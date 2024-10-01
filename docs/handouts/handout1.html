@@ -357,16 +357,16 @@ div.csl-indent {
 <h2 class="anchored" data-anchor-id="graph-density">Graph Density</h2>
 <p>Once we have the number of edges and nodes, we can calculate the most basic derived statistic in a network, which is the <strong>density</strong>. Since the movie network is an <strong>undirected</strong> graph, the density is given by:</p>
 <p><span class="math display">\[\begin{equation}
-   \frac{2E}{V(V-1)}
+   \frac{2m}{n(n-1)}
 \end{equation}\]</span></p>
-<p>Where <span class="math inline">\(E\)</span> is the number of edges and <span class="math inline">\(N\)</span> is the number of nodes, or in our case:</p>
+<p>Where <span class="math inline">\(m\)</span> is the number of edges and <span class="math inline">\(n\)</span> is the number of nodes, or in our case:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   (<span class="dv">2</span> <span class="sc">*</span> <span class="dv">102</span>) <span class="sc">/</span> (<span class="dv">38</span> <span class="sc">*</span> (<span class="dv">38</span> <span class="sc">-</span> <span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.1450925</code></pre>
 </div>
 </div>
-<p>Of course, igraph has a dedicated function to compute the density too, which takes the igraph object as input:</p>
+<p>Of course, igraph has a dedicated function called <code>edge_density</code> to compute the density too, which takes the igraph object as input:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   <span class="fu">edge_density</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -609,38 +609,26 @@ ED SULLIVAN      2     2     2          2           0            2         4
 ENGLISH DAVE     2     2     1          2           2            0         3
 ESMARELDA        3     4     2          3           4            3         0</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   rs.S <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span>
-<span id="cb54-2"><a href="#cb54-2"></a>   rs.S</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
-             80              93              70              80              93 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
-             95             142             104              96             103 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
-             88             107             108              76             108 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
-             90              96              97             102              87 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
-             80              90             103             103              88 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
-             95              80             104             176             137 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
-            179              72             120              95              80 
-      YOUNG MAN     YOUNG WOMAN             ZED 
-            120             120             137 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>   rm.S <span class="ot">&lt;-</span> rs.S <span class="sc">/</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb56-2"><a href="#cb56-2"></a>   L <span class="ot">&lt;-</span> <span class="fu">mean</span>(rm.S)</span>
-<span id="cb56-3"><a href="#cb56-3"></a>   L</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The <code>igraph</code> function <code>distances</code> takes the network object as input and returns the desired shortest path matrix. So for instance, Brett is directly connected to Butch (they appear in a scene together) but indirectly connected to Buddy via a path of length two (they both appear in scenes with common neighbors even if they don’t appear together).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   rs.S <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span>
+<span id="cb54-2"><a href="#cb54-2"></a>   rm.S <span class="ot">&lt;-</span> rs.S <span class="sc">/</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb54-3"><a href="#cb54-3"></a>   <span class="fu">mean</span>(rm.S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.769559</code></pre>
 </div>
 </div>
-<p>The <code>igraph</code> function <code>distances</code> takes the network object as input and returns the desired shortest path matrix. So for instance, Brett is directly connected to Butch (they appear in a scene together) but indirectly connected to Buddy via a path of length two (they both appear in scenes with common neighbors even if they don’t appear together).</p>
-<p>To calculate the average path length, first we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes. Then we divide this vector by the number of nodes minus one (to exclude themselves) to create a vector of the <em>average</em> distance of each node to each of the other nodes. Then we take the average of this set of averages to get the graph’s average shortest path length, which in this case equals L = 2.8. Meaning that on average, each person in the <em>Pulp Fiction</em> is separated by little less than three contacts (a fairly small world).</p>
+<p>Once we have the geodesic distance matrix, it is easy to calculate the average path length of the graph:</p>
+<ul>
+<li><p>First (line 1) we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes (we will use this to compute <strong>closeness centrality</strong> later).</p></li>
+<li><p>Then (line 2) we divide this vector by the number of nodes minus one (to exclude themselves) to create a vector of the <em>average</em> distance of each node to each of the other nodes.</p></li>
+<li><p>Finally (line 3) we take the average across all nodes of this average distance vector to get the <em>graph</em>’s average shortest path length, which in this case equals L = 2.8.</p></li>
+</ul>
+<p>This means that, on average, each character in <em>Pulp Fiction</em> is separated by little less than three contacts in the co-appearance network (a fairly small world).</p>
 <p>Of course this can also be done in just one step on <code>igraph</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   <span class="fu">mean_distance</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>   <span class="fu">mean_distance</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.769559</code></pre>
 </div>
