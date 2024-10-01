@@ -1,0 +1,190 @@
+---
+title: "Basic Network Statistics"
+execute: 
+  eval: true
+  echo: true
+  output: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Loading Data
+
+Here we will analyze a small network and computer some basic statistics of interst. The first thing we need to do is get some data! For this purpose, we will use the package `networkdata` (available [here](https://schochastics.github.io/networkdata/)). To install the package, use the following code:
+
+```{r}
+   #install.packages("remotes") 
+   remotes::install_github("schochastics/networkdata")
+```
+
+To load the network datasets in the `networkdata` just type:
+
+```{r}
+   library(networkdata)
+```
+
+The package contains a bunch of human and animal social networks to browse through them, type:
+
+```{r}
+#| eval: false
+   data(package = "networkdata")
+```
+
+We will pick one of the movies for this analysis, namely, *Pulp Fiction*. This is `movie_559`. In the movie network two characters are linked by an edge if they appear in a scene together. The `networkdata` data sets come in `igraph` format, so we need to load that package (or install it using `install.packages` if you haven't done that yet).
+
+```{r}
+   #install.packages("igraph") 
+   library(igraph)
+   g <- movie_559
+```
+
+## Number of Nodes and Edges
+
+Now we are ready to compute some **basic network statistics**. As with any network, we want to know what the number of *nodes* and the number of *edges* (links) are. Since this is a relatively small network, we can begin by listing the actors. 
+
+```{r}
+#| output: true
+   V(g)
+```
+
+The function `V` takes the `igraph` network object as input and returns an `igraph.vs` object as output (short for "igraph vertex sequence"), listing the names (if given as a graph attribute) of each node. The first line also tells us that there are 38 nodes in this network.  
+
+The `igraph.vs` object operates much like an `R` character vector, so we can query its length to figure out the number of nodes:
+
+```{r}
+#| output: true
+   length(V(g))
+```
+
+The analogue function for edges in `igraph` is `E` which also takes the network object as input and returns an object of class `igraph.es` ("igraph edge sequence") as output:
+
+```{r}
+#| output: true
+   E(g)
+```
+
+This tells us that there are 102 edges (connected dyads) in the network. Some of these include Brett and Marsellus and Fabienne and Jules, but not all can be listed for reasons of space. 
+
+`igraph` also has two dedicated functions that return the number of nodes and edges in the graph in one fell swoop. They are called `vcount` and `ecount` and take the graph object as input:
+
+
+```{r}
+#| output: true
+   vcount(g)
+   ecount(g)
+```
+
+## Graph Density
+
+Once we have the number of edges and nodes, we can calculate the most basic derived statistic in a network, which is the **density**. Since the movie network is an **undirected** graph, the density is given by:
+
+\begin{equation}
+   \frac{2E}{V(V-1)}
+\end{equation}
+
+Where $E$ is the number of edges and $N$ is the number of nodes, or in our case:
+
+```{r}
+#| output: true
+   (2 * 102) / (38 * (38 - 1))
+```
+
+Of course, igraph has a dedicated function to compute the density too, which takes the igraph object as input:
+
+```{r}
+#| output: true
+   edge_density(g)
+```
+
+## Degree
+
+The next set of graph metrics are based on the **degree** of the graph. We can list the graph's **degree sequence** using the `igraph` function `degree`:
+
+```{r}
+#| output: true
+   degree(g)
+```
+
+The `degree` function takes the igraph network object as input and returns a plain old `R` **named vector** as output with the names being the `names` attribute of vertices in the network object. 
+
+Because this is just a vector we can use regular mathematical operations to figure out things like the **maximum**, **minimum**, and **average degree** of the graph:
+
+```{r}
+#| output: true
+   d <- degree(g)
+   max(d)
+   min(d)
+   mean(d)
+```
+
+So the maximum degree is 25 (belonging to Vincent) the minimum is one, and the average is about 5.4.
+
+Some people also consider the **degree variance** of the graph as a measure of inequality of connectivity in the system. It is equal to the average sum of square deviations of each node's degree from the average:
+
+```{r}
+#| output: true
+   var(d)
+```
+This tells us that there is a lot of inequality in the distribution of degrees in the graph (a graph with all nodes equal degree would have variance zero).
+
+Another way of looking at inequalities of degrees in a graph is to examine its **degree distribution**. This gives us the probability of observing a node with a given degree *k* in the graph. 
+
+
+```{r}
+#| output: true
+   deg.dist <- degree_distribution(g)
+   deg.dist <- round(deg.dist, 3)
+   deg.dist
+```
+
+The igraph function `degree_distribution` just returns a numeric vector of the same `length` as the number of nodes in the graph. The first gives us the proportion of nodes with degree zero (isolates), the second the proportion of nodes of degree one, and so on up to the graph's **maximum degree**. 
+
+Since there are no isolates in the network, we can ignore the first element of this vector, to get the proportion of nodes of each degree in the *Pulp Fiction* network. To that, we fist create a `data.frame` with the degrees in the first column and the proportions in the second:
+
+```{r}
+#| output: true
+   degree <- c(1:25)
+   prop <- deg.dist
+   prop <- prop[-1]
+   deg.dist <- data.frame(degree, prop)
+   deg.dist
+```
+
+Of course, a better way to display the degree distribution of a graph is via some kind of data visualization, particularly for large networks where a long table of numbers is just not feasible. To do that, we can call on our good friend `ggplot`:
+
+```{r}
+#| output: true
+   # install.packages(ggplot2)
+   library(ggplot2)
+   p <- ggplot(data = deg.dist, aes(x = degree, y = prop))
+   p <- p + geom_bar(stat = "identity", fill = "red", color = "red")
+   p <- p + theme_minimal()
+   p <- p + labs(x = "", y = "Proportion", 
+                 title = "Degree Distribution in Pulp Fiction Network") 
+   p <- p + geom_vline(xintercept = mean(d), 
+                       linetype = 2, linewidth = 0.5, color = "blue")
+   p <- p + scale_x_continuous(breaks = c(1, 5, 10, 15, 20, 25))
+   p
+```
+
+## The Degree Correlation
+
+```{r}
+#| output: true
+   # install.packages(dplyr)
+   library(dplyr)
+   g.el <- as_edgelist(g)
+   g.el1 <- data.frame(name = g.el[, 1])
+   g.el2 <- data.frame(name = g.el[, 2])
+   deg.dat <- data.frame(d, name = names(d))
+   g.el1 <- left_join(g.el1, deg.dat) %>% 
+      rename(name1 = name, d1 = d)
+   g.el2 <- left_join(g.el2, deg.dat) %>% 
+      rename(name2 = name, d2 = d)
+   g.el <- cbind(g.el1, g.el2)
+   cor(g.el$d1, g.el$d2)
+```
+
+
+
