@@ -170,21 +170,54 @@ Of course, a better way to display the degree distribution of a graph is via som
 
 ## The Degree Correlation
 
+Another overall network statistic we may want to know is the **degree correlation** [@newman02]. How do we compute it? Imagine taking each edge in the network and creating two degree vectors, one based on the degree of the node in one end and the degre of the node in another. Then the **degree assortativity coefficient** is just the Pearson product moment correlation between these two vectors.
+
+Let's see how this would work for the *Pulp Fiction* network. First we need to extract an *edge list* from the graph:
+
+```{r}
+#| output: true
+   g.el <- as_edgelist(g) #transforming graph to edgelist
+   head(g.el)
+```
+
+We can see that the `as_edgelist` function takes the igraph network object as input and returns an $E \times 2$ matrix, with $E = 102$ being the number of rows. Each column of the matrix records the name of the node on each end of the edge. So the first row of the edge list with entries "BRETT" and "MARSELLUS" tells us that there is an edge linking Brett and Marsellus, and so forth for each row. 
+
+To compute the correlation between the degrees of each node, all we need to do is attach the corresponding degrees to each name for each of the columns of the edge list, which can be done via data wrangling magic from the `dplyr` package (part of the `tidyverse`):
+
 ```{r}
 #| output: true
    # install.packages(dplyr)
    library(dplyr)
-   g.el <- as_edgelist(g)
    g.el1 <- data.frame(name = g.el[, 1])
    g.el2 <- data.frame(name = g.el[, 2])
-   deg.dat <- data.frame(d, name = names(d))
+   deg.dat <- data.frame(name = names(d), d)
    g.el1 <- left_join(g.el1, deg.dat) %>% 
       rename(name1 = name, d1 = d)
    g.el2 <- left_join(g.el2, deg.dat) %>% 
       rename(name2 = name, d2 = d)
    g.el <- cbind(g.el1, g.el2)
-   cor(g.el$d1, g.el$d2)
+   head(g.el)
 ```
 
+Line 3 creates a single-column data frame (called "g.el1") containing the node names in the first column of the edge list. Line 4 does the same thing for the second column ("g.el2"). Line 5 creates a two-column data frame (called "deg.dat") with as many rows as there are nodes in the graph. The first column of the data frame (called "name") contains the name of each node. The second column of the data frame contains the degrees of each node (stored in the `d` vector ealier). 
+
+Lines 6-7 perform a `left_join` of each of the degrees in "deg.dat" to each of the names in the longer vector "g.el1" (where many of the names are repeated as many times as their degree). Then we do the same thing for "g.el2" in lines 8-9. 
+Finally line 10 joins the pair of two-column data frames to create an augmented edge list containing the degrees of each node. We can see from the output that indeed "BRETT" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "MARSELLUS" a degree of 10, "VINCENT" a degree of 25 and so forth. 
+
+Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "g.el" that containg the degree information:
+
+```{r}
+#| output: true
+cor(g.el$d1, g.el$d2)
+```
+
+The result $r_{deg} = -0.30$ tells us that there is *anti-correlation* by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don't appear together very often.
+
+Of course, `igraph` has a native function that does all of this for you, implementing the methods in @newman02 (who uses the term "assortativity"):
+
+```{r}
+#| output: true
+   assortativity_degree(g)
+```
 
 

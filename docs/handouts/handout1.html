@@ -83,6 +83,25 @@ code span.st { color: #4070a0; } /* String */
 code span.va { color: #19177c; } /* Variable */
 code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
 </style>
 
 
@@ -231,7 +250,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#degree" id="toc-degree" class="nav-link" data-scroll-target="#degree">Degree</a></li>
   <li><a href="#the-degree-correlation" id="toc-the-degree-correlation" class="nav-link" data-scroll-target="#the-degree-correlation">The Degree Correlation</a></li>
   </ul>
-</nav>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handouts/handout1.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -472,28 +491,72 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="the-degree-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="the-degree-correlation">The Degree Correlation</h2>
+<p>Another overall network statistic we may want to know is the <strong>degree correlation</strong> <span class="citation" data-cites="newman02">(<a href="#ref-newman02" role="doc-biblioref">Newman 2002</a>)</span>. How do we compute it? Imagine taking each edge in the network and creating two degree vectors, one based on the degree of the node in one end and the degre of the node in another. Then the <strong>degree assortativity coefficient</strong> is just the Pearson product moment correlation between these two vectors.</p>
+<p>Let’s see how this would work for the <em>Pulp Fiction</em> network. First we need to extract an <em>edge list</em> from the graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   <span class="co"># install.packages(dplyr)</span></span>
-<span id="cb34-2"><a href="#cb34-2"></a>   <span class="fu">library</span>(dplyr)</span>
-<span id="cb34-3"><a href="#cb34-3"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g)</span>
-<span id="cb34-4"><a href="#cb34-4"></a>   g.el1 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name =</span> g.el[, <span class="dv">1</span>])</span>
-<span id="cb34-5"><a href="#cb34-5"></a>   g.el2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name =</span> g.el[, <span class="dv">2</span>])</span>
-<span id="cb34-6"><a href="#cb34-6"></a>   deg.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(d, <span class="at">name =</span> <span class="fu">names</span>(d))</span>
-<span id="cb34-7"><a href="#cb34-7"></a>   g.el1 <span class="ot">&lt;-</span> <span class="fu">left_join</span>(g.el1, deg.dat) <span class="sc">%&gt;%</span> </span>
-<span id="cb34-8"><a href="#cb34-8"></a>      <span class="fu">rename</span>(<span class="at">name1 =</span> name, <span class="at">d1 =</span> d)</span>
-<span id="cb34-9"><a href="#cb34-9"></a>   g.el2 <span class="ot">&lt;-</span> <span class="fu">left_join</span>(g.el2, deg.dat) <span class="sc">%&gt;%</span> </span>
-<span id="cb34-10"><a href="#cb34-10"></a>      <span class="fu">rename</span>(<span class="at">name2 =</span> name, <span class="at">d2 =</span> d)</span>
-<span id="cb34-11"><a href="#cb34-11"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">cbind</span>(g.el1, g.el2)</span>
-<span id="cb34-12"><a href="#cb34-12"></a>   <span class="fu">cor</span>(g.el<span class="sc">$</span>d1, g.el<span class="sc">$</span>d2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
+<span id="cb34-2"><a href="#cb34-2"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1]    [,2]       
+[1,] "BRETT" "MARSELLUS"
+[2,] "BRETT" "MARVIN"   
+[3,] "BRETT" "ROGER"    
+[4,] "BRETT" "VINCENT"  
+[5,] "BUDDY" "MIA"      
+[6,] "BUDDY" "VINCENT"  </code></pre>
+</div>
+</div>
+<p>We can see that the <code>as_edgelist</code> function takes the igraph network object as input and returns an <span class="math inline">\(E \times 2\)</span> matrix, with <span class="math inline">\(E = 102\)</span> being the number of rows. Each column of the matrix records the name of the node on each end of the edge. So the first row of the edge list with entries “BRETT” and “MARSELLUS” tells us that there is an edge linking Brett and Marsellus, and so forth for each row.</p>
+<p>To compute the correlation between the degrees of each node, all we need to do is attach the corresponding degrees to each name for each of the columns of the edge list, which can be done via data wrangling magic from the <code>dplyr</code> package (part of the <code>tidyverse</code>):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   <span class="co"># install.packages(dplyr)</span></span>
+<span id="cb36-2"><a href="#cb36-2"></a>   <span class="fu">library</span>(dplyr)</span>
+<span id="cb36-3"><a href="#cb36-3"></a>   g.el1 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name =</span> g.el[, <span class="dv">1</span>])</span>
+<span id="cb36-4"><a href="#cb36-4"></a>   g.el2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name =</span> g.el[, <span class="dv">2</span>])</span>
+<span id="cb36-5"><a href="#cb36-5"></a>   deg.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name =</span> <span class="fu">names</span>(d), d)</span>
+<span id="cb36-6"><a href="#cb36-6"></a>   g.el1 <span class="ot">&lt;-</span> <span class="fu">left_join</span>(g.el1, deg.dat) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-7"><a href="#cb36-7"></a>      <span class="fu">rename</span>(<span class="at">name1 =</span> name, <span class="at">d1 =</span> d)</span>
+<span id="cb36-8"><a href="#cb36-8"></a>   g.el2 <span class="ot">&lt;-</span> <span class="fu">left_join</span>(g.el2, deg.dat) <span class="sc">%&gt;%</span> </span>
+<span id="cb36-9"><a href="#cb36-9"></a>      <span class="fu">rename</span>(<span class="at">name2 =</span> name, <span class="at">d2 =</span> d)</span>
+<span id="cb36-10"><a href="#cb36-10"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">cbind</span>(g.el1, g.el2)</span>
+<span id="cb36-11"><a href="#cb36-11"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  name1 d1     name2 d2
+1 BRETT  7 MARSELLUS 10
+2 BRETT  7    MARVIN  6
+3 BRETT  7     ROGER  6
+4 BRETT  7   VINCENT 25
+5 BUDDY  2       MIA 11
+6 BUDDY  2   VINCENT 25</code></pre>
+</div>
+</div>
+<p>Line 3 creates a single-column data frame (called “g.el1”) containing the node names in the first column of the edge list. Line 4 does the same thing for the second column (“g.el2”). Line 5 creates a two-column data frame (called “deg.dat”) with as many rows as there are nodes in the graph. The first column of the data frame (called “name”) contains the name of each node. The second column of the data frame contains the degrees of each node (stored in the <code>d</code> vector ealier).</p>
+<p>Lines 6-7 perform a <code>left_join</code> of each of the degrees in “deg.dat” to each of the names in the longer vector “g.el1” (where many of the names are repeated as many times as their degree). Then we do the same thing for “g.el2” in lines 8-9. Finally line 10 joins the pair of two-column data frames to create an augmented edge list containing the degrees of each node. We can see from the output that indeed “BRETT” is assigned a degree of 7 in each row of the edge list, “BUDDY” a degree of 2, “MARSELLUS” a degree of 10, “VINCENT” a degree of 25 and so forth.</p>
+<p>Now to compute the degree correlation in the network all we need to do is call the native <code>R</code> function <code>cor</code> on the two columns from “g.el” that containg the degree information:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a><span class="fu">cor</span>(g.el<span class="sc">$</span>d1, g.el<span class="sc">$</span>d2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.2989797</code></pre>
 </div>
 </div>
+<p>The result <span class="math inline">\(r_{deg} = -0.30\)</span> tells us that there is <em>anti-correlation</em> by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don’t appear together very often.</p>
+<p>Of course, <code>igraph</code> has a native function that does all of this for you, implementing the methods in <span class="citation" data-cites="newman02">Newman (<a href="#ref-newman02" role="doc-biblioref">2002</a>)</span> (who uses the term “assortativity”):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">assortativity_degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -0.2896427</code></pre>
+</div>
+</div>
+
 
 
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-newman02" class="csl-entry" role="doc-biblioentry">
+Newman, Mark EJ. 2002. <span>“Assortative Mixing in Networks.”</span> <em>Physical Review Letters</em> 89 (20): 208701.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
