@@ -108,17 +108,50 @@ The next set of graph metrics are based on the **degree** of the graph. We can l
 
 The `degree` function takes the igraph network object as input and returns a plain old `R` **named vector** as output with the names being the `names` attribute of vertices in the network object. 
 
-Because this is just a vector we can use regular mathematical operations to figure out things like the **maximum**, **minimum**, and **average degree** of the graph:
+Usually we are interested in who are the "top nodes" in the network by degree (a kind of **centrality**). To figure that out, all we need to do is sort the degree vector and list the top entries:
 
 ```{r}
 #| output: true
    d <- degree(g)
+   d.sort <- sort(d, decreasing = TRUE)
+   d.sort[1:8]
+```
+
+Line 1 stores the degrees in an object "d", line 2 creates a "sorted" version of the same object (from bigger to smaller) and line 3 shows the first eight entries of the sorted degree sequence.
+
+Because the degree vector "d" is just a regular old vector we can use native `R` mathematical operations to figure out things like the **sum**, **maximum**, **minimum**, and **average degree** of the graph:
+
+```{r}
+#| output: true
+   sum(d)
    max(d)
    min(d)
    mean(d)
 ```
 
-So the maximum degree is 25 (belonging to Vincent) the minimum is one, and the average is about 5.4.
+So the sum of degrees is 204, the maximum degree is 25 (belonging to Vincent), the minimum is one, and the average is about 5.4.
+
+Note that these numbers recreate some well-known equalities in graph theory:
+
+- The sum of degrees is twice the number of edges (the first theorem of graph theory): 
+
+```{r}
+#| output: true
+   2 * ecount(g)
+```
+- The average degree is just the sum of degrees divided by the number of nodes:
+
+```{r}
+#| output: true
+   sum(d)/vcount(g)
+```
+
+- The density is just the average degree divided by the number of nodes minus one, as explained [here](https://olizardo.github.io/networks-textbook/lesson-graphs-degree-metrics.html#the-connection-between-density-and-average-degree):
+
+```{r}
+#| output: true
+   mean(d)/(vcount(g) - 1)
+```
 
 Some people also consider the **degree variance** of the graph as a measure of inequality of connectivity in the system. It is equal to the average sum of square deviations of each node's degree from the average:
 
@@ -204,14 +237,14 @@ Line 3 creates a single-column data frame (called "g.el1") containing the node n
 Lines 6-7 perform a `left_join` of each of the degrees in "deg.dat" to each of the names in the longer vector "g.el1" (where many of the names are repeated as many times as their degree). Then we do the same thing for "g.el2" in lines 8-9. 
 Finally line 10 joins the pair of two-column data frames to create an augmented edge list containing the degrees of each node. We can see from the output that indeed "BRETT" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "MARSELLUS" a degree of 10, "VINCENT" a degree of 25 and so forth. 
 
-Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "g.el" that containg the degree information:
+Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "g.el" that containing the degree information:
 
 ```{r}
 #| output: true
 cor(g.el$d1, g.el$d2)
 ```
 
-The result $r_{deg} = -0.30$ tells us that there is *anti-correlation* by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don't appear together very often.
+The result $r_{deg} = -0.298$ tells us that there is *anti-correlation* by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don't appear together very often.
 
 Of course, `igraph` has a native function that does all of this for you, implementing the methods in @newman02 (who uses the term "assortativity"):
 
@@ -219,5 +252,33 @@ Of course, `igraph` has a native function that does all of this for you, impleme
 #| output: true
    assortativity_degree(g)
 ```
+
+## The Average Shortest Path Length
+
+The final statistic people use to characterize networks is the **average shortest path length**. In a network, even nodes that are not adjacent, could be indirectly connected to other nodes via a path of some length. So it is useful to know what the average of this quantity is across all dyads in the network. To do that, we first need to compute the length of the shortest path $l$ for each pair of nodes in the network (also known as the **geodesic distance**). Adjacent nodes get an automatic score of $l = 1$. In `igraph` this is done as follows:
+
+```{r}
+#| output: true
+   S <- distances(g)
+   S[1:7, 1:7]
+   rs.S <- rowSums(S)
+   rs.S
+   rm.S <- rs.S / (vcount(g) - 1)
+   L <- mean(rm.S)
+   L
+```
+
+The `igraph` function `distances` takes the network object as input and returns the desired shortest path matrix. So for instance, Brett is directly connected to Butch (they appear in a scene together) but indirectly connected to Buddy via a path of length two (they both appear in scenes with common neighbors even if they don't appear together). 
+
+To calculate the average path length, first we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes. Then we divide this vector by the number of nodes minus one (to exclude themselves) to create a vector of the *average* distance of each node to each of the other nodes. Then we take the average of this set of averages to get the graph's average shortest path length, which in this case equals L =  `r round(L, 1)`.  Meaning that on average, each person in the *Pulp Fiction* is separated by little less than three contacts (a fairly small world).
+
+Of course this can also be done in just one step on `igraph`:
+
+```{r}
+#| output: true
+   mean_distance(g)
+```
+
+
 
 
