@@ -255,6 +255,7 @@ div.csl-indent {
   <li><a href="#the-degree-correlation" id="toc-the-degree-correlation" class="nav-link" data-scroll-target="#the-degree-correlation">The Degree Correlation</a></li>
   <li><a href="#the-average-shortest-path-length" id="toc-the-average-shortest-path-length" class="nav-link" data-scroll-target="#the-average-shortest-path-length">The Average Shortest Path Length</a></li>
   <li><a href="#putting-it-all-together" id="toc-putting-it-all-together" class="nav-link" data-scroll-target="#putting-it-all-together">Putting it all Together</a></li>
+  <li><a href="#appendix-loading-network-data-from-a-file" id="toc-appendix-loading-network-data-from-a-file" class="nav-link" data-scroll-target="#appendix-loading-network-data-from-a-file">Appendix: Loading Network Data from a File</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handouts/handout1.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -708,6 +709,68 @@ ESMARELDA        3     4     2          3           4            3         0</co
 
 </div>
 </div>
+</section>
+<section id="appendix-loading-network-data-from-a-file" class="level2">
+<h2 class="anchored" data-anchor-id="appendix-loading-network-data-from-a-file">Appendix: Loading Network Data from a File</h2>
+<p>When get network data from an archival source, and it will be in the form of a <strong>matrix</strong> or an <strong>edge list</strong>, typically in some kind of comma separated value (csv) format. Here will show how to input that into <code>R</code> to create an <code>igraph</code> network object from an outside file.</p>
+<p>First we will write the <em>Pulp Fiction</em> data into an edge list and save it to disk. We already did that earlier with the “g.el” object. So all we have to do is save it to your local folder as a csv file:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   <span class="co">#install.packages(here)</span></span>
+<span id="cb62-2"><a href="#cb62-2"></a>   <span class="fu">library</span>(here)</span>
+<span id="cb62-3"><a href="#cb62-3"></a>   g.el <span class="ot">&lt;-</span> g.el[, <span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>)]</span>
+<span id="cb62-4"><a href="#cb62-4"></a>   <span class="fu">write.csv</span>(g.el, <span class="fu">here</span>(<span class="st">"handouts"</span>, <span class="st">"pulp.csv"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>write.csv</code> function just saves an <code>R</code> object into a .csv file. Here the <code>R</code> object is “g.el” and we asked it to save just the columns which contain the name of each character. This represents the adjacency relations in the network as an edge list. We use the package <code>here</code> to keep track of our working directory. See <a href="https://here.r-lib.org/">here</a> (pun intended) for details.</p>
+<p>Now suppose that’s the network we want to work with and it’s saved in our hard drive. To load it, we just type:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">here</span>(<span class="st">"handouts"</span>, <span class="st">"pulp.csv"</span>), </span>
+<span id="cb63-2"><a href="#cb63-2"></a>                    <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>))</span>
+<span id="cb63-3"><a href="#cb63-3"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  name1     name2
+1 BRETT MARSELLUS
+2 BRETT    MARVIN
+3 BRETT     ROGER
+4 BRETT   VINCENT
+5 BUDDY       MIA
+6 BUDDY   VINCENT</code></pre>
+</div>
+</div>
+<p>Which gives us the edge list we want now saved into an <code>R</code> object of class <code>data.frame</code>. So all we need is to convert that into an <code>igraph</code> object. To do that we use one of the many <code>graph_from...</code> functions in the <code>igraph</code> package. In this case, we want <code>graph_from_edgelist</code> because our network is stored as an edge list:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(g.el)</span>
+<span id="cb65-2"><a href="#cb65-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">graph_from_edgelist</span>(g.el, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb65-3"><a href="#cb65-3"></a>   <span class="fu">V</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>+ 38/38 vertices, named, from 36731f6:
+ [1] BRETT           MARSELLUS       MARVIN          ROGER          
+ [5] VINCENT         BUDDY           MIA             BUTCH          
+ [9] CAPT KOONS      ESMARELDA       GAWKER #2       JULES          
+[13] PEDESTRIAN      SPORTSCASTER #1 ENGLISH DAVE    FABIENNE       
+[17] FOURTH MAN      HONEY BUNNY     MANAGER         JIMMIE         
+[21] JODY            PATRON          PUMPKIN         RAQUEL         
+[25] WINSTON         LANCE           MAYNARD         THE GIMP       
+[29] ZED             ED SULLIVAN     MOTHER          WOMAN          
+[33] PREACHER        SPORTSCASTER #2 THE WOLF        WAITRESS       
+[37] YOUNG MAN       YOUNG WOMAN    </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">E</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>+ 102/102 edges from 36731f6 (vertex names):
+ [1] BRETT      --MARSELLUS       BRETT      --MARVIN         
+ [3] BRETT      --ROGER           BRETT      --VINCENT        
+ [5] BUDDY      --MIA             VINCENT    --BUDDY          
+ [7] BRETT      --BUTCH           BUTCH      --CAPT KOONS     
+ [9] BUTCH      --ESMARELDA       BUTCH      --GAWKER #2      
+[11] BUTCH      --JULES           MARSELLUS  --BUTCH          
+[13] BUTCH      --PEDESTRIAN      BUTCH      --SPORTSCASTER #1
+[15] BUTCH      --ENGLISH DAVE    BRETT      --FABIENNE       
+[17] BUTCH      --FABIENNE        JULES      --FABIENNE       
+[19] JULES      --FOURTH MAN      VINCENT    --FOURTH MAN     
++ ... omitted several edges</code></pre>
+</div>
+</div>
+<p>Which gives us back the original <code>igraph</code> object we have been working with. Note that first we converted the <code>data.frame</code> object into a <code>matrix</code> object. We also specified that the graph is <strong>undirected</strong> by setting the option <code>directed</code> to false.</p>
 
 
 
