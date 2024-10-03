@@ -278,6 +278,16 @@ The final statistic people use to characterize networks is the **average shortes
 
 The `igraph` function `distances` takes the network object as input and returns the desired shortest path matrix. So for instance, Brett is directly connected to Butch (they appear in a scene together) but indirectly connected to Buddy via a path of length two (they both appear in scenes with common neighbors even if they don't appear together). 
 
+The maximum distance between two nodes in the graph (the longest shortest path to put it confusingly) is called the **graph diameter**. We can find this out simply by using the native `R` function for the maximum on the shortest path matrix:
+
+```{r}
+#| output: true
+   max(S)
+```
+
+This means that in the *Pulp Fiction* network the maximum degree of separation between two characters is a path of length 8. 
+
+Once we have the geodesic distance matrix, it is easy to calculate the average path length of the graph: 
 
 ```{r}
 #| output: true
@@ -286,11 +296,10 @@ The `igraph` function `distances` takes the network object as input and returns 
    mean(rm.S)
 ```
 
-Once we have the geodesic distance matrix, it is easy to calculate the average path length of the graph: 
 
 - First (line 1) we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes (we will use this to compute **closeness centrality** later). 
 
-- Then (line 2) we divide this vector by the number of nodes minus one (to exclude themselves) to create a vector of the *average* distance of each node to each of the other nodes. 
+- Then (line 2) we divide this vector by the number of nodes minus one (to exclude the focal node) to create a vector of the *average* distance of each node to each of the other nodes. 
 
 - Finally (line 3) we take the average across all nodes of this average distance vector to get the *graph*'s average shortest path length, which in this case equals L =  `r round(mean(rm.S), 1)`.  
 
@@ -308,13 +317,13 @@ Of course this can also be done in just one step on `igraph`:
 Now we can put together all the basic network statistics that we have computed into some sort of summary table, like the ones [here](https://networkrepository.com/soc.php). We first create a vector with the names of each statistic:
 
 ```{r}
-   Stat <- c("Nodes", "Edges", "Min. Degree", "Max. Degree", "Avg. Degree", "Degree Corr.", "Avg. Shortest Path Length")
+   Stat <- c("Nodes", "Edges", "Min. Degree", "Max. Degree", "Avg. Degree", "Degree Corr.", "Diameter", "Avg. Shortest Path Length")
 ```
 
 Then we create a vector with the values:
 
 ```{r}
-   Value <- c(vcount(g), ecount(g), min(d), max(d), round(mean(d), 2), round(assortativity_degree(g), 2), round(mean_distance(g), 2))
+   Value <- c(vcount(g), ecount(g), min(d), max(d), round(mean(d), 2), round(assortativity_degree(g), 2), max(S), round(mean_distance(g), 2))
 ```
 
 We can then put these two vector together into a data frame:
