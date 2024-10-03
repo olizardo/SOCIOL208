@@ -229,27 +229,32 @@ To compute the correlation between the degrees of each node, all we need to do i
 #| output: true
    # install.packages(dplyr)
    library(dplyr)
-   g.el1 <- data.frame(name = g.el[, 1])
-   g.el2 <- data.frame(name = g.el[, 2])
-   deg.dat <- data.frame(name = names(d), d)
-   g.el1 <- left_join(g.el1, deg.dat) %>% 
-      rename(name1 = name, d1 = d)
-   g.el2 <- left_join(g.el2, deg.dat) %>% 
-      rename(name2 = name, d2 = d)
-   g.el <- cbind(g.el1, g.el2)
-   head(g.el)
+   deg.dat <- data.frame(name1 = names(d), name2 = names(d), d)
+   el.temp <- data.frame(name2 = g.el[, 2]) %>% 
+      left_join(deg.dat, by = "name2") %>% 
+      dplyr::select(c("name2", "d")) %>% 
+      rename(d2 = d) 
+   d.el <- data.frame(name1 = g.el[, 1]) %>% 
+      left_join(deg.dat, by = "name1") %>% 
+      dplyr::select(c("name1", "d")) %>% 
+      rename(d1 = d) %>% 
+      cbind(el.temp)
+head(d.el)
 ```
 
-Line 3 creates a single-column data frame (called "g.el1") containing the node names in the first column of the edge list. Line 4 does the same thing for the second column ("g.el2"). Line 5 creates a two-column data frame (called "deg.dat") with as many rows as there are nodes in the graph. The first column of the data frame (called "name") contains the name of each node. The second column of the data frame contains the degrees of each node (stored in the `d` vector earlier). 
+Line 3 creates a two-column data frame called "deg.dat" with as many rows as there are nodes in the network. The first two columns contain the names of each node (identically listed with different names) and the third columns contains the corresponding node's degree. 
 
-Lines 6-7 perform a `left_join` of each of the degrees in "deg.dat" to each of the names in the longer vector "g.el1" (where many of the names are repeated as many times as their degree). Then we do the same thing for "g.el2" in lines 8-9. 
-Finally line 10 joins the pair of two-column data frames to create an augmented edge list containing the degrees of each node. We can see from the output that indeed "BRETT" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "MARSELLUS" a degree of 10, "VINCENT" a degree of 25 and so forth. 
+Lines 4-7 use `dplyr` functions to create a new object "el.temp" joining the degree information to each of the node names listed in the second position in the original edge list "g.el," and rename the imported column of degrees "d2." 
 
-Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "g.el" that containing the degree information:
+Lines 8-12 do the same for the nodes listed in the first position in the original edge list, renames the imported columns of degrees "d1," and the binds the columns of the "el.temp" object to the new object "d.el." The resulting object has four columns: Two for the names of the nodes incident to each edge on the edge list (columns 1 and 3), and two other ones corresponding to the degrees of the corresponding nodes (columns 2 and 4). 
+
+We can see from the output of the first few rows of the "d.el" object that indeed "BRETT" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "MARSELLUS" a degree of 10, "VINCENT" a degree of 25 and so forth. 
+
+Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "d.el" that containing the degree information:
 
 ```{r}
 #| output: true
-   cor(g.el$d1, g.el$d2)
+   cor(d.el$d1, d.el$d2)
 ```
 
 The result $r_{deg} = -0.298$ tells us that there is *anti-correlation* by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don't appear together very often.
@@ -338,8 +343,7 @@ First we will write the *Pulp Fiction* data into an edge list and save it to dis
 ```{r}
    #install.packages(here)
    library(here)
-   g.el <- g.el[, c("name1", "name2")]
-   write.csv(g.el, here("pulp.csv"))
+   write.csv(d.el[c("name1", "name2")], here("pulp.csv"))
 ```
 
 The `write.csv` function just saves an `R` object into a .csv file. Here the `R` object is "g.el" and we asked it to save just the columns which contain the name of each character. This represents the adjacency relations in the network as an edge list. We use the package `here` to keep track of our working directory. See [here](https://here.r-lib.org/) (pun intended) for details.
