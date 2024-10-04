@@ -4,6 +4,8 @@ execute:
   eval: true
   echo: true
   output: true
+  warning: false
+  message: false
 format: 
    html:
       code-line-numbers: true
@@ -37,7 +39,7 @@ The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` 
 
 The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed relations. So to illustrate them, we need to switch to a different source of data.
 
-We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can givigraphen advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html)):
+We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can givigraphen advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html)), called `law_advice`:
 
 ```{r}
    d.g <- law_advice
@@ -45,9 +47,11 @@ We pick an **advice network** which is a classical directed kind of (asymmetric)
    vertex_attr(d.g)
 ```
 
-We can see that the graph has 71 vertices, and that there are various **attributes** associated with each vertex, like gender, age, seniority, status in the law firm, etc. From the data description, we know the first 36 nodes (with value of 1 in the status attribute) are the law firm's partners (the rest are associates). 
+We can see that the graph has 71 vertices, and that there are various **attributes** associated with each vertex, like gender, age, seniority, status in the law firm, etc. We can query those attributes using the `igraph` function `vertex_attr`, which takes the graph object as input. 
 
-To keep things manageable, we will restrict our analysis to partners. To do that we need to select the **subgraph** that only includes partners. In `igraph` we can do this as using the `subgraph` function:
+### Subsetting the Graph According to a Node Attribute
+
+To keep things manageable, we will restrict our analysis to partners. To do that we need to select the **subgraph** that only includes the vertices with value of 1 in the "status" vertex attribute. From the [data description](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html), we know the first 36 nodes (with value of 1 in the status attribute) are the law firm's partners (the rest are associates). In `igraph` we can do this as using the `subgraph` function:
 
 ```{r}
    d.g <- subgraph(d.g, 1:36)
@@ -55,9 +59,32 @@ To keep things manageable, we will restrict our analysis to partners. To do that
    V(d.g)$status
 ```
 
-Which just tells `igraph` to generate the subgraph containing the first 36 nodes (the partners).
+The first line just tells `igraph` to generate the subgraph containing the first 36 nodes (the partners). The `subgraph` function thus takes two main inputs: The graph object, and then a vector of node ids (or node labels) telling the function which nodes to select to create the **node-induced subgraph**.
 
-We can now create our (asymmetric) adjacency matrix and compute the row and column sums:
+Of course we already knew from the data description that the first 36 nodes where the partners. But let's say we have a large data set and we don't know *which* nodes are the partners. A smarter way of selecting a subgraph based on a node attribute is as follows:
+
+```{r}
+   partners <- which(V(law_advice)$status == 1)
+   d.g <- subgraph(law_advice, partners)
+   V(d.g)
+```
+
+The first line using the native `R` vector function `which` allowing us to subset a vector based on a logical condition. The function takes a vector followed by a logical condition as input, and returns the *position* of the vector elements that meet that condition. In this case, we took the vector of values for the attribute of status and selected the node ids where status is equal to 1. We then fed that vector to the `subgraph` function in line 2. 
+
+We could do this with any other attribute:
+
+```{r}
+   older <- which(V(law_advice)$age > 50)
+   older
+   og <- subgraph(law_advice, older)
+   V(og)
+```
+
+Here we selected the subgraph (called "og", get it, get it) formed by the subset of nodes over the age of 50 at the firm. The values of the vector older tell us which of the 71 members meet the relevant condition. 
+
+### Computing in and outdegree
+
+OK, going back to the partners subgraph, we can now create our (asymmetric) adjacency matrix and compute the row and column sums:
 
 
 ```{r}
@@ -122,10 +149,87 @@ Once we have the closeness centrality values, we are interested in who are the t
 
 It makes sense that the three main characters are also the ones that are at closest distances from everyone else!
 
+What about closeness centrality for a directed network? Let us see how this works using a **subgraph** of the advice network, this time selecting just women under the age of forty:
+
 ```{r}
-   w.v <- which(V(law_advice)$gender == 2)
-   w.d.g <- subgraph(law_advice, w.v)
-   V(w.d.g)
+   women <- which(V(law_advice)$gender == 2)
+   wg <- subgraph(law_advice, women)
+   young <- which(V(wg)$age < 40)
+   wg <- subgraph(wg, young)
+   V(wg)
 ```
 
+This network is small enough that a plot could be informative about its structure. Let us plot it using the package `ggraph`, a visualization package that follows the same principles as the `ggplot` grammar of graphics but for network graphs (see [here](https://exts.ggplot2.tidyverse.org/ggraph.html)).
+
+```{r}
+#| fig-cap: "Women's advice network"
+#| fig-cap-location: margin
+   #install.packages("ggraph")
+   library(ggraph)
+    p <- ggraph(wg, layout = 'auto')
+    p <- p + geom_edge_parallel(color = "steelblue", edge_width = 0.5,
+                                arrow = arrow(length = unit(2.5, 'mm')),
+                                end_cap = circle(4, 'mm'), 
+                                sep = unit(3, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+Now a question we might ask is who has the greatest closeness centrality in this advice network. We could proceed as usual and compute the geodesic distances between actors:
+
+```{r}
+   S <- distances(wg)
+   S
+```
+
+Note that this is not quite right. In `igraph` the default settings of the distance function treats the graph as undirected. So it doesn't use the strict **directed paths**, but it just treats them all as **semi-paths** ignoring direction. That is why, for instance, it counts node 1 as being "adjacent" to node 4 even though there is only one incoming link from 4 to 1 and why the whole matrix is symmetric, when we know from just eyeballing the network that there is a lot of asymmetry in terms of who can reach who via directed paths. 
+
+To get the actual directed distance matrix, we need to specify the "mode" option, asking whether we want in or out paths. Here, let's select outpaths:
+
+```{r}
+   S <- distances(wg, mode = "out")
+   S
+```
+
+This is better but introduces a problem. The directed graph is not strongly connected, so it means that some nodes cannot reach other ones via a directed path of *any* length. That means that the **geodesic distances** from a node to an unreachable node is coded as "infinite" (Inf). The problem with infinity is that it gets in the way of calculatinng sums of distances, a requirement for the closeness centrality. 
+
+```{r}
+   S <- distances(wg, mode = "out")
+   rowSums(S)
+```
+
+Adding infinity to a number just returns infinity so all the rows with at least one "Inf" in the distance matrix get an Inf for the row sum. In this case that's all of them. A bummer.
+
+But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality**, a kind of closeness centrality that works whether you are working with connected or disconnected graphs, and therefore regardless of whether the geodesic distance matrix contains Infs. The main difference is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
+
+
+```{r}
+   S <- distances(wg, mode = "out")
+   S = round(1/S, 2)
+   diag(S) <- 0
+   S
+```
+
+Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). Unreachable directed pairs of nodes get the lowest score, corresponding to $1/infnty = 0$. Note that the reachability relation is asymmetric: So node 4 and reach one (there is a directed tie from 4 to 1), but node 1 cannot reach 4.
+
+Once we have this matrix, then we can compute the harmonic centrality the same way as regular closeness:
+
+```{r}
+   d.harm <- rowSums(S)
+   d.harm
+```
+
+We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here's a plot of the network highlighting the highest centrality node. 
+
+```{r}
+#| fig-cap: "Women's advice network with highest closeness centrality node in red"
+#| fig-cap-location: margin
+   col <- rep("tan2", vcount(wg)) #creating node color vector
+   col[which(d.clos == max(d.clos))] <- "red"
+   p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = col)
+   p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+   p
+```
 
