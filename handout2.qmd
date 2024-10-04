@@ -39,7 +39,7 @@ The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` 
 
 The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed relations. So to illustrate them, we need to switch to a different source of data.
 
-We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can givigraphen advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html)), called `law_advice`:
+We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can give advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html)), called `law_advice`:
 
 ```{r}
    d.g <- law_advice
@@ -116,13 +116,14 @@ So if we wanted to figure our the correlation between some vertex attribute and 
 
 Which tells us that at least in this case, younger partners are more sought after as sources of advice than older partners. 
 
+
 ## Closeness Centrality
 
 Recall that the **closeness centrality** is defined as the inverse of the sum of shortest paths from each node to every other node. That means that to compute it, we first need to calculate the shortest path matrix. Then, we sum the rows (or columns) and then we obtain the inverse to get the closeness of each node:
 
 
 ```{r}
-   S <- distances(g)
+   S <- distances(g) #shortest paths matrix
    d.sum <- rowSums(S)
    close1 <- round(1/d.sum, 4)
    close1
@@ -162,7 +163,7 @@ What about closeness centrality for a directed network? Let us see how this work
 This network is small enough that a plot could be informative about its structure. Let us plot it using the package `ggraph`, a visualization package that follows the same principles as the `ggplot` grammar of graphics but for network graphs (see [here](https://exts.ggplot2.tidyverse.org/ggraph.html)).
 
 ```{r}
-#| fig-cap: "Women's advice network"
+#| fig-cap: "Women lawyers advice network"
 #| fig-cap-location: margin
    #install.packages("ggraph")
    library(ggraph)
@@ -186,14 +187,14 @@ Now a question we might ask is who has the greatest closeness centrality in this
 
 Note that this is not quite right. In `igraph` the default settings of the distance function treats the graph as undirected. So it doesn't use the strict **directed paths**, but it just treats them all as **semi-paths** ignoring direction. That is why, for instance, it counts node 1 as being "adjacent" to node 4 even though there is only one incoming link from 4 to 1 and why the whole matrix is symmetric, when we know from just eyeballing the network that there is a lot of asymmetry in terms of who can reach who via directed paths. 
 
-To get the actual directed distance matrix, we need to specify the "mode" option, asking whether we want in or out paths. Here, let's select outpaths:
+To get the actual directed distance matrix, we need to specify the "mode" option, asking whether we want in or out paths. Here, let's select out-paths:
 
 ```{r}
    S <- distances(wg, mode = "out")
    S
 ```
 
-This is better but introduces a problem. The directed graph is not strongly connected, so it means that some nodes cannot reach other ones via a directed path of *any* length. That means that the **geodesic distances** from a node to an unreachable node is coded as "infinite" (Inf). The problem with infinity is that it gets in the way of calculatinng sums of distances, a requirement for the closeness centrality. 
+This is better but introduces a problem. The directed graph is not **strongly connected**, so it means that some nodes cannot reach other ones via a directed path of *any* length. That means that the **geodesic distances** from a node to an unreachable node is coded as "infinite" (Inf). The problem with infinity is that it gets in the way of calculatinng sums of distances, a requirement for the closeness centrality. 
 
 ```{r}
    S <- distances(wg, mode = "out")
@@ -203,7 +204,7 @@ This is better but introduces a problem. The directed graph is not strongly conn
 Adding infinity to a number just returns infinity so all the rows with at least one "Inf" in the distance matrix get an Inf for the row sum. In this case that's all of them. A bummer.
 
 ### Harmonic Centrality
-But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality**, a kind of closeness centrality that works whether you are working with connected or disconnected graphs, and therefore regardless of whether the geodesic distance matrix contains Infs. The main difference is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
+But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality**, a kind of closeness centrality that works whether you are working with connected or disconnected graphs (or in the case of directed graphs regardless of whether the graph is strongly or weakly connected), and therefore regardless of whether the geodesic distance matrix contains Infs. The main difference is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
 
 
 ```{r}
@@ -215,7 +216,7 @@ But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/l
 
 Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). Unreachable directed pairs of nodes get the lowest score, corresponding to $1/\infty = 0$. 
 
-Note that the reachability relation is asymmetric: So node 4 and reach one (there is a directed tie from 4 to 1), but node 1 cannot reach 4.
+Note that the reachability relation is asymmetric: So node 4 and reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want. 
 
 Once we have this matrix, then we can compute the harmonic centrality the same way as regular closeness:
 
@@ -226,10 +227,10 @@ Once we have this matrix, then we can compute the harmonic centrality the same w
    d.harm
 ```
 
-We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here's a plot of the network highlighting the highest centrality node. 
+We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here's a plot of the network highlighting the highest harmonic (closeness) centrality node. 
 
 ```{r}
-#| fig-cap: "Women's advice network with highest closeness centrality node in red"
+#| fig-cap: "Women lawyers advice network with highest closeness centrality node in red"
 #| fig-cap-location: margin
    col <- rep("tan2", vcount(wg)) #creating node color vector
    col[which(d.harm == max(d.harm))] <- "red"
@@ -284,7 +285,7 @@ Let's create a top ten table of betweenness for the *Pulp Fiction* network. We u
 ```{r}
    pulp.bet <- betweenness(g)
    top.5.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
-   kbl(top.5.bet, format = "pipe", align = c("l", "c"),
+   kbl(round(top.5.bet, 2), format = "pipe", align = c("l", "c"),
        col.names = c("Character", "Betweenness"),
        caption = "Top Five Betweenness Characters in Pulp Fiction Network.") %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
@@ -329,13 +330,15 @@ $$
 \sum_{i \neq j} \frac{\sigma_{i(e)j}}{\sigma_{ij}}
 $$
 
-This tells us that the betweenness of an edge *e* is the sum of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j*. 
+This tells us that the betweenness of an edge *e* is the ratio of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j* divided by the total number of shortest paths linking every pair of nodes. Like before, this is a probability: Namely, that if you send something from *i* to *j* it has to go through edge *e*. 
 
 For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an **undirected** graph. We use the `igraph` function `as.undirected` for that:
 
 ```{r}
    wg <- as.undirected(wg, mode = "collapse")
 ```
+
+The "collapse" value in the "mode" argument tells `igraph` to take every edge and transform it into an undirected one, collapsing mutual edges into one ignoring direction and removing the arrows from the one-sided ones. 
 
 The resulting graph looks like this:
 
@@ -351,7 +354,7 @@ The resulting graph looks like this:
 ```
 
 
-Looking at the plot of  the women lawyers advice network which edge do you think has the top betweenness? Well no need to figure that out via eyeballing! We can just use the `igraph` function `edge_betweenness`:
+Looking at this point and line plot of  the women lawyers advice network which edge do you think has the top betweenness? Well no need to figure that out via eyeballing! We can just use the `igraph` function `edge_betweenness`:
 
 ```{r}
    w.ebet <- edge_betweenness(wg)
@@ -360,16 +363,18 @@ Looking at the plot of  the women lawyers advice network which edge do you think
 We can then create a table of the top ten edges ordered by betweenness:
 
 ```{r}
-   edges <- as_edgelist(wg)
+   edges <- as_edgelist(wg) #creating an edgelist
    etab <- data.frame(edges, bet = round(w.ebet, 2))
-   etab <- etab[order(etab$bet, decreasing = TRUE), ]
+   etab <- etab[order(etab$bet, decreasing = TRUE), ] #ordering by bet.
    kbl(etab[1:10, ], format = "pipe", align = c("l", "l", "c"),
        col.names = c("i", "j", "Edge Bet."), row.names = FALSE,
        caption = "Edges Sorted by Betweenness in the Women Lawyers Advice Network") %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-Not surprisingly, the top edges are the ones linking nodes 3 and 4 and nodes 5 and 8. High betweenness edges are likely to function as **bridges** being the only point of connection between most nodes in the social structure. That means that an easy way to disconnect a graph is to remove the bridges.
+Not surprisingly, the top edges are the ones linking nodes 3 and 4 and nodes 5 and 8. 
+
+High betweenness edges are likely to function as **bridges** being the only point of connection between most nodes in the social structure. That means that an easy way to disconnect a graph is to remove the bridges [@girvan_newman02].
 
 In `igraph` we can produce an **edge deleted subgraph** of an original graph using the "minus" operator, along with the `edge` function like this:
 
@@ -378,7 +383,7 @@ In `igraph` we can produce an **edge deleted subgraph** of an original graph usi
    del.g <- del.g - edge("5|8")
 ```
 
-The first line creates a new graph object (a subgraph) which equals the original graph minus the edge linking nodes 3 and 4. The second line takes this last subgraph and deletes the edge linking nodes 5 and 8. 
+The first line creates a new graph object (a subgraph) which equals the original graph minus the edge linking nodes 3 and 4. The second line takes this last subgraph and further deletes the edge linking nodes 5 and 8. 
 
 The resulting subgraph, minus the high-betweenness edges, looks like:
 
