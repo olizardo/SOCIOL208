@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-In this handout we will go through the basic centrality metrics. We beginn with the "big three" according to @freeman79, namely, **degree**, **closeness** (in two flavors) and **betweenness**. 
+In this handout we will go through the basic centrality metrics. Particularly, the "big three" according to @freeman79, namely, **degree**, **closeness** (in two flavors) and **betweenness**. 
 
 We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -202,6 +202,7 @@ This is better but introduces a problem. The directed graph is not strongly conn
 
 Adding infinity to a number just returns infinity so all the rows with at least one "Inf" in the distance matrix get an Inf for the row sum. In this case that's all of them. A bummer.
 
+### Harmonic Centrality
 But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality**, a kind of closeness centrality that works whether you are working with connected or disconnected graphs, and therefore regardless of whether the geodesic distance matrix contains Infs. The main difference is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
 
 
@@ -212,12 +213,16 @@ But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/l
    S
 ```
 
-Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). Unreachable directed pairs of nodes get the lowest score, corresponding to $1/infnty = 0$. Note that the reachability relation is asymmetric: So node 4 and reach one (there is a directed tie from 4 to 1), but node 1 cannot reach 4.
+Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). Unreachable directed pairs of nodes get the lowest score, corresponding to $1/\infty = 0$. 
+
+Note that the reachability relation is asymmetric: So node 4 and reach one (there is a directed tie from 4 to 1), but node 1 cannot reach 4.
 
 Once we have this matrix, then we can compute the harmonic centrality the same way as regular closeness:
 
 ```{r}
    d.harm <- rowSums(S)
+   d.harm <- d.harm/(vcount(wg) - 1)
+   d.harm <- round(d.harm, 2)
    d.harm
 ```
 
@@ -227,9 +232,166 @@ We can see that the highest harmonic closeness centrality node is 5, followed by
 #| fig-cap: "Women's advice network with highest closeness centrality node in red"
 #| fig-cap-location: margin
    col <- rep("tan2", vcount(wg)) #creating node color vector
-   col[which(d.clos == max(d.clos))] <- "red"
+   col[which(d.harm == max(d.harm))] <- "red"
    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = col)
    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
    p
 ```
+
+Of course, `igraph` has a built in function to calculate the harmonic centrality called (you guessed it) `harmonic_centrality`:
+
+```{r}
+   d.harm <- harmonic_centrality(wg, normalized = TRUE)
+   d.harm <- round(d.harm, 2)
+   d.harm
+```
+
+## Betweenness
+
+We finally come to betweenness centrality. Recall that the key conceptual distinction between closeness and betweenness according to @freeman79 is that between capacity to reach others quickly (e.g., via the shortest paths) and capacity to *intermediate* among those same paths. High betweenness nodes control the flow of information in the network.
+
+This is evident in the way betweenness is calculated. Recall that the betweenness of a node *k* relative to any pair of nodes *i* and *j* in the network is simply:
+
+$$
+\frac{\sigma_{i(k)j}}{\sigma_{ij}}
+$$
+
+Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* number of shortest paths that start and end with nodes *i* and *j* and the numerator of the fraction ($\sigma_{i(k)j}$) is the subset of those paths that include node *k* as an **inner node**.
+
+As @freeman79 also notes because this is a ratio, it can range from zero to one,  with everything in between. As such the betweenness centrality of a node relative to any two others has an intuitive interpretation as a *probability*, namely the probability that if you send something from *i* to *j* it has to go *through* *k*. This probability is 1.0 if *k* stands in *every* shortest path between *i* and *j* and zero if they stand in none of the shortest paths indirectly connecting *i* and *j*. 
+
+The betweenness of a given node is just the sum all of these probabilities across every pair of nodes in the graph for each node:
+
+$$
+\sum_{i \neq j, i \neq n, j \neq v} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
+$$
+
+Below we can see a point and line diagram of the undirectd *Pulp Fiction* network we have been working with. 
+
+```{r}
+#| echo: false
+    p <- ggraph(g, layout = 'auto')
+    p <- p + geom_edge_fan(color = "lightgray", width = 0.5) 
+    p <- p + geom_node_text(aes(label = name), size = 2.5, color = "steelblue")
+    p <- p + theme_graph() 
+    p
+```
+
+We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters that themselves don't appear in any scenes together, thus intermediating between different parts of the story. Characters that only appear in one scene (like The Wolf or The Gimp) are likely to be low in betweenness.
+
+Let's create a top ten table of betweenness for the *Pulp Fiction* network. We use the `igraph` function `betweenness` to calculate the scores:
+
+```{r}
+   pulp.bet <- betweenness(g)
+   top.5.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
+   kbl(top.5.bet, format = "pipe", align = c("l", "c"),
+       col.names = c("Character", "Betweenness"),
+       caption = "Top Five Betweenness Characters in Pulp Fiction Network.") %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Unsurprisingly, the top four characters are also the highest in betweenness. Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a steep drop in the bottom five of the top ten. 
+
+Now let us examine betweenness centrality in our directed women lawyers advice network:
+
+
+```{r}
+   w.bet <- betweenness(wg)
+   w.bet
+```
+
+Here we see that node 3 is the highest in betweenness, pictured below:
+
+```{r}
+#| echo: false
+#| fig-cap: "Women's advice network with highest betweenness centrality node in red"
+#| fig-cap-location: margin
+   col <- rep("tan2", vcount(wg)) #creating node color vector
+   col[which(w.bet == max(w.bet))] <- "red"
+    p <- ggraph(wg, layout = 'auto')
+    p <- p + geom_edge_parallel(color = "steelblue", edge_width = 0.5,
+                                arrow = arrow(length = unit(2.5, 'mm')),
+                                end_cap = circle(4, 'mm'), 
+                                sep = unit(3, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = col) 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+This result makes sense. Node 3 intermediates all  the connections linking the tightly knit group of nodes on the left side (6, 10, 11, 12) with the rest of the network. Also if nodes 5 and 7 need to pass something along to the rest, they have to use 3 at least half time. Node 4 also needs 3 to reach 6. This result nicely illustrates the difference between closeness and betweenness. 
+
+## Edge Betweenness
+
+Edge betweenness is defined in similar fashion as node betweenness:
+
+$$
+\sum_{i \neq j} \frac{\sigma_{i(e)j}}{\sigma_{ij}}
+$$
+
+This tells us that the betweenness of an edge *e* is the sum of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j*. 
+
+For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an **undirected** graph. We use the `igraph` function `as.undirected` for that:
+
+```{r}
+   wg <- as.undirected(wg, mode = "collapse")
+```
+
+The resulting graph looks like this:
+
+```{r}
+#| echo: false
+    p <- ggraph(wg, layout = 'auto')
+    l <- as.matrix(p$data[, 1:2])
+    p <- p + geom_edge_link(color = "steelblue", width = 0.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+
+Looking at the plot of  the women lawyers advice network which edge do you think has the top betweenness? Well no need to figure that out via eyeballing! We can just use the `igraph` function `edge_betweenness`:
+
+```{r}
+   w.ebet <- edge_betweenness(wg)
+```
+
+We can then create a table of the top ten edges ordered by betweenness:
+
+```{r}
+   edges <- as_edgelist(wg)
+   etab <- data.frame(edges, bet = round(w.ebet, 2))
+   etab <- etab[order(etab$bet, decreasing = TRUE), ]
+   kbl(etab[1:10, ], format = "pipe", align = c("l", "l", "c"),
+       col.names = c("i", "j", "Edge Bet."), row.names = FALSE,
+       caption = "Edges Sorted by Betweenness in the Women Lawyers Advice Network") %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Not surprisingly, the top edges are the ones linking nodes 3 and 4 and nodes 5 and 8. High betweenness edges are likely to function as **bridges** being the only point of connection between most nodes in the social structure. That means that an easy way to disconnect a graph is to remove the bridges.
+
+In `igraph` we can produce an **edge deleted subgraph** of an original graph using the "minus" operator, along with the `edge` function like this:
+
+```{r}
+   del.g <- wg - edge("3|4")
+   del.g <- del.g - edge("5|8")
+```
+
+The first line creates a new graph object (a subgraph) which equals the original graph minus the edge linking nodes 3 and 4. The second line takes this last subgraph and deletes the edge linking nodes 5 and 8. 
+
+The resulting subgraph, minus the high-betweenness edges, looks like:
+
+```{r}
+#| echo: false
+    p <- ggraph(del.g, layout = l)
+    p <- p + geom_edge_link(color = "steelblue", width = 0.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+Which is indeed disconnected!
+
 
