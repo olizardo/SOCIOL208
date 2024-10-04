@@ -1,0 +1,131 @@
+---
+title: "Centrality"
+execute: 
+  eval: true
+  echo: true
+  output: true
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In this handout we will go through the basic centrality metrics. We beginn with the "big three" according to @freeman79, namely, **degree**, **closeness** (in two flavors) and **betweenness**. 
+
+We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- movie_559
+```
+
+## Degree Cenntrality
+
+Degree centrality is the simplest and most straightforward measure. In fact, we are already computed in [handout 1](https://olizardo.github.io/SOCIOL208/handout1.html) since it is the same as obtaining the graph's **degree sequence**. So the `igraph` function `degree` would do it as we already saw. 
+
+Here we follow a different approach using the row (or column) sums of the graph's **adjacency matrix**:
+
+```{r}
+   A <- as_adjacency_matrix(g)
+   A <- as.matrix(A)
+   rowSums(A)
+```
+
+The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` matrix object, so we have to further coerce the resulting object into a numerical matrix containing zeroes and ones using the `as.matrix` function in line 2. Then we can apply the native `rowSums` function to obtain each node's degree. Note that this is same output we got using the `degree` function before. 
+
+## Indegree and Outdegree
+
+The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed relations. So to illustrate them, we need to switch to a different source of data.
+
+We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can givigraphen advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/law_advice.html)):
+
+```{r}
+   d.g <- law_advice
+   V(d.g)
+   vertex_attr(d.g)
+```
+
+We can see that the graph has 71 vertices, and that there are various **attributes** associated with each vertex, like gender, age, seniority, status in the law firm, etc. From the data description, we know the first 36 nodes (with value of 1 in the status attribute) are the law firm's partners (the rest are associates). 
+
+To keep things manageable, we will restrict our analysis to partners. To do that we need to select the **subgraph** that only includes partners. In `igraph` we can do this as using the `subgraph` function:
+
+```{r}
+   d.g <- subgraph(d.g, 1:36)
+   V(d.g)
+   V(d.g)$status
+```
+
+Which just tells `igraph` to generate the subgraph containing the first 36 nodes (the partners).
+
+We can now create our (asymmetric) adjacency matrix and compute the row and column sums:
+
+
+```{r}
+   d.A <- as_adjacency_matrix(d.g)
+   d.A <- as.matrix(d.A)
+   rowSums(d.A)
+   colSums(d.A)
+```
+
+Note that in contrast to the undirected case the row and column sums give you two different sets of numbers. The row sums provide the directed graph's **outdegree set** (number of *outgoing* links incident to each node), and the column sums provide the graph's **indegree set** (number of *incoming* links incident to each node). So if you are high in the first vector, you are an *advice giver* (perhaps indicating informal status or experience) and if you are high in the second you are advice taker.
+
+Of course `igraph` has a dedicated function for this, which is just our old friend `degree` with an extra option `mode`, indicating whether you want the in or outdegrees:
+
+```{r}
+   d.o <- degree(d.g, mode = "out")
+   d.i <- degree(d.g, mode = "in")
+   d.o
+   d.i
+```
+
+Note that the graph attributes are just vectors of values, and can be accessed from the graph object using the $ operator attached to the `V()` function as we did above. 
+
+So if we wanted to figure our the correlation between some vertex attribute and in or out degree centrality, all we need to do is correlate the two vectors:
+
+```{r}
+   r <- cor(d.o, V(d.g)$age)
+   round(r, 2)
+```
+
+Which tells us that at least in this case, younger partners are more sought after as sources of advice than older partners. 
+
+## Closeness Centrality
+
+Recall that the **closeness centrality** is defined as the inverse of the sum of shortest paths from each node to every other node. That means that to compute it, we first need to calculate the shortest path matrix. Then, we sum the rows (or columns) and then we obtain the inverse to get the closeness of each node:
+
+
+```{r}
+   S <- distances(g)
+   d.sum <- rowSums(S)
+   close1 <- round(1/d.sum, 4)
+   close1
+```
+
+Of course, we could have just used the available function in igraph and computed the closeness centrality directly from the graph object using the function `closeness`:
+
+```{r}
+   close2 <- round(closeness(g), 4)
+   close2
+```
+
+Once we have the closeness centrality values, we are interested in who are the top nodes. The following code creates a table with the top five:
+
+```{r}
+   library(kableExtra)
+   close2 <- sort(close2, decreasing = TRUE)
+   close2 <- data.frame(close2[1:5])
+   kbl(close2, format = "pipe", align = c("l", "c"),
+       col.names = c("Character", "Closeness"),
+       caption = "Top Five Closeness Characters in Pulp Fiction Network.") %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+It makes sense that the three main characters are also the ones that are at closest distances from everyone else!
+
+```{r}
+   w.v <- which(V(law_advice)$gender == 2)
+   w.d.g <- subgraph(law_advice, w.v)
+   V(w.d.g)
+```
+
+
