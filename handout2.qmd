@@ -425,22 +425,21 @@ We will use the undirected version of the women lawyers advice network for this 
 ```{r}
    bet <- betweenness(wg) #original centrality scores
    Sbet <- sum(bet) #sum of original centrality scores
-   wg.d <- wg - vertex("10")
+   wg.d <- wg - vertex("10") #removing vertex 10 from the graph
    bet.d <- betweenness(wg.d) #centrality scores of node deleted subgraph
    Sbet.d <- sum(bet.d) #sum of centrality scores of node deleted subgraph
    total.c <- Sbet - Sbet.d #total centrality
-   indirect.c <- total.c - bet[10] #total minus direct
+   indirect.c <- total.c - bet[10] #indirect centrality
    indirect.c
 ```
 
-Line 1 just calculates the regular betweenness centrality vector for the graph. Line 2 sums up all of the entries of this vector. Line 3 creates a node deleted subgraph by removing node 10. This is done using the "minus" operator and the `igraph` function `vertex`, which just like the `edge` function we used earlier to create an edge deleted subgraph, takes a node id or name as input.
+Line 1 just calculates the regular betweenness centrality vector for the graph. Line 2 sums up all of the entries of this vector. Line 3 creates a node deleted subgraph by removing node 10. This is done using the "minus" operator and the `igraph` function `vertex`, which works just like the `edge` function we used earlier to create an edge deleted subgraph, except it takes a node id or name as input.
 
-Lines 4-5 just recalculates the sum of betweenness centralities in the subgraph that excludes node 10. Then in line 6 subtract sum of centralities of the node deleted subgraph from the sum of centralities of the original graph. If this number, which Borgatti and Everett call the "total" centrality, is large and positive then that means that node 10 makes a difference for the centrality of others. 
+Lines 4-5 just recalculate the sum of betweenness centralities in the subgraph that excludes node 10. Then in line 6 we subtract the sum of centralities of the node deleted subgraph from the sum of centralities of the original graph. If this number, which Borgatti and Everett call the "total" centrality, is large and positive then that means that node 10 makes a difference for the centrality of others. 
 
-However, part of that difference is node 10's own "direct" centrality, so to get a pure sense of node 10's impact on other people's centrality we need to subtract node 10's direct centrality from the total number, which we do in line 7 to get node 10's "indirect" centrality. The result is shown in the last line, which indicates that node 10 has a pretty big impact on other people's betweenness centralities, net of their own. 
+However, part of that difference is node 10's own "direct" centrality, so to get a more accurate sense of node 10's impact on other people's centrality we need to subtract node 10's direct centrality from the total number, which we do in line 7 to get node 10's "indirect" centrality. The result is shown in the last line, which indicates that node 10 has a pretty big impact on other people's betweenness centralities, net of their own (which is pretty small). 
 
-
-Now all we need to do is do the same for each node to create a vector of indirect betweenness centralities. So we incorporate the code above into a short loop:
+Now all we need to do is do the same for each node to create a vector of indirect betweenness centralities. So we incorporate the code above into a short loop through all vertices:
 
 ```{r}
    total.c <- 0 #empty vector
@@ -458,7 +457,7 @@ We can now list the total, direct, and indirect betweenness centralities for the
 
 ```{r}
    i.bet <- data.frame(n = 1:vcount(wg), total.c, round(betweenness(wg), 1), round(indirect.c, 1))
-   kbl(i.bet, format = "pipe", align = c("l", "c", "c"),
+   kbl(i.bet, format = "pipe", align = c("l", "c", "c", "c"),
        col.names = c("Node", "Total", "Direct", "Indirect"), row.names = FALSE,
        caption = "Induced Betweenness Scores in the Women Lawyers Advice Network") %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
@@ -466,11 +465,11 @@ We can now list the total, direct, and indirect betweenness centralities for the
 
 This approach to decomposing betweenness centrality provides a new way to categorize actors in a network: 
 
-- On the one hand, we have actors like nodes 3 and 4 who "hog" centrality from others. Perhaps these are the prototypical high betweenness actors who monopolize the flow through the network. Their own direct centrality is high, but their indirect centrality is negative, suggesting that others become *more* central when they are removed from the graph as they can become intermediaries themselves.
+- On the one hand, we have actors like nodes 3 and 4 who "hog" centrality from others. Perhaps these are the prototypical high betweenness actors who monopolize the flow through the network. Their own direct centrality is high, but their indirect centrality is negative, suggesting that others become *more* central when they are removed from the graph as they can now become intermediaries themselves.
 
-- In contrast, we also have actors like node 5 who are high centrality themselves, but who's removal from the network does not affect anyone else's centrality: They are high in direct centrality but don't particularly affect other people's centrality one way or the other. 
+- In contrast, we also have actors like node 5 who are high centrality themselves, but who's removal from the network does not affect anyone else's centrality. These actors are high betweenness but themselves don't monopolize the flow of information in the network. 
 
 - Then we have actors (like nodes 9-12) who have low centrality, but whose removal from the network makes a positive difference for other people's centrality, which overall *decreases* when they are removed from the network. 
 
-- Finally, we have actors line nodes 2 and 8, who are not particularly central, but who also hog centrality from others, in that removing them from the network also increases other people's centrality. 
+- Finally, we have actors line nodes 2 and 8, who are not particularly central, but who also hog centrality from others, in that removing them from the network also increases other people's centrality (although not such an extent as the hogs). 
 
