@@ -214,11 +214,11 @@ But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/l
    S
 ```
 
-Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). Unreachable directed pairs of nodes get the lowest score, corresponding to $1/\infty = 0$. 
+Note that in this matrix of inverse distances, the closest (adjacent) nodes get the maximum score of one, and nodes farther apart when smaller scores (approaching zero). More importantly, those pesky Infs disappear! Unreachable directed pairs of nodes get the lowest score, corresponding to $1/\infty = 0$. Turns out the mathematics of infinity weren't our enemy after all. 
 
-Note that the reachability relation is asymmetric: So node 4 and reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want. 
+Also note that the reachability relation expressed in this matrix is asymmetric: So node 4 and reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want. 
 
-Once we have this matrix, then we can compute the harmonic centrality the same way as regular closeness:
+Once we have this matrix of inverse distances, we can then we can compute the harmonic centrality the same way as regular closeness by adding up the row scores for each node and dividing by the number of nodes minus one (to get the average):
 
 ```{r}
    d.harm <- rowSums(S)
@@ -233,7 +233,7 @@ We can see that the highest harmonic closeness centrality node is 5, followed by
 #| fig-cap: "Women lawyers advice network with highest closeness centrality node in red"
 #| fig-cap-location: margin
    col <- rep("tan2", vcount(wg)) #creating node color vector
-   col[which(d.harm == max(d.harm))] <- "red"
+   col[which(d.harm == max(d.harm))] <- "red" #changing color of max centrality node to red
    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = col)
    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
    p
@@ -247,9 +247,11 @@ Of course, `igraph` has a built in function to calculate the harmonic centrality
    d.harm
 ```
 
+Which gives us the same results.
+
 ## Betweenness
 
-We finally come to betweenness centrality. Recall that the key conceptual distinction between closeness and betweenness according to @freeman79 is that between the capacity to reach others quickly (e.g., via the shortest paths) and the capacity to *intermediate* among those same paths. High betweenness nodes control the flow of information in the network between other nodes.
+We finally come to betweenness centrality. Recall that the key conceptual distinction between closeness and betweenness according to @freeman79 is that between (pun intended) the capacity to reach others quickly (e.g., via the shortest paths) and the capacity to *intermediate* among those same paths. High betweenness nodes control the flow of information in the network between other nodes.
 
 This is evident in the way betweenness is calculated. Recall that the betweenness of a node *k* relative to any pair of nodes *i* and *j* in the network is simply:
 
@@ -331,7 +333,9 @@ $$
 \sum_{i \neq j} \frac{\sigma_{i(e)j}}{\sigma_{ij}}
 $$
 
-This tells us that the betweenness of an edge *e* is the ratio of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j* divided by the total number of shortest paths linking every pair of nodes. Like before, this is a probability: Namely, that if you send something--using a shortest path--from *i* to *j* it has to go through edge *e*. 
+This tells us that the betweenness of an edge *e* is the sum of the ratios of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j* divided by the total number of shortest paths linking each pair of nodes. 
+
+Like before, this is a probability: Namely, that if you send something--using a shortest path--from any node *i* to any other node *j* it has to go through edge *e*. The resulting scores is the sum of these probabilities across every possible pair. 
 
 For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an **undirected** graph. We use the `igraph` function `as.undirected` for that:
 
