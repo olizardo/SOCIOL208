@@ -194,7 +194,7 @@ To get the actual directed distance matrix, we need to specify the "mode" option
    S
 ```
 
-This is better but introduces a problem. The directed graph is not **strongly connected**, so it means that some nodes cannot reach other ones via a directed path of *any* length. That means that the **geodesic distances** from a node to an unreachable node is coded as "infinite" (Inf). The problem with infinity is that it gets in the way of calculatinng sums of distances, a requirement for the closeness centrality. 
+This is better but introduces a problem. The directed graph is not **strongly connected**, so it means that some nodes cannot reach other ones via a directed path of *any* length. That means that the **geodesic distances** from a node to an unreachable node is coded as "infinite" (Inf). The problem with infinity is that it gets in the way of calculating sums of distances, a requirement for the closeness centrality. 
 
 ```{r}
    S <- distances(wg, mode = "out")
@@ -204,9 +204,7 @@ This is better but introduces a problem. The directed graph is not **strongly co
 Adding infinity to a number just returns infinity so all the rows with at least one "Inf" in the distance matrix get an Inf for the row sum. In this case that's all of them. A bummer.
 
 ## Harmonic Centrality
-But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality**, a kind of closeness centrality that works whether you are working with connected or disconnected graphs (or in the case of directed graphs regardless of whether the graph is strongly or weakly connected), and therefore regardless of whether the geodesic distance matrix contains Infs. 
-
-Some people [@boldi_vigna14] claim that the harmonic centrality is the *only* centrality measure that could be called by that name from a purely axiomatic mathematical approach, but that's a different story.  
+But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality** [@rochat09].^[@agneessens_etal17 call the harmonic centrality "reciprocal closeness"] This is a variation on the closeness centrality that works whether you are working with connected or disconnected graphs (or in the case of directed graphs regardless of whether the graph is strongly or weakly connected), and therefore regardless of whether the geodesic distance matrix contains Infs.^[Some people [@boldi_vigna14] claim that the harmonic centrality is the *only* centrality measure that could be called by that name from a purely axiomatic mathematical approach, but that's a different story.]  
 
 The main difference between the harmonic and regular closeness centrality is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
 
@@ -472,4 +470,77 @@ This approach to decomposing betweenness centrality provides a new way to catego
 - Then we have actors (like nodes 9-12) who have low centrality, but whose removal from the network makes a positive difference for other people's centrality, which overall *decreases* when they are removed from the network. 
 
 - Finally, we have actors line nodes 2 and 8, who are not particularly central, but who also hog centrality from others, in that removing them from the network also increases other people's centrality (although not such an extent as the hogs). 
+
+## Generalized Harmonic Centrality
+
+@agneessens_etal17 propose a "generalized" version of the harmonic centrality that yields plain old degree centrality and the regular harmonic centrality as special cases. The key is to introduce a parameter $\delta$ governing how much weight we give to shortest paths based on distance. Let's see how this works. 
+
+Recall that the harmonic centrality we defined earlier is given by:
+
+$$
+\frac{\sum_{j \neq i} (g_{ij})^{-1}}{n-1} 
+$$
+
+Where $g_{ij}$ is the geodesic distance between nodes *i* and *j* which could be "infinite" if there is no path linking them. 
+
+Agneessens et al's tweak is no instead compute:
+
+$$
+\frac{\sum_{j \neq i} (g_{ij})^{-\delta}}{n-1} 
+$$
+
+Where $\delta$ is a free parameter chosen by the researcher with the restriction that $\delta \geq 0$. 
+
+When $\delta = \infty$ the numerator element $1/(g_{ij})^{\infty} = 1$ only when nodes are adjacent and $g_{ij} = 1$ (because $1^{\infty} = 1$); otherwise, for $g_{ij} > 1$ then $1/(g_{ij})^{\infty} = 0$, and therefore the generalized harmonic centrality just becomes a (normalized) version of degree centrality. Alternatively, when $\delta = 1$ we just get the plain old harmonic centrality we defined earlier.
+
+The interesting cases come from $1 > \delta < \infty$ and $0 > \delta < 1$. In the first case, nodes at shorter distances are weighted more (like in the standard harmonic centrality measure) as \delta becomes bigger and bigger then the measure approximates degree. For values below one, as $\delta$ approaches zero then being connected to other nodes counts equally for your centrality regardless of how far away they are. 
+
+Let us go back to the original under-forty women lawyers network to see how this works:
+
+First, we create a custom function to compute the generalized harmonic centrality:
+
+```{r}
+   g.harm <- function(x, d) {
+      library(igraph)
+      S <- distances(x) #get distances from graph object
+      S <- 1/S^d
+      diag(S) <- 0 #set diagonals to zero
+      c <- rowSums(S)/(vcount(x) - 1)
+      return(c)
+   }
+```
+
+Then we compute three versions of the harmonic centrality, with $\delta = 5$, $\delta = 0.05$, and $\delta = -5$, using the full (unrestricted by age) subgraph of the `law_advice` network composed of the women lawyers at the firm, with relations constrained to be undirected:
+
+```{r}
+   women <- which(V(law_advice)$gender == 2)
+   wg <- subgraph(law_advice, women)
+   wg <- as.undirected(wg)
+
+   c1 <- g.harm(wg, d = 5)
+   c2 <- g.harm(wg, d = 0.05)
+   c3 <- g.harm(wg, d = -5)
+```
+
+The first version of the harmonic centrality, with a positive value of $\delta$ above zero, will compute centrality scores emphasizing *direct* (one-step) connections, thus coming closer to **degree**. The second version with a value of $\delta$ close to zero, will emphasizing *indirect* connections weighing longer paths almost as much as shorter paths Finally, the last version, with $\delta < 0$, will weigh *longer* paths more than short ones, serving as a measure of **eccentricity** (farness from others) not closeness. 
+
+
+```{r}
+#| fig-cap: "Full women lawyers advice network"
+#| fig-cap-location: margin
+#| echo: false
+   col <- rep("tan2", vcount(wg)) #creating node color vector
+   col[which(c1 == max(c1))] <- "red" 
+   col[which(c2 == max(c2))] <- "blue" 
+   col[which(c3 == max(c3))] <- "purple" 
+
+    p <- ggraph(wg, layout = 'auto')
+    p <- p + geom_edge_link(color = "steelblue", width = 0.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = col) 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 3.5, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+Above is a plot of the women lawyers network showing the top node for each of the centralities. In red we have node 3 who has the largest degree ($k(3) = 8$) and thus comes out on top the harmonic version that emphasize direct connections. Then in blue we have node 9 who can reach the most others via the shortest paths, and thus comes out on top when emphasizing indirect connectivity. Finally, in purple we have node 12, which is *farthest* from everyone else, and thus comes out on "top" when longer indirect connections are count for more. 
 
