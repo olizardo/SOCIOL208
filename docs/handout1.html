@@ -558,7 +558,7 @@ div.csl-indent {
 <p><img src="handout1_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>The plot clearly shows that the <em>Pulp Fiction</em> network degree distribution is <em>skewed</em> with a small number of characters having a large degree <span class="math inline">\(k \geq 15\)</span> while most other charactrers in the movie have a small degree <span class="math inline">\(k \leq 5\)</span> indicating inequality of connectivity in the system.</p>
+<p>The plot clearly shows that the <em>Pulp Fiction</em> network degree distribution is <em>skewed</em> with a small number of characters having a large degree <span class="math inline">\(k \geq 15\)</span> while most other characters in the movie have a small degree <span class="math inline">\(k \leq 5\)</span> indicating inequality of connectivity in the system.</p>
 </section>
 <section id="the-degree-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="the-degree-correlation">The Degree Correlation</h2>
@@ -607,17 +607,24 @@ div.csl-indent {
 <p>Lines 4-7 use <code>dplyr</code> functions to create a new object “el.temp” joining the degree information to each of the node names listed in the second position in the original edge list “g.el,” and rename the imported column of degrees “d2.”</p>
 <p>Lines 8-12 do the same for the nodes listed in the first position in the original edge list, renames the imported columns of degrees “d1,” and the binds the columns of the “el.temp” object to the new object “d.el.” The resulting object has four columns: Two for the names of the nodes incident to each edge on the edge list (columns 1 and 3), and two other ones corresponding to the degrees of the corresponding nodes (columns 2 and 4).</p>
 <p>We can see from the output of the first few rows of the “d.el” object that indeed “BRETT” is assigned a degree of 7 in each row of the edge list, “BUDDY” a degree of 2, “MARSELLUS” a degree of 10, “VINCENT” a degree of 25 and so forth.</p>
-<p>Now to compute the degree correlation in the network all we need to do is call the native <code>R</code> function <code>cor</code> on the two columns from “d.el” that containing the degree information:</p>
+<p>Now to compute the degree correlation in the network all we need to do is call the native <code>R</code> function <code>cor</code> on the two columns from “d.el” that containing the degree information. <strong>Note that because each degree appears twice at the end of each edge in an undirected graph (as both “sender” and “receiver”), we need to double each column by appending the other degree column at the end</strong>. So the first degree column is the vector:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">cor</span>(d.el<span class="sc">$</span>d1, d.el<span class="sc">$</span>d2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   d1 <span class="ot">&lt;-</span> <span class="fu">c</span>(d.el<span class="sc">$</span>d1, d.el<span class="sc">$</span>d2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And the second degree column is the vector:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   d2 <span class="ot">&lt;-</span> <span class="fu">c</span>(d.el<span class="sc">$</span>d2, d.el<span class="sc">$</span>d1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And the graph’s degree correlation <span class="citation" data-cites="newman03">(<a href="#ref-newman03" role="doc-biblioref">Newman 2003</a>)</span> is just the Pearson correlation between these two degree vectors:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">cor</span>(d1, d2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] -0.2989797</code></pre>
+<pre><code>[1] -0.2896427</code></pre>
 </div>
 </div>
-<p>The result <span class="math inline">\(r_{deg} = -0.298\)</span> tells us that there is <em>anti-correlation</em> by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don’t appear together very often.</p>
-<p>Of course, <code>igraph</code> has a native function that does all of this for you, implementing the methods in <span class="citation" data-cites="newman02">Newman (<a href="#ref-newman02" role="doc-biblioref">2002</a>)</span> (who uses the term “assortativity”):</p>
+<p>The result <span class="math inline">\(r_{deg} = -0.29\)</span> tells us that there is <em>anti-correlation</em> by degree in the Pulp Function network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don’t appear together very often.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">assortativity_degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   <span class="fu">assortativity_degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.2896427</code></pre>
 </div>
@@ -627,8 +634,8 @@ div.csl-indent {
 <h2 class="anchored" data-anchor-id="the-average-shortest-path-length">The Average Shortest Path Length</h2>
 <p>The final statistic people use to characterize networks is the <strong>average shortest path length</strong>. In a network, even nodes that are not adjacent, could be indirectly connected to other nodes via a path of some length. So it is useful to know what the average of this quantity is across all dyads in the network. To do that, we first need to compute the length of the shortest path <span class="math inline">\(l\)</span> for each pair of nodes in the network (also known as the <strong>geodesic distance</strong>). Adjacent nodes get an automatic score of <span class="math inline">\(l = 1\)</span>. In <code>igraph</code> this is done as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
-<span id="cb52-2"><a href="#cb52-2"></a>   S[<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
+<span id="cb54-2"><a href="#cb54-2"></a>   S[<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             BRETT BUDDY BUTCH CAPT KOONS ED SULLIVAN ENGLISH DAVE ESMARELDA
 BRETT            0     2     1          2           2            2         3
@@ -643,7 +650,7 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <p>The <code>igraph</code> function <code>distances</code> takes the network object as input and returns the desired shortest path matrix. So for instance, Brett is directly connected to Butch (they appear in a scene together) but indirectly connected to Buddy via a path of length two (they both appear in scenes with common neighbors even if they don’t appear together).</p>
 <p>The maximum distance between two nodes in the graph (the longest shortest path to put it confusingly) is called the <strong>graph diameter</strong>. We can find this out simply by using the native <code>R</code> function for the maximum on the shortest paths matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">max</span>(S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>   <span class="fu">max</span>(S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 8</code></pre>
 </div>
@@ -651,9 +658,9 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <p>This means that in the <em>Pulp Fiction</em> network the maximum degree of separation between two characters is a path of length 8.</p>
 <p>Once we have the geodesic distance matrix, it is easy to calculate the average path length of the graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>   rs.S <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span>
-<span id="cb56-2"><a href="#cb56-2"></a>   rm.S <span class="ot">&lt;-</span> rs.S<span class="sc">/</span>(<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb56-3"><a href="#cb56-3"></a>   <span class="fu">mean</span>(rm.S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   rs.S <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span>
+<span id="cb58-2"><a href="#cb58-2"></a>   rm.S <span class="ot">&lt;-</span> rs.S<span class="sc">/</span>(<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb58-3"><a href="#cb58-3"></a>   <span class="fu">mean</span>(rm.S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.769559</code></pre>
 </div>
@@ -666,7 +673,7 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <p>This means that, on average, each character in <em>Pulp Fiction</em> is separated by little less than three contacts in the co-appearance network (a fairly small world).</p>
 <p>Of course this can also be done in just one step on <code>igraph</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   <span class="fu">mean_distance</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   <span class="fu">mean_distance</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.769559</code></pre>
 </div>
@@ -676,23 +683,23 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <h2 class="anchored" data-anchor-id="putting-it-all-together">Putting it all Together</h2>
 <p>Now we can put together all the basic network statistics that we have computed into some sort of summary table, like the ones <a href="https://networkrepository.com/soc.php">here</a>. We first create a vector with the names of each statistic:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   Stat <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Nodes"</span>, <span class="st">"Edges"</span>, <span class="st">"Min. Degree"</span>, <span class="st">"Max. Degree"</span>, <span class="st">"Avg. Degree"</span>, <span class="st">"Degree Corr."</span>, <span class="st">"Diameter"</span>, <span class="st">"Avg. Shortest Path Length"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   Stat <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Nodes"</span>, <span class="st">"Edges"</span>, <span class="st">"Min. Degree"</span>, <span class="st">"Max. Degree"</span>, <span class="st">"Avg. Degree"</span>, <span class="st">"Degree Corr."</span>, <span class="st">"Diameter"</span>, <span class="st">"Avg. Shortest Path Length"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then we create a vector with the values:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1"></a>   Value <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">vcount</span>(g), <span class="fu">ecount</span>(g), <span class="fu">min</span>(d), <span class="fu">max</span>(d), <span class="fu">round</span>(<span class="fu">mean</span>(d), <span class="dv">2</span>), <span class="fu">round</span>(<span class="fu">assortativity_degree</span>(g), <span class="dv">2</span>), <span class="fu">max</span>(S), <span class="fu">round</span>(<span class="fu">mean_distance</span>(g), <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   Value <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">vcount</span>(g), <span class="fu">ecount</span>(g), <span class="fu">min</span>(d), <span class="fu">max</span>(d), <span class="fu">round</span>(<span class="fu">mean</span>(d), <span class="dv">2</span>), <span class="fu">round</span>(<span class="fu">assortativity_degree</span>(g), <span class="dv">2</span>), <span class="fu">max</span>(S), <span class="fu">round</span>(<span class="fu">mean_distance</span>(g), <span class="dv">2</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can then put these two vector together into a data frame:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   net.stats <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Stat, Value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   net.stats <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Stat, Value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We can then use the package <code>kableExtra</code> (a nice table maker) to create a nice html table:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   <span class="co"># intall.packages(kableExtra)</span></span>
-<span id="cb63-2"><a href="#cb63-2"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb63-3"><a href="#cb63-3"></a>   <span class="fu">kbl</span>(net.stats, <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb63-4"><a href="#cb63-4"></a>       <span class="at">caption =</span> <span class="st">"Key Statistics for Pulp Fiction Network."</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb63-5"><a href="#cb63-5"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="co"># intall.packages(kableExtra)</span></span>
+<span id="cb65-2"><a href="#cb65-2"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb65-3"><a href="#cb65-3"></a>   <span class="fu">kbl</span>(net.stats, <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb65-4"><a href="#cb65-4"></a>       <span class="at">caption =</span> <span class="st">"Key Statistics for Pulp Fiction Network."</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb65-5"><a href="#cb65-5"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -747,16 +754,16 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <p>When get network data from an archival source, and it will be in the form of a <strong>matrix</strong> or an <strong>edge list</strong>, typically in some kind of comma separated value (csv) format. Here will show how to input that into <code>R</code> to create an <code>igraph</code> network object from an outside file.</p>
 <p>First we will write the <em>Pulp Fiction</em> data into an edge list and save it to disk. We already did that earlier with the “g.el” object. So all we have to do is save it to your local folder as a csv file:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   <span class="co">#install.packages(here)</span></span>
-<span id="cb64-2"><a href="#cb64-2"></a>   <span class="fu">library</span>(here)</span>
-<span id="cb64-3"><a href="#cb64-3"></a>   <span class="fu">write.csv</span>(d.el[<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>)], <span class="fu">here</span>(<span class="st">"pulp.csv"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1"></a>   <span class="co">#install.packages(here)</span></span>
+<span id="cb66-2"><a href="#cb66-2"></a>   <span class="fu">library</span>(here)</span>
+<span id="cb66-3"><a href="#cb66-3"></a>   <span class="fu">write.csv</span>(d.el[<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>)], <span class="fu">here</span>(<span class="st">"pulp.csv"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>write.csv</code> function just saves an <code>R</code> object into a .csv file. Here the <code>R</code> object is “g.el” and we asked it to save just the columns which contain the name of each character. This represents the adjacency relations in the network as an edge list. We use the package <code>here</code> to keep track of our working directory. See <a href="https://here.r-lib.org/">here</a> (pun intended) for details.</p>
 <p>Now suppose that’s the network we want to work with and it’s saved in our hard drive. To load it, we just type:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">here</span>(<span class="st">"pulp.csv"</span>), </span>
-<span id="cb65-2"><a href="#cb65-2"></a>                    <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>))</span>
-<span id="cb65-3"><a href="#cb65-3"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">here</span>(<span class="st">"pulp.csv"</span>), </span>
+<span id="cb67-2"><a href="#cb67-2"></a>                    <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>))</span>
+<span id="cb67-3"><a href="#cb67-3"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  name1     name2
 1 BRETT MARSELLUS
@@ -769,11 +776,11 @@ ESMARELDA        3     4     2          3           4            3         0</co
 </div>
 <p>Which gives us the edge list we want now saved into an <code>R</code> object of class <code>data.frame</code>. So all we need is to convert that into an <code>igraph</code> object. To do that we use one of the many <code>graph_from...</code> functions in the <code>igraph</code> package. In this case, we want <code>graph_from_edgelist</code> because our network is stored as an edge list:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(g.el)</span>
-<span id="cb67-2"><a href="#cb67-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">graph_from_edgelist</span>(g.el, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb67-3"><a href="#cb67-3"></a>   <span class="fu">V</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(g.el)</span>
+<span id="cb69-2"><a href="#cb69-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">graph_from_edgelist</span>(g.el, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb69-3"><a href="#cb69-3"></a>   <span class="fu">V</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>+ 38/38 vertices, named, from f4f6377:
+<pre><code>+ 38/38 vertices, named, from 024f75e:
  [1] BRETT           MARSELLUS       MARVIN          ROGER          
  [5] VINCENT         BUDDY           MIA             BUTCH          
  [9] CAPT KOONS      ESMARELDA       GAWKER #2       JULES          
@@ -785,9 +792,9 @@ ESMARELDA        3     4     2          3           4            3         0</co
 [33] PREACHER        SPORTSCASTER #2 THE WOLF        WAITRESS       
 [37] YOUNG MAN       YOUNG WOMAN    </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   <span class="fu">E</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1"></a>   <span class="fu">E</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>+ 102/102 edges from f4f6377 (vertex names):
+<pre><code>+ 102/102 edges from 024f75e (vertex names):
  [1] BRETT      --MARSELLUS       BRETT      --MARVIN         
  [3] BRETT      --ROGER           BRETT      --VINCENT        
  [5] BUDDY      --MIA             VINCENT    --BUDDY          
@@ -810,6 +817,9 @@ ESMARELDA        3     4     2          3           4            3         0</co
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-newman02" class="csl-entry" role="doc-biblioentry">
 Newman, Mark EJ. 2002. <span>“Assortative Mixing in Networks.”</span> <em>Physical Review Letters</em> 89 (20): 208701.
+</div>
+<div id="ref-newman03" class="csl-entry" role="doc-biblioentry">
+———. 2003. <span>“Mixing Patterns in Networks.”</span> <em>Physical Review E</em> 67 (2): 026126.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
