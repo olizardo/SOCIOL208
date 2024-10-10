@@ -644,24 +644,43 @@ Second, we need to collect the node ids of the people who point to these set of 
    }
 ```
 
-Now we have a `list` object in `R` of length equal to the number of younger women with each entry equal to the ids of those women's in-neighbors. Now we need to create a vector of the unique ids of these nodes:
+Line one creates an (empty) `list` object in `R`. The beauty of a list object is that it is an object that can hold other objects (vectors, matrices, `igraph` graph objects, etc.) as members (it can also have other lists as objects, with lists all the way down). 
+
+The idea is to populate this initially list with the vectors of the in-neighbor ids of each node listed in the vector `yw`. Lines 2-8 do that using a simple `for` loop starring the `igraph` command `neighbors`, a function which takes three inputs: an `igraph` graph object, a node id, and the "mode" ("in" or "out" for directed graphs). Here we want the in-neighbors, so `mode` = "in".
+
+Now we have a `list` object in `R` of length equal to the number of younger women (12 in this case) with each entry equal to the ids of those women's in-neighbors. Now we need to create a vector of the unique ids of these nodes:
+
+```{r}
+   length(yw_in)
+   head(yw_in)
+```
+
+The last step is just to "unlist" all of this node ids to create a simple vector. The `unlist` native `R` function does that for us, taking a list as input and returning all of the elements inside the list as output. Here we wrap that call in the `unique` native `R` function to eliminate repeats (common in-neighbors across women):
 
 ```{r}
    yw_in <- unique(unlist(yw_in))
    yw_in
 ```
 
-Now we are ready to create our subgraph! All we need to do is specify we want *both* the younger law firm women and their in-neighbors:
+Of course, because the younger women are their own in-neighbors, they are included in this vector, so we need to get rid of them:
 
 ```{r}
-   nodes <- unique(c(yw, yw_in))
-   g <- subgraph(law_advice, nodes)
+   yw_in <- setdiff(yw_in, yw)
+   yw_in
+```
+
+We use the native command `setdiff` to find the elements in vector yw_in that are not contained in the vector of young women ids yw.
+
+Now that we have the vector of ids of the focal nodes and the vector of ids of their in-neighbors, we are ready to create our subgraph! All we need to do is specify we want *both* the younger law firm women and their in-neighbors in our node-induced subgraph:
+
+```{r}
+   g <- subgraph(law_advice, c(yw, yw_in))
 ```
 
 We can even specify a new vertex attribute, differentiating the focal network from the in-neighbor network.
 
 ```{r}
-   V(g)$net_status <- c(rep(1, length(yw)), rep(2, length(nodes) - length(yw)))
+   V(g)$net_status <- c(rep(1, length(yw)), rep(2, length(c(yw, yw_in)) - length(yw)))
    vertex_attr(g)
 ```
 
