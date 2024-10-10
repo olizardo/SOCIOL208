@@ -619,3 +619,90 @@ When we set $\delta=\infty$ the generalized harmonic centrality is the same as (
    degree(wg, normalized = TRUE)
 ```
 
+## Appendix: Selecting a Subgraph Based on Edge Conditions
+A great question asked in class goes as follows: What if I want to create a subgraph based on selecting a subset of a nodes, and then the other nodes in the graph that are that set of node's in-neighbors?
+
+Let's see how that would work. 
+
+First, we create a vector with the node ids of our **focal nodes**, which will be women under 40 in the `law_advice` network.
+
+```{r}
+   yw <- which(V(law_advice)$gender == 2 & V(law_advice)$age < 40)
+   yw
+```
+
+Second, we need to collect the node ids of the people who point to these set of nodes; that is, each of these node's **in-neighbors**. For that, we use the `igraph` function `neighbors`:
+
+```{r}
+   yw_in <- list() #creating empty list
+   k <- 1 #counter for list position
+   for (i in yw) {
+      nei <- neighbors(law_advice, i, mode = "in") 
+      nei <- as.vector(nei) #vector of in-neighbors ids
+      yw_in[[k]] <- nei #adding to list
+      k <- k + 1 #incrementing counter
+   }
+```
+
+Now we have a `list` object in `R` of length equal to the number of younger women with each entry equal to the ids of those women's in-neighbors. Now we need to create a vector of the unique ids of these nodes:
+
+```{r}
+   yw_in <- unique(unlist(yw_in))
+   yw_in
+```
+
+Now we are ready to create our subgraph! All we need to do is specify we want *both* the younger law firm women and their in-neighbors:
+
+```{r}
+   nodes <- unique(c(yw, yw_in))
+   g <- subgraph(law_advice, nodes)
+```
+
+We can even specify a new vertex attribute, differentiating the focal network from the in-neighbor network.
+
+```{r}
+   V(g)$net_status <- c(rep(1, length(yw)), rep(2, length(nodes) - length(yw)))
+   vertex_attr(g)
+```
+
+Finally, we create an **edge deleted subgraph** including only the incoming advice edges from nodes who are *not* younger women in the firm to younger women and deleting everything other link:
+
+```{r}
+   e.rem <- E(g)[V(g)[net_status==1] %->% V(g)[net_status==1]] 
+   #selecting edges from younger women to younger women
+   g.r <- delete_edges(g, e.rem) #removing edges
+   e.rem <- E(g.r)[V(g.r)[net_status==1] %->% V(g.r)[net_status==2]] 
+   #selecting edges from younger women to non-younger women
+   g.r <- delete_edges(g.r, e.rem) #removing edges
+   e.rem <- E(g.r)[V(g.r)[net_status==2] %->% V(g.r)[net_status==2]] 
+   #selecting edges from non-younger women to non-younger women
+   g.r <- delete_edges(g.r, e.rem) #removing edges
+   Iso = which(degree(g.r)==0) #selecting isolates
+   g.r <- delete_vertices(g.r, Iso) #removing isolates
+```
+
+We can now plot the incoming advice network to younger women (in red):
+
+```{r}
+#| echo: false
+#| fig-cap: "Women lawyers advice network showing incoming links from outside the group"
+#| fig-cap-location: margin
+   library(ggraph)
+   set.seed(123)
+    p <- ggraph(g.r, layout = 'dh')
+    p <- p + geom_edge_parallel(color = "darkgray", edge_width = 0.1,
+                                arrow = arrow(
+                                length = unit(2, 'mm')),
+                                end_cap = circle(3, 'mm'), 
+                                sep = unit(2, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y, 
+                                 color = as.factor(net_status)), size = 5) 
+    p <- p + scale_color_manual(labels = c("Younger Women", "Other Lawyers"), 
+                                values = c("red", "blue"))
+    p <- p + theme_graph() + theme(legend.title = element_blank(), 
+                                   legend.position = "bottom")
+    p
+```
+
+
+
