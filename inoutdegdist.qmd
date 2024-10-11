@@ -82,54 +82,56 @@ Then we use the magical package `patchwork` to combine the plots:
 
 The data clearly shows that while both distributions are skewed, the indegree distribution is more heterogeneous with a larger proportion of nodes in the high end of *receiving* advice, as compared to giving advice. 
 
+Note also that since the mean degree is the same regardless of whether we use the out or indegree distribution, then the blue line pointing to the mean degree falls in the same spot on the x-axis for both plots. 
+
 ## In and Out Degree Correlations
 
 The same doubling (really tripling) happens to degree correlations in directed graphs. While in an undirected graph, there is a single degree correlation, in the directed case we have three quantities to compute: The out-out degree correlation, the in-in degree correlation, and the in-out degree correlation. 
 
 To proceed, need to create an edge list data set with six columns: The node id of the first node, the node id of the second, the indegree of the first node, the outdegree of the first node, the indegree of the second node, and the outdegree of the second node. 
 
-We can adapt the code we used for the directed case for this purpose. First, we create and edge list:
+We can adapt the code we used for the directed case for this purpose. First, we create an edge list data frame:
 
 ```{r}
    library(dplyr)
-   g.el <- as_edgelist(g) #transforming graph to edgelist
+   g.el <- igraph::as_data_frame(g) #transforming graph to edgelist
    head(g.el)
 ```
 
-Second, we create data frames containing the in and outdegrees of each node:
+Second, we create data frames containing the in and outdegrees of each node in the edge:
 
 ```{r}
-    i.deg.dat <- data.frame(name1 = 1:vcount(g), 
-                            name2 = 1:vcount(g),
-                            i.d)
-    o.deg.dat <- data.frame(name1 = 1:vcount(g), 
-                            name2 = 1:vcount(g),
-                            o.d)
+    deg.dat1 <- data.frame(from = 1:vcount(g), o.d, i.d)
+    deg.dat2 <- data.frame(to = 1:vcount(g), o.d, i.d)
 ```
 
-Third, we merge this info into the edge list:
+Third, we merge this info into the edge list data frame:
 
 ```{r}
-   el.temp <- data.frame(name2 = g.el[, 2]) %>% 
-      left_join(o.deg.dat, by = "name2") %>% 
-      left_join(i.deg.dat, by = "name2") %>% 
-      dplyr::select(c("name2", "i.d", "o.d")) %>% 
-      rename(i.d2 = i.d, o.d2 = o.d) 
-   d.el <- data.frame(name1 = g.el[, 1]) %>% 
-      left_join(o.deg.dat, by = "name1") %>% 
-      left_join(i.deg.dat, by = "name1") %>%
-      dplyr::select(c("name1", "i.d", "o.d")) %>% 
-      rename(i.d1 = i.d, o.d1 = o.d) %>% 
-      cbind(el.temp)
+   d.el <- g.el %>% 
+      left_join(deg.dat1) %>% 
+      rename(o.d1 = o.d, i.d1 = i.d) %>% 
+      left_join(deg.dat2, by = "to") %>% 
+      rename(o.d2 = o.d, i.d2 = i.d) 
    head(d.el)
 ```
 
-Now we can compute the three different flavors of the degree correlation for directed graphs:
+Now we can compute the *four* different flavors (see [here](https://barabasi.com/f/620.pdf), p. 38) of the degree correlation for directed graphs:
 
 ```{r}
-   round(cor(d.el$o.d1, d.el$o.d2), 2)
-   round(cor(d.el$i.d1, d.el$i.d2), 2)
-   round(cor(d.el$i.d1, d.el$o.d2), 2)
+   round(cor(d.el$o.d1, d.el$o.d2), 4) #out-out correlation
+   round(cor(d.el$i.d1, d.el$i.d2), 4) #in-in correlation
+   round(cor(d.el$i.d1, d.el$o.d2), 4) #in-out correlation
+   round(cor(d.el$o.d1, d.el$i.d2), 4) #out-in correlation
 ```
 
+These results tell us that there is not much degree assortativity going on in the law advice network, *except* for a tendency of people who receive advice from lots of others to give advice to people who also receive advice from a lot of other people (the "in-in" correlation)
+
+Note that by default, the `assortativity_degree` function in `R` only returns the out-in correlation:
+
+```{r}
+   round(assortativity_degree(g), 4)
+```
+
+That is, it checks if more active senders are more likely to send ties to people who are popular receivers of ties. 
 
