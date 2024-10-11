@@ -196,7 +196,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./handout1.html" class="sidebar-item-text sidebar-link">Centrality</a>
+  <a href="./handout1.html" class="sidebar-item-text sidebar-link">Basic Network Statistics</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -272,7 +272,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>The same thing applies to the degree distribution and the degree correlation.</p>
 <section id="in-and-out-degree-distributions" class="level2">
 <h2 class="anchored" data-anchor-id="in-and-out-degree-distributions">In and Out Degree Distributions</h2>
-<p>In the case of the degree distribution, now we have <em>two distributions</em> an <strong>outdegree distribution</strong> and an <strong>indegree distribution</strong>.</p>
+<p>In the case of the degree distribution, now we have <em>two distributions</em>: An <strong>outdegree distribution</strong> and an <strong>indegree distribution</strong>.</p>
 <p>Let’s see an example using the <code>law_advice</code> data.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
@@ -343,79 +343,81 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p><img src="inoutdegdist_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>The data clearly shows that while both distributions are skewed, the indegree distribution is more heterogeneous with a larger proportion of nodes in the high end of <em>receiving</em> advice, as compared to giving advice.</p>
+<p>The data clearly shows that while both distributions are skewed, the indegree distribution is more heterogeneous, with a larger proportion of nodes in the high end of <em>receiving</em> advice as compared to giving advice.</p>
 <p>Note also that since the mean degree is the same regardless of whether we use the out or indegree distribution, then the blue line pointing to the mean degree falls in the same spot on the x-axis for both plots.</p>
 </section>
 <section id="in-and-out-degree-correlations" class="level2">
 <h2 class="anchored" data-anchor-id="in-and-out-degree-correlations">In and Out Degree Correlations</h2>
-<p>The same doubling (really tripling) happens to degree correlations in directed graphs. While in an undirected graph, there is a single degree correlation, in the directed case we have three quantities to compute: The out-out degree correlation, the in-in degree correlation, and the in-out degree correlation.</p>
-<p>To proceed, need to create an edge list data set with six columns: The node id of the first node, the node id of the second, the indegree of the first node, the outdegree of the first node, the indegree of the second node, and the outdegree of the second node.</p>
-<p>We can adapt the code we used for the directed case for this purpose. First, we create an edge list data frame:</p>
+<p>The same doubling (really quadrupling) happens to degree correlations in directed graphs. While in an undirected graph, there is a single degree correlation, in the directed case we have <em>four</em> quantities to compute: The out-out degree correlation, the in-in degree correlation, the out-in degree correlation, and the in-out degree correlation (see <a href="https://barabasi.com/f/620.pdf">here</a>, p.&nbsp;38).</p>
+<p>To proceed, we need to create an edge list data set with six columns: The node id of the “from” node, the node id of the “to” node, the indegree of the “from” node, the outdegree of the “from” node, the indegree of the “to” node, and the outdegree of the “to” node.</p>
+<p>We can adapt the code we used for the directed case for this purpose. First, we create an edge list data frame using the <code>igraph</code> function <code>as_data_frame</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">library</span>(dplyr)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>   g.el <span class="ot">&lt;-</span> igraph<span class="sc">::</span><span class="fu">as_data_frame</span>(g) <span class="co">#transforming graph to edgelist</span></span>
-<span id="cb8-3"><a href="#cb8-3"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-2"><a href="#cb8-2"></a>   g.el <span class="ot">&lt;-</span> igraph<span class="sc">::</span><span class="fu">as_data_frame</span>(g) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-3"><a href="#cb8-3"></a>      <span class="fu">rename</span>(<span class="at">fr =</span> from)</span>
+<span id="cb8-4"><a href="#cb8-4"></a>   <span class="fu">head</span>(g.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  from to
-1    1  2
-2    1 17
-3    1 20
-4    2  1
-5    2  6
-6    2 17</code></pre>
+<pre><code>  fr to
+1  1  2
+2  1 17
+3  1 20
+4  2  1
+5  2  6
+6  2 17</code></pre>
 </div>
 </div>
-<p>Second, we create data frames containing the in and outdegrees of each node in the edge:</p>
+<p>Note that we have to specify that this is in an <code>igraph</code> function by typing <code>igraph::</code> in front of the <code>as_data_frame</code> because there is an (older) <code>dplyr</code> function with the same name that was used for data wrangling.</p>
+<p>Second, we create data frames containing the in and outdegrees of each node in the network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>    deg.dat1 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">from =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), o.d, i.d)</span>
-<span id="cb10-2"><a href="#cb10-2"></a>    deg.dat2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">to =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), o.d, i.d)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>    deg.dat.fr <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">fr =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), o.d, i.d)</span>
+<span id="cb10-2"><a href="#cb10-2"></a>    deg.dat.to <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">to =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), o.d, i.d)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Third, we merge this info into the edge list data frame:</p>
+<p>Third, we merge this info into the edge list data frame to get the in and outdegrees of the from and to nodes in the directed edge:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   d.el <span class="ot">&lt;-</span> g.el <span class="sc">%&gt;%</span> </span>
-<span id="cb11-2"><a href="#cb11-2"></a>      <span class="fu">left_join</span>(deg.dat1) <span class="sc">%&gt;%</span> </span>
-<span id="cb11-3"><a href="#cb11-3"></a>      <span class="fu">rename</span>(<span class="at">o.d1 =</span> o.d, <span class="at">i.d1 =</span> i.d) <span class="sc">%&gt;%</span> </span>
-<span id="cb11-4"><a href="#cb11-4"></a>      <span class="fu">left_join</span>(deg.dat2, <span class="at">by =</span> <span class="st">"to"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb11-5"><a href="#cb11-5"></a>      <span class="fu">rename</span>(<span class="at">o.d2 =</span> o.d, <span class="at">i.d2 =</span> i.d) </span>
+<span id="cb11-2"><a href="#cb11-2"></a>      <span class="fu">left_join</span>(deg.dat.fr) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-3"><a href="#cb11-3"></a>      <span class="fu">rename</span>(<span class="at">o.d.fr =</span> o.d, <span class="at">i.d.fr =</span> i.d) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-4"><a href="#cb11-4"></a>      <span class="fu">left_join</span>(deg.dat.to, <span class="at">by =</span> <span class="st">"to"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-5"><a href="#cb11-5"></a>      <span class="fu">rename</span>(<span class="at">o.d.to =</span> o.d, <span class="at">i.d.to =</span> i.d) </span>
 <span id="cb11-6"><a href="#cb11-6"></a>   <span class="fu">head</span>(d.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  from to o.d1 i.d1 o.d2 i.d2
-1    1  2    3   22    7   23
-2    1 17    3   22   21   26
-3    1 20    3   22   11   22
-4    2  1    7   23    3   22
-5    2  6    7   23    0   21
-6    2 17    7   23   21   26</code></pre>
+<pre><code>  fr to o.d.fr i.d.fr o.d.to i.d.to
+1  1  2      3     22      7     23
+2  1 17      3     22     21     26
+3  1 20      3     22     11     22
+4  2  1      7     23      3     22
+5  2  6      7     23      0     21
+6  2 17      7     23     21     26</code></pre>
 </div>
 </div>
-<p>Now we can compute the <em>four</em> different flavors (see <a href="https://barabasi.com/f/620.pdf">here</a>, p.&nbsp;38) of the degree correlation for directed graphs:</p>
+<p>Now we can compute the four different flavors of the degree correlation for directed graphs:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>o.d1, d.el<span class="sc">$</span>o.d2), <span class="dv">4</span>) <span class="co">#out-out correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>o.d.fr, d.el<span class="sc">$</span>o.d.to), <span class="dv">4</span>) <span class="co">#out-out correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.0054</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>i.d1, d.el<span class="sc">$</span>i.d2), <span class="dv">4</span>) <span class="co">#in-in correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>i.d.fr, d.el<span class="sc">$</span>i.d.to), <span class="dv">4</span>) <span class="co">#in-in correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.187</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>i.d1, d.el<span class="sc">$</span>o.d2), <span class="dv">4</span>) <span class="co">#in-out correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>i.d.fr, d.el<span class="sc">$</span>o.d.to), <span class="dv">4</span>) <span class="co">#in-out correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.0283</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>o.d1, d.el<span class="sc">$</span>i.d2), <span class="dv">4</span>) <span class="co">#out-in correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   <span class="fu">round</span>(<span class="fu">cor</span>(d.el<span class="sc">$</span>o.d.fr, d.el<span class="sc">$</span>i.d.to), <span class="dv">4</span>) <span class="co">#out-in correlation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.0843</code></pre>
 </div>
 </div>
 <p>These results tell us that there is not much degree assortativity going on in the law advice network, <em>except</em> for a tendency of people who receive advice from lots of others to give advice to people who also receive advice from a lot of other people (the “in-in” correlation)</p>
-<p>Note that by default, the <code>assortativity_degree</code> function in <code>R</code> only returns the out-in correlation:</p>
+<p>Note that by default, the <code>assortativity_degree</code> function in <code>R</code> only returns the out-in correlation for directed graphs:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   <span class="fu">round</span>(<span class="fu">assortativity_degree</span>(g), <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   <span class="fu">round</span>(<span class="fu">assortativity_degree</span>(g, <span class="at">directed =</span> <span class="cn">TRUE</span>), <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.0843</code></pre>
 </div>
 </div>
-<p>That is, it checks if more active senders are more likely to send ties to people who are popular receivers of ties.</p>
+<p>That is, <code>assortativity_degree</code> checks if more active senders are more likely to send ties to people who are popular receivers of ties.</p>
 
 
 </section>
