@@ -21,7 +21,7 @@ One way of quantifying this idea goes like this. If $\mathbf{x}$ is a vector con
 
 $$
    x_i = \sum_{j} a_{ij}x_j
-$$
+$$#first-eq
 
 Where $a_{ij} = 1$ if $i$ is adjacent to $j$ in the network. Note that this formula just sums up the status scores of all the others each actor is connected to.
 
@@ -51,6 +51,70 @@ Note that all of this obscure talk about eigenvalues and eigenvectors is just ma
 
 Eigenvalues and eigenvectors are not a model of social structure in the way graph theory is (their first scientific application was in Physics). They are just a mechanical math fix to a circular equation problem. 
 
-This is why it's a mistake to introduce network measures of status and prestige using the machinery of linear algebra (or worse talk about the idea of **eigenvector centrality** which means nothing to most people). 
+This is why it's a mistake to introduce network measures of status and prestige by jumping directly to the machinery of linear algebra (or worse talk about the idea of **eigenvector centrality** which means nothing to most people). 
+
+A better approach is to see if we can *motivate* the use of measures like the ones above using the simple model of the distribution of status and prestige we started with earlier. We will see that we can, and that doing that leads us back to solutions that are the mathematical equivalent of all the eigenvector stuff. 
+
+## Distributing Centrality to Others
+
+Let's start with the simplest model of how people can get their status from the status of others in a network. It is the simplest because it is based on degree. Imagine everyone has the same "quantum" of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people "send" the same amount of status to all their alters in the network. At the end of each step, we compute people's status scores using @first-eq. They stop doing this after the status scores of people stop changing.
+
+Let us see a real-life example at work. 
+
+We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast. The data are reported as directed ties ($i$ nominates $j$ as a friend) but we will constrain ties to be undirected:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- as.undirected(ht_friends)
+```
+
+This is what the network looks like:
+
+```{r}
+#| echo: false
+#| fig-cap: "Krackhardt's Manager Data."
+#| fig-height: 7
+   library(ggraph)
+   set.seed(456)
+    p <- ggraph(g, layout = 'dh')
+    p <- p + geom_edge_fan(color = gray(0.5), edge_width = 0.25)
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+We extract the adjacency matrix corresponding to this network:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+```
+
+And here's a simple `while` loop that exemplifies the process of status distribution through the network we talked about earlier:
+
+```{r}
+     n <- nrow(A) #number of actors
+     c <- rep(1, n) #initial status vector set to all ones
+     w <- 1 
+     k <- 0 #initializing counter
+     while (w > 0.0001) {
+          o.c <- c #old status scores
+          c <- A %*% c #new scores a function of old scores and adjacency matrix
+          c <- c/norm(c, type = "E") #normalizing new status scores
+          w <- abs(sum(abs(c) - abs(o.c))) #diff. between new and old scores
+          k <- k + 1 #incrementing while counter
+     }
+```
+
+And here's the resulting (row) vector of status scores for each node:
+
+```{r}
+   c <- as.vector(t(c))
+   round(c, 3)
+```      
+
+
+
 
 
