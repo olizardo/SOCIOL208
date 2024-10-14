@@ -150,7 +150,7 @@ div.csl-indent {
 
 <link rel="stylesheet" href="styles.css">
 <meta property="og:title" content="SOCIOL 208 - The Cube">
-<meta property="og:description" content="Brandes, Borgatti, and Freeman (2016) discuss the centrality “cube,” and interesting an intuitive way to understand the way betweenness centrality works, as well as the dual connection between…">
+<meta property="og:description" content="Brandes, Borgatti, and Freeman (2016) discuss the centrality “cube,” an interesting and intuitive way to understand the way betweenness centrality works, as well as the dual connection between…">
 <meta property="og:site-name" content="SOCIOL 208">
 </head>
 
@@ -266,7 +266,14 @@ div.csl-indent {
 </nav>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#building-the-cube" id="toc-building-the-cube" class="nav-link active" data-scroll-target="#building-the-cube">Building the Cube</a></li>
+  <li><a href="#exploring-the-cube" id="toc-exploring-the-cube" class="nav-link" data-scroll-target="#exploring-the-cube">Exploring the Cube</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/cube.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -288,11 +295,11 @@ div.csl-indent {
 
 </header>
 
-<p><span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> discuss the centrality “cube,” and interesting an intuitive way to understand the way betweenness centrality works, as well as the dual connection between closeness and betweenness.</p>
+<p><span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> discuss the centrality “cube,” an interesting and intuitive way to understand the way betweenness centrality works, as well as the dual connection between closeness and betweenness.</p>
 <p>Let us illustrate using a simple example. We begin by creating an Erdos-Renyi graph with eight nodes and connection probability <span class="math inline">\(p = 0.5\)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(igraph)</span>
-<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">set.seed</span>(<span class="dv">234</span>)</span>
+<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">set.seed</span>(<span class="dv">345</span>)</span>
 <span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> <span class="fu">erdos.renyi.game</span>(<span class="dv">8</span>, <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The resulting graph looks like:</p>
@@ -302,9 +309,11 @@ div.csl-indent {
 </div>
 </div>
 <p>The basic innovation behind the centrality cube is to store the intermediation information among every node triplet in the graph <span class="math inline">\(s\)</span>, <span class="math inline">\(r\)</span>, <span class="math inline">\(b\)</span> (standing for “<strong>s</strong>ender,” <strong>r</strong>eceiver,” and “<strong>b</strong>roker”) in a three dimensional <em>array</em> rather than the usual two dimensional matrix.</p>
-<p>The three dimensional array can be thought of as a “cube” by stacking multiple reachability matrices between every pair <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> along a three dimensional dimension <span class="math inline">\(b\)</span>. So each “b-slice” of the cube will contain the number of times node <span class="math inline">\(b\)</span> stands in a shortest path between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span>.</p>
+<p>The three dimensional array can be thought of as a “cube” by stacking multiple reachability matrices between every pair <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> along a three dimensional dimension <span class="math inline">\(b\)</span>. So each “b-slice” of the cube will contain the number of times node <span class="math inline">\(b\)</span> stands in a shortest path between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> divided by the total number of paths between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> which as you recall computes the pairwise betweenness of <span class="math inline">\(b\)</span> with respect to <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span>.</p>
 <p>Let’s see how that works.</p>
-<p>First, we build a simple function to count the total number of shortest paths between each pair of nodes:</p>
+<section id="building-the-cube" class="level2">
+<h2 class="anchored" data-anchor-id="building-the-cube">Building the Cube</h2>
+<p>First, we write a simple function to count the total number of shortest paths between each pair of nodes:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   nsp <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
 <span id="cb2-2"><a href="#cb2-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
@@ -319,8 +328,8 @@ div.csl-indent {
 <span id="cb2-11"><a href="#cb2-11"></a>      <span class="fu">return</span>(S)</span>
 <span id="cb2-12"><a href="#cb2-12"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The function is called <code>nsp</code> and takes a graph as input and returns and matrix called <span class="math inline">\(\mathbf{S}\)</span> with entries <span class="math inline">\(s_{ij}\)</span> equal to the total number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. This is done by computing the <code>length</code> of the list returned by the <code>all_shortest_paths</code> function in <code>igraph</code> for each pair of non-adjacent nodes.</p>
-<p>Second, we write a user function to build the cube. Here’s a not-so-efficient (programming wise) but working example:</p>
+<p>The function is called <code>nsp</code> and takes a graph as input and returns and matrix called <span class="math inline">\(\mathbf{S}\)</span> with entries <span class="math inline">\(s_{ij}\)</span> equal to the total number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. This is done by computing the <code>length</code> of the list returned by the <code>all_shortest_paths</code> function in <code>igraph</code> for each pair of non-adjacent nodes, which we check using the <code>neighbors</code> function (which returns a vector of the node ids of nodes adjacent to a given node <span class="math inline">\(i\)</span> in the graph). The <code>all_shortest_paths</code> function, in turn, takes three inputs: (1) A graph, (2) the sender node, and (3) the receiver node (which can be a vector of receiver nodes).</p>
+<p>Second, we write a user defined function to build the cube. Here’s a not-so-efficient (programming wise) but working example:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   cube <span class="ot">&lt;-</span> <span class="cf">function</span>(g) {</span>
 <span id="cb3-2"><a href="#cb3-2"></a>   kill.ends <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
@@ -352,62 +361,89 @@ div.csl-indent {
 <span id="cb3-28"><a href="#cb3-28"></a>      c[, , i] <span class="ot">&lt;-</span> c[, , i]<span class="sc">/</span>S</span>
 <span id="cb3-29"><a href="#cb3-29"></a>      }</span>
 <span id="cb3-30"><a href="#cb3-30"></a>   c[<span class="fu">is.na</span>(c)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb3-31"><a href="#cb3-31"></a>   c <span class="ot">&lt;-</span> <span class="fu">round</span>(c, <span class="dv">2</span>)</span>
-<span id="cb3-32"><a href="#cb3-32"></a>   <span class="fu">return</span>(c)</span>
-<span id="cb3-33"><a href="#cb3-33"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-31"><a href="#cb3-31"></a>   <span class="fu">return</span>(c)</span>
+<span id="cb3-32"><a href="#cb3-32"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We name the function <code>cube</code>. Lines 2-5 it’s just a mini-function called <code>kill.ends</code> within the <code>cube</code> function that takes a vector as input and returns the same vector minus the first and last element as output. This will come in handy when we want to extract the <strong>inner nodes</strong> (brokers) of the path information returned by the <code>igraph</code> function <code>all_shortest_paths</code> while dropping the sender and receiver nodes.</p>
 <p>Line 8 initializes the <code>array</code> in <code>R</code>. It takes a string of zeros of length <span class="math inline">\(n^2 \times n\)</span> where <span class="math inline">\(n\)</span> is the number of nodes and crams them into an <span class="math inline">\(n \times n \times n\)</span> array. Basically, in this case, since <span class="math inline">\(n = 8\)</span>, this means eight empty matrices of dimensions eighth by eight stacked together to form our cube full of zeros. The <span class="math inline">\(ijk^{th}\)</span> cell of the array corresponds to sender <span class="math inline">\(i\)</span>, receiver <span class="math inline">\(j\)</span> and broker node <span class="math inline">\(k\)</span>.</p>
-<p>Lines 9-22 populate the cube with the required information using an (inefficient as noted earlier) triple <code>for</code> loop. As noted some useful <code>igraph</code> functions come into play here. In line 12 the <code>if</code> conditional inside the triple loop uses the <code>neighbors</code> function in <code>igraph</code> and checks that node <span class="math inline">\(r\)</span> is not a neighbor of <span class="math inline">\(s\)</span> (if they are directly connected then node <span class="math inline">\(b\)</span> cannot be a broker).</p>
+<p>Lines 9-25 populate the cube with the required information using an (inefficient as noted earlier) triple <code>for</code> loop. As noted some, useful <code>igraph</code> functions come into play here. In line 12 the <code>if</code> conditional inside the triple loop uses the <code>neighbors</code> function in <code>igraph</code> and checks that node <span class="math inline">\(r\)</span> is not a neighbor of <span class="math inline">\(s\)</span> (if they are directly connected then node <span class="math inline">\(b\)</span> cannot be a broker).</p>
 <p>After we check that <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> are not neighbors, we use the <code>all_shortest_paths</code> function in <code>igraph</code> to get all the shortest paths between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> in line 13. Line 14 drops the source and receiver nodes from the vector of node ids returned by the function, and line 15 uses some <code>sapply</code> magic and the base <code>R</code> function <code>%in%</code> to check how many times <span class="math inline">\(b\)</span> shows up in that list of shortest paths between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span>. Finally, line 15 puts that number in the <span class="math inline">\(ijk^{th}\)</span> cell of the array, and loop through all triplets until we are done.</p>
+<p>Lines 27-29 loop through the cube again, this time to take the ratio of the number of shortest paths involving each broker node to the <em>total</em> number of shortest paths between each pair (the pairwise betweenness), which we computed in line 26 using our trusty <code>nsp</code> function. So all we have to do is divided each eight by eight matrix in the cube by the <span class="math inline">\(S\)</span> matrix.</p>
+</section>
+<section id="exploring-the-cube" class="level2">
+<h2 class="anchored" data-anchor-id="exploring-the-cube">Exploring the Cube</h2>
 <p>Once we have our array, we can create all kinds of interesting sub-matrices containing the intermediation information in the graph by summing rows and columns of the array along different dimensions.</p>
-<p>For instance, let’s take the row sums of the <span class="math inline">\(s\)</span> to <span class="math inline">\(r\)</span> corresponding to node 6 as the broker. This can be done like this:</p>
+<p>First, let us see what’s in the cube. We can query specific two-dimensional sub-matrices using an extension of the usual format for querying matrices in <code>R</code> for three-dimensional arrays. For instance this:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   srb <span class="ot">&lt;-</span> <span class="fu">cube</span>(g)</span>
-<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">rowSums</span>(srb[ , , <span class="dv">6</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">round</span>(srb[, , <span class="dv">2</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 3 5 3 6 5 0 3 3</code></pre>
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]  0.0    0 0.00    0 0.00  0.5    0 0.00
+[2,]  0.0    0 0.00    0 0.00  0.0    0 0.00
+[3,]  0.0    0 0.00    0 0.00  0.0    0 0.33
+[4,]  0.0    0 0.00    0 0.00  0.0    0 0.00
+[5,]  0.0    0 0.00    0 0.00  0.0    0 0.33
+[6,]  0.5    0 0.00    0 0.00  0.0    0 1.00
+[7,]  0.0    0 0.00    0 0.00  0.0    0 0.00
+[8,]  0.0    0 0.33    0 0.33  1.0    0 0.00</code></pre>
 </div>
 </div>
-<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span>, note this vector gives us the dependence of each node in the graph on node 6. Obviously node 6 doesn’t depend on itself so there is a zero on the sixth spot in the vector. As is clear from the plot, nodes 2 and 5 are the most dependent on 6 for intermediation.</p>
+<p>Creates a three-dimensional matrix of pairwise betweenness probabilities, assigns it to the <code>srb</code> object, and looks at the <span class="math inline">\(i \times j \times 2\)</span> entry.</p>
+<p>Because each sub-matrix in the cube is a matrix, we can do the usual matrix operations on them. For instance, let’s take the row sums of the <span class="math inline">\(s\)</span> to <span class="math inline">\(r\)</span> corresponding to node 3 as the broker. This can be done like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   d<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(srb[ , , <span class="dv">3</span>])</span>
+<span id="cb6-2"><a href="#cb6-2"></a>   <span class="fu">names</span>(d<span class="fl">.3</span>) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb6-3"><a href="#cb6-3"></a>   d<span class="fl">.3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  1   2   3   4   5   6   7   8 
+1.5 2.0 0.0 3.0 6.0 3.5 3.0 1.0 </code></pre>
+</div>
+</div>
+<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span>, note this vector gives us the dependence of each node in the graph on node 3. Obviously node 3 doesn’t depend on itself so there is a zero on the third spot in the vector. As is clear from the plot, node 5 is the most dependent on 3 for intermediation with the rest of the nodes in the graph.</p>
 <p>Note also that the betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. So to get each node’s betweenness we just sum up the entries in each of the cube’s sub-matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   b.cube <span class="ot">&lt;-</span> <span class="fu">colSums</span>(srb, <span class="at">dims =</span> <span class="dv">2</span>)<span class="sc">/</span><span class="dv">2</span></span>
-<span id="cb6-2"><a href="#cb6-2"></a>   b.igraph <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g)</span>
-<span id="cb6-3"><a href="#cb6-3"></a>   b.cube</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   b.cube <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">colSums</span>(srb, <span class="at">dims =</span> <span class="dv">2</span>)<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span>
+<span id="cb8-2"><a href="#cb8-2"></a>   b.igraph <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">betweenness</span>(g), <span class="dv">2</span>)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>   <span class="fu">names</span>(b.cube) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb8-4"><a href="#cb8-4"></a>   <span class="fu">names</span>(b.igraph) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb8-5"><a href="#cb8-5"></a>   b.cube</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1]  0  0 12  0  0 14  0  6</code></pre>
+<pre><code>    1     2     3     4     5     6     7     8 
+ 0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   b.igraph</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   b.igraph</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1]  0  0 12  0  0 14  0  6</code></pre>
+<pre><code>    1     2     3     4     5     6     7     8 
+ 0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
 </div>
 </div>
-<p>Note we dived the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric matrices inside the cube.</p>
-<p>In any case, using the cube info we can build a matrix of <em>dependencies</em> between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the <span class="math inline">\(ij^{th}\)</span> contains the number of times the column node stands in a shortest path that starts with the row node.</p>
+<p>Note the neat trick of using the argument <code>dims = 2</code> in the usual <code>colSums</code> command. This tells <code>colSums</code> that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube’s third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube.</p>
+<p>Not surprisingly, node 3 is the top betweenness centrality node.</p>
+<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> point out, using the cube info, we can build a matrix of <em>dependencies</em> between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the <span class="math inline">\(sb^{th}\)</span> entry contains the number of times the broker node stands in a shortest path that starts with the sender node.</p>
 <p>Here’s a function that uses the cube info to build the dependency matrix that <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> talk about using the cube as input:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   dep.ij <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
-<span id="cb10-2"><a href="#cb10-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(c)</span>
-<span id="cb10-3"><a href="#cb10-3"></a>      dep.ij <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(c[, , <span class="dv">1</span>])</span>
-<span id="cb10-4"><a href="#cb10-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
-<span id="cb10-5"><a href="#cb10-5"></a>         dep.ij <span class="ot">&lt;-</span> <span class="fu">cbind</span>(dep.ij,  <span class="fu">rowSums</span>(c[, , i]))</span>
-<span id="cb10-6"><a href="#cb10-6"></a>         </span>
-<span id="cb10-7"><a href="#cb10-7"></a>         }</span>
-<span id="cb10-8"><a href="#cb10-8"></a>      <span class="fu">rownames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
-<span id="cb10-9"><a href="#cb10-9"></a>      <span class="fu">colnames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
-<span id="cb10-10"><a href="#cb10-10"></a>      <span class="fu">return</span>(dep.ij)</span>
-<span id="cb10-11"><a href="#cb10-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   dep.ij <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
+<span id="cb12-2"><a href="#cb12-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(c)</span>
+<span id="cb12-3"><a href="#cb12-3"></a>      dep.ij <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(c[, , <span class="dv">1</span>])</span>
+<span id="cb12-4"><a href="#cb12-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
+<span id="cb12-5"><a href="#cb12-5"></a>         dep.ij <span class="ot">&lt;-</span> <span class="fu">cbind</span>(dep.ij,  <span class="fu">rowSums</span>(c[, , i]))</span>
+<span id="cb12-6"><a href="#cb12-6"></a>         </span>
+<span id="cb12-7"><a href="#cb12-7"></a>         }</span>
+<span id="cb12-8"><a href="#cb12-8"></a>      <span class="fu">rownames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
+<span id="cb12-9"><a href="#cb12-9"></a>      <span class="fu">colnames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
+<span id="cb12-10"><a href="#cb12-10"></a>      <span class="fu">return</span>(dep.ij)</span>
+<span id="cb12-11"><a href="#cb12-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This function just takes the various vectors formed by the row sums of the sender-receiver matrix across each value of the third dimension (which is just each node in the graph when playing the broker role). It then returns a regular old <span class="math inline">\(n \times n\)</span> containing the info.</p>
 <p>Here’s the result when applied to our little example:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   d <span class="ot">&lt;-</span> <span class="fu">dep.ij</span>(srb)</span>
-<span id="cb11-2"><a href="#cb11-2"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb11-3"><a href="#cb11-3"></a>   <span class="fu">kbl</span>(d, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb11-4"><a href="#cb11-4"></a>       <span class="at">caption =</span> <span class="st">"Dependence Matrix."</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb11-5"><a href="#cb11-5"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb11-6"><a href="#cb11-6"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb13-2"><a href="#cb13-2"></a>   <span class="fu">kbl</span>(<span class="fu">round</span>(<span class="fu">dep.ij</span>(srb), <span class="dv">2</span>), </span>
+<span id="cb13-3"><a href="#cb13-3"></a>       <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb13-4"><a href="#cb13-4"></a>       <span class="at">caption =</span> <span class="st">"Dependence Matrix."</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb13-5"><a href="#cb13-5"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-6"><a href="#cb13-6"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -429,123 +465,127 @@ div.csl-indent {
   <tr>
    <td style="text-align:left;font-weight: bold;"> 1 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.50 </td>
+   <td style="text-align:center;"> 1.5 </td>
+   <td style="text-align:center;"> 0.00 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 4 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 2.50 </td>
+   <td style="text-align:center;"> 2.5 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 2 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 2.0 </td>
+   <td style="text-align:center;"> 0.00 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 5 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 2.0 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 3 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.33 </td>
+   <td style="text-align:center;"> 0.0 </td>
+   <td style="text-align:center;"> 0.33 </td>
    <td style="text-align:center;"> 0 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1.33 </td>
+   <td style="text-align:center;"> 0.0 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 4 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 3.0 </td>
+   <td style="text-align:center;"> 0.00 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 6 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 2.0 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 5 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.33 </td>
+   <td style="text-align:center;"> 6.0 </td>
+   <td style="text-align:center;"> 0.33 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 5 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 1.33 </td>
+   <td style="text-align:center;"> 0.0 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 6 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 1.50 </td>
+   <td style="text-align:center;"> 3.5 </td>
+   <td style="text-align:center;"> 0.00 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 0.50 </td>
+   <td style="text-align:center;"> 0.5 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 7 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 3.0 </td>
+   <td style="text-align:center;"> 0.00 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 4 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 6 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 1.0 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 8 </td>
    <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 4 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 0 </td>
-   <td style="text-align:center;"> 3 </td>
+   <td style="text-align:center;"> 1.67 </td>
+   <td style="text-align:center;"> 1.0 </td>
+   <td style="text-align:center;"> 0.67 </td>
    <td style="text-align:center;"> 0 </td>
    <td style="text-align:center;"> 0 </td>
+   <td style="text-align:center;"> 0.67 </td>
+   <td style="text-align:center;"> 0.0 </td>
   </tr>
 </tbody>
 </table>
 
 </div>
 </div>
-<p>Note that this is valued matrix that is also <em>asymmetric</em>. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 only depends on nodes 6 and 8.</p>
-<p>Interestingly, as <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> also note, the betweenness centrality can be calculated from the dependency matrix! All we need to do is compute the column sums, equivalent to in-degree in the directed dependence network:</p>
+<p>Note that this is valued matrix that is also <em>asymmetric</em>. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 does not depend on nodes 1, 5, 6, or 8.</p>
+<p>Interestingly, as <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> also show, the betweenness centrality also can be calculated from the dependency matrix! All we need to do is compute the <em>column sums</em>, equivalent to <strong>in-degree</strong> in the directed dependence network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   <span class="fu">colSums</span>(d)<span class="sc">/</span><span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code> 1  2  3  4  5  6  7  8 
- 0  0 12  0  0 14  0  6 </code></pre>
-</div>
-</div>
-<p>Even more interestingly, <strong>closeness centrality</strong> is also in the dependence matrix! It is given by the <em>outdegree</em> each actor in the dependence network, corresponding to the <em>row sums</em> of the matrix (shifted by a constant given by <span class="math inline">\(n-1\)</span>).</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   c.c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">distances</span>(g))</span>
-<span id="cb14-2"><a href="#cb14-2"></a>   c.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(d) <span class="sc">+</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb14-3"><a href="#cb14-3"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.c, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.067 0.062 0.091 0.059 0.062 0.091 0.050 0.071</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.d, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(<span class="fu">colSums</span>(<span class="fu">dep.ij</span>(srb))<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
-0.067 0.062 0.091 0.059 0.062 0.091 0.050 0.071 </code></pre>
+ 0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
 </div>
 </div>
-<p>This makes sense since for an actor to have high closeness and be able to reach other, they have to depend on the most actors in the network as intermediaries.</p>
+<p>Even more interestingly, <strong>closeness centrality</strong> is also in the dependence matrix! It is given by the <em>outdegree</em> of each actor in the directed dependence network, corresponding to the <em>row sums</em> of the matrix (shifted by a constant given by <span class="math inline">\(n-1\)</span>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   c.c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">distances</span>(g))</span>
+<span id="cb16-2"><a href="#cb16-2"></a>   c.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">dep.ij</span>(srb)) <span class="sc">+</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb16-3"><a href="#cb16-3"></a>   <span class="fu">names</span>(c.c) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb16-4"><a href="#cb16-4"></a>   <span class="fu">names</span>(c.d) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb16-5"><a href="#cb16-5"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.c, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    1     2     3     4     5     6     7     8 
+0.071 0.091 0.111 0.083 0.067 0.077 0.091 0.091 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.d, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    1     2     3     4     5     6     7     8 
+0.071 0.091 0.111 0.083 0.067 0.077 0.091 0.091 </code></pre>
+</div>
+</div>
+<p>Here we see that node 3 is also the top in closeness, followed closely (pun intended) by nodes 2, 7, and 8. This makes sense because an actor with high closeness is one that has <em>low dependence</em> on key nodes to be able to reach others.</p>
 
 
 
+</section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-brandes_etal16" class="csl-entry" role="doc-biblioentry">
