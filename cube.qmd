@@ -219,27 +219,42 @@ Even more interestingly, **closeness centrality** is also in the dependence matr
 
 Here we see that node 3 is also the top in closeness, followed closely (pun intended) by nodes 2, 7, and 8. This makes sense because an actor with high closeness is one that has *low dependence* on key nodes to be able to reach others.
 
-Of course, closeness is also in the cube because of the mathematical relationship we saw earlier between the sum of entries between senders and receives across brokers in the cube and the geodesic distance. 
+Of course, closeness is also in the cube because of the mathematical relationship we saw earlier between the sum of entries between senders and receivers across brokers in the cube and the geodesic distance. 
 
-So if we wanted to get the geodesic distances between every pair of nodes in the graph, all we need to do is loop through each pair of nodes and compute the relevant sum across brokers:
+For instance, let's get the matrix corresponding to node 3's role as *sender* across all brokers and receivers:
 
 ```{r}
+   round(srb[3, , ], 2)
+```
+
+The entries of this matrix give  us the probability that node 3 is the sender, whenever the row node is the is the broker (an inner node in the path) and the column node is the receiver. 
+
+For instance, the value 0.3 in row 8 and column 1 tells us that node 3 is the sender node in one third of the paths that end in node 1 and feature node 8 as a broker. 
+
+Interestingly, the *sums* of the entries in this matrix are equivalent to the sum of the geodesic distances between node 3 and every other node in the graph shifted by a constant ($n- 1$):
+
+```{r}
+   sum(srb[3, , ]) + (vcount(g) - 1)
+   sum(distances(g)[3, ])
+```
+
+So the closeness centrality can be computed from the cube as follows:
+
+```{r}
+   c <- 0
    n <- vcount(g)
-   D <- matrix(0, n, n)
    for (i in 1:n) {
-      for (j in 1:n) {
-         if (i != j) {
-            D[i,j] <- sum(srb[i, j, ]) + 1
-         }
-      }
+      c[i] <- 1/(sum(srb[i, , ]) + (n - 1))
    }
-   D
+   round(c, 3)
 ```
 
-Which is the same as the geodesic distance matrix:
+Which is the same as:
 
 ```{r}
-   distances(g)
+   round(closeness(g), 3)
 ```
+
+
 
 
