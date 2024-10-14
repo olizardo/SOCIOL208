@@ -1,0 +1,184 @@
+---
+title: "The Cube"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+@brandes_etal16 discuss the centrality "cube," and interesting an intuitive way to understand the way betweenness centrality works, as well as the dual connection between closeness and betweenness. 
+
+Let us illustrate using a simple example. We begin by creating an Erdos-Renyi graph with eight nodes and connection probability $p = 0.5$:
+
+```{r}
+   library(igraph)
+   set.seed(234)
+   g <- erdos.renyi.game(8, 0.5)
+```
+
+The resulting graph looks like:
+
+```{r}
+#| echo: false
+   plot(g)
+```
+
+The basic innovation behind the centrality cube is to store the intermediation information among every node triplet in the graph $s$, $r$, $b$ (standing for "**s**ender," **r**eceiver," and "**b**roker") in a three dimensional *array* rather than the usual two dimensional matrix. 
+
+The three dimensional array can be thought of as a "cube" by stacking multiple reachability matrices between every pair $s$ and $r$ along a three dimensional dimension $b$. So each "b-slice" of the cube will contain the number of times node $b$ stands in a shortest path between $s$ and $r$.
+
+Let's see how that works. 
+
+First, we build a simple function to count the total number of shortest paths between each pair of nodes:
+
+```{r}
+   nsp <- function(x) {
+      n <- vcount(g)
+      S <- matrix(0, n, n)
+      for (i in 1:n) {
+            for (j in 1:n) {
+                  if (j %in% neighbors(x, i) != TRUE) {
+                     S[i, j] <- length(all_shortest_paths(x, i, j)$vpaths)
+               }
+            }
+         }
+      return(S)
+   }
+```
+
+The function is called `nsp` and takes a graph as input and returns and matrix called $\mathbf{S}$ with entries $s_{ij}$ equal to the total number of shortest paths between $i$ and $j$. This is done by computing the `length` of the list returned by the `all_shortest_paths` function in `igraph` for each pair of non-adjacent nodes. 
+
+Second, we write a user function to build the cube. Here's a not-so-efficient (programming wise) but working example:
+
+```{r}
+   cube <- function(g) {
+   kill.ends <- function(x) {
+      x <- x[-c(1, length(x))]
+      return(x)
+      }
+      n <- vcount(g)
+      n.paths <- 0
+      c <- array(rep(n^2*n, 0), c(n, n, n))
+      for (b in 1:n) {
+         for (s in 1:n) {
+            for (r in 1:n) {
+               if (s != r & r %in% neighbors(g, s) == FALSE) {
+                  p.sr <- all_shortest_paths(g, s, r)
+                  inner.nodes <- lapply(p.sr$vpaths, kill.ends)
+                  c[s, r, b] <- sum(as.numeric(sapply(inner.nodes, function(x) {b %in% x})))
+               }
+               else if (s == r) {
+                  c[s, r, b] <- 0
+               }
+               else if (r %in% neighbors(g, s) == TRUE) {
+                  c[s, r, b] <- 0
+               }
+            }
+         }
+      }
+   S <- nsp(g)
+   for (i in 1:n) {
+      c[, , i] <- c[, , i]/S
+      }
+   c[is.na(c)] <- 0
+   c <- round(c, 2)
+   return(c)
+   }
+```
+
+We name the function `cube`. Lines 2-5 it's just a mini-function called `kill.ends` within the `cube` function that takes a vector as input and returns the same vector minus the first and last element as output. This will come in handy when we want to extract the **inner nodes** (brokers) of the path information returned by the `igraph` function `all_shortest_paths` while dropping the sender and receiver nodes. 
+
+Line 8 initializes the `array` in `R`. It takes a string of zeros of length $n^2 \times n$ where $n$ is the number of nodes and crams them into an $n \times n \times n$ array. Basically, in this case, since $n = 8$, this means eight empty matrices of dimensions eighth by eight stacked together to form our cube full of zeros. The $ijk^{th}$ cell of the array corresponds to sender $i$, receiver $j$ and broker node $k$.
+
+Lines 9-22 populate the cube with the required information using an (inefficient as noted earlier) triple `for` loop. As noted some useful `igraph` functions come into play here. In line 12 the `if` conditional inside the triple loop uses the `neighbors` function in `igraph` and checks that node $r$ is not a neighbor of $s$ (if they are directly connected then node $b$ cannot be a broker). 
+
+After we check that $s$ and $r$ are not neighbors, we use the `all_shortest_paths` function in `igraph` to get all the shortest paths between $s$ and $r$ in line 13. Line 14 drops the source and receiver nodes from the vector of node ids returned by the function, and line 15 uses some `sapply` magic and the base `R` function `%in%` to check how many times $b$ shows up in that list of shortest paths between $s$ and $r$. Finally, line 15 puts that number in the $ijk^{th}$ cell of the array, and loop through all triplets until we are done. 
+
+Once we have our array, we can create all kinds of interesting sub-matrices containing the intermediation information in the graph by summing rows and columns of the array along different dimensions. 
+
+For instance, let's take the row sums of the $s$ to $r$ corresponding to node 6 as the broker. This can be done like this:
+
+```{r}
+   srb <- cube(g)
+   rowSums(srb[ , , 6])
+```
+
+  
+As @brandes_etal16, note this vector gives us the dependence of each node in the graph on node 6. Obviously node 6 doesn't depend on itself so there is a zero on the sixth spot in the vector. As is clear from the plot, nodes 2 and 5 are the most dependent on 6 for intermediation. 
+
+Note also that the betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. So to get each node's betweenness we just sum up the entries in each of the cube's sub-matrices:
+
+```{r}
+   b.cube <- colSums(srb, dims = 2)/2
+   b.igraph <- betweenness(g)
+   b.cube
+   b.igraph
+```
+
+Note we dived the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric matrices inside the cube. 
+
+In any case, using the cube info we can build a matrix of *dependencies* between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the $ij^{th}$ contains the number of times the column node stands in a shortest path that starts with the row node. 
+
+Here's a function that uses the cube info to build the dependency matrix that @brandes_etal16 talk about using the cube as input:
+
+```{r}
+   dep.ij <- function(c) {
+      n <- nrow(c)
+      dep.ij <- rowSums(c[, , 1])
+      for (i in 2:n) {
+         dep.ij <- cbind(dep.ij,  rowSums(c[, , i]))
+         
+         }
+      rownames(dep.ij) <- 1:n
+      colnames(dep.ij) <- 1:n
+      return(dep.ij)
+   }
+```
+
+This function just takes the various vectors formed by the row sums of the sender-receiver matrix across each value of the third dimension (which is just each node in the graph when playing the broker role). It then returns a regular old $n \times n$ containing the info. 
+
+Here's the result when applied to our little example:
+
+```{r}
+   d <- dep.ij(srb)
+   library(kableExtra)
+   kbl(d, format = "html", align = "c", row.names = TRUE,
+       caption = "Dependence Matrix.") %>% 
+      column_spec(1, bold = TRUE) %>%
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Note that this is valued matrix that is also *asymmetric*. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 only depends on nodes 6 and 8. 
+
+Interestingly, as @brandes_etal16 also note, the betweenness centrality can be calculated from the dependency matrix! All we need to do is compute the column sums, equivalent to in-degree in the directed dependence network:
+
+```{r}
+   colSums(d)/2
+```
+
+Even more interestingly, **closeness centrality** is also in the dependence matrix! It is given by the *outdegree* each actor in the dependence network, corresponding to the *row sums* of the matrix (shifted by a constant given by $n-1$). 
+
+```{r}
+   c.c <- rowSums(distances(g))
+   c.d <- rowSums(d) + (vcount(g) - 1)
+   round(1/c.c, 3)
+   round(1/c.d, 3)
+```
+
+This makes sense since for an actor to have high closeness and be able to reach other, they have to depend on the most actors in the network as intermediaries. 
+
+
+
+
+
+
+
+
+
+
+
