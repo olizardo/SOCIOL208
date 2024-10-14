@@ -65,7 +65,7 @@ Second, we write a user defined function to build the cube. Here's a not-so-effi
       }
       n <- vcount(g)
       n.paths <- 0
-      c <- array(rep(n^2*n, 0), c(n, n, n))
+      c <- array(rep(n^3, 0), c(n, n, n))
       for (b in 1:n) {
          for (s in 1:n) {
             for (r in 1:n) {
@@ -113,7 +113,9 @@ First, let us see what's in the cube. We can query specific two-dimensional sub-
    round(srb[, , 2], 2)
 ```
 
-Creates a three-dimensional matrix of pairwise betweenness probabilities, assigns it to the `srb` object, and looks at the $i \times j \times 2$ entry. Each entry in the matrix is the probability that node 2 stands on a shortest path between the row and the column node. For instance, the 0.33 in the entry corresponding to row 5 and column 8 tells us that node 2 stands in one third of the shortest paths between nodes 5 and 8 (there are `r nsp(g)[5, 8]` distinct shortest paths between 5 and 8). 
+Creates a three-dimensional matrix of pairwise betweenness probabilities and assigns it to the `srb` object in line 1, and looks at the $i \times j \times 2$ entry in line 2. 
+
+Each entry in the matrix is the *probability* that node 2 stands on a shortest path between the row and the column node. For instance, the 0.33 in the entry corresponding to row 5 and column 8 tells us that node 2 stands in one third of the shortest paths between nodes 5 and 8 (there are `r nsp(g)[5, 8]` distinct shortest paths between 5 and 8). 
 
 Because each sub-matrix in the cube is a matrix, we can do the usual matrix operations on them. For instance, let's take the row sums of the $s$ to $r$ matrix corresponding to node 3 as the broker. This can be done like this:
 
@@ -125,7 +127,34 @@ Because each sub-matrix in the cube is a matrix, we can do the usual matrix oper
   
 As @brandes_etal16, note this vector gives us the dependence of each node in the graph on node 3. Obviously node 3 doesn't depend on itself so there is a zero on the third spot in the vector. As is clear from the plot, node 5 is the most dependent on 3 for intermediation with the rest of the nodes in the graph. 
 
-Note also that the betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. So to get each node's betweenness we just sum up the entries in each of the cube's sub-matrices:
+We can also pick a particular sender and receiver node and sum all their dyadic entries in the cube *across* the third (broker) dimension:
+
+```{r}
+   sum(srb[1, 6, ])
+```
+
+This number is equivalent to the **geodesic distance** between the nodes minus one:
+
+```{r}
+   distances(g)[1, 6] - 1
+```
+
+## Betweenness and Closeness in the Cube
+
+The betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. For instance, let's look at the matrix composed by taking the slice of cube that corresponds to node 3 as a broker:
+
+```{r}
+   srb[, , 3]
+```
+
+The sum of the all the cells in this matrix (divided by two) correspond to node 3's **betweenness centrality**:
+
+```{r}
+   sum(srb[, , 3])/2
+   betweenness(g)[3]
+```
+
+So to get each node's betweenness we just can just sum up the entries in each of the cube's sub-matrices:
 
 ```{r}
    b.cube <- round(colSums(srb, dims = 2)/2, 2)
@@ -136,9 +165,7 @@ Note also that the betweenness centrality of each node is encoded in the cube, b
    b.igraph
 ```
 
-Note the neat trick of using the argument `dims = 2` in the usual `colSums` command. This tells `colSums` that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube's third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube. 
-
-Not surprisingly, node 3 is the top betweenness centrality node. 
+Note the neat trick of using the argument `dims = 2` in the usual `colSums` command. This tells `colSums` that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube's third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube (not surprisingly, node 3 is the top betweenness centrality node). 
 
 As @brandes_etal16 point out, using the cube info, we can build a matrix of *dependencies* between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the $sb^{th}$ entry contains the sum of the proportion of paths containing the broker nodes that starts with the sender node and end with some other node in the graph. 
 
@@ -191,3 +218,28 @@ Even more interestingly, **closeness centrality** is also in the dependence matr
 ```
 
 Here we see that node 3 is also the top in closeness, followed closely (pun intended) by nodes 2, 7, and 8. This makes sense because an actor with high closeness is one that has *low dependence* on key nodes to be able to reach others.
+
+Of course, closeness is also in the cube because of the mathematical relationship we saw earlier between the sum of entries between senders and receives across brokers in the cube and the geodesic distance. 
+
+So if we wanted to get the geodesic distances between every pair of nodes in the graph, all we need to do is loop through each pair of nodes and compute the relevant sum across brokers:
+
+```{r}
+   n <- vcount(g)
+   D <- matrix(0, n, n)
+   for (i in 1:n) {
+      for (j in 1:n) {
+         if (i != j) {
+            D[i,j] <- sum(srb[i, j, ]) + 1
+         }
+      }
+   }
+   D
+```
+
+Which is the same as the geodesic distance matrix:
+
+```{r}
+   distances(g)
+```
+
+

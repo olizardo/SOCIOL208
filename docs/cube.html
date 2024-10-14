@@ -272,6 +272,7 @@ div.csl-indent {
   <ul>
   <li><a href="#building-the-cube" id="toc-building-the-cube" class="nav-link active" data-scroll-target="#building-the-cube">Building the Cube</a></li>
   <li><a href="#exploring-the-cube" id="toc-exploring-the-cube" class="nav-link" data-scroll-target="#exploring-the-cube">Exploring the Cube</a></li>
+  <li><a href="#betweenness-and-closeness-in-the-cube" id="toc-betweenness-and-closeness-in-the-cube" class="nav-link" data-scroll-target="#betweenness-and-closeness-in-the-cube">Betweenness and Closeness in the Cube</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/cube.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -338,7 +339,7 @@ div.csl-indent {
 <span id="cb3-5"><a href="#cb3-5"></a>      }</span>
 <span id="cb3-6"><a href="#cb3-6"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
 <span id="cb3-7"><a href="#cb3-7"></a>      n.paths <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb3-8"><a href="#cb3-8"></a>      c <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">rep</span>(n<span class="sc">^</span><span class="dv">2</span><span class="sc">*</span>n, <span class="dv">0</span>), <span class="fu">c</span>(n, n, n))</span>
+<span id="cb3-8"><a href="#cb3-8"></a>      c <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">rep</span>(n<span class="sc">^</span><span class="dv">3</span>, <span class="dv">0</span>), <span class="fu">c</span>(n, n, n))</span>
 <span id="cb3-9"><a href="#cb3-9"></a>      <span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
 <span id="cb3-10"><a href="#cb3-10"></a>         <span class="cf">for</span> (s <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
 <span id="cb3-11"><a href="#cb3-11"></a>            <span class="cf">for</span> (r <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
@@ -388,7 +389,8 @@ div.csl-indent {
 [8,]  0.0    0 0.33    0 0.33  1.0    0 0.00</code></pre>
 </div>
 </div>
-<p>Creates a three-dimensional matrix of pairwise betweenness probabilities, assigns it to the <code>srb</code> object, and looks at the <span class="math inline">\(i \times j \times 2\)</span> entry. Each entry in the matrix is the probability that node 2 stands on a shortest path between the row and the column node. For instance, the 0.33 in the entry corresponding to row 5 and column 8 tells us that node 2 stands in one third of the shortest paths between nodes 5 and 8 (there are 3 distinct shortest paths between 5 and 8).</p>
+<p>Creates a three-dimensional matrix of pairwise betweenness probabilities and assigns it to the <code>srb</code> object in line 1, and looks at the <span class="math inline">\(i \times j \times 2\)</span> entry in line 2.</p>
+<p>Each entry in the matrix is the <em>probability</em> that node 2 stands on a shortest path between the row and the column node. For instance, the 0.33 in the entry corresponding to row 5 and column 8 tells us that node 2 stands in one third of the shortest paths between nodes 5 and 8 (there are 3 distinct shortest paths between 5 and 8).</p>
 <p>Because each sub-matrix in the cube is a matrix, we can do the usual matrix operations on them. For instance, let’s take the row sums of the <span class="math inline">\(s\)</span> to <span class="math inline">\(r\)</span> matrix corresponding to node 3 as the broker. This can be done like this:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   d<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(srb[ , , <span class="dv">3</span>])</span>
@@ -400,49 +402,91 @@ div.csl-indent {
 </div>
 </div>
 <p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span>, note this vector gives us the dependence of each node in the graph on node 3. Obviously node 3 doesn’t depend on itself so there is a zero on the third spot in the vector. As is clear from the plot, node 5 is the most dependent on 3 for intermediation with the rest of the nodes in the graph.</p>
-<p>Note also that the betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. So to get each node’s betweenness we just sum up the entries in each of the cube’s sub-matrices:</p>
+<p>We can also pick a particular sender and receiver node and sum all their dyadic entries in the cube <em>across</em> the third (broker) dimension:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   b.cube <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">colSums</span>(srb, <span class="at">dims =</span> <span class="dv">2</span>)<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>   b.igraph <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">betweenness</span>(g), <span class="dv">2</span>)</span>
-<span id="cb8-3"><a href="#cb8-3"></a>   <span class="fu">names</span>(b.cube) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb8-4"><a href="#cb8-4"></a>   <span class="fu">names</span>(b.igraph) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb8-5"><a href="#cb8-5"></a>   b.cube</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">sum</span>(srb[<span class="dv">1</span>, <span class="dv">6</span>, ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2</code></pre>
+</div>
+</div>
+<p>This number is equivalent to the <strong>geodesic distance</strong> between the nodes minus one:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   <span class="fu">distances</span>(g)[<span class="dv">1</span>, <span class="dv">6</span>] <span class="sc">-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2</code></pre>
+</div>
+</div>
+</section>
+<section id="betweenness-and-closeness-in-the-cube" class="level2">
+<h2 class="anchored" data-anchor-id="betweenness-and-closeness-in-the-cube">Betweenness and Closeness in the Cube</h2>
+<p>The betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. For instance, let’s look at the matrix composed by taking the slice of cube that corresponds to node 3 as a broker:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   srb[, , <span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]  0.0  0.0    0  0.0    1  0.5  0.0    0
+[2,]  0.0  0.0    0  0.5    1  0.0  0.5    0
+[3,]  0.0  0.0    0  0.0    0  0.0  0.0    0
+[4,]  0.0  0.5    0  0.0    1  1.0  0.5    0
+[5,]  1.0  1.0    0  1.0    0  1.0  1.0    1
+[6,]  0.5  0.0    0  1.0    1  0.0  1.0    0
+[7,]  0.0  0.5    0  0.5    1  1.0  0.0    0
+[8,]  0.0  0.0    0  0.0    1  0.0  0.0    0</code></pre>
+</div>
+</div>
+<p>The sum of the all the cells in this matrix (divided by two) correspond to node 3’s <strong>betweenness centrality</strong>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">sum</span>(srb[, , <span class="dv">3</span>])<span class="sc">/</span><span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 10</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">betweenness</span>(g)[<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 10</code></pre>
+</div>
+</div>
+<p>So to get each node’s betweenness we just can just sum up the entries in each of the cube’s sub-matrices:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   b.cube <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">colSums</span>(srb, <span class="at">dims =</span> <span class="dv">2</span>)<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span>
+<span id="cb18-2"><a href="#cb18-2"></a>   b.igraph <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">betweenness</span>(g), <span class="dv">2</span>)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>   <span class="fu">names</span>(b.cube) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>   <span class="fu">names</span>(b.igraph) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>   b.cube</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
  0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   b.igraph</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   b.igraph</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
  0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
 </div>
 </div>
-<p>Note the neat trick of using the argument <code>dims = 2</code> in the usual <code>colSums</code> command. This tells <code>colSums</code> that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube’s third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube.</p>
-<p>Not surprisingly, node 3 is the top betweenness centrality node.</p>
+<p>Note the neat trick of using the argument <code>dims = 2</code> in the usual <code>colSums</code> command. This tells <code>colSums</code> that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube’s third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube (not surprisingly, node 3 is the top betweenness centrality node).</p>
 <p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> point out, using the cube info, we can build a matrix of <em>dependencies</em> between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the <span class="math inline">\(sb^{th}\)</span> entry contains the sum of the proportion of paths containing the broker nodes that starts with the sender node and end with some other node in the graph.</p>
 <p>Here’s a function that uses the cube info to build the dependency matrix that <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> talk about using the cube as input:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   dep.ij <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
-<span id="cb12-2"><a href="#cb12-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(c)</span>
-<span id="cb12-3"><a href="#cb12-3"></a>      dep.ij <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(c[, , <span class="dv">1</span>])</span>
-<span id="cb12-4"><a href="#cb12-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
-<span id="cb12-5"><a href="#cb12-5"></a>         dep.ij <span class="ot">&lt;-</span> <span class="fu">cbind</span>(dep.ij,  <span class="fu">rowSums</span>(c[, , i]))</span>
-<span id="cb12-6"><a href="#cb12-6"></a>         </span>
-<span id="cb12-7"><a href="#cb12-7"></a>         }</span>
-<span id="cb12-8"><a href="#cb12-8"></a>      <span class="fu">rownames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
-<span id="cb12-9"><a href="#cb12-9"></a>      <span class="fu">colnames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
-<span id="cb12-10"><a href="#cb12-10"></a>      <span class="fu">return</span>(dep.ij)</span>
-<span id="cb12-11"><a href="#cb12-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   dep.ij <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
+<span id="cb22-2"><a href="#cb22-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(c)</span>
+<span id="cb22-3"><a href="#cb22-3"></a>      dep.ij <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(c[, , <span class="dv">1</span>])</span>
+<span id="cb22-4"><a href="#cb22-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
+<span id="cb22-5"><a href="#cb22-5"></a>         dep.ij <span class="ot">&lt;-</span> <span class="fu">cbind</span>(dep.ij,  <span class="fu">rowSums</span>(c[, , i]))</span>
+<span id="cb22-6"><a href="#cb22-6"></a>         </span>
+<span id="cb22-7"><a href="#cb22-7"></a>         }</span>
+<span id="cb22-8"><a href="#cb22-8"></a>      <span class="fu">rownames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
+<span id="cb22-9"><a href="#cb22-9"></a>      <span class="fu">colnames</span>(dep.ij) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>n</span>
+<span id="cb22-10"><a href="#cb22-10"></a>      <span class="fu">return</span>(dep.ij)</span>
+<span id="cb22-11"><a href="#cb22-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This function just takes the various vectors formed by the row sums of the sender-receiver matrix across each value of the third dimension (which is just each node in the graph when playing the broker role). It then returns a regular old <span class="math inline">\(n \times n\)</span> containing the info.</p>
 <p>Here’s the result when applied to our little example:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   <span class="fu">kbl</span>(<span class="fu">round</span>(<span class="fu">dep.ij</span>(srb), <span class="dv">2</span>), </span>
-<span id="cb13-3"><a href="#cb13-3"></a>       <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb13-4"><a href="#cb13-4"></a>       <span class="at">caption =</span> <span class="st">"Dependence Matrix."</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb13-5"><a href="#cb13-5"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb13-6"><a href="#cb13-6"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb23-2"><a href="#cb23-2"></a>   <span class="fu">kbl</span>(<span class="fu">round</span>(<span class="fu">dep.ij</span>(srb), <span class="dv">2</span>), </span>
+<span id="cb23-3"><a href="#cb23-3"></a>       <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb23-4"><a href="#cb23-4"></a>       <span class="at">caption =</span> <span class="st">"Dependence Matrix."</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-5"><a href="#cb23-5"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="#cb23-6"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -557,7 +601,7 @@ div.csl-indent {
 <p>Note that this is valued matrix that is also <em>asymmetric</em>. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 does not depend on nodes 1, 5, 6, or 8.</p>
 <p>Interestingly, as <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> also show, the betweenness centrality also can be calculated from the dependency matrix! All we need to do is compute the <em>column sums</em>, equivalent to <strong>in-degree</strong> in the directed dependence network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(<span class="fu">colSums</span>(<span class="fu">dep.ij</span>(srb))<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   <span class="fu">round</span>(<span class="fu">colSums</span>(<span class="fu">dep.ij</span>(srb))<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
  0.00  2.17 10.00  0.67  0.00  0.00  3.17  4.00 </code></pre>
@@ -565,22 +609,62 @@ div.csl-indent {
 </div>
 <p>Even more interestingly, <strong>closeness centrality</strong> is also in the dependence matrix! It is given by the <em>outdegree</em> of each actor in the directed dependence network, corresponding to the <em>row sums</em> of the matrix (shifted by a constant given by <span class="math inline">\(n-1\)</span>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   c.c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">distances</span>(g))</span>
-<span id="cb16-2"><a href="#cb16-2"></a>   c.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">dep.ij</span>(srb)) <span class="sc">+</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb16-3"><a href="#cb16-3"></a>   <span class="fu">names</span>(c.c) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb16-4"><a href="#cb16-4"></a>   <span class="fu">names</span>(c.d) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb16-5"><a href="#cb16-5"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.c, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   c.c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">distances</span>(g))</span>
+<span id="cb26-2"><a href="#cb26-2"></a>   c.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">dep.ij</span>(srb)) <span class="sc">+</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb26-3"><a href="#cb26-3"></a>   <span class="fu">names</span>(c.c) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb26-4"><a href="#cb26-4"></a>   <span class="fu">names</span>(c.d) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb26-5"><a href="#cb26-5"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.c, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
 0.071 0.091 0.111 0.083 0.067 0.077 0.091 0.091 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.d, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">round</span>(<span class="dv">1</span><span class="sc">/</span>c.d, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    1     2     3     4     5     6     7     8 
 0.071 0.091 0.111 0.083 0.067 0.077 0.091 0.091 </code></pre>
 </div>
 </div>
 <p>Here we see that node 3 is also the top in closeness, followed closely (pun intended) by nodes 2, 7, and 8. This makes sense because an actor with high closeness is one that has <em>low dependence</em> on key nodes to be able to reach others.</p>
+<p>Of course, closeness is also in the cube because of the mathematical relationship we saw earlier between the sum of entries between senders and receives across brokers in the cube and the geodesic distance.</p>
+<p>So if we wanted to get the geodesic distances between every pair of nodes in the graph, all we need to do is loop through each pair of nodes and compute the relevant sum across brokers:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<span id="cb30-2"><a href="#cb30-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n)</span>
+<span id="cb30-3"><a href="#cb30-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb30-4"><a href="#cb30-4"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb30-5"><a href="#cb30-5"></a>         <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
+<span id="cb30-6"><a href="#cb30-6"></a>            D[i,j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(srb[i, j, ]) <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb30-7"><a href="#cb30-7"></a>         }</span>
+<span id="cb30-8"><a href="#cb30-8"></a>      }</span>
+<span id="cb30-9"><a href="#cb30-9"></a>   }</span>
+<span id="cb30-10"><a href="#cb30-10"></a>   D</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    2    2    2    3    3    1    1
+[2,]    2    0    1    2    2    1    2    1
+[3,]    2    1    0    1    1    1    1    2
+[4,]    2    2    1    0    2    2    2    1
+[5,]    3    2    1    2    0    2    2    3
+[6,]    3    1    1    2    2    0    2    2
+[7,]    1    2    1    2    2    2    0    1
+[8,]    1    1    2    1    3    2    1    0</code></pre>
+</div>
+</div>
+<p>Which is the same as the geodesic distance matrix:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   <span class="fu">distances</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]    0    2    2    2    3    3    1    1
+[2,]    2    0    1    2    2    1    2    1
+[3,]    2    1    0    1    1    1    1    2
+[4,]    2    2    1    0    2    2    2    1
+[5,]    3    2    1    2    0    2    2    3
+[6,]    3    1    1    2    2    0    2    2
+[7,]    1    2    1    2    2    2    0    1
+[8,]    1    1    2    1    3    2    1    0</code></pre>
+</div>
+</div>
 
 
 
