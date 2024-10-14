@@ -90,9 +90,17 @@ We name the function `cube`. Lines 2-5 it's just a mini-function called `kill.en
 
 Line 8 initializes the `array` in `R`. It takes a string of zeros of length $n^2 \times n$ where $n$ is the number of nodes and crams them into an $n \times n \times n$ array. Basically, in this case, since $n = 8$, this means eight empty matrices of dimensions eighth by eight stacked together to form our cube full of zeros. The $ijk^{th}$ cell of the array corresponds to sender $i$, receiver $j$ and broker node $k$.
 
-Lines 9-19 populate the cube with the required information using an (inefficient as noted earlier) triple `for` loop. As noted some, useful `igraph` functions come into play here. In line 12 the `if` conditional inside the triple loop uses the `neighbors` function in `igraph` and checks that node $r$ is not a neighbor of $s$ (if they are directly connected then node $b$ cannot be a broker). After we check that $s$ and $r$ are not neighbors, we use the `all_shortest_paths` function in `igraph` to get all the shortest paths between $s$ and $r$ in line 13. Line 14 uses the `kill.ends` function to drop the source and receiver nodes from the vector of node ids returned by the `all_shortest_paths` function, and line 15 uses some `sapply` magic and the base `R` function `%in%` to check how many times each broker node $b$ shows up in that list of shortest paths as an inner node between $s$ and $r$; we put that number in the $ijk^{th}$ cell of the array, and loop through all triplets until we are done. 
+Lines 9-19 populate the cube with the required information using an (inefficient as noted earlier) triple `for` loop. As noted some, useful `igraph` functions come into play here:
 
-Lines 21-23 loop through the cube again, this time to take the ratio of the number of shortest paths involving each broker node to the *total* number of shortest paths between each pair (the pairwise betweenness), which we computed in line 20 using our trusty `nsp` function. So all we have to do is divided each eight by eight matrix in the cube by the $S$ matrix. 
+- In line 12 the `if` conditional inside the triple loop uses the `neighbors` function in `igraph` and checks that node $r$ is not a neighbor of $s$ (if they are directly connected then node $b$ cannot be a broker). 
+
+- After we check that $s$ and $r$ are not neighbors, we use the `all_shortest_paths` function in `igraph` to get all the shortest paths between $s$ and $r$ in line 13. 
+
+- Line 14 uses the `kill.ends` function to drop the source and receiver nodes from the vector of node ids returned by the `all_shortest_paths` function.
+
+- Line 15 uses some `sapply` magic and the base `R` function `%in%` to check how many times each broker node $b$ shows up in that list of shortest paths as an inner node between $s$ and $r$; we put that number in the $ijk^{th}$ cell of the array, and loop through all triplets until we are done. 
+
+Finally, lines 21-23 loop through the cube again, this time to take the ratio of the number of shortest paths involving each broker node to the *total* number of shortest paths between each pair (the pairwise betweenness), which we computed in line 20 using our trusty `nsp` function. So all we have to do is divided each eight by eight matrix in the cube by the $S$ matrix. 
 
 ## Exploring the Cube
 
@@ -105,10 +113,9 @@ First, let us see what's in the cube. We can query specific two-dimensional sub-
    round(srb[, , 2], 2)
 ```
 
-Creates a three-dimensional matrix of pairwise betweenness probabilities, assigns it to the `srb` object, and looks at the $i \times j \times 2$ entry. 
+Creates a three-dimensional matrix of pairwise betweenness probabilities, assigns it to the `srb` object, and looks at the $i \times j \times 2$ entry. Each entry in the matrix is the probability that node 2 stands on a shortest path between the row and the column node. For instance, the 0.33 in the entry corresponding to row 5 and column 8 tells us that node 2 stands in one third of the shortest paths between nodes 5 and 8 (there are `r nsp(g)[5, 8]` distinct shortest paths between 5 and 8). 
 
-
-Because each sub-matrix in the cube is a matrix, we can do the usual matrix operations on them. For instance, let's take the row sums of the $s$ to $r$ corresponding to node 3 as the broker. This can be done like this:
+Because each sub-matrix in the cube is a matrix, we can do the usual matrix operations on them. For instance, let's take the row sums of the $s$ to $r$ matrix corresponding to node 3 as the broker. This can be done like this:
 
 ```{r}
    d.3 <- rowSums(srb[ , , 3])
