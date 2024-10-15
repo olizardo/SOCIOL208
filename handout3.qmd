@@ -207,6 +207,60 @@ The (normalized) scores produced by this approach are identical to those compute
 
 So the distributional model of status is the same one implemented in the PageRank algorithm!
 
+PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
+
+```{r}
+   g <- ht_advice
+```
+
+We then compute the $\mathbf{P}$ matrix:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+   P <- A/rowSums(A)
+   round(P, 2)
+```
+
+Another way of thinking about the $\mathbf{P}$ is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
+
+One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in the above matrix nodes, with just one out-neighbor, in which case the probability is 1.0 that if the random walker is a node 6 it will go to node 21. 
+
+To avoid this issue the original designers of the PageRank algorithm (Brinn and Page) added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph.
+
+How do we do that? Well we need to "fix" the $\mathbf{P}$ to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for Google):
+
+$$
+   \mathbf{G} = \alpha \mathbf{P} + (1 - \alpha) \mathbf{E}
+$$
+
+Where $\mathbf{E}$ is a matrix of the same dimension as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being teleported to.
+
+So fixing $\alpha = 0.85$ our $\mathbf{G}$ matrix would be:
+
+```{r}
+   E <- matrix(1/vcount(g), vcount(g), vcount(g))
+   G <- (0.85 * P) + (0.15 * E)
+```
+
+And then we just play our status distribution game on the transpose of $\mathbf{G}$:
+
+```{r}
+   s3 <- round(status1(t(G)), 3)
+   round(s3/max(s3), 3)
+
+```
+
+Which is the same answer you would get from the `igraph` function `page_rank` by setting the "damping" parameter to 0.85:
+
+```{r}
+   pr <- page_rank(g, damping = 0.85, algo = "arpack")$vector
+   round(pr/max(pr), 3)
+```
+
+
+
+
+
 
 
 
