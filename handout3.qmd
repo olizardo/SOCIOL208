@@ -251,14 +251,14 @@ We then compute the $\mathbf{P}$ matrix:
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
    P <- A/rowSums(A)
-   round(P, 2)
+   round(P[1:10, 1:10], 2)
 ```
 
 Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
 
-One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in the above matrix nodes, with just one out-neighbor, in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
+One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor, in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
 
-To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph.
+To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.
 
 How do we do that? Well we need to "fix" the $\mathbf{P}$ matrix to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for **G**oogle):
 
@@ -271,7 +271,8 @@ Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but contai
 So fixing $\alpha = 0.85$ our $\mathbf{G}$ matrix would be:
 
 ```{r}
-   E <- matrix(1/vcount(g), vcount(g), vcount(g))
+   n <- vcount(g)
+   E <- matrix(1/n, n, n)
    G <- (0.85 * P) + (0.15 * E)
 ```
 
@@ -280,7 +281,6 @@ And then we just play our status distribution game on the transpose of $\mathbf{
 ```{r}
    s3 <- round(status1(t(G)), 3)
    round(s3/max(s3), 3)
-
 ```
 
 Which is the same answer you would get from the `igraph` function `page_rank` by setting the "damping" parameter to 0.85:
@@ -308,7 +308,7 @@ $$
    x^a_i = \sum_i a_{ij} x^h_i
 $$
 
-Which says that the hub score $x^h$ of a node is the sum of the authority scores $x^a$ of the nodes they point to, and the authority score of a node is the sum of the hub scores of the nodes that point to it. 
+Which says that the hub score $x^h$ of a node is the sum of the authority scores $x^a$ of the nodes they point to (sum over $j$; the outdegree), and the authority score of a node is the sum of the hub scores of the nodes that point to it (sum over $i$; the indegree). 
 
 So we need to make our status game a bit more complicated (but not too much) to account for this duality:
 
