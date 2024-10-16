@@ -333,7 +333,7 @@ div.csl-indent {
 <p>Let’s start with the simplest model of how people can get their status from the status of others in a network. It is the simplest because it is based on degree.</p>
 <p>Imagine everyone has the same “quantum” of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people “send” the same amount of status to all their alters in the network. At the end of each step, we compute people’s status scores using <a href="#eq-status-sum">Equation&nbsp;1</a>. We stop doing this after the status scores of people stop changing across each iteration.</p>
 <p>Let us see a real-life example at work.</p>
-<p>We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast. The data are reported as directed ties (<span class="math inline">\(i\)</span> nominates <span class="math inline">\(j\)</span> as a friend) but we will constrain ties to be undirected:</p>
+<p>We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast (see the description <a href="https://rdrr.io/github/schochastics/networkdata/man/ht_friends.html">here</a>). The data are reported as directed ties (<span class="math inline">\(i\)</span> nominates <span class="math inline">\(j\)</span> as a friend) but we will constrain ties to be undirected:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
 <span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
@@ -378,8 +378,8 @@ div.csl-indent {
 <pre><code> [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</code></pre>
 </div>
 </div>
-<p>Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the <em>current</em> status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible as checked in line 10.</p>
-<p>Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely. The <code>type = "E"</code> normalization is called the <strong>euclidean vector norm</strong>, which we divide each value of the status scores by after each update. For a vector of numbers <span class="math inline">\(\mathbf{x}\)</span> the euclidean vector norm <span class="math inline">\(||\mathbf{x}||_2\)</span> is given by: <span class="math inline">\(\sqrt{\sum x^2}\)</span>. So we divide each status scores by the square root of the sum of all the squared scores.</p>
+<p>Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the <em>current</em> status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible (<span class="math inline">\(\delta &lt; 0.0001\)</span>) as checked in line 10.</p>
+<p>Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely. In base <code>R</code>, the <code>type = "E"</code> normalization implements the <strong>euclidean vector norm</strong>, by which we divide each value of the status scores by after each update.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>And here’s the resulting (row) vector of status scores for each node:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">round</span>(<span class="fu">status1</span>(A), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -407,8 +407,8 @@ div.csl-indent {
 </div>
 <p>So, the eigenvector centralities are just the limit scores produced by the status distribution process implemented in the <code>status1</code> function!</p>
 <p>Most other measures of status in networks are constructed using similar principles. What changes is the <em>model</em> of how status is distributed in the system. That’s why scary and non-intuitive stuff about eigenvectors or whatever is misleading.</p>
-<p>Other measures are constructed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in <strong>directed graphs</strong>, by for instance, differentiating status derived from outgoing links from that derived from incoming links.</p>
-<p>Let’s see some other examples.</p>
+<p>Other measures are designed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in <strong>directed graphs</strong>, by for instance, differentiating status derived from outgoing links from that derived from incoming links.</p>
+<p>Let’s see some examples of these alternative cases.</p>
 </section>
 <section id="a-degree-dependent-model-of-status-aka-pagerank" class="level2">
 <h2 class="anchored" data-anchor-id="a-degree-dependent-model-of-status-aka-pagerank">A Degree-Dependent Model of Status (AKA PageRank)</h2>
@@ -606,7 +606,7 @@ div.csl-indent {
 <span id="cb35-13"><a href="#cb35-13"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">h =</span> <span class="fu">as.vector</span>(a), <span class="at">a =</span> <span class="fu">as.vector</span>(h)))</span>
 <span id="cb35-14"><a href="#cb35-14"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Everything is like our previous <code>status1</code> function except now we are keeping track of two mutually defining scores <code>a</code> and <code>h</code>.</p>
+<p>Everything is like our previous <code>status1</code> function except now we are keeping track of two mutually defining scores <code>a</code> and <code>h</code>. As you may have guessed this is just an implementation of the “HITS” algorithm developed by <span class="citation" data-cites="kleinberg99">Kleinberg (<a href="#ref-kleinberg99" role="doc-biblioref">1999</a>)</span>.</p>
 <p>The results for the Krackhardt advice network are:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   <span class="fu">round</span>(<span class="fu">status2</span>(A)<span class="sc">$</span>a<span class="sc">/</span><span class="fu">max</span>(<span class="fu">status2</span>(A)<span class="sc">$</span>a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -633,19 +633,101 @@ div.csl-indent {
 [13] 0.331 0.279 1.000 0.274 0.313 0.800 0.581 0.687 0.600</code></pre>
 </div>
 </div>
+<p>Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the eigenvectors of a network proximity matrix (the adjacency matrix <span class="math inline">\(\mathbf{A}\)</span> and the probability matrix <span class="math inline">\(\mathbf{P}\)</span> respectively). It would be surprising if the same wasn’t true of the hub and authority status scores.</p>
+<p>Let’s find out which ones!</p>
+<p>Consider the matrices:</p>
+<p><span class="math display">\[
+\mathbf{M} = \mathbf{A}\mathbf{A}^T
+\]</span></p>
+<p><span class="math display">\[
+\mathbf{N} = \mathbf{A}^T\mathbf{A}
+\]</span></p>
+<p>Let’s see what they look like in the Krackhardt manager’s network:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   M <span class="ot">=</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A)</span>
+<span id="cb44-2"><a href="#cb44-2"></a>   N <span class="ot">=</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A</span>
+<span id="cb44-3"><a href="#cb44-3"></a>   M[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
+ [1,]    6    1    5    5    5    1    3    4    5     5
+ [2,]    1    3    3    2    3    1    2    3    3     0
+ [3,]    5    3   15   11   12    1    8    8   12     8
+ [4,]    5    2   11   12   11    1    7    6   11     8
+ [5,]    5    3   12   11   15    1    7    7   12    10
+ [6,]    1    1    1    1    1    1    1    1    1     0
+ [7,]    3    2    8    7    7    1    8    5    8     4
+ [8,]    4    3    8    6    7    1    5    8    7     4
+ [9,]    5    3   12   11   12    1    8    7   13     7
+[10,]    5    0    8    8   10    0    4    4    7    14</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   N[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
+ [1,]   13   13    4    5    5    6    8    8    4     8
+ [2,]   13   18    5    8    5    9   11   10    4     9
+ [3,]    4    5    5    4    4    2    4    4    2     3
+ [4,]    5    8    4    8    3    4    6    6    3     4
+ [5,]    5    5    4    3    5    1    3    3    3     3
+ [6,]    6    9    2    4    1   10    7    7    2     6
+ [7,]    8   11    4    6    3    7   13    6    3     7
+ [8,]    8   10    4    6    3    7    6   10    3     6
+ [9,]    4    4    2    3    3    2    3    3    4     3
+[10,]    8    9    3    4    3    6    7    6    3     9</code></pre>
+</div>
+</div>
+<p>What’s in these matrices? Well let’s look at <span class="math inline">\(\mathbf{M}\)</span>. The diagonals will look familiar because they happen to be the <strong>outdegree</strong> of each node:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">degree</span>(g, <span class="at">mode =</span> <span class="st">"out"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1]  6  3 15 12 15  1  8  8 13 14</code></pre>
+</div>
+</div>
+<p>You may have guessed that the diagonals of matrix <span class="math inline">\(\mathbf{N}\)</span> contain the <strong>indegrees</strong>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">degree</span>(g, <span class="at">mode =</span> <span class="st">"in"</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 13 18  5  8  5 10 13 10  4  9</code></pre>
+</div>
+</div>
+<p>Which means that the <em>off-diagonals</em> cells of each matrix <span class="math inline">\(m_{ij}\)</span> and <span class="math inline">\(n_{ij}\)</span>, contain the common out-neighbors and common in-neighbors shared by nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> in the graph, respectively.</p>
+<p>As you may already be suspecting, the hub and authorities scores are the leading eigenvectors of the <span class="math inline">\(\mathbf{M}\)</span> and <span class="math inline">\(\mathbf{N}\)</span> matrices <span class="citation" data-cites="kleinberg99">(<a href="#ref-kleinberg99" role="doc-biblioref">Kleinberg 1999</a>)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   h <span class="ot">&lt;-</span> <span class="fu">eigen</span>(M)<span class="sc">$</span>vector[,<span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb52-2"><a href="#cb52-2"></a>   a <span class="ot">&lt;-</span> <span class="fu">eigen</span>(N)<span class="sc">$</span>vector[,<span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb52-3"><a href="#cb52-3"></a>   <span class="fu">round</span>(h<span class="sc">/</span><span class="fu">max</span>(h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0.370 0.176 0.841 0.709 0.835 0.065 0.492 0.490 0.773 0.672 0.206 0.122
+[13] 0.331 0.279 1.000 0.274 0.313 0.800 0.581 0.687 0.600</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">round</span>(a<span class="sc">/</span><span class="fu">max</span>(a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0.782 1.000 0.356 0.496 0.330 0.644 0.684 0.711 0.290 0.615 0.769 0.498
+[13] 0.323 0.677 0.267 0.570 0.645 0.871 0.323 0.589 0.776</code></pre>
+</div>
+</div>
+<p>Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!</p>
 
 
 
 </section>
 
+
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-brin_page98" class="csl-entry" role="doc-biblioentry">
 Brin, Sergey, and Lawrence Page. 1998. <span>“The Anatomy of a Large-Scale Hypertextual Web Search Engine.”</span> <em>Computer Networks and ISDN Systems</em> 30 (1-7): 107–17.
 </div>
+<div id="ref-kleinberg99" class="csl-entry" role="doc-biblioentry">
+Kleinberg, Jon M. 1999. <span>“Authoritative Sources in a Hyperlinked Environment.”</span> <em>Journal of the ACM (JACM)</em> 46 (5): 604–32.
+</div>
 <div id="ref-podolny01" class="csl-entry" role="doc-biblioentry">
 Podolny, Joel M. 2001. <span>“Networks as the Pipes and Prisms of the Market.”</span> <em>American Journal of Sociology</em> 107 (1): 33–60.
 </div>
-</div></section></div></main> <!-- /main -->
+</div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>For a vector of numbers <span class="math inline">\(\mathbf{x}\)</span> the euclidean vector norm <span class="math inline">\(||\mathbf{x}||_2\)</span> is given by: <span class="math inline">\(\sqrt{\sum x^2}\)</span>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {

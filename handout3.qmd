@@ -67,7 +67,7 @@ Imagine everyone has the same "quantum" of status to begin with (this can be sto
 
 Let us see a real-life example at work. 
 
-We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast. The data are reported as directed ties ($i$ nominates $j$ as a friend) but we will constrain ties to be undirected:
+We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast (see the description [here](https://rdrr.io/github/schochastics/networkdata/man/ht_friends.html)). The data are reported as directed ties ($i$ nominates $j$ as a friend) but we will constrain ties to be undirected:
 
 ```{r}
    library(networkdata)
@@ -122,9 +122,9 @@ Lines 1-5 initialize various quantities, most importantly the initial status vec
    rep(1, nrow(A))
 ```
 
-Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible as checked in line 10. 
+Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 0.0001$) as checked in line 10. 
 
-Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely. The `type = "E"` normalization is called the **euclidean vector norm**, which we divide each value of the status scores by after each update. For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$. So we divide each status scores by the square root of the sum of all the squared scores.
+Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely. In base `R`, the `type = "E"` normalization implements the **euclidean vector norm**, by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
 
 And here's the resulting (row) vector of status scores for each node:
 
@@ -149,9 +149,9 @@ So, the eigenvector centralities are just the limit scores produced by the statu
 
 Most other measures of status in networks are constructed using similar principles. What changes is the *model* of how status is distributed in the system. That's why scary and non-intuitive stuff about eigenvectors or whatever is misleading.
 
-Other measures are constructed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in **directed graphs**, by for instance, differentiating status derived from outgoing links from that derived from incoming links. 
+Other measures are designed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in **directed graphs**, by for instance, differentiating status derived from outgoing links from that derived from incoming links. 
 
-Let's see some other examples.
+Let's see some examples of these alternative cases.
 
 ## A Degree-Dependent Model of Status (AKA PageRank)
 
@@ -306,7 +306,7 @@ So we need to make our status game a bit more complicated (but not too much) to 
    }
 ```
 
-Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. 
+Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. As you may have guessed this is just an implementation of the "HITS" algorithm developed by @kleinberg99.
 
 The results for the Krackhardt advice network are:
 
@@ -321,6 +321,58 @@ Which are equivalent to using the `igraph` functions `authority_score` and `hub_
    round(authority_score(g, scale = TRUE)$vector, 3)
    round(hub_score(g, scale = TRUE)$vector, 3)
 ```
+
+Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the eigenvectors of a network proximity matrix (the adjacency matrix $\mathbf{A}$ and the probability matrix $\mathbf{P}$ respectively). It would be surprising if the same wasn't true of the hub and authority status scores.
+
+Let's find out which ones!
+
+Consider the matrices:
+
+$$
+\mathbf{M} = \mathbf{A}\mathbf{A}^T
+$$
+
+$$
+\mathbf{N} = \mathbf{A}^T\mathbf{A}
+$$
+
+Let's see what they look like in the Krackhardt manager's network:
+
+```{r}
+   M = A %*% t(A)
+   N = t(A) %*% A
+   M[1:10, 1:10]
+   N[1:10, 1:10]
+```
+
+What's in these matrices? Well let's look at $\mathbf{M}$. The diagonals will look familiar because they happen to be the **outdegree** of each node:
+
+```{r}
+   degree(g, mode = "out")[1:10]
+```
+
+You may have guessed that the diagonals of matrix $\mathbf{N}$ contain the **indegrees**:
+
+```{r}
+   degree(g, mode = "in")[1:10]
+```
+
+Which means that the *off-diagonals* cells of each matrix $m_{ij}$ and $n_{ij}$, contain the common out-neighbors and common in-neighbors shared by nodes $i$ and $j$ in the graph, respectively.
+
+As you may already be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}$ and $\mathbf{N}$ matrices [@kleinberg99]:
+
+```{r}
+   h <- eigen(M)$vector[,1] * -1
+   a <- eigen(N)$vector[,1] * -1
+   round(h/max(h), 3)
+   round(a/max(a), 3)
+```
+
+Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!
+
+
+
+
 
 
 
