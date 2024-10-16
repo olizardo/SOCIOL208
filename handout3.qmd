@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-In the last handout, we saw how to compute the most popular centrality measures. Freeman's "big three" have strong graph-theoretic foundation and do a good job of formalizing and quantifying the idea that a node is central if it is "well-placed" in the network, where being well-placed resolves into either being able to *reach* others (directly as with degree or indirectly as with closeness) or being able to *intermediate* between others (as with betweenness).
+In the [last handout](https://olizardo.github.io/SOCIOL208/handout2.html), we saw how to compute the most popular centrality measures. Freeman's "big three" have strong graph-theoretic foundation and do a good job of formalizing and quantifying the idea that a node is central if it is "well-placed" in the network, where being well-placed resolves into either being able to *reach* others (directly as with degree or indirectly as with closeness) or being able to *intermediate* between others (as with betweenness).
 
 ## Networks as Prisms
 
@@ -145,7 +145,22 @@ Which is of course what is computed by the `eigen_centrality` function in `igrap
    round(eigen_centrality(g, scale = FALSE)$vector, 3)
 ```
 
-So, the eigenvector centralities are just the limit scores produced by the status distribution process implemented in the `status1` function!
+So, the "eigenvector centralities" are just the limit scores produced by the status distribution process implemented in the `status1` function!
+
+When treated as a structural index of connectivity in a graph (aka a centrality measure) the eigenvector status scores induce an ordering of the nodes which we may be interested in looking at:
+
+```{r}
+   nodes <- 1:vcount(g)
+   eig.cent <- round(status1(A), 3)
+   eig.dat <- data.frame(Nodes = nodes, Eigen.Cent = eig.cent, Deg.Cent = degree(g))
+   eig.dat <- eig.dat[order(eig.dat$Eigen.Cent, decreasing = TRUE), ]
+   library(kableExtra)
+   kbl(eig.dat[1:10, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Ten Eigenvector Scores.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+
 
 Most other measures of status in networks are constructed using similar principles. What changes is the *model* of how status is distributed in the system. That's why scary and non-intuitive stuff about eigenvectors or whatever is misleading.
 
@@ -191,7 +206,15 @@ Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "out
    round(colSums(P), 2)
 ```
 
-Which means that inequalities in the system will be tied to the indegree of each node in the $\mathbf{P}$ matrix. This matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a large indegree in $\mathbf{P}$. 
+Which means that inequalities in the system will be tied to the indegree of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix:
+
+```{r}
+   round(rowSums(t(P)), 2)
+```
+
+This will come in handy in a second.
+
+The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a large indegree in $\mathbf{P}$. 
 
 Now we can just write function implementing the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
 
@@ -369,6 +392,34 @@ As you may already be suspecting, the hub and authorities scores are the leading
 ```
 
 Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!
+
+Of course, like before, we can treat the PageRank, Hub, and Authority Scores as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes stack up according to the different status criteria:
+
+```{r}
+#| echo: false
+   nodes <- 1:vcount(g)
+   pr.cent <- round(status1(t(G))/max(status1(t(G))), 3)
+   hu.cent <- round(h/max(h), 3)
+   au.cent <- round(a/max(a), 3)
+   pr.dat <- data.frame(Nodes = nodes, PR.Cent = pr.cent, ODeg.Cent = degree(g, mode = "out"), IDeg.Cent = degree(g, mode = "in"))
+   hu.dat <- data.frame(Nodes = nodes, Hub.Cent = hu.cent, ODeg.Cent = degree(g, mode = "out"), IDeg.Cent = degree(g, mode = "in"))
+   au.dat <- data.frame(Nodes = nodes, Auth.Cent = au.cent, ODeg.Cent = degree(g, mode = "out"), IDeg.Cent = degree(g, mode = "in"))  
+   pr.dat <- pr.dat[order(pr.dat$PR.Cent, decreasing = TRUE), ]
+   hu.dat <- hu.dat[order(hu.dat$Hub.Cent, decreasing = TRUE), ]
+   au.dat <- au.dat[order(au.dat$Auth.Cent, decreasing = TRUE), ]
+
+   kbl(pr.dat[1:5, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Five PageRank Scores.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+   
+   kbl(hu.dat[1:5, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Five Hub Scores.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+   
+   kbl(au.dat[1:5, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Five Authority Scores.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
 
 
 
