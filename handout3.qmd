@@ -191,7 +191,7 @@ Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "out
 
 Which means that inequalities in the system will be tied to the indegree of each node in the $\mathbf{P}$ matrix. This matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a large indegree in $\mathbf{P}$. 
 
-Now we can just write function implementing the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
+Now we can just write function implementing the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
 
 ```{r}
    round(status1(t(P)), 3)
@@ -235,13 +235,13 @@ One issue that arises is that there could be nodes with no out-neighbors (so-cal
 
 To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph.
 
-How do we do that? Well we need to "fix" the $\mathbf{P}$ to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for Google):
+How do we do that? Well we need to "fix" the $\mathbf{P}$ matrix to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for **G**oogle):
 
 $$
    \mathbf{G} = \alpha \mathbf{P} + (1 - \alpha) \mathbf{E}
 $$
 
-Where $\mathbf{E}$ is a matrix of the same dimension as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being teleported to.
+Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being teleported to.
 
 So fixing $\alpha = 0.85$ our $\mathbf{G}$ matrix would be:
 
@@ -294,13 +294,13 @@ So we need to make our status game a bit more complicated (but not too much) to 
      diff.a.h <- 1 #initializing diff.
      while (diff.a.h >= 0.0001) {
          o.a <- a #old authority scores
-         h <- A %*% o.a #new hub scores a function of previous authority scores
+         h <- A %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
          h <- h/norm(h, type = "E")
-         a <- t(A) %*% h #new authority scores a function of current hub scores
+         a <- t(A) %*% h #new authority scores a function of current hub scores of their in-neighbors
          a <- a/norm(a, type = "E")
          diff.a.h <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
          }
-   return(list(h = as.vector(h), a = as.vector(a)))
+   return(list(h = as.vector(a), a = as.vector(h)))
    }
 ```
 
