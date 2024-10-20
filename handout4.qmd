@@ -31,6 +31,8 @@ In a graph, an equivalence class $C$ is just a set of nodes that are structurall
 
 The partitioning of the vertex set into a set of equivalence classes $\{C_1, C_2 \ldots C_k\}$ as well as the adjacency relations between nodes in the same class and nodes in different classes defines the **role structure** of the network. 
 
+## Structural Equivalence in an Ideal World
+
 Let us illustrate these concepts. Consider the following toy graph:
 
 ```{r}
@@ -240,3 +242,94 @@ These intra and inter-block relations can then be represented in the reduced **i
 ```
 
 Which reveals a more economical representation of the system based on structural equivalence. 
+
+## Structural Equivalence in the Real World
+
+Of course, in real data, it is very unlikely that two nodes will meet the exact mathematical criterion of structural equivalence. They might have three out of five, or eight out of nine common neighbors but would still get a big zero in the $\mathbf{E}$ defined using our strict function.
+
+So, a lot of role analysis in real networks follows instead the path of search for a *near cousin* to structural equivalence that follows the path of search for the large class of **distance** and **similarity** metrics, and pick one where structural equivalence falls off as a special case.
+
+For random reasons, early work in social network analysis focused on distance metrics, while more recent work inspired by network science focuses on similarity metrics. The end goal is the same though. 
+
+Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric $d$ with a well defined minimum value $d_{min}$, such that:
+
+$$
+   v_i \equiv v_j \iff d(v_i, v_j) = d_{min}
+$$
+
+We then populate the $\mathbf{E}$ matrix with the values of $d$ for each pair of nodes $(v_i, v_j)$, do some kind of clustering on the matrix, and use our clusters assignments to re-arrange the original adjacency matrix to find our blocks, and so forth. 
+
+A very obvious candidate for $d$ is the **Euclidean Distance** [@burt76]:
+
+$$
+   d_{i,j} = \sqrt{\sum_{k \neq i,j} (a_{ik} - a_{jk})^2}
+$$ 
+
+Where $a_{ik}$ and $a_{jk}$ are the corresponding entries in the graph's adjacency matrix $\mathbf{A}$. The minimum for this measure is $d_{min} = 0$, so this is the value we should find for structurally equivalent nodes. 
+
+A function that does this for any graph is:
+
+```{r}
+   d.euclid <- function(x) {
+      A <- as.matrix(as_adjacency_matrix(x))
+      n <- nrow(A)
+      E <- matrix(0, n, n)
+      for (i in 1:n) {
+         for (j in 1:n) {
+            if (i < j & i != j) {
+               d.ij <- 0
+               for (k in 1:n) {
+                  if (k != i & k != j) {
+                     d.ij <- d.ij + (A[i,k] - A[j,k])^2
+                     }
+                  }
+               E[i,j] <- sqrt(d.ij)
+               E[j,i] <- sqrt(d.ij)
+            }
+         }
+      }
+   rownames(E) <- rownames(A)
+   colnames(E) <- colnames(A)
+   return(E)
+   }
+```
+
+And we can try it out with our toy graph:
+
+```{r}
+   E <- d.euclid(g)
+   round(E, 1)
+```
+
+And it looks like indeed it detected the structurally equivalent nodes in the graph. We can see it clearly by re-ordering the rows and columns according to our known ordering:
+
+```{r}
+   E <- E[SE.ord, SE.ord]
+   round(E, 1)
+```
+
+Here the block-diagonals of the matrix contain zeroes because the $d$ is a distance function with a minimum of zero. If we wanted it to contain ones instead we would normalize:
+
+$$
+   d^* = 1-\left(\frac{d}{max(d)}\right)
+$$
+
+Which would give us:
+
+```{r}
+   E.norm <- 1 - E/max(E)
+   round(E.norm, 1)
+```
+
+As noted, a distance function defines a *clustering* on the nodes, and the results of the clustering generate our blocks. In `R` we can use the functions `dist` and `hclust` to do the job:
+
+```{r}
+   E <- dist(E) #transforming E to a dist object
+   h.res <- hclust(E, method = "ward.D2")
+   plot(h.res)
+```
+
+Which are our original clusters of structural equivalent nodes!
+
+
+

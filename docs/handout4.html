@@ -281,6 +281,8 @@ div.csl-indent {
    
   <ul>
   <li><a href="#structural-equivalence" id="toc-structural-equivalence" class="nav-link active" data-scroll-target="#structural-equivalence">Structural Equivalence</a></li>
+  <li><a href="#structural-equivalence-in-an-ideal-world" id="toc-structural-equivalence-in-an-ideal-world" class="nav-link" data-scroll-target="#structural-equivalence-in-an-ideal-world">Structural Equivalence in an Ideal World</a></li>
+  <li><a href="#structural-equivalence-in-the-real-world" id="toc-structural-equivalence-in-the-real-world" class="nav-link" data-scroll-target="#structural-equivalence-in-the-real-world">Structural Equivalence in the Real World</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout4.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -316,6 +318,9 @@ div.csl-indent {
 \]</span></p>
 <p>In a graph, an equivalence class <span class="math inline">\(C\)</span> is just a set of nodes that are structurally equivalent, such that if <span class="math inline">\(v_i \in C_i\)</span> and <span class="math inline">\(v_j \in C_i\)</span> then <span class="math inline">\(v_i \equiv v_j\)</span> for all pairs <span class="math inline">\((v_i, v_j) \in C_i\)</span>.</p>
 <p>The partitioning of the vertex set into a set of equivalence classes <span class="math inline">\(\{C_1, C_2 \ldots C_k\}\)</span> as well as the adjacency relations between nodes in the same class and nodes in different classes defines the <strong>role structure</strong> of the network.</p>
+</section>
+<section id="structural-equivalence-in-an-ideal-world" class="level2">
+<h2 class="anchored" data-anchor-id="structural-equivalence-in-an-ideal-world">Structural Equivalence in an Ideal World</h2>
 <p>Let us illustrate these concepts. Consider the following toy graph:</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -987,6 +992,112 @@ C_4 = \{B, C\}
 </div>
 </div>
 <p>Which reveals a more economical representation of the system based on structural equivalence.</p>
+</section>
+<section id="structural-equivalence-in-the-real-world" class="level2">
+<h2 class="anchored" data-anchor-id="structural-equivalence-in-the-real-world">Structural Equivalence in the Real World</h2>
+<p>Of course, in real data, it is very unlikely that two nodes will meet the exact mathematical criterion of structural equivalence. They might have three out of five, or eight out of nine common neighbors but would still get a big zero in the <span class="math inline">\(\mathbf{E}\)</span> defined using our strict function.</p>
+<p>So, a lot of role analysis in real networks follows instead the path of search for a <em>near cousin</em> to structural equivalence that follows the path of search for the large class of <strong>distance</strong> and <strong>similarity</strong> metrics, and pick one where structural equivalence falls off as a special case.</p>
+<p>For random reasons, early work in social network analysis focused on distance metrics, while more recent work inspired by network science focuses on similarity metrics. The end goal is the same though.</p>
+<p>Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric <span class="math inline">\(d\)</span> with a well defined minimum value <span class="math inline">\(d_{min}\)</span>, such that:</p>
+<p><span class="math display">\[
+   v_i \equiv v_j \iff d(v_i, v_j) = d_{min}
+\]</span></p>
+<p>We then populate the <span class="math inline">\(\mathbf{E}\)</span> matrix with the values of <span class="math inline">\(d\)</span> for each pair of nodes <span class="math inline">\((v_i, v_j)\)</span>, do some kind of clustering on the matrix, and use our clusters assignments to re-arrange the original adjacency matrix to find our blocks, and so forth.</p>
+<p>A very obvious candidate for <span class="math inline">\(d\)</span> is the <strong>Euclidean Distance</strong> <span class="citation" data-cites="burt76">(<a href="#ref-burt76" role="doc-biblioref">Burt 1976</a>)</span>:</p>
+<p><span class="math display">\[
+   d_{i,j} = \sqrt{\sum_{k \neq i,j} (a_{ik} - a_{jk})^2}
+\]</span></p>
+<p>Where <span class="math inline">\(a_{ik}\)</span> and <span class="math inline">\(a_{jk}\)</span> are the corresponding entries in the graph’s adjacency matrix <span class="math inline">\(\mathbf{A}\)</span>. The minimum for this measure is <span class="math inline">\(d_{min} = 0\)</span>, so this is the value we should find for structurally equivalent nodes.</p>
+<p>A function that does this for any graph is:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   d.euclid <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb6-2"><a href="#cb6-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
+<span id="cb6-3"><a href="#cb6-3"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb6-4"><a href="#cb6-4"></a>      E <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n)</span>
+<span id="cb6-5"><a href="#cb6-5"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb6-6"><a href="#cb6-6"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb6-7"><a href="#cb6-7"></a>            <span class="cf">if</span> (i <span class="sc">&lt;</span> j <span class="sc">&amp;</span> i <span class="sc">!=</span> j) {</span>
+<span id="cb6-8"><a href="#cb6-8"></a>               d.ij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb6-9"><a href="#cb6-9"></a>               <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb6-10"><a href="#cb6-10"></a>                  <span class="cf">if</span> (k <span class="sc">!=</span> i <span class="sc">&amp;</span> k <span class="sc">!=</span> j) {</span>
+<span id="cb6-11"><a href="#cb6-11"></a>                     d.ij <span class="ot">&lt;-</span> d.ij <span class="sc">+</span> (A[i,k] <span class="sc">-</span> A[j,k])<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb6-12"><a href="#cb6-12"></a>                     }</span>
+<span id="cb6-13"><a href="#cb6-13"></a>                  }</span>
+<span id="cb6-14"><a href="#cb6-14"></a>               E[i,j] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
+<span id="cb6-15"><a href="#cb6-15"></a>               E[j,i] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
+<span id="cb6-16"><a href="#cb6-16"></a>            }</span>
+<span id="cb6-17"><a href="#cb6-17"></a>         }</span>
+<span id="cb6-18"><a href="#cb6-18"></a>      }</span>
+<span id="cb6-19"><a href="#cb6-19"></a>   <span class="fu">rownames</span>(E) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb6-20"><a href="#cb6-20"></a>   <span class="fu">colnames</span>(E) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb6-21"><a href="#cb6-21"></a>   <span class="fu">return</span>(E)</span>
+<span id="cb6-22"><a href="#cb6-22"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And we can try it out with our toy graph:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   E <span class="ot">&lt;-</span> <span class="fu">d.euclid</span>(g)</span>
+<span id="cb7-2"><a href="#cb7-2"></a>   <span class="fu">round</span>(E, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    A   B   C   D   E   F   G   H   I
+A 0.0 2.0 2.0 1.7 1.7 1.7 0.0 2.6 2.6
+B 2.0 0.0 0.0 2.6 2.6 2.6 2.0 1.7 1.7
+C 2.0 0.0 0.0 2.6 2.6 2.6 2.0 1.7 1.7
+D 1.7 2.6 2.6 0.0 0.0 0.0 1.7 2.0 2.0
+E 1.7 2.6 2.6 0.0 0.0 0.0 1.7 2.0 2.0
+F 1.7 2.6 2.6 0.0 0.0 0.0 1.7 2.0 2.0
+G 0.0 2.0 2.0 1.7 1.7 1.7 0.0 2.6 2.6
+H 2.6 1.7 1.7 2.0 2.0 2.0 2.6 0.0 0.0
+I 2.6 1.7 1.7 2.0 2.0 2.0 2.6 0.0 0.0</code></pre>
+</div>
+</div>
+<p>And it looks like indeed it detected the structurally equivalent nodes in the graph. We can see it clearly by re-ordering the rows and columns according to our known ordering:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   E <span class="ot">&lt;-</span> E[SE.ord, SE.ord]</span>
+<span id="cb9-2"><a href="#cb9-2"></a>   <span class="fu">round</span>(E, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    F   D   E   H   I   A   G   B   C
+F 0.0 0.0 0.0 2.0 2.0 1.7 1.7 2.6 2.6
+D 0.0 0.0 0.0 2.0 2.0 1.7 1.7 2.6 2.6
+E 0.0 0.0 0.0 2.0 2.0 1.7 1.7 2.6 2.6
+H 2.0 2.0 2.0 0.0 0.0 2.6 2.6 1.7 1.7
+I 2.0 2.0 2.0 0.0 0.0 2.6 2.6 1.7 1.7
+A 1.7 1.7 1.7 2.6 2.6 0.0 0.0 2.0 2.0
+G 1.7 1.7 1.7 2.6 2.6 0.0 0.0 2.0 2.0
+B 2.6 2.6 2.6 1.7 1.7 2.0 2.0 0.0 0.0
+C 2.6 2.6 2.6 1.7 1.7 2.0 2.0 0.0 0.0</code></pre>
+</div>
+</div>
+<p>Here the block-diagonals of the matrix contain zeroes because the <span class="math inline">\(d\)</span> is a distance function with a minimum of zero. If we wanted it to contain ones instead we would normalize:</p>
+<p><span class="math display">\[
+   d^* = 1-\left(\frac{d}{max(d)}\right)
+\]</span></p>
+<p>Which would give us:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   E.norm <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> E<span class="sc">/</span><span class="fu">max</span>(E)</span>
+<span id="cb11-2"><a href="#cb11-2"></a>   <span class="fu">round</span>(E.norm, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    F   D   E   H   I   A   G   B   C
+F 1.0 1.0 1.0 0.2 0.2 0.3 0.3 0.0 0.0
+D 1.0 1.0 1.0 0.2 0.2 0.3 0.3 0.0 0.0
+E 1.0 1.0 1.0 0.2 0.2 0.3 0.3 0.0 0.0
+H 0.2 0.2 0.2 1.0 1.0 0.0 0.0 0.3 0.3
+I 0.2 0.2 0.2 1.0 1.0 0.0 0.0 0.3 0.3
+A 0.3 0.3 0.3 0.0 0.0 1.0 1.0 0.2 0.2
+G 0.3 0.3 0.3 0.0 0.0 1.0 1.0 0.2 0.2
+B 0.0 0.0 0.0 0.3 0.3 0.2 0.2 1.0 1.0
+C 0.0 0.0 0.0 0.3 0.3 0.2 0.2 1.0 1.0</code></pre>
+</div>
+</div>
+<p>As noted, a distance function defines a <em>clustering</em> on the nodes, and the results of the clustering generate our blocks. In <code>R</code> we can use the functions <code>dist</code> and <code>hclust</code> to do the job:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   E <span class="ot">&lt;-</span> <span class="fu">dist</span>(E) <span class="co">#transforming E to a dist object</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(E, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout4_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Which are our original clusters of structural equivalent nodes!</p>
 
 
 
