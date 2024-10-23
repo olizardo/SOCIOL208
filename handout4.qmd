@@ -251,11 +251,13 @@ So, a lot of role analysis in real networks follows instead the path of search f
 
 For random reasons, early work in social network analysis focused on distance metrics, while more recent work inspired by network science focuses on similarity metrics. The end goal is the same though. 
 
-Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric $d$ with a well defined minimum value $d_{min}$, such that:
+Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric $d$ with a well defined minimum $d_{min}$ or maximum value $d_{min}$, such that:
 
 $$
-   v_i \equiv v_j \iff d(v_i, v_j) = d_{min}
+   v_i \equiv v_j \iff d(v_i, v_j) = d_{min} \lor d(v_i, v_j) = d_{max}
 $$
+
+Where whether we pick the maximum or minimum value depends on the particularities of the measure $d$.
 
 We then populate the $\mathbf{E}$ matrix with the values of $d$ for each pair of nodes $(v_i, v_j)$, do some kind of clustering on the matrix, and use our clusters assignments to re-arrange the original adjacency matrix to find our blocks, and so forth. 
 
@@ -329,7 +331,156 @@ As noted, a distance function defines a *clustering* on the nodes, and the resul
    plot(h.res)
 ```
 
-Which are our original clusters of structural equivalent nodes!
+Which are our original clusters of structurally equivalent nodes!
+
+Let's see how this would work in real data. Let's take the *Flintstones* (film) co-appearance network as an example:
+
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+   library(networkdata)
+   g.flint <- movie_267
+   g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
+   E <- d.euclid(g.flint)
+   E <- dist(E) #transforming E to a dist object
+   h.res <- hclust(E, method = "ward.D2") #hierarchical clustering
+   #install.packages("dendextend")
+   library(dendextend) #nice dendrogram plotting
+   dend <- as.dendrogram(h.res) %>% 
+      color_branches(k = 8) %>% 
+      color_labels(k = 8) %>% 
+      set("labels_cex", 0.65) %>% 
+      set("branches_lwd", 2) %>% 
+      plot
+```
+
+The *Flintstones* is a film based on a family, and families are the prototypes of *social roles* in networks, so if structural equivalence gets at roles, then it should recover known kin roles here, and indeed it does to some extent. One cluster is the focal parents separated into "moms" and "dads" roles, and another has the kids.
+
+## CONCOR
+
+The other (perhaps less obvious) way of defining a distance between nodes in the network based on their connectivity patterns to other nodes is the **correlation distance**:
+
+$$
+    d_{i,j} = 
+    \frac{
+    \sum_{i \neq k}
+    (a_{ik} - \overline{a}_{i}) \times 
+    \sum_{j \neq k}
+    (a_{jk} - \overline{a}_{j})
+    }
+    {
+    \sqrt{
+    \sum_{i \neq k}
+    (a_{ik} - \overline{a}_{i})^2 \times
+    \sum_{j \neq k}
+    (a_{jk} - \overline{a}_{j})^2
+        }
+    }
+$$
+
+A more involved but still meaningful formula compared of the Euclidean distance. Here $\overline{a}_{i}$ is the *row(column) mean* of the entries of node $i$ in the affiliation matrix. 
+
+So the correlation distance is the ratio of the covariance of the row(column) vectors corresponding to each node in the adjacency matrix and the product of their standard deviations. 
+
+The correlation distance between nodes in our toy network is given by simply typing:
+
+```{r}
+   m <- as.matrix(as_adjacency_matrix(g))
+   C <- cor(m)
+   round(C, 2)
+```
+
+Which gives the Pearson product moment correlation of each pair of *columns* in the adjacency matrix. 
+
+The key thing that was noticed by @breiger_etal75 is that we can *iterate* this process, and compute *correlation distances of correlation distances* between nodes in the graph. If we do this for our toy network a few (e.g., three) times we get:
+
+```{r}
+   C1 <- cor(C)
+   C2 <- cor(C1)
+   C3 <- cor(C2)
+   round(C3, 2)
+```
+
+Interestingly the positive correlations converge to 1.0 and the negative correlations converge to -1.0!
+
+If we sort the rows and columns of the new matrix according to these values, we get:
+
+```{r}
+   C.ord <- corrMatOrder(C3, order = "hclust", hclust.method = "ward.D2")
+   C3 <- C3[C.ord, C.ord]
+   round(C3, 2)
+```
+
+Aha! The iterated correlations seems to have split the matrix into two **blocks** $C_1 = \{G, F, D, A, G\}$ and $C_2 = \{I, H, B, C\}$. Each of the blocks is composed of two sub-blocks that we know are structurally equivalent from our previous analysis. 
+
+A function implementing this method of iterated correlation distances until convergence looks like:
+
+```{r}
+   con.cor <- function(x) {
+      C <- x
+      while (mean(abs(C)) != 1) {
+         C <- cor(C)
+         }
+      b1 <- C[, 1] > 0
+      b2 <- !b1
+      return(list(x[, b1, drop = FALSE], x[, b2, drop = FALSE]))
+      }
+```
+
+This function takes a graph's adjacency matrix as input, creates a copy of the adjacency matrix in line 2 (to be put through the iterated correlations meat grinder). The three-line (3-5) `while` loop goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of a couple of matrices stored in a list in line 8. 
+
+For instance, to use our example above:
+
+```{r}
+   con.cor(m)
+```
+
+The columns of these two matrices are the two blocks we found before. Of course, to implement this method as a *divisive* clustering algorithm, what we want is to split these two blocks into two finer grained blocks, to find our original four structurally equivalent groups. 
+
+The following function--simplified and adapted from [Adam Slez's work](https://rdrr.io/github/aslez/concoR/src/R/concoR.R)---which includes the `con.cor` function shown earlier inside of it, will do it:
+
+```{r}
+  blocks <- function(g, s = 2) {
+     A <- as.matrix(as_adjacency_matrix(g))
+     B <- list(A)
+     for(i in 1:s) {
+       B <- unlist(lapply(B, con.cor), recursive = FALSE)
+       }
+     return(lapply(B, colnames))
+   }
+```
+
+This function takes the graph as input and returns a list of column names containing the structurally equivalent blocks as output:
+
+```{r}
+   blocks(g)
+```
+
+Which are the original structurally equivalent classes. The argument `s` controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on. 
+
+This is the algorithm called CONCOR [@breiger_etal75], short for **con**vergence of iterate **cor**relations, and can be used to cluster the rows(columns) of any valued square data matrix. 
+
+For instance, if we wanted to split the *Flintstones* network into four blocks we would proceed as follows:
+
+```{r}
+   g.flint <- movie_267
+   g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
+   blocks(g.flint)
+```
+
+Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms. 
+
+We could then visualize the results as follows:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g.flint))
+   ord <- unlist(blocks(g.flint))
+   A <- A[ord, ord]
+   corrplot(A, is.corr = FALSE, method = 'square', tl.cex = 0.5, 
+            cl.pos = 'n', col = c('white', 'black'))
+```
+
+
 
 
 

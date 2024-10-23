@@ -283,6 +283,7 @@ div.csl-indent {
   <li><a href="#structural-equivalence" id="toc-structural-equivalence" class="nav-link active" data-scroll-target="#structural-equivalence">Structural Equivalence</a></li>
   <li><a href="#structural-equivalence-in-an-ideal-world" id="toc-structural-equivalence-in-an-ideal-world" class="nav-link" data-scroll-target="#structural-equivalence-in-an-ideal-world">Structural Equivalence in an Ideal World</a></li>
   <li><a href="#structural-equivalence-in-the-real-world" id="toc-structural-equivalence-in-the-real-world" class="nav-link" data-scroll-target="#structural-equivalence-in-the-real-world">Structural Equivalence in the Real World</a></li>
+  <li><a href="#concor" id="toc-concor" class="nav-link" data-scroll-target="#concor">CONCOR</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout4.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -998,10 +999,11 @@ C_4 = \{B, C\}
 <p>Of course, in real data, it is very unlikely that two nodes will meet the exact mathematical criterion of structural equivalence. They might have three out of five, or eight out of nine common neighbors but would still get a big zero in the <span class="math inline">\(\mathbf{E}\)</span> defined using our strict function.</p>
 <p>So, a lot of role analysis in real networks follows instead the path of search for a <em>near cousin</em> to structural equivalence that follows the path of search for the large class of <strong>distance</strong> and <strong>similarity</strong> metrics, and pick one where structural equivalence falls off as a special case.</p>
 <p>For random reasons, early work in social network analysis focused on distance metrics, while more recent work inspired by network science focuses on similarity metrics. The end goal is the same though.</p>
-<p>Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric <span class="math inline">\(d\)</span> with a well defined minimum value <span class="math inline">\(d_{min}\)</span>, such that:</p>
+<p>Let us, therefore, begin with the distance approach. Here the goal is simply to pick a distance metric <span class="math inline">\(d\)</span> with a well defined minimum <span class="math inline">\(d_{min}\)</span> or maximum value <span class="math inline">\(d_{min}\)</span>, such that:</p>
 <p><span class="math display">\[
-   v_i \equiv v_j \iff d(v_i, v_j) = d_{min}
+   v_i \equiv v_j \iff d(v_i, v_j) = d_{min} \lor d(v_i, v_j) = d_{max}
 \]</span></p>
+<p>Where whether we pick the maximum or minimum value depends on the particularities of the measure <span class="math inline">\(d\)</span>.</p>
 <p>We then populate the <span class="math inline">\(\mathbf{E}\)</span> matrix with the values of <span class="math inline">\(d\)</span> for each pair of nodes <span class="math inline">\((v_i, v_j)\)</span>, do some kind of clustering on the matrix, and use our clusters assignments to re-arrange the original adjacency matrix to find our blocks, and so forth.</p>
 <p>A very obvious candidate for <span class="math inline">\(d\)</span> is the <strong>Euclidean Distance</strong> <span class="citation" data-cites="burt76">(<a href="#ref-burt76" role="doc-biblioref">Burt 1976</a>)</span>:</p>
 <p><span class="math display">\[
@@ -1097,7 +1099,214 @@ C 0.0 0.0 0.0 0.3 0.3 0.2 0.2 1.0 1.0</code></pre>
 <p><img src="handout4_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Which are our original clusters of structural equivalent nodes!</p>
+<p>Which are our original clusters of structurally equivalent nodes!</p>
+<p>Let’s see how this would work in real data. Let’s take the <em>Flintstones</em> (film) co-appearance network as an example:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">library</span>(networkdata)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>   g.flint <span class="ot">&lt;-</span> movie_267</span>
+<span id="cb14-3"><a href="#cb14-3"></a>   g.flint <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g.flint, <span class="fu">degree</span>(g.flint) <span class="sc">&lt;=</span> <span class="dv">3</span>)</span>
+<span id="cb14-4"><a href="#cb14-4"></a>   E <span class="ot">&lt;-</span> <span class="fu">d.euclid</span>(g.flint)</span>
+<span id="cb14-5"><a href="#cb14-5"></a>   E <span class="ot">&lt;-</span> <span class="fu">dist</span>(E) <span class="co">#transforming E to a dist object</span></span>
+<span id="cb14-6"><a href="#cb14-6"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(E, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb14-7"><a href="#cb14-7"></a>   <span class="co">#install.packages("dendextend")</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a>   <span class="fu">library</span>(dendextend) <span class="co">#nice dendrogram plotting</span></span>
+<span id="cb14-9"><a href="#cb14-9"></a>   dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(h.res) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-10"><a href="#cb14-10"></a>      <span class="fu">color_branches</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-11"><a href="#cb14-11"></a>      <span class="fu">color_labels</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-12"><a href="#cb14-12"></a>      <span class="fu">set</span>(<span class="st">"labels_cex"</span>, <span class="fl">0.65</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-13"><a href="#cb14-13"></a>      <span class="fu">set</span>(<span class="st">"branches_lwd"</span>, <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-14"><a href="#cb14-14"></a>      plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout4_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="768"></p>
+</div>
+</div>
+<p>The <em>Flintstones</em> is a film based on a family, and families are the prototypes of <em>social roles</em> in networks, so if structural equivalence gets at roles, then it should recover known kin roles here, and indeed it does to some extent. One cluster is the focal parents separated into “moms” and “dads” roles, and another has the kids.</p>
+</section>
+<section id="concor" class="level2">
+<h2 class="anchored" data-anchor-id="concor">CONCOR</h2>
+<p>The other (perhaps less obvious) way of defining a distance between nodes in the network based on their connectivity patterns to other nodes is the <strong>correlation distance</strong>:</p>
+<p><span class="math display">\[
+    d_{i,j} =
+    \frac{
+    \sum_{i \neq k}
+    (a_{ik} - \overline{a}_{i}) \times
+    \sum_{j \neq k}
+    (a_{jk} - \overline{a}_{j})
+    }
+    {
+    \sqrt{
+    \sum_{i \neq k}
+    (a_{ik} - \overline{a}_{i})^2 \times
+    \sum_{j \neq k}
+    (a_{jk} - \overline{a}_{j})^2
+        }
+    }
+\]</span></p>
+<p>A more involved but still meaningful formula compared of the Euclidean distance. Here <span class="math inline">\(\overline{a}_{i}\)</span> is the <em>row(column) mean</em> of the entries of node <span class="math inline">\(i\)</span> in the affiliation matrix.</p>
+<p>So the correlation distance is the ratio of the covariance of the row(column) vectors corresponding to each node in the adjacency matrix and the product of their standard deviations.</p>
+<p>The correlation distance between nodes in our toy network is given by simply typing:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   m <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb15-2"><a href="#cb15-2"></a>   C <span class="ot">&lt;-</span> <span class="fu">cor</span>(m)</span>
+<span id="cb15-3"><a href="#cb15-3"></a>   <span class="fu">round</span>(C, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      A     B     C     D     E     F     G     H     I
+A  1.00 -0.32 -0.32  0.32  0.32  0.32  0.50 -0.63 -0.63
+B -0.32  1.00  1.00 -1.00 -1.00 -1.00 -0.32  0.35  0.35
+C -0.32  1.00  1.00 -1.00 -1.00 -1.00 -0.32  0.35  0.35
+D  0.32 -1.00 -1.00  1.00  1.00  1.00  0.32 -0.35 -0.35
+E  0.32 -1.00 -1.00  1.00  1.00  1.00  0.32 -0.35 -0.35
+F  0.32 -1.00 -1.00  1.00  1.00  1.00  0.32 -0.35 -0.35
+G  0.50 -0.32 -0.32  0.32  0.32  0.32  1.00 -0.63 -0.63
+H -0.63  0.35  0.35 -0.35 -0.35 -0.35 -0.63  1.00  0.55
+I -0.63  0.35  0.35 -0.35 -0.35 -0.35 -0.63  0.55  1.00</code></pre>
+</div>
+</div>
+<p>Which gives the Pearson product moment correlation of each pair of <em>columns</em> in the adjacency matrix.</p>
+<p>The key thing that was noticed by <span class="citation" data-cites="breiger_etal75">Breiger, Boorman, and Arabie (<a href="#ref-breiger_etal75" role="doc-biblioref">1975</a>)</span> is that we can <em>iterate</em> this process, and compute <em>correlation distances of correlation distances</em> between nodes in the graph. If we do this for our toy network a few (e.g., three) times we get:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   C1 <span class="ot">&lt;-</span> <span class="fu">cor</span>(C)</span>
+<span id="cb17-2"><a href="#cb17-2"></a>   C2 <span class="ot">&lt;-</span> <span class="fu">cor</span>(C1)</span>
+<span id="cb17-3"><a href="#cb17-3"></a>   C3 <span class="ot">&lt;-</span> <span class="fu">cor</span>(C2)</span>
+<span id="cb17-4"><a href="#cb17-4"></a>   <span class="fu">round</span>(C3, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   A  B  C  D  E  F  G  H  I
+A  1 -1 -1  1  1  1  1 -1 -1
+B -1  1  1 -1 -1 -1 -1  1  1
+C -1  1  1 -1 -1 -1 -1  1  1
+D  1 -1 -1  1  1  1  1 -1 -1
+E  1 -1 -1  1  1  1  1 -1 -1
+F  1 -1 -1  1  1  1  1 -1 -1
+G  1 -1 -1  1  1  1  1 -1 -1
+H -1  1  1 -1 -1 -1 -1  1  1
+I -1  1  1 -1 -1 -1 -1  1  1</code></pre>
+</div>
+</div>
+<p>Interestingly the positive correlations converge to 1.0 and the negative correlations converge to -1.0!</p>
+<p>If we sort the rows and columns of the new matrix according to these values, we get:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   C.ord <span class="ot">&lt;-</span> <span class="fu">corrMatOrder</span>(C3, <span class="at">order =</span> <span class="st">"hclust"</span>, <span class="at">hclust.method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>   C3 <span class="ot">&lt;-</span> C3[C.ord, C.ord]</span>
+<span id="cb19-3"><a href="#cb19-3"></a>   <span class="fu">round</span>(C3, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   B  C  H  I  F  D  E  A  G
+B  1  1  1  1 -1 -1 -1 -1 -1
+C  1  1  1  1 -1 -1 -1 -1 -1
+H  1  1  1  1 -1 -1 -1 -1 -1
+I  1  1  1  1 -1 -1 -1 -1 -1
+F -1 -1 -1 -1  1  1  1  1  1
+D -1 -1 -1 -1  1  1  1  1  1
+E -1 -1 -1 -1  1  1  1  1  1
+A -1 -1 -1 -1  1  1  1  1  1
+G -1 -1 -1 -1  1  1  1  1  1</code></pre>
+</div>
+</div>
+<p>Aha! The iterated correlations seems to have split the matrix into two <strong>blocks</strong> <span class="math inline">\(C_1 = \{G, F, D, A, G\}\)</span> and <span class="math inline">\(C_2 = \{I, H, B, C\}\)</span>. Each of the blocks is composed of two sub-blocks that we know are structurally equivalent from our previous analysis.</p>
+<p>A function implementing this method of iterated correlation distances until convergence looks like:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   con.cor <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb21-2"><a href="#cb21-2"></a>      C <span class="ot">&lt;-</span> x</span>
+<span id="cb21-3"><a href="#cb21-3"></a>      <span class="cf">while</span> (<span class="fu">mean</span>(<span class="fu">abs</span>(C)) <span class="sc">!=</span> <span class="dv">1</span>) {</span>
+<span id="cb21-4"><a href="#cb21-4"></a>         C <span class="ot">&lt;-</span> <span class="fu">cor</span>(C)</span>
+<span id="cb21-5"><a href="#cb21-5"></a>         }</span>
+<span id="cb21-6"><a href="#cb21-6"></a>      b1 <span class="ot">&lt;-</span> C[, <span class="dv">1</span>] <span class="sc">&gt;</span> <span class="dv">0</span></span>
+<span id="cb21-7"><a href="#cb21-7"></a>      b2 <span class="ot">&lt;-</span> <span class="sc">!</span>b1</span>
+<span id="cb21-8"><a href="#cb21-8"></a>      <span class="fu">return</span>(<span class="fu">list</span>(x[, b1, <span class="at">drop =</span> <span class="cn">FALSE</span>], x[, b2, <span class="at">drop =</span> <span class="cn">FALSE</span>]))</span>
+<span id="cb21-9"><a href="#cb21-9"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This function takes a graph’s adjacency matrix as input, creates a copy of the adjacency matrix in line 2 (to be put through the iterated correlations meat grinder). The three-line (3-5) <code>while</code> loop goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of a couple of matrices stored in a list in line 8.</p>
+<p>For instance, to use our example above:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   <span class="fu">con.cor</span>(m)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+  A D E F G
+A 0 0 0 0 1
+B 1 1 1 1 1
+C 1 1 1 1 1
+D 0 0 0 0 0
+E 0 0 0 0 0
+F 0 0 0 0 0
+G 1 0 0 0 0
+H 0 1 1 1 0
+I 0 1 1 1 0
+
+[[2]]
+  B C H I
+A 1 1 0 0
+B 0 0 0 0
+C 0 0 0 0
+D 1 1 1 1
+E 1 1 1 1
+F 1 1 1 1
+G 1 1 0 0
+H 0 0 0 1
+I 0 0 1 0</code></pre>
+</div>
+</div>
+<p>The columns of these two matrices are the two blocks we found before. Of course, to implement this method as a <em>divisive</em> clustering algorithm, what we want is to split these two blocks into two finer grained blocks, to find our original four structurally equivalent groups.</p>
+<p>The following function–simplified and adapted from <a href="https://rdrr.io/github/aslez/concoR/src/R/concoR.R">Adam Slez’s work</a>—which includes the <code>con.cor</code> function shown earlier inside of it, will do it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>  blocks <span class="ot">&lt;-</span> <span class="cf">function</span>(g, <span class="at">s =</span> <span class="dv">2</span>) {</span>
+<span id="cb24-2"><a href="#cb24-2"></a>     A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb24-3"><a href="#cb24-3"></a>     B <span class="ot">&lt;-</span> <span class="fu">list</span>(A)</span>
+<span id="cb24-4"><a href="#cb24-4"></a>     <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>s) {</span>
+<span id="cb24-5"><a href="#cb24-5"></a>       B <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(B, con.cor), <span class="at">recursive =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb24-6"><a href="#cb24-6"></a>       }</span>
+<span id="cb24-7"><a href="#cb24-7"></a>     <span class="fu">return</span>(<span class="fu">lapply</span>(B, colnames))</span>
+<span id="cb24-8"><a href="#cb24-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This function takes the graph as input and returns a list of column names containing the structurally equivalent blocks as output:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   <span class="fu">blocks</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+[1] "A" "G"
+
+[[2]]
+[1] "D" "E" "F"
+
+[[3]]
+[1] "B" "C"
+
+[[4]]
+[1] "H" "I"</code></pre>
+</div>
+</div>
+<p>Which are the original structurally equivalent classes. The argument <code>s</code> controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on.</p>
+<p>This is the algorithm called CONCOR <span class="citation" data-cites="breiger_etal75">(<a href="#ref-breiger_etal75" role="doc-biblioref">Breiger, Boorman, and Arabie 1975</a>)</span>, short for <strong>con</strong>vergence of iterate <strong>cor</strong>relations, and can be used to cluster the rows(columns) of any valued square data matrix.</p>
+<p>For instance, if we wanted to split the <em>Flintstones</em> network into four blocks we would proceed as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   g.flint <span class="ot">&lt;-</span> movie_267</span>
+<span id="cb27-2"><a href="#cb27-2"></a>   g.flint <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g.flint, <span class="fu">degree</span>(g.flint) <span class="sc">&lt;=</span> <span class="dv">3</span>)</span>
+<span id="cb27-3"><a href="#cb27-3"></a>   <span class="fu">blocks</span>(g.flint)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]
+[1] "BAM-BAM"    "BETTY"      "PEBBLES"    "POINDEXTER" "WILMA"     
+
+[[2]]
+[1] "FELDSPAR"   "HERDMASTER" "LAVA"       "PILTDOWN"   "PYRITE"    
+[6] "SLATE"     
+
+[[3]]
+[1] "BARNEY"          "FRED"            "LEACH"           "PEBBLES BAM-BAM"
+
+[[4]]
+[1] "HEADMISTRESS" "MORRIS"       "MRS SLATE"   </code></pre>
+</div>
+</div>
+<p>Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms.</p>
+<p>We could then visualize the results as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
+<span id="cb29-2"><a href="#cb29-2"></a>   ord <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">blocks</span>(g.flint))</span>
+<span id="cb29-3"><a href="#cb29-3"></a>   A <span class="ot">&lt;-</span> A[ord, ord]</span>
+<span id="cb29-4"><a href="#cb29-4"></a>   <span class="fu">corrplot</span>(A, <span class="at">is.corr =</span> <span class="cn">FALSE</span>, <span class="at">method =</span> <span class="st">'square'</span>, <span class="at">tl.cex =</span> <span class="fl">0.5</span>, </span>
+<span id="cb29-5"><a href="#cb29-5"></a>            <span class="at">cl.pos =</span> <span class="st">'n'</span>, <span class="at">col =</span> <span class="fu">c</span>(<span class="st">'white'</span>, <span class="st">'black'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout4_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 
 
 
