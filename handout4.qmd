@@ -473,17 +473,127 @@ Which is similar to the results we got from the Euclidean distance method, excep
 We could then visualize the results as follows:
 
 ```{r}
+   #install.packages("ggcorrplot")
+   library(ggcorrplot)
    A <- as.matrix(as_adjacency_matrix(g.flint))
    ord <- unlist(blocks(g.flint, 2))
    A <- A[ord, ord]
-   corrplot(A, is.corr = FALSE, method = 'square', 
-            tl.cex = 0.5, tl.col = "black",
-            cl.pos = 'n', col = c('white', 'black'))
+   p <- ggcorrplot(A, colors = c("white", "white", "black")) 
+   p <- p + theme(legend.position = "none",
+                  axis.text = element_text(size = 3)
+                  )
+   p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 5.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 15.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 15.5, linewidth = 2, color = "blue")
+   p
 ```
 
-Which is just a tile plot of the original adjacency matrix with rows and columns re-ordered according to the four-block solution. 
+Which is just a tile plot of the original adjacency matrix (adjacent cells in black) with rows and columns re-ordered according to the four-block solution and `ggplot` vertical and horizontal lines highlighting the boundaries of the blocked matrix. 
 
 As you can see, characters with similar patterns of scene co-appearances (like Barney and Fred) are drawn next to one another, revealing the larger "roles" in the network. 
+
+## Structural Equivalence in Directed Graphs
+
+Like before, the main complication introduced by the directed case is the "doubling" of the relations considered. 
+
+In the Euclidean distance case, we have to decide whether we want to compute two set of distances between nodes, one based on the in-distance vectors and the other on the out-distance vectors, and the two sets of hierarchical clustering partitions. 
+
+Another approach is simply to combine both according to the formula:
+
+$$
+   d_{i,j} = \sqrt{
+                  \sum_{k \neq i,j} (a_{ik} - a_{jk})^2 +
+                  \sum_{k \neq i,j} (a_{ki} - a_{kj})^2
+                  }
+$$ 
+
+Which just sums the out and in-distances and takes the square root. Here nodes would be structurally equivalent only if they have the same set of in and out-neighbors. This would mean changing line 11 in the function `d.euclid` above with the following: 
+
+```{r}
+#| eval: false
+   d.ij <- d.ij + ((A[i,k] - A[j,k])^2 + (A[k,i] - A[k,j])^2)
+```
+
+This way, distances are computed on both the row and columns of the directed graph's adjacency matrix.
+
+If we are using the correlation distance approach in a directed graph, then the main trick is to *stack* the original adjacency matrix against its transpose, and then compute the correlation distance on the columns of the stacked matrices, which by definition combines information in incoming and outgoing ties. 
+
+Let's see a brief example. Let's load up the Krackhardt's high-tech managers data on advice relations and look at the adjacency matrix:
+
+```{r}
+   g <- ht_advice
+   A <- as.matrix(as_adjacency_matrix(g))
+   A
+```
+
+Recall that [in these data](https://rdrr.io/github/schochastics/networkdata/man/ht_advice.html) a tie goes *from* an advice seeker *to* an advisor. So the standard correlation distance on the columns computes the in-correlation, or structural equivalence based on incoming ties (two managers are equivalent if they are nominated as advisors by the same others).
+
+We may also be interested in the out-correlation, that is structural equivalence based on out-going ties. Here two managers are structurally equivalent is they seek advice from the same others. This information is contained in the transpose of the original adjacency matrix:
+
+```{r}
+   A.t <- t(A)
+   A.t
+```
+
+Correlating the columns of this matrix would thus give us the out-correlation distance based on advice seeking relations. 
+
+"Stacking" is a way to combine both in and out-going ties and compute a single distance based on both. It just means that we literally bind the rows of the firs matrix and its transpose:
+
+```{r}
+   A.stack <- rbind(A, A.t)
+   A.stack
+```
+
+Note that this matrix has the same number of columns as the original adjacency matrix and double the number of rows. This doesn't matter since the correlation distance works on the columns, meaning that it will return a matrix of the same dimensions as the original:
+
+```{r}
+   round(cor(A.stack), 2)
+```
+
+And we would then do a blockmodel based on these distances:
+
+```{r}
+   blocks2 <- function(A, s = 2) {
+     colnames(A) <- 1:ncol(A) #use only if the original matrix has no names
+     B <- list(A)
+     for(i in 1:s) {
+       B <- unlist(lapply(B, con.cor), recursive = FALSE)
+       }
+     return(lapply(B, colnames))
+   }
+   blocks2(A.stack)
+```
+
+## Structuraly Equivalence in Multigraphs
+
+Note that we would apply the same trick if we wanted to do a blockmodel based on multiple relations like friendship *and* advice. Here's a blockmodel based on the stacked matrices of incoming ties of both types:
+
+```{r}
+   A.f <- as.matrix(as_adjacency_matrix(ht_friends))
+   A.stack <- rbind(A, A.f)
+   blocks2(A.stack)
+```
+
+And one combining, incoming and outgoing friendship and advice ties:
+
+```{r}
+   A.stack <- rbind(A, A.t, A.f, t(A.f))
+   blocks2(A.stack)
+```
+
+Note that here the stacked matrix has four sub-matrices: (1) Incoming advice, (2) outgoing advice, (3) incoming friendship, and (4) Outgoing friendship.
+
+
+
+
+
+
+
+
+
 
 
 
