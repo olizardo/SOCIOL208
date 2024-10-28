@@ -648,10 +648,10 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <p>As <span class="citation" data-cites="jeh_widom02">Jeh and Widom (<a href="#ref-jeh_widom02" role="doc-biblioref">2002</a>)</span> note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity <em>recursively</em> and iterate through the graph until the similarity scores stop changing.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>More specifically, they propose to measure the similarity between two nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> at each time-step in the iteration using the formula:</p>
 <p><span class="math display">\[\begin{equation}
-   s_{ij} = \frac{\alpha}{d_i d_j} \sum_{k=1}^{d_i} \sum_{l=1}^{d_j} s_{kl}
+   s_{ij} = \frac{\alpha}{d_i d_j} \sum_{k \in N(i)} \sum_{l \in N(j)} s_{kl}
 \end{equation}\]</span></p>
-<p>So the similarity between two nodes is just the sum of the pairwise similarities between the set of nodes formed by the union of their neighborhoods, weighted by the ratio of a free parameter <span class="math inline">\(\alpha\)</span> (a number between zero and one) to the product of their degrees.</p>
-<p>This measure nicely capture the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn’t matter whether these neighbors are shared between the two nodes (the summation occurs over <span class="math inline">\(p\)</span> + <span class="math inline">\(q\)</span> + <span class="math inline">\(r\)</span> as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem.</p>
+<p>So the similarity between two nodes is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step), weighted by the ratio of a free parameter <span class="math inline">\(\alpha\)</span> (a number between zero and one) to the product of their degrees (to take a weighted average).</p>
+<p>This measure nicely capture the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn’t matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in <span class="math inline">\(p\)</span> + <span class="math inline">\(q\)</span> versus <span class="math inline">\(p\)</span> + <span class="math inline">\(r\)</span> as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem.</p>
 <p>A function that implements this idea looks like:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   SimRank.in <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
@@ -684,31 +684,31 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <span id="cb19-28"><a href="#cb19-28"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Note that this function calculates <code>SimRank</code> using each node’s in-neighbors (it doesn’t matter if the graph is undirected).</p>
-<p>Let’s try it out in the <em>Flintstones</em> graph:</p>
+<p>Let’s try it out in the <em>Flintstones</em> graph using <span class="math inline">\(\alpha = 0.95\)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
-<span id="cb20-2"><a href="#cb20-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank.in</span>(A)</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank.in</span>(A, <span class="fl">0.95</span>)</span>
 <span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                BAM-BAM BARNEY BETTY FELDSPAR FRED
-BAM-BAM            1.00   0.19  0.20     0.27 0.20
-BARNEY             0.19   1.00  0.20     0.18 0.21
-BETTY              0.20   0.20  1.00     0.21 0.20
-FELDSPAR           0.27   0.18  0.21     1.00 0.18
-FRED               0.20   0.21  0.20     0.18 1.00
-HEADMISTRESS       0.20   0.21  0.19     0.16 0.20
-HERDMASTER         0.21   0.20  0.21     0.32 0.20
-LAVA               0.21   0.20  0.20     0.22 0.20
-LEACH              0.23   0.21  0.21     0.27 0.19
-MORRIS             0.23   0.21  0.19     0.16 0.19
-MRS SLATE          0.21   0.19  0.20     0.20 0.20
-PEBBLES            0.25   0.19  0.20     0.27 0.20
-PEBBLES BAM-BAM    0.22   0.21  0.21     0.20 0.20
-PILTDOWN           0.21   0.21  0.20     0.25 0.20
-POINDEXTER         0.21   0.20  0.21     0.25 0.19
-PYRITE             0.21   0.21  0.20     0.25 0.20
-SLATE              0.21   0.20  0.20     0.23 0.20
-WILMA              0.21   0.19  0.20     0.21 0.20</code></pre>
+BAM-BAM            1.00   0.46  0.47     0.52 0.47
+BARNEY             0.46   1.00  0.47     0.45 0.48
+BETTY              0.47   0.47  1.00     0.48 0.47
+FELDSPAR           0.52   0.45  0.48     1.00 0.46
+FRED               0.47   0.48  0.47     0.46 1.00
+HEADMISTRESS       0.47   0.48  0.46     0.44 0.48
+HERDMASTER         0.48   0.47  0.48     0.57 0.48
+LAVA               0.48   0.47  0.47     0.49 0.48
+LEACH              0.49   0.48  0.48     0.53 0.47
+MORRIS             0.49   0.48  0.47     0.44 0.47
+MRS SLATE          0.47   0.46  0.47     0.48 0.47
+PEBBLES            0.51   0.47  0.48     0.53 0.48
+PEBBLES BAM-BAM    0.49   0.48  0.48     0.48 0.48
+PILTDOWN           0.47   0.48  0.47     0.52 0.48
+POINDEXTER         0.47   0.47  0.48     0.51 0.47
+PYRITE             0.47   0.48  0.47     0.52 0.48
+SLATE              0.47   0.47  0.48     0.50 0.48
+WILMA              0.47   0.47  0.48     0.48 0.47</code></pre>
 </div>
 </div>
 <p>We can transform the generalized similarities to distances and plot:</p>
@@ -726,6 +726,7 @@ WILMA              0.21   0.19  0.20     0.21 0.20</code></pre>
 <p><img src="handout5_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>Which returns an intuitive role partition.</p>
 
 
 
