@@ -71,9 +71,9 @@ Let's look at an example:
    A.r[1:10, 1:10]
 ```
 
-Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix in the undirected case. 
+Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix in the undirected case. 
 
-So the most obvious measure of similarity between two nodes is simply the number of common neighbors:
+So the most obvious measure of similarity between two nodes is simply the number of common neighbors [@leicht_etal06]:
 
 $$
    s_{ij} = p_{ij}
@@ -103,7 +103,7 @@ In this case, similarity can be measured *either* by the number of common in-nei
 
 If the network under consideration is a (directed) **citation network** with nodes being papers and links between papers defined as a citation from paper $i$ to paper $j$, then the number of *common in-neighbors* between two papers is their **co-citation** similarity (the number of other papers that cite both papers), and the number of *common out-neighbors* is their **bibliographic coupling** similarity (the overlap in their list of references).
 
-One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
+One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network [@leicht_etal06]. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
 
 ## Normalized Similarity Metrics
 
@@ -116,6 +116,8 @@ The Jacccard index is given by:
 $$
    s_{ij} = \frac{p}{p + q + r}
 $$
+
+Which is the ratio of the size of the *intersection* of the neighborhoods of the two nodes (number of common neighbors) divided by the size of the *union* of the two neighborhoods. 
 
 In our example, this would be:
 
@@ -132,6 +134,8 @@ $$
    s_{ij} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
 $$
 
+Which is the ratio of the number of common neighbors divided by the product of the square root of the degrees of each node, since $p$ + $q$ is the degree of node $i$ and $p$ + $r$ is the degree of node $j$.
+
 In our example, this would be:
 
 ```{r}
@@ -147,6 +151,8 @@ $$
    s_{ij} = \frac{2p}{2p + q + r}
 $$
 
+Which is given by the ratio of the number of *twice* the number of common neighbors divided by twice the same quantity plus the sum of the non-shared neighbors (and thus a variation of the Jaccard measure). 
+
 In our example, this would be:
 
 ```{r}
@@ -158,6 +164,25 @@ Once again, showing results comparable to the previous.
 
 Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).
 
+@leicht_etal06 introduce a variation on the theme of normalized structural similarity scores. Their point is that maybe we should care about nodes that are *surprisingly* similar given some suitable null model. They propose the **configuration model** as such a null model. This model takes a graph with the same degree distribution as the original but with connections formed at random as reference. 
+
+The **LHN similarity index** (for Leicht, Holme, and Newman) is then given by: 
+
+$$
+s_{ij} = \frac{p}{(p + q)(p + r)}
+$$
+
+Which can be seen as a variation of the cosine similarity defined earlier. 
+
+In our example, this would be:
+
+```{r}
+   D <- A.p / ((A.p + A.q) * (A.p + A.r))
+   round(D[1:10, 1:10], 2)
+```
+
+Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
+
 ## Similarity and Structural Equivalence
 
 All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes. 
@@ -167,7 +192,6 @@ Because they define distances, this also means that these approaches can be used
 For instance, consider our toy graph from before with four structurally equivalent sets of nodes:
 
 ```{r}
-#| label: fig-se
 #| fig-cap: "A toy graph demonstrating structural equivalence."
 #| echo: false
    library(igraph)
@@ -208,7 +232,7 @@ Note that structurally equivalent nodes have similarity scores equal to 1.0. In 
 And a hierarchical clustering on this matrix reveals the structurally equivalent classes:
 
 ```{r}
-   D <- dist(D) #transforming E to a dist object
+   D <- dist(D) 
    h.res <- hclust(D, method = "ward.D2")
    plot(h.res)
 ```
@@ -228,20 +252,14 @@ We can package all that we said before into a handy function that takes a graph 
       }
 ```
 
-In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Jaccard):
+In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):
 
 ```{r}
    g.flint <- movie_267
    g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
-   D <- dist(1- vertex.sim(g.flint)$J)
+   D <- dist(1- vertex.sim(g.flint)$C)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   library(dendextend) #nice dendrogram plotting
-   dend <- as.dendrogram(h.res) %>% 
-      color_branches(k = 8) %>% 
-      color_labels(k = 8) %>% 
-      set("labels_cex", 0.65) %>% 
-      set("branches_lwd", 2) %>% 
-      plot
+   plot(h.res)
 ```
 
 ## Generalized Similarities
@@ -270,7 +288,7 @@ More specifically, they propose to measure the similarity between two nodes $i$ 
 
 So the similarity between two nodes is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees (to take a weighted average). 
 
-This measure nicely capture the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in $p$ + $q$ versus $p$ + $r$ as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem. 
+This measure nicely captures the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in $p$ + $q$ versus $p$ + $r$ as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem. 
 
 A function that implements this idea looks like:
 
@@ -320,14 +338,10 @@ We can transform the generalized similarities to distances and plot:
 ```{r}
    D <- dist(1- S)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   library(dendextend) #nice dendrogram plotting
-   dend <- as.dendrogram(h.res) %>% 
-      color_branches(k = 8) %>% 
-      color_labels(k = 8) %>% 
-      set("labels_cex", 0.65) %>% 
-      set("branches_lwd", 2) %>% 
-      plot
+   plot(h.res)
 ```
 
 Which returns an intuitive role partition. 
+
+
 
