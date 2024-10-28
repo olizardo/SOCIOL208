@@ -101,20 +101,20 @@ $$
 
 In this case, similarity can be measured *either* by the number of common in-neighbors or the number of common out-neighbors. 
 
-If the network under consideration is a **citation network**, then the number of common in-neighbors between two papers is their **co-citation** similarity and the number of common out-neighbors is their **bibliographic coupling** similarity.
+If the network under consideration is a (directed) **citation network** with nodes being papers and links between papers defined as a citation from paper $i$ to paper $j$, then the number of *common in-neighbors* between two papers is their **co-citation** similarity (the number of other papers that cite both papers), and the number of *common out-neighbors* is their **bibliographic coupling** similarity (the overlap in their list of references).
 
-One problem with using unbounded quantities like the number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
+One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
 
 ## Normalized Similarity Metrics
 
-Normalized similarity measures deal with this issue by adjusting the raw similarity based on $p$ using the number of non-shared neighbors $q$ and $r$. 
+Normalized similarity metrics deal with this issue by adjusting the raw similarity based on $p$ using the number of non-shared neighbors $q$ and $r$. 
 
 The two most popular versions of normalized vertex similarity scores are the **Jaccard index** and the **cosine coefficient**. 
 
 The Jacccard index is given by:
 
 $$
-   s_{i,j} = \frac{p}{p + q + r}
+   s_{ij} = \frac{p}{p + q + r}
 $$
 
 In our example, this would be:
@@ -129,7 +129,7 @@ Here showing that Barney is more similar to Fred and Betty than he is to Bam-Bam
 The cosine coefficient is given by:
 
 $$
-   s_{i,j} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
+   s_{ij} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
 $$
 
 In our example, this would be:
@@ -144,7 +144,7 @@ Showing results similar (pun intended) to those obtained using the Jaccard index
 A less commonly used option is the **Dice Coefficient** given by:
 
 $$
-   s_{i,j} = \frac{2p}{2p + q + r}
+   s_{ij} = \frac{2p}{2p + q + r}
 $$
 
 In our example, this would be:
@@ -156,11 +156,11 @@ In our example, this would be:
 
 Once again, showing results comparable to the previous.  
 
-Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves.
+Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).
 
 ## Similarity and Structural Equivalence
 
-As we also noted, these types of measures also define a distance on each pair of nodes. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes. 
+All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes. 
 
 Because they define distances, this also means that these approaches can be used to find approximately structurally equivalent classes of nodes in a graph just like we did with the Euclidean and correlation distances. 
 
@@ -233,8 +233,7 @@ In the *Flintstones* network, we could then find structurally equivalent blocks 
 ```{r}
    g.flint <- movie_267
    g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
-   sim.res <- vertex.sim(g.flint)
-   D <- dist(1- sim.res$J)
+   D <- dist(1- vertex.sim(g.flint)$J)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
    library(dendextend) #nice dendrogram plotting
    dend <- as.dendrogram(h.res) %>% 
@@ -245,7 +244,90 @@ In the *Flintstones* network, we could then find structurally equivalent blocks 
       plot
 ```
 
+## Generalized Similarities
 
+So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
+
+Yet, similarities based on local neighborhood information only have been criticized (e.g., by @borgatti_everett92) for not quite capturing the sociological intuition behind the idea of a *role* which is usually what they are deployed for. 
+That is, two doctors don't occupy the same role because they treat the *same* set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not. 
+
+This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as **automorphic** or **regular equivalence** [@borgatti_everett92]. 
+
+Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting. 
+
+A better approach here is to use the more relaxed notion of similarity like we did above to come up with a more general definition that can capture our role-based intuitions. Note that all the similarity notions studied earlier have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that *nodes are similar to the extent they connect to the same others*. 
+
+We can generalize this idea (to deal with the doctor/patient role problem) in the following way: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff). 
+
+As @jeh_widom02 note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity *recursively* and iterate through the graph until the similarity scores stop changing.^[Note the similarity (heh, heh) between this idea and the various status ranking algorithms we discussed in the previous handout.] 
+
+More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each time-step in the iteration using the formula:
+
+
+\begin{equation}
+   s_{ij} = \frac{\alpha}{d_i d_j} \sum_{k=1}^{d_i} \sum_{l=1}^{d_j} s_{kl}
+\end{equation}
+
+So the similarity between two nodes is just the sum of the pairwise similarities between the set of nodes formed by the union of their neighborhoods, weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees. 
+
+This measure nicely capture the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over $p$ + $q$ + $r$ as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem. 
+
+A function that implements this idea looks like:
+
+```{r}
+   SimRank.in <- function(A, C = 0.8, iter = 10) {
+      d <- colSums(A)
+      n <- nrow(A)
+      S <- diag(1, n, n)
+      rownames(S) <- rownames(A)
+      colnames(S) <- colnames(A)
+      m <- 1
+      while(m < iter) {
+          for(i in 1:n) {
+               for(j in 1:n) {
+                    if (i < j) {
+                        a <- names(which(A[, i] == 1)) 
+                        b <- names(which(A[, j] == 1)) 
+                        Sij <- 0
+                        for (k in a) {
+                           for (l in b) {
+                              Sij <- Sij + S[k, l] #i's similarity to j
+                           }
+                        }
+                        S[i, j] <- C/(d[i] * d[j]) * Sij
+                        S[j, i] <- C/(d[i] * d[j]) * Sij
+                    }
+               }
+          }
+         m <- m + 1
+      }
+   return(S)
+}
+```
+
+Note that this function calculates `SimRank` using each node's in-neighbors (it doesn't matter if the graph is undirected). 
+
+Let's try it out in the *Flintstones* graph:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g.flint))
+   S <- SimRank.in(A)
+   round(S[, 1:5], 2)
+```
+
+We can transform the generalized similarities to distances and plot:
+
+```{r}
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   library(dendextend) #nice dendrogram plotting
+   dend <- as.dendrogram(h.res) %>% 
+      color_branches(k = 8) %>% 
+      color_labels(k = 8) %>% 
+      set("labels_cex", 0.65) %>% 
+      set("branches_lwd", 2) %>% 
+      plot
+```
 
 
 

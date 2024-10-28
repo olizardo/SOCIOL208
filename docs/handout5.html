@@ -285,6 +285,7 @@ div.csl-indent {
   <li><a href="#basic-ingredients-of-vertex-similarity-metrics" id="toc-basic-ingredients-of-vertex-similarity-metrics" class="nav-link active" data-scroll-target="#basic-ingredients-of-vertex-similarity-metrics">Basic Ingredients of Vertex Similarity Metrics</a></li>
   <li><a href="#normalized-similarity-metrics" id="toc-normalized-similarity-metrics" class="nav-link" data-scroll-target="#normalized-similarity-metrics">Normalized Similarity Metrics</a></li>
   <li><a href="#similarity-and-structural-equivalence" id="toc-similarity-and-structural-equivalence" class="nav-link" data-scroll-target="#similarity-and-structural-equivalence">Similarity and Structural Equivalence</a></li>
+  <li><a href="#generalized-similarities" id="toc-generalized-similarities" class="nav-link" data-scroll-target="#generalized-similarities">Generalized Similarities</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout5.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -445,16 +446,16 @@ MORRIS           2      0</code></pre>
    \mathbf{A}(p^{in}) = \mathbf{A} \mathbf{A}^T
 \]</span></p>
 <p>In this case, similarity can be measured <em>either</em> by the number of common in-neighbors or the number of common out-neighbors.</p>
-<p>If the network under consideration is a <strong>citation network</strong>, then the number of common in-neighbors between two papers is their <strong>co-citation</strong> similarity and the number of common out-neighbors is their <strong>bibliographic coupling</strong> similarity.</p>
-<p>One problem with using unbounded quantities like the number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as “similar” to almost everyone.</p>
+<p>If the network under consideration is a (directed) <strong>citation network</strong> with nodes being papers and links between papers defined as a citation from paper <span class="math inline">\(i\)</span> to paper <span class="math inline">\(j\)</span>, then the number of <em>common in-neighbors</em> between two papers is their <strong>co-citation</strong> similarity (the number of other papers that cite both papers), and the number of <em>common out-neighbors</em> is their <strong>bibliographic coupling</strong> similarity (the overlap in their list of references).</p>
+<p>One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as “similar” to almost everyone.</p>
 </section>
 <section id="normalized-similarity-metrics" class="level2">
 <h2 class="anchored" data-anchor-id="normalized-similarity-metrics">Normalized Similarity Metrics</h2>
-<p>Normalized similarity measures deal with this issue by adjusting the raw similarity based on <span class="math inline">\(p\)</span> using the number of non-shared neighbors <span class="math inline">\(q\)</span> and <span class="math inline">\(r\)</span>.</p>
+<p>Normalized similarity metrics deal with this issue by adjusting the raw similarity based on <span class="math inline">\(p\)</span> using the number of non-shared neighbors <span class="math inline">\(q\)</span> and <span class="math inline">\(r\)</span>.</p>
 <p>The two most popular versions of normalized vertex similarity scores are the <strong>Jaccard index</strong> and the <strong>cosine coefficient</strong>.</p>
 <p>The Jacccard index is given by:</p>
 <p><span class="math display">\[
-   s_{i,j} = \frac{p}{p + q + r}
+   s_{ij} = \frac{p}{p + q + r}
 \]</span></p>
 <p>In our example, this would be:</p>
 <div class="cell">
@@ -488,7 +489,7 @@ MORRIS        0.20   1.00</code></pre>
 <p>Here showing that Barney is more similar to Fred and Betty than he is to Bam-Bam.</p>
 <p>The cosine coefficient is given by:</p>
 <p><span class="math display">\[
-   s_{i,j} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
+   s_{ij} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
 \]</span></p>
 <p>In our example, this would be:</p>
 <div class="cell">
@@ -522,7 +523,7 @@ MORRIS        0.33   1.00</code></pre>
 <p>Showing results similar (pun intended) to those obtained using the Jaccard index.</p>
 <p>A less commonly used option is the <strong>Dice Coefficient</strong> given by:</p>
 <p><span class="math display">\[
-   s_{i,j} = \frac{2p}{2p + q + r}
+   s_{ij} = \frac{2p}{2p + q + r}
 \]</span></p>
 <p>In our example, this would be:</p>
 <div class="cell">
@@ -554,11 +555,11 @@ MORRIS        0.33   1.00</code></pre>
 </div>
 </div>
 <p>Once again, showing results comparable to the previous.</p>
-<p>Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves.</p>
+<p>Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).</p>
 </section>
 <section id="similarity-and-structural-equivalence" class="level2">
 <h2 class="anchored" data-anchor-id="similarity-and-structural-equivalence">Similarity and Structural Equivalence</h2>
-<p>As we also noted, these types of measures also define a distance on each pair of nodes. So the <strong>cosine distance</strong> between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes.</p>
+<p>All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a <em>distance</em> on each pair of nodes which is equal to one minus the similarity. So the <strong>cosine distance</strong> between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes.</p>
 <p>Because they define distances, this also means that these approaches can be used to find approximately structurally equivalent classes of nodes in a graph just like we did with the Euclidean and correlation distances.</p>
 <p>For instance, consider our toy graph from before with four structurally equivalent sets of nodes:</p>
 <div class="cell">
@@ -622,18 +623,107 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   g.flint <span class="ot">&lt;-</span> movie_267</span>
 <span id="cb18-2"><a href="#cb18-2"></a>   g.flint <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g.flint, <span class="fu">degree</span>(g.flint) <span class="sc">&lt;=</span> <span class="dv">3</span>)</span>
-<span id="cb18-3"><a href="#cb18-3"></a>   sim.res <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g.flint)</span>
-<span id="cb18-4"><a href="#cb18-4"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> sim.res<span class="sc">$</span>J)</span>
-<span id="cb18-5"><a href="#cb18-5"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb18-6"><a href="#cb18-6"></a>   <span class="fu">library</span>(dendextend) <span class="co">#nice dendrogram plotting</span></span>
-<span id="cb18-7"><a href="#cb18-7"></a>   dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(h.res) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-8"><a href="#cb18-8"></a>      <span class="fu">color_branches</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-9"><a href="#cb18-9"></a>      <span class="fu">color_labels</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-10"><a href="#cb18-10"></a>      <span class="fu">set</span>(<span class="st">"labels_cex"</span>, <span class="fl">0.65</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-11"><a href="#cb18-11"></a>      <span class="fu">set</span>(<span class="st">"branches_lwd"</span>, <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb18-12"><a href="#cb18-12"></a>      plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-3"><a href="#cb18-3"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> <span class="fu">vertex.sim</span>(g.flint)<span class="sc">$</span>J)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb18-5"><a href="#cb18-5"></a>   <span class="fu">library</span>(dendextend) <span class="co">#nice dendrogram plotting</span></span>
+<span id="cb18-6"><a href="#cb18-6"></a>   dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(h.res) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-7"><a href="#cb18-7"></a>      <span class="fu">color_branches</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-8"><a href="#cb18-8"></a>      <span class="fu">color_labels</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-9"><a href="#cb18-9"></a>      <span class="fu">set</span>(<span class="st">"labels_cex"</span>, <span class="fl">0.65</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-10"><a href="#cb18-10"></a>      <span class="fu">set</span>(<span class="st">"branches_lwd"</span>, <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb18-11"><a href="#cb18-11"></a>      plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="handout5_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="generalized-similarities" class="level2">
+<h2 class="anchored" data-anchor-id="generalized-similarities">Generalized Similarities</h2>
+<p>So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.</p>
+<p>Yet, similarities based on local neighborhood information only have been criticized (e.g., by <span class="citation" data-cites="borgatti_everett92">Borgatti and Everett (<a href="#ref-borgatti_everett92" role="doc-biblioref">1992</a>)</span>) for not quite capturing the sociological intuition behind the idea of a <em>role</em> which is usually what they are deployed for. That is, two doctors don’t occupy the same role because they treat the <em>same</em> set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not.</p>
+<p>This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as <strong>automorphic</strong> or <strong>regular equivalence</strong> <span class="citation" data-cites="borgatti_everett92">(<a href="#ref-borgatti_everett92" role="doc-biblioref">Borgatti and Everett 1992</a>)</span>.</p>
+<p>Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting.</p>
+<p>A better approach here is to use the more relaxed notion of similarity like we did above to come up with a more general definition that can capture our role-based intuitions. Note that all the similarity notions studied earlier have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that <em>nodes are similar to the extent they connect to the same others</em>.</p>
+<p>We can generalize this idea (to deal with the doctor/patient role problem) in the following way: <em>nodes are similar to the extent they connect to similar others</em>, with the restriction that we can only use endogenous (structural connectivity) information—like with structural equivalence or common-neighbor approaches—to define everyone’s similarity (no exogenous attribute stuff).</p>
+<p>As <span class="citation" data-cites="jeh_widom02">Jeh and Widom (<a href="#ref-jeh_widom02" role="doc-biblioref">2002</a>)</span> note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity <em>recursively</em> and iterate through the graph until the similarity scores stop changing.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>More specifically, they propose to measure the similarity between two nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> at each time-step in the iteration using the formula:</p>
+<p><span class="math display">\[\begin{equation}
+   s_{ij} = \frac{\alpha}{d_i d_j} \sum_{k=1}^{d_i} \sum_{l=1}^{d_j} s_{kl}
+\end{equation}\]</span></p>
+<p>So the similarity between two nodes is just the sum of the pairwise similarities between the set of nodes formed by the union of their neighborhoods, weighted by the ratio of a free parameter <span class="math inline">\(\alpha\)</span> (a number between zero and one) to the product of their degrees.</p>
+<p>This measure nicely capture the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn’t matter whether these neighbors are shared between the two nodes (the summation occurs over <span class="math inline">\(p\)</span> + <span class="math inline">\(q\)</span> + <span class="math inline">\(r\)</span> as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem.</p>
+<p>A function that implements this idea looks like:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   SimRank.in <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
+<span id="cb19-2"><a href="#cb19-2"></a>      d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
+<span id="cb19-3"><a href="#cb19-3"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb19-4"><a href="#cb19-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb19-5"><a href="#cb19-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb19-6"><a href="#cb19-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb19-7"><a href="#cb19-7"></a>      m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb19-8"><a href="#cb19-8"></a>      <span class="cf">while</span>(m <span class="sc">&lt;</span> iter) {</span>
+<span id="cb19-9"><a href="#cb19-9"></a>          <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb19-10"><a href="#cb19-10"></a>               <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb19-11"><a href="#cb19-11"></a>                    <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb19-12"><a href="#cb19-12"></a>                        a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) </span>
+<span id="cb19-13"><a href="#cb19-13"></a>                        b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) </span>
+<span id="cb19-14"><a href="#cb19-14"></a>                        Sij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb19-15"><a href="#cb19-15"></a>                        <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb19-16"><a href="#cb19-16"></a>                           <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb19-17"><a href="#cb19-17"></a>                              Sij <span class="ot">&lt;-</span> Sij <span class="sc">+</span> S[k, l] <span class="co">#i's similarity to j</span></span>
+<span id="cb19-18"><a href="#cb19-18"></a>                           }</span>
+<span id="cb19-19"><a href="#cb19-19"></a>                        }</span>
+<span id="cb19-20"><a href="#cb19-20"></a>                        S[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
+<span id="cb19-21"><a href="#cb19-21"></a>                        S[j, i] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
+<span id="cb19-22"><a href="#cb19-22"></a>                    }</span>
+<span id="cb19-23"><a href="#cb19-23"></a>               }</span>
+<span id="cb19-24"><a href="#cb19-24"></a>          }</span>
+<span id="cb19-25"><a href="#cb19-25"></a>         m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb19-26"><a href="#cb19-26"></a>      }</span>
+<span id="cb19-27"><a href="#cb19-27"></a>   <span class="fu">return</span>(S)</span>
+<span id="cb19-28"><a href="#cb19-28"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Note that this function calculates <code>SimRank</code> using each node’s in-neighbors (it doesn’t matter if the graph is undirected).</p>
+<p>Let’s try it out in the <em>Flintstones</em> graph:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank.in</span>(A)</span>
+<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                BAM-BAM BARNEY BETTY FELDSPAR FRED
+BAM-BAM            1.00   0.19  0.20     0.27 0.20
+BARNEY             0.19   1.00  0.20     0.18 0.21
+BETTY              0.20   0.20  1.00     0.21 0.20
+FELDSPAR           0.27   0.18  0.21     1.00 0.18
+FRED               0.20   0.21  0.20     0.18 1.00
+HEADMISTRESS       0.20   0.21  0.19     0.16 0.20
+HERDMASTER         0.21   0.20  0.21     0.32 0.20
+LAVA               0.21   0.20  0.20     0.22 0.20
+LEACH              0.23   0.21  0.21     0.27 0.19
+MORRIS             0.23   0.21  0.19     0.16 0.19
+MRS SLATE          0.21   0.19  0.20     0.20 0.20
+PEBBLES            0.25   0.19  0.20     0.27 0.20
+PEBBLES BAM-BAM    0.22   0.21  0.21     0.20 0.20
+PILTDOWN           0.21   0.21  0.20     0.25 0.20
+POINDEXTER         0.21   0.20  0.21     0.25 0.19
+PYRITE             0.21   0.21  0.20     0.25 0.20
+SLATE              0.21   0.20  0.20     0.23 0.20
+WILMA              0.21   0.19  0.20     0.21 0.20</code></pre>
+</div>
+</div>
+<p>We can transform the generalized similarities to distances and plot:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
+<span id="cb22-2"><a href="#cb22-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb22-3"><a href="#cb22-3"></a>   <span class="fu">library</span>(dendextend) <span class="co">#nice dendrogram plotting</span></span>
+<span id="cb22-4"><a href="#cb22-4"></a>   dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(h.res) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-5"><a href="#cb22-5"></a>      <span class="fu">color_branches</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-6"><a href="#cb22-6"></a>      <span class="fu">color_labels</span>(<span class="at">k =</span> <span class="dv">8</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-7"><a href="#cb22-7"></a>      <span class="fu">set</span>(<span class="st">"labels_cex"</span>, <span class="fl">0.65</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-8"><a href="#cb22-8"></a>      <span class="fu">set</span>(<span class="st">"branches_lwd"</span>, <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb22-9"><a href="#cb22-9"></a>      plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout5_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 
@@ -641,11 +731,23 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 
 </section>
 
+
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-borgatti_everett92" class="csl-entry" role="doc-biblioentry">
+Borgatti, Stephen P, and Martin G Everett. 1992. <span>“Notions of Position in Social Network Analysis.”</span> <em>Sociological Methodology</em> 22: 1–35.
+</div>
+<div id="ref-jeh_widom02" class="csl-entry" role="doc-biblioentry">
+Jeh, Glen, and Jennifer Widom. 2002. <span>“Simrank: A Measure of Structural-Context Similarity.”</span> In <em>Proceedings of the Eighth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining</em>, 538–43.
+</div>
 <div id="ref-kleinberg99" class="csl-entry" role="doc-biblioentry">
 Kleinberg, Jon M. 1999. <span>“Authoritative Sources in a Hyperlinked Environment.”</span> <em>Journal of the ACM (JACM)</em> 46 (5): 604–32.
 </div>
-</div></section></div></main> <!-- /main -->
+</div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Note the similarity (heh, heh) between this idea and the various status ranking algorithms we discussed in the previous handout.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
