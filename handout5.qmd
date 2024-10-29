@@ -109,7 +109,7 @@ One problem with using unbounded quantities like the sheer number of common (in 
 
 Normalized similarity metrics deal with this issue by adjusting the raw similarity based on $p$ using the number of non-shared neighbors $q$ and $r$. 
 
-The two most popular versions of normalized vertex similarity scores are the **Jaccard index** and the **cosine coefficient** (sometimes also referred to as the **Salton Index**). 
+The two most popular versions of normalized vertex similarity scores are the **Jaccard index** and the **cosine similarity** (sometimes also referred to as the **Salton Index**). 
 
 The Jacccard index is given by:
 
@@ -237,7 +237,7 @@ And a hierarchical clustering on this matrix reveals the structurally equivalent
    plot(h.res)
 ```
 
-We can package all that we said before into a handy function that takes a graph as input and returns all three normalized similarity metrics as output:
+We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
 
 ```{r}
    vertex.sim <- function(x) {
@@ -248,7 +248,8 @@ We can package all that we said before into a handy function that takes a graph 
       J <- A.p / (A.p + A.q + A.r)
       C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
       D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
-      return(list(J = J, C = C, D = D))
+      L <- A.p / ((A.p + A.q) * (A.p + A.r))
+      return(list(J = J, C = C, D = D, L = L))
       }
 ```
 
@@ -397,7 +398,7 @@ $$
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4 ... + \alpha^{k-2} \mathbf{A}^k
 $$
 
-Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter. Any other issue is that there was already an all-paths similarity measure in existence developed by the mathematical social scientist Leo Katz in the 1950s (!). 
+Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter. Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo @katz53 in the 1950s (!). 
 
 The basic idea was to use linear algebra tricks to solve:
 
@@ -413,21 +414,20 @@ $$
 \mathbf{S} = (\mathbf{I} - \alpha A)^{-1}
 $$
 
-Where $\mathbf{I}$ is the **identity matrix** (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the **matrix inverse** operation (most matrices unless they are weird are invertible).
+Where $\mathbf{I}$ is the **identity matrix** (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the **matrix inverse** operation (most matrices are invertible, unless they are weird).
 
 A function to compute the **Katz similarity** between all node pairs is:
 
 ```{r}
    katz.sim <- function(A, min.alpha = 0.05) {
       I <- diag(nrow(A)) #creating identity matrix
-      max.alpha <- 1/eigen(A)$values[1]
-      alpha <- runif(1, min = min.alpha, max = max.alpha)
+      alpha <- runif(1, min = min.alpha, max = 1/eigen(A)$values[1])
       S <- solve(I - alpha * A) 
       return(S)
    }
 ```
 
-For technical reasons we need to choose $\alpha$ to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in lines 3 and 4 (set the seed to get reproducible answers). 
+For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose $\alpha$ to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in line 3 (set the seed to get reproducible answers). 
 
 In the *Flintstones* network the Katz similarity looks like:
 
@@ -437,7 +437,7 @@ In the *Flintstones* network the Katz similarity looks like:
    round(S[1:10, 1:10], 2)
 ```
 
-Finally, @leicht_etal06 argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being "similar" to a buch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.
+@leicht_etal06 argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being "similar" to a buch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.
 
 @leicht_etal06 propose a "fix" for this weakness in the Katz similarity, resulting in the matrix linear algebra equivalent of a degree-normalized similarity measure like the Jaccard or Cosine. 
 
@@ -455,9 +455,9 @@ Which leads to the function:
 
 ```{r}
    LHN.sim <- function(A, alpha = 0.9) {
-      D <- solve(diag(rowSums(A))) #creating degree matrix
-      lambda <- eigen(A)$values[1]
-      S <- D %*% solve((alpha * A)/lambda) %*% D
+      D <- solve(diag(rowSums(A))) #inverse of degree matrix
+      lambda <- eigen(A)$values[1] #first eigenvalue of adjacency matrix
+      S <- D %*% solve((alpha * A)/lambda) %*% D #LHN index
       rownames(S) <- rownames(A)
       colnames(S) <- colnames(A)
       return(S)

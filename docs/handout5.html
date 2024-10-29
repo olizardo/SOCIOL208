@@ -453,7 +453,7 @@ MORRIS           2      0</code></pre>
 <section id="normalized-similarity-metrics" class="level2">
 <h2 class="anchored" data-anchor-id="normalized-similarity-metrics">Normalized Similarity Metrics</h2>
 <p>Normalized similarity metrics deal with this issue by adjusting the raw similarity based on <span class="math inline">\(p\)</span> using the number of non-shared neighbors <span class="math inline">\(q\)</span> and <span class="math inline">\(r\)</span>.</p>
-<p>The two most popular versions of normalized vertex similarity scores are the <strong>Jaccard index</strong> and the <strong>cosine coefficient</strong> (sometimes also referred to as the <strong>Salton Index</strong>).</p>
+<p>The two most popular versions of normalized vertex similarity scores are the <strong>Jaccard index</strong> and the <strong>cosine similarity</strong> (sometimes also referred to as the <strong>Salton Index</strong>).</p>
 <p>The Jacccard index is given by:</p>
 <p><span class="math display">\[
    s_{ij} = \frac{p}{p + q + r}
@@ -646,7 +646,7 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <p><img src="handout5_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>We can package all that we said before into a handy function that takes a graph as input and returns all three normalized similarity metrics as output:</p>
+<p>We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
 <span id="cb19-2"><a href="#cb19-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
@@ -656,8 +656,9 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <span id="cb19-6"><a href="#cb19-6"></a>      J <span class="ot">&lt;-</span> A.p <span class="sc">/</span> (A.p <span class="sc">+</span> A.q <span class="sc">+</span> A.r)</span>
 <span id="cb19-7"><a href="#cb19-7"></a>      C <span class="ot">&lt;-</span> A.p <span class="sc">/</span> (<span class="fu">sqrt</span>(A.p <span class="sc">+</span> A.q) <span class="sc">*</span> <span class="fu">sqrt</span>(A.p <span class="sc">+</span> A.r))</span>
 <span id="cb19-8"><a href="#cb19-8"></a>      D <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> A.p) <span class="sc">/</span> ((<span class="dv">2</span> <span class="sc">*</span> A.p) <span class="sc">+</span> A.q <span class="sc">+</span> A.r)</span>
-<span id="cb19-9"><a href="#cb19-9"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J =</span> J, <span class="at">C =</span> C, <span class="at">D =</span> D))</span>
-<span id="cb19-10"><a href="#cb19-10"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb19-9"><a href="#cb19-9"></a>      L <span class="ot">&lt;-</span> A.p <span class="sc">/</span> ((A.p <span class="sc">+</span> A.q) <span class="sc">*</span> (A.p <span class="sc">+</span> A.r))</span>
+<span id="cb19-10"><a href="#cb19-10"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J =</span> J, <span class="at">C =</span> C, <span class="at">D =</span> D, <span class="at">L =</span> L))</span>
+<span id="cb19-11"><a href="#cb19-11"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>In the <em>Flintstones</em> network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):</p>
 <div class="cell">
@@ -816,7 +817,7 @@ MORRIS         4.0    6.0</code></pre>
 <p><span class="math display">\[
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4 ... + \alpha^{k-2} \mathbf{A}^k
 \]</span></p>
-<p>Where <span class="math inline">\(k\)</span> is the length of the maximum path considered. <span class="citation" data-cites="lu_etal09">Lü, Jin, and Zhou (<a href="#ref-lu_etal09" role="doc-biblioref">2009</a>)</span> argue that these higher order paths don’t matter. Any other issue is that there was already an all-paths similarity measure in existence developed by the mathematical social scientist Leo Katz in the 1950s (!).</p>
+<p>Where <span class="math inline">\(k\)</span> is the length of the maximum path considered. <span class="citation" data-cites="lu_etal09">Lü, Jin, and Zhou (<a href="#ref-lu_etal09" role="doc-biblioref">2009</a>)</span> argue that these higher order paths don’t matter. Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo <span class="citation" data-cites="katz53">Katz (<a href="#ref-katz53" role="doc-biblioref">1953</a>)</span> in the 1950s (!).</p>
 <p>The basic idea was to use linear algebra tricks to solve:</p>
 <p><span class="math display">\[
 \mathbf{S} = \sum_{k=1}^{\infty} \alpha^k A^k
@@ -826,18 +827,17 @@ MORRIS         4.0    6.0</code></pre>
 <p><span class="math display">\[
 \mathbf{S} = (\mathbf{I} - \alpha A)^{-1}
 \]</span></p>
-<p>Where <span class="math inline">\(\mathbf{I}\)</span> is the <strong>identity matrix</strong> (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the <strong>matrix inverse</strong> operation (most matrices unless they are weird are invertible).</p>
+<p>Where <span class="math inline">\(\mathbf{I}\)</span> is the <strong>identity matrix</strong> (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the <strong>matrix inverse</strong> operation (most matrices are invertible, unless they are weird).</p>
 <p>A function to compute the <strong>Katz similarity</strong> between all node pairs is:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">min.alpha =</span> <span class="fl">0.05</span>) {</span>
 <span id="cb28-2"><a href="#cb28-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(A)) <span class="co">#creating identity matrix</span></span>
-<span id="cb28-3"><a href="#cb28-3"></a>      max.alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>]</span>
-<span id="cb28-4"><a href="#cb28-4"></a>      alpha <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>, <span class="at">min =</span> min.alpha, <span class="at">max =</span> max.alpha)</span>
-<span id="cb28-5"><a href="#cb28-5"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> A) </span>
-<span id="cb28-6"><a href="#cb28-6"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb28-7"><a href="#cb28-7"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb28-3"><a href="#cb28-3"></a>      alpha <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>, <span class="at">min =</span> min.alpha, <span class="at">max =</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>])</span>
+<span id="cb28-4"><a href="#cb28-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> A) </span>
+<span id="cb28-5"><a href="#cb28-5"></a>      <span class="fu">return</span>(S)</span>
+<span id="cb28-6"><a href="#cb28-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>For technical reasons we need to choose <span class="math inline">\(\alpha\)</span> to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in lines 3 and 4 (set the seed to get reproducible answers).</p>
+<p>For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose <span class="math inline">\(\alpha\)</span> to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in line 3 (set the seed to get reproducible answers).</p>
 <p>In the <em>Flintstones</em> network the Katz similarity looks like:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
@@ -868,7 +868,7 @@ LEACH         1.01   0.01
 MORRIS        0.01   1.01</code></pre>
 </div>
 </div>
-<p>Finally, <span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being “similar” to a buch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.</p>
+<p><span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being “similar” to a buch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.</p>
 <p><span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> propose a “fix” for this weakness in the Katz similarity, resulting in the matrix linear algebra equivalent of a degree-normalized similarity measure like the Jaccard or Cosine.</p>
 <p>So instead of Katz they suggest we compute:</p>
 <p><span class="math display">\[
@@ -879,9 +879,9 @@ MORRIS        0.01   1.01</code></pre>
 <p>Which leads to the function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   LHN.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.9</span>) {</span>
-<span id="cb31-2"><a href="#cb31-2"></a>      D <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="fu">diag</span>(<span class="fu">rowSums</span>(A))) <span class="co">#creating degree matrix</span></span>
-<span id="cb31-3"><a href="#cb31-3"></a>      lambda <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>]</span>
-<span id="cb31-4"><a href="#cb31-4"></a>      S <span class="ot">&lt;-</span> D <span class="sc">%*%</span> <span class="fu">solve</span>((alpha <span class="sc">*</span> A)<span class="sc">/</span>lambda) <span class="sc">%*%</span> D</span>
+<span id="cb31-2"><a href="#cb31-2"></a>      D <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="fu">diag</span>(<span class="fu">rowSums</span>(A))) <span class="co">#inverse of degree matrix</span></span>
+<span id="cb31-3"><a href="#cb31-3"></a>      lambda <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="co">#first eigenvalue of adjacency matrix</span></span>
+<span id="cb31-4"><a href="#cb31-4"></a>      S <span class="ot">&lt;-</span> D <span class="sc">%*%</span> <span class="fu">solve</span>((alpha <span class="sc">*</span> A)<span class="sc">/</span>lambda) <span class="sc">%*%</span> D <span class="co">#LHN index</span></span>
 <span id="cb31-5"><a href="#cb31-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
 <span id="cb31-6"><a href="#cb31-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
 <span id="cb31-7"><a href="#cb31-7"></a>      <span class="fu">return</span>(S)</span>
@@ -927,6 +927,9 @@ Borgatti, Stephen P, and Martin G Everett. 1992. <span>“Notions of Position in
 </div>
 <div id="ref-jeh_widom02" class="csl-entry" role="doc-biblioentry">
 Jeh, Glen, and Jennifer Widom. 2002. <span>“Simrank: A Measure of Structural-Context Similarity.”</span> In <em>Proceedings of the Eighth ACM SIGKDD International Conference on Knowledge Discovery and Data Mining</em>, 538–43.
+</div>
+<div id="ref-katz53" class="csl-entry" role="doc-biblioentry">
+Katz, Leo. 1953. <span>“A New Status Index Derived from Sociometric Analysis.”</span> <em>Psychometrika</em> 18 (1): 39–43.
 </div>
 <div id="ref-kleinberg99" class="csl-entry" role="doc-biblioentry">
 Kleinberg, Jon M. 1999. <span>“Authoritative Sources in a Hyperlinked Environment.”</span> <em>Journal of the ACM (JACM)</em> 46 (5): 604–32.
