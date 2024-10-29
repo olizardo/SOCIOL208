@@ -1,0 +1,63 @@
+---
+title: "Role Similarity Across Graphs"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+Sometimes we may want to figure out how similar a given node's position in one social network is to that of another node in a *different* network. This calls for a method that could allow us to compare how similar a node in one graph is to *other nodes* in *another graph*. 
+
+A particularly interesting version of this problem arises when we have information on the same set of nodes across different set of relations. In that case, we may be interested in answering the question as to whether nodes occupy similar or dissimilar positions across the networks defined by the different relations. 
+
+@blondel_etal04 describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute status scores from directed graphs (like PageRank and HITS) but this time to *compute similarity* scores between *pairs* of nodes *across* graphs. 
+
+The idea, just like with the status scores, is that the two set of nodes in each graph start with the same similarity scores, and then we update them as we traverse the connectivity structure of the two graphs. 
+
+So let's say the adjacency matrix of the first graph is $\mathbf{A}$ and that of the second graph is $\mathbf{B}$. The first graph has $n_A$ number of nodes and the corresponding quantity in the second graph is $n_B$ our target similarity matrix $\mathbf{Z}$, comparing the node sets in the two graphs, will therefore be of dimensions $n_A \times n_B$. 
+
+We initialize $z_{ij}(0) = 1$ for all $i$ and $j$; that is, $\mathbf{Z}(0)$ is a matrix full of ones. At each time step subsequent to that, we fill up the $\mathbf{Z}$ matrix with new values according to:
+
+$$ 
+   \mathbf{Z}(t + 1) = \mathbf{B}\mathbf{Z(t)}\mathbf{A}^T + \mathbf{B}^T\mathbf{Z(t)}\mathbf{A}
+$$
+
+To ensure convergence, we then normalize the $\mathbf{Z}$ matrix after every update using our trusty Euclidean norm:
+
+$$
+\mathbf{Z}(t > 0) = \frac{\mathbf{Z}}{||\mathbf{Z}||_2}
+$$
+
+Let us see how this would work with real data. Let us start with the case of the same set of nodes measured across two different relational networks. Here, we will use Krackhardt's high tech manager's data which contains directed adjacency relations based on both *friendship* and *advice* nominations.
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   A <- as.matrix(as_adjacency_matrix(ht_friends))
+   B <- as.matrix(as_adjacency_matrix(ht_advice))
+```
+
+A function to compute the **Blondel similarity** can be written as:
+
+```{r}
+   blondel.sim <- function(x, w, sigma = 0.0001) {
+      n.x <- nrow(x)
+      n.w <- nrow(w)
+      Z <- matrix(1, n.x, n.w)
+      diff <- 1
+      while (diff > sigma) {
+         Z.old <- Z
+         Z <- (w %*% Z.old %*% t(x)) + (t(w) %*% Z.old %*% x)
+         diff <- abs(sum(abs(Z)) - sum(abs(Z.old)))
+      }
+   }
+```
+
+
+
+
