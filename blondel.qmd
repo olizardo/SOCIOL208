@@ -36,26 +36,68 @@ $$
 Let us see how this would work with real data. Let us start with the case of the same set of nodes measured across two different relational networks. Here, we will use Krackhardt's high tech manager's data which contains directed adjacency relations based on both *friendship* and *advice* nominations.
 
 ```{r}
+#| fig-subcap:
+#|   - "Florentine Families Marriage Alliance Network"
+#|   - "Florentine Families Business Alliance Network"
+#| layout-ncol: 1
+#| fig-width: 8
+#| fig-height: 8
    library(networkdata)
    library(igraph)
-   A <- as.matrix(as_adjacency_matrix(ht_friends))
-   B <- as.matrix(as_adjacency_matrix(ht_advice))
+   library(ggraph)
+   set.seed(123)
+   plot(ants_1, 
+        edge.arrow.size=.5, 
+        vertex.color="tan2", 
+        vertex.size=8, vertex.frame.color="gray", 
+        vertex.label.color="black", vertex.label.cex=1, 
+        vertex.label.dist=2, edge.curved=0.2)
+   plot(ants_2, 
+        edge.arrow.size=.5, 
+        vertex.color="tan2", 
+        vertex.size=8, vertex.frame.color="gray", 
+        vertex.label.color="black", vertex.label.cex=1, 
+        vertex.label.dist=2, edge.curved=0.2)
 ```
 
 A function to compute the **Blondel similarity** can be written as:
 
 ```{r}
-   blondel.sim <- function(x, w, sigma = 0.0001) {
-      n.x <- nrow(x)
-      n.w <- nrow(w)
-      Z <- matrix(1, n.x, n.w)
+   blondel.sim <- function(A, B) {
+      K <- matrix(1, nrow(B), nrow(A))
+      k <- 1
       diff <- 1
-      while (diff > sigma) {
-         Z.old <- Z
-         Z <- (w %*% Z.old %*% t(x)) + (t(w) %*% Z.old %*% x)
-         diff <- abs(sum(abs(Z)) - sum(abs(Z.old)))
+      old.diff <- 2
+      while (diff != old.diff | k %% 2 == 0) {
+         old.diff <- diff
+         K.old <- K
+         K <- (B %*% K.old %*% t(A)) + (t(B) %*% K.old %*% A)
+         K <- K/norm(K, type = "F")
+         diff <- abs(sum(abs(K)) - sum(abs(K.old)))
+         k <- k + 1
       }
+   K <- K/max(K)
+   return(list(K = K, k = k, diff = diff))
    }
+```
+
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(flo_marriage))
+   B <- as.matrix(as_adjacency_matrix(flo_business))
+   K <- round(blondel.sim(A, B)[[1]], 4)
+   K
+```
+
+
+```{r}
+   g5 <- make_empty_graph(2)
+   g5 <- add_edges(g5, c(1,2))
+   A <- as.matrix(as_adjacency_matrix(g5))
+   B <- as.matrix(as_adjacency_matrix(ht_advice))
+   K <- round(blondel.sim(A, B)[[1]], 4)
+   K/max(K)
+   cbind(hits_scores(ht_advice)$hub, hits_scores(ht_advice)$authority)
 ```
 
 

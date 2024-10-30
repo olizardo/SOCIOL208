@@ -279,7 +279,6 @@ A better approach here is to use the more relaxed notion of similarity like we d
 We can generalize this idea (to deal with the doctor/patient role problem) in the following way: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff). 
 
 As @jeh_widom02 note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity *recursively* and iterate through the graph until the similarity scores stop changing.^[Note the similarity (heh, heh) between this idea and the various status ranking algorithms we discussed in the previous handout.] 
-
 More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each time-step in the iteration using the formula:
 
 
@@ -324,7 +323,7 @@ A function that implements this idea looks like:
 }
 ```
 
-Note that this function calculates `SimRank` using each node's in-neighbors (it doesn't matter if the graph is undirected). 
+Note that this function calculates `SimRank` using each node's in-neighbors (this doesn't matter if the graph is undirected). 
 
 Let's try it out in the *Flintstones* graph using $\alpha = 0.95$:
 
@@ -475,6 +474,34 @@ Note that as @leicht_etal06 discuss, the entries in the **LHN** version of the s
 
 Here we can see that Barney and Fred are actually not that similar to one another (after we take into account their very high degree) and that Barney is actually most similar to Feldspar (and Fred even more so). 
 
+## Appendix
+
+A more general version of the function to compute `SimRank` looks like this [partly based on @fouss_etal16, pp. 84, algorithm 2.4]
+
+```{r}
+   SimRank <- function(A, sigma = 0.0001, alpha = 0.8) {
+      n <- nrow(A)
+      d <- as.numeric(colSums(A) > 0)
+      e <- matrix(1, n, 1)
+      Q <- diag(as.vector(t(e) %*% A), n, n)
+      diag(Q) <- 1/diag(Q)
+      Q <- A %*% Q
+      Q[is.nan(Q)] <- 0
+      diff <- 1
+      k <- 1
+      K <- diag(1, n, n)
+      while(diff > sigma) {
+         K.old <- K
+         K.p <- alpha * t(Q) %*% K %*% Q
+         K <- K.p - diag(as.vector(diag(K.p)), n, n) + diag(d, n, n)
+         diff <- abs(sum(abs(K.old)) - sum(abs(K)))
+         k <- k + 1
+      }
+      rownames(K) <- rownames(A)
+      colnames(K) <- colnames(A)
+      return(K)
+   }
+```
 
 
 

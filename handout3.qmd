@@ -129,20 +129,23 @@ Note the normalization step on line 9, which is necessary to prevent the sum of 
 And here's the resulting (row) vector of status scores for each node:
 
 ```{r}
-   round(status1(A), 3)
+   s <- status1(A)
+   s <- s/max(s) #normalizing by maximum
+   round(s, 3)
 ```      
 
 What if I told you that this vector is the same as that given by the leading (first) eigenvector of the adjacency matrix?
 
 ```{r}
-   eig <- eigen(A)
-   round(eig$vector[, 1], 3) * -1
+   s <- abs(eigen(A)$vector[, 1])#computing the first eigenvector
+   s <- s/max(s) #normalizing by maximum
+   round(s, 3)
 ```
 
 Which is of course what is computed by the `eigen_centrality` function in `igraph`:
 
 ```{r}
-   round(eigen_centrality(g, scale = FALSE)$vector, 3)
+   round(eigen_centrality(g)$vector, 3) #igraph automatically normalizes
 ```
 
 So, the "eigenvector centralities" are just the limit scores produced by the status distribution process implemented in the `status1` function!
@@ -219,23 +222,24 @@ The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies th
 Now we can just adapt the the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
 
 ```{r}
-   round(status1(t(P)), 3)
+   s2 <- round(status1(t(P)), 3)
+   s2 <- s2/max(s2)
+   round(s2, 3)
 ```
 
 What if I told you that these numbers are the same as the leading eigenvector of $\mathbf{P}^T$?
 
 ```{r}
-   eig <- eigen(t(P))
-   round(eig$vector[, 1], 3) * -1
+   s2 <- abs(eigen(t(P))$vector[, 1])
+   s2 <- s2/max(s2)
+   round(s2, 3) 
 ```
 
 And, of course, the (normalized) scores produced by this approach are identical to those computed by the `page_rank` function in `igraph`:
 
 ```{r}
-   s2 <- status1(t(P))
    pr <- page_rank(g, damping = 1, algo = "arpack")$vector
    round(pr/max(pr), 3)
-   round(s2/max(s2), 3)
 ```
 
 So the distributional model of status is the same one implemented in the PageRank algorithm!
