@@ -11,6 +11,7 @@ format:
       code-line-numbers: true
 ---
 
+## What are communities?
 What are communities? In networks, communities are subset of nodes that have more interactions or connectivity within themselves than they do outside of themselves (these are sometimes called "modules" outside of sociology). Communities thus exemplify the sociological concept of a **group**. 
 
 A network has *community structure* if it contains many such subsets or groups of nodes that interact preferentially among themselves. Not all networks have to have community structure; a network in which all nodes interact with equal propensity doesn't have communities.
@@ -21,7 +22,9 @@ But first, we need to develop a criterion for whether a given partition of the n
 
 Mark Newman, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). 
 
-The best way to understand the modularity is as follows. Imagine we have an idea of what the communities in a network are. This could be given by some special  community partition method, our intuition,  or some exogenous coloring on the nodes (e.g., as given by a node attribute like race, gender, position  in the organization, etc.). The membership of each node in each community is thus stored in a vector, $C_i = k$ if node $i$ belongs to community $k$. 
+## A bag of links
+
+An intuitive way to understand the modularity is as follows. Imagine we have an idea of what the communities in a network are. This could be given by some special  community partition method, our intuition,  or some exogenous coloring on the nodes (e.g., as given by a node attribute like race, gender, position  in the organization, etc.). The membership of each node in each community is thus stored in a vector, $C_i = k$ if node $i$ belongs to community $k$. 
 
 Our job is to decide whether that community partition is a good one. One way to proceed is to imagine that we take the network in question, and we throw each observed link into a bag. Then our modularity measure should give us an idea of the probability that if we drew a link at random, the nodes at the end of each link belong to same community (or have the same color if the communities are defined by exogenous attributes). If the probability is high, then the network has community structure. If the probability is no better than we would expect given a null model that says there is nothing going on in the network connectivity-wise except random chance, then the modularity should be low (and we decide that the partition we chose actually does not divide the network into meaningful communities). 
 
@@ -37,14 +40,14 @@ If you remember your elementary probability theory, you know that the *joint* pr
 
 So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
 
-Let's move to a real example. Below are two plots of the advice network from the `law_advice` data from the `networkdata` package. The first shows the nodes colored by status in the firm (partners versus associates) and the other shows the nodes colored by gender. It is pretty evident that there is more community by status than by gender. So a measure of modularity should be higher when using status as our partition than when using gender.
+Let's move to a real example. Below are two plots of the advice network from the `law_friends` data from the `networkdata` package. The first shows the nodes colored by status in the firm (partners versus associates) and the other shows the nodes colored by gender. It is pretty evident that there is more community by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.
 
 ```{r}
 #| fig-height: 10
 #| fig-width: 10
 #| fig-subcap:
-#|   - "Law Advice Friendship Network by Status"
-#|   - "Law Advice Friendship Network by Gender"
+#|   - "Law Firm Friendship Network by Status"
+#|   - "Law Firm Friendship Network by Gender"
 #| echo: false
    library(networkdata)
    library(igraph)
@@ -94,7 +97,7 @@ So if we wanted an edge list data frame containing each node's status membership
    head(link.dat)
 ```
 
-Note than an edge list is a "bag of links" so we can compute the three probabilities we need to compute the modularity of a partition directly from the edge list data frame. Here's a function that does this:
+Note than an edge list is already a "bag of links" so we can compute the three probabilities we need to compute the modularity of a partition directly from the edge list data frame. Here's a function that does this:
 
 ```{r}
    mod.Q1 <- function(x, c1 = 2, c2 = 4) {
@@ -119,15 +122,17 @@ This function takes the edge list data frame as input. Optionally, you can speci
 So if wanted to check if status was more powerful in structuring the community organization of the `law_advice` network than gender, we would just type:
 
 ```{r}
-   link.dat1 <- link.bag(g, V(g)$status)
-   link.dat2 <- link.bag(g, V(g)$gender)
-   mod.Q1(link.dat1)
-   mod.Q1(link.dat2)
+   mod.Q1(link.bag(g, V(g)$status))
+   mod.Q1( link.bag(g, V(g)$gender))
 ```
 
 Which indeed confirms that status is a more powerful organizing community principle than gender in this network. 
 
-Note that while the "bag of links" idea is good to show the basic probabilistic principle behind the modularity in a network we can compute directly from the adjacency matrix without going through the edge list data frame construction step. A function that does this looks like:
+## Modularity from the Adjancency Matrix
+
+Note that while the "bag of links" idea is good to show the basic probabilistic principle behind the modularity in a network we can compute directly from the adjacency matrix without going through the edge list data frame construction step. 
+
+A function that does this looks like:
 
 
 ```{r}
@@ -174,5 +179,116 @@ Of course, you don't even have to use a custom function like the above, because 
 
 But at least now you know what's going on inside of it!
 
+## The Modularity Matrix
+
+Obviously, the modularity wouldn't be a famous method if it was just a way of measuring the goodness of a community partition produced by other methods. It itself can be used to find community partitions by using a method that somehow produces node partition that find the largest values that it can take in a graph.
+
+A useful tool in this quest is what is called the **modularity matrix** ($\mathbf{B}$), which is defined as a variation on the adjacency matrix ($\mathbf{A}$), with each cell $b_{ij}$ taking having the value:
+
+$$
+b_{ij} = a_{ij} - \frac{k^{out}_ik^{in}_j}{\sum_i\sum_j a_{ij}}
+$$
+
+Where $k^{out}_i$ is node $i$'s outdegree and $k^{in}_j$ is node j's indegree. Note that the modularity matrix has the same "observed minus expected" structure as the formulas for the modularity. In this case we compare whether we see a link from $i$ to $j$ as given by $a_{ij}$ against the probability of observing a link in a graph in which nodes connect at random with probability proportional to their degrees (as given by the right-hand side fraction). 
 
 
+A function to compute the modularity matrix by looping through every element of the adjacency matrix looks like:
+
+```{r}
+   mod.mat <- function(x){
+      A <- as.matrix(as_adjacency_matrix(x))
+      od <- rowSums(A) #outdegrees
+      id <- colSums(A) #indegrees
+      vol <- sum(A)
+      n <- nrow(A)
+      B <- matrix(0, n, n)
+      for (i in 1:n){
+         for (j in 1:n) {
+            B[i,j] <- A[i,j] - ((od[i]*id[j])/vol)
+         }
+      }
+   return(B)
+   }
+```
+
+Peeking inside the resulting matrix:
+
+```{r}
+   round(mod.mat(g)[1:10, 1:10], 3)
+```
+
+Which gives us the same numbers we would have obtained using the `igraph` function `modularity_matrix`:
+
+```{r}
+   B <- modularity_matrix(g)
+   round(B[1:10, 1:10], 3)
+```
+
+The modularity matrix has some interesting properties. For instance, *both* its rows and columns sum to zero:
+
+```{r}
+   round(rowSums(B), 2)
+   round(colSums(B), 2)
+```
+
+Which makes $\mathbf{B}$ **doubly centered** a neat but so far useless property. 
+
+Here's a more useful property. Remember the network distribution game we played to defined our various reflective status measure in Handout 3? What if we played it with the modularity matrix? 
+
+```{r}
+   status1 <- function(A) {
+      n <- nrow(A) #number of actors
+      x <- rep(1, n) #initial status vector set to all ones
+      w <- 1 
+      k <- 0 #initializing counter
+      while (w > 0.0001) {
+          o.x <- x #old status scores
+          x <- A %*% x #new scores a function of old scores and adjacency matrix
+          x <- x/norm(x, type = "E") #normalizing new status scores
+          w <- abs(sum(abs(x) - abs(o.x))) #diff. between new and old scores
+          k <- k + 1 #incrementing while counter
+      }
+   return(as.vector(x))
+   }
+```
+
+```{r}
+   C <- status1(B)
+   round(C,2)
+```
+
+This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actual a **partition** of the original graph into two communities? Not only that, I have even better news. This is the partition that *maximizes* that modularity, the best two-group partition in the graph that has the most edges within groups and the least edges going across groups. 
+
+Let's see some visual evidence. 
+
+First, let's turn the "status" vector into a community indicator vector. We assign all nodes with scores zero and larger to one community and nodes with scores less than zero to the other one:
+
+```{r}
+   C[C>0] <- 1
+   C[C<=0] <-2
+   C
+```
+
+And for the big check:
+
+```{r}
+   modularity(g, C)
+```
+
+Which is a pretty big score, at least larger than we obtained using status in the law firm as a binary partition. Here's some visual evidence:
+
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+#| fig-subcap:
+#|   - "Law Firm Friendship Network by The Best Binary Partition According to the Modularity"
+   V(g)$color <- C
+   plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+Which definitely looks like an optimal clustering into two groups based on friendship!
