@@ -1,0 +1,178 @@
+---
+title: "Community Structure"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+What are communities? In networks, communities are subset of nodes that have more interactions or connectivity within themselves than they do outside of themselves (these are sometimes called "modules" outside of sociology). Communities thus exemplify the sociological concept of a **group**. 
+
+A network has *community structure* if it contains many such subsets or groups of nodes that interact preferentially among themselves. Not all networks have to have community structure; a network in which all nodes interact with equal propensity doesn't have communities.
+
+So whether a network has community structure, and whether a given guess as to what these communities are yields actual *communities* (cluster of nodes that interact more among themselves than they do with outsiders) is an empirical question than needs to be answered with data.
+
+But first, we need to develop a criterion for whether a given partition of the network into mutually exclusive node subsets is actually producing *communities* as we defined them earlier. This criterion should be independent of particular methods and algorithms that claim to find communities, so that way we can compare them with one another and see whether the partitions they recommend yield actual communities.
+
+Mark Newman, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). 
+
+The best way to understand the modularity is as follows. Imagine we have an idea of what the communities in a network are. This could be given by some special  community partition method, our intuition,  or some exogenous coloring on the nodes (e.g., as given by a node attribute like race, gender, position  in the organization, etc.). The membership of each node in each community is thus stored in a vector, $C_i = k$ if node $i$ belongs to community $k$. 
+
+Our job is to decide whether that community partition is a good one. One way to proceed is to imagine that we take the network in question, and we throw each observed link into a bag. Then our modularity measure should give us an idea of the probability that if we drew a link at random, the nodes at the end of each link belong to same community (or have the same color if the communities are defined by exogenous attributes). If the probability is high, then the network has community structure. If the probability is no better than we would expect given a null model that says there is nothing going on in the network connectivity-wise except random chance, then the modularity should be low (and we decide that the partition we chose actually does not divide the network into meaningful communities). 
+
+Let's assume our bag of links is full of directed links and we draw a bunch of them at random. Let's call the node at the starting end of the link $s$ and the node at the destination end of the link $d$. Then we can measure the modularity---let's call it $Q$---of a given partition of the network into $m$ clusters as follows:
+
+$$
+Q <- \sum_{k = 1}^m \left[P(s \in k \land d \in k) - P(s \in k) \times P(d \in k) \right]
+$$
+
+In this equation, $P(s \in k \land d \in k)$ is the probability that a link drawn at random has a source and a destination node that belong to the same community $k$; $P(s \in k)$ is just the probability of drawing a link that has a starting node in community $k$ (regardless of the membership of the destination node) and $P(d \in k)$ is the probability of drawing a link that has a destination node that belongs to community $k$ (regardless of the membership fo the source node).
+
+If you remember your elementary probability theory, you know that the *joint* probability of two events that are assumed to be *independent* of one another is just the product of their individual probabilities. So that means that $P(s \in k) \times P(d \in k)$ is the expected probability of finding that both the source and destination node are in the same community $k$ in a network in which communities don't matter for link formation (because the two probabilities are assumed to be independent).
+
+So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
+
+Let's move to a real example. Below are two plots of the advice network from the `law_advice` data from the `networkdata` package. The first shows the nodes colored by status in the firm (partners versus associates) and the other shows the nodes colored by gender. It is pretty evident that there is more community by status than by gender. So a measure of modularity should be higher when using status as our partition than when using gender.
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+#| fig-subcap:
+#|   - "Law Advice Friendship Network by Status"
+#|   - "Law Advice Friendship Network by Gender"
+#| echo: false
+   library(networkdata)
+   library(igraph)
+set.seed(123)
+   g <- law_friends
+   g <- subgraph(g, degree(g) >= 2)
+   V(g)$color <- V(g)$status
+   plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+   
+   V(g)$color <- V(g)$gender
+   plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+Let's see an example of the modularity computed using our "bag of links" framework. Below is a quick function that uses `dplyr` code to take a graph as input and return and **edge list** data frame containing the "community membership" of each node by some characteristic given by the second input into the function.
+
+```{r}
+   link.bag <- function(x, c) {
+      library(dplyr)
+      g.el <- data.frame(as_edgelist(x))
+      names(g.el) <- c("vi", "vj")
+      comm.dat <- data.frame(vi = as.vector(V(x)), 
+                             vj = as.vector(V(x)), 
+                             c = as.vector(c))
+      el.temp <- data.frame(vj = g.el[, 2]) %>% 
+         left_join(comm.dat, by = "vj") %>% 
+         dplyr::select(c("vj", "c")) %>% 
+         rename(c2 = c) 
+      d.el <- data.frame(vi = g.el[, 1]) %>% 
+         left_join(comm.dat, by = "vi") %>% 
+         dplyr::select(c("vi", "c")) %>% 
+         rename(c1 = c) %>% 
+         cbind(el.temp)
+   return(d.el)
+   }
+```
+
+So if we wanted an edge list data frame containing each node's status membership in the `law_advice` network, we would just type:
+
+```{r}
+   link.dat <- link.bag(g, V(g)$status)
+   head(link.dat)
+```
+
+Note than an edge list is a "bag of links" so we can compute the three probabilities we need to compute the modularity of a partition directly from the edge list data frame. Here's a function that does this:
+
+```{r}
+   mod.Q1 <- function(x, c1 = 2, c2 = 4) {
+      Q <- 0
+      comms <- unique(x[, c1])
+      for (k in comms) {
+         e.same <- x[x[, c1] == k & x[, c2] == k, ]
+         e.sour <- x[x[, c1] == k, ]
+         e.dest <- x[x[, c2] == k, ]
+         e.total <- nrow(x)
+         p.same <- nrow(e.same)/e.total
+         p.sour <- nrow(e.sour)/e.total
+         p.dest <- nrow(e.dest)/e.total
+         Q <- Q + (p.same - (p.sour * p.dest))
+      }
+   return(Q)
+   }
+```
+
+This function takes the edge list data frame as input. Optionally, you can specify the two columns containing community membership info for the source and destination node in each link (in this case this happens to be the second and fourth columns). The  probability of a link drawn randomly from the bag is just the number of links where the source and destination links belong to the same community (`e.same`, computed in line 5) divided by the total number of links (which is the number of rows in the edge list data frame), this  ratio is computed in line 9 (`p.same`). The overall probability of a link containing a source node in community $k$ is computed in line 10 (`p.sour`), and the overall probability of a link containing a destination node in community $k$ is computed in line 11 (`p.dest`). The actual modularity is computed step by step by summation across levels of the community indicator variable in line 12 which is the sum of the difference between `p.same` and the product of `p.same` times `p.same` across all communities $m$ (in this case $m = 2$ as there are only two levels of status). 
+
+So if wanted to check if status was more powerful in structuring the community organization of the `law_advice` network than gender, we would just type:
+
+```{r}
+   link.dat1 <- link.bag(g, V(g)$status)
+   link.dat2 <- link.bag(g, V(g)$gender)
+   mod.Q1(link.dat1)
+   mod.Q1(link.dat2)
+```
+
+Which indeed confirms that status is a more powerful organizing community principle than gender in this network. 
+
+Note that while the "bag of links" idea is good to show the basic probabilistic principle behind the modularity in a network we can compute directly from the adjacency matrix without going through the edge list data frame construction step. A function that does this looks like:
+
+
+```{r}
+mod.Q2 <- function(x, c) {
+   A <- as.matrix(as_adjacency_matrix(x))
+   vol <- sum(A)
+   Q <- 0
+   for (k in unique(c)) {
+      A.sub <- A[which(c == k), which(c == k)]
+      vol.k <- sum(A.sub)
+      A.i <- A[which(c == k), ]
+      A.j <- A[, which(c == k)]
+      Q <- Q + ((vol.k/vol) - ((sum(A.i) * sum(A.j))/vol^2))
+      }
+   return(Q)
+   }
+```
+
+This function just takes a graph and a vector indicating the community membership of each node and returns the modularity as output. Like before the modularity is the difference in the probability of observing a within-community link between two nodes (given by the ratio of the number of links in the sub-adjacency matrix containing only within community-nodes---obtained in line 7---and the overall number of links in the adjacency matrix, computed in line 3) and the *expected* probability of a link between a source node with community membership $k$ and a destination node with the same community membership. 
+
+This last quantity is given by the product of the sum links in a the sub-adjacency matrix with *row nodes* that belong to community $k$ (the source nodes) and the number of links in the sub adjacency matrix with the *column nodes* belonging to community $k$ (the destination nodes) divided by the *square* of the total number of links observed the network. 
+
+In formulese:
+
+\begin{equation}
+Q = \sum_{k=1}^m \left[\frac{\sum_{i \in k} \sum_{j \in k} a_{ij}}{\sum_i \sum_j a_{ij}}  - \frac{(\sum_{i \in k} \sum_j a_{ij})(\sum_i \sum_{j \in k} a_{ij})}{(\sum_i \sum_j a_{ij})^2} \right]
+\end{equation}
+
+Where $\sum_i \sum_ja_{ij}$ is the sum of all the entries in the network adjacency matrix, $\sum_{i \in k} \sum_{j \in k} a_{ij}$ is the sum of all the entries of the sub-adjacency matrix where *both* the row and column nodes come from community $k$, $\sum_{i \in k} \sum_j a_{ij}$ is the sum of all the entries in the sub-adjacency matrix where only the row nodes come from community $k$, and $\sum_i \sum_{j \in k} a_{ij}$ is the sum of all the entries in the sub-adjacency matrix where only the column nodes come from community $k$.
+
+We can easily see that this approach gives us the same answer as the bag of links version:
+
+```{r}
+   mod.Q2(g, V(g)$status)
+   mod.Q2(g, V(g)$gender)
+```
+
+Of course, you don't even have to use a custom function like the above, because `igraph` has one, called (you guessed it) `modularity`:
+
+```{r}
+   modularity(g, V(g)$status)
+   modularity(g, V(g)$gender)
+```
+
+But at least now you know what's going on inside of it!
+
+
+
