@@ -677,6 +677,22 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <p><img src="handout5_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>We can then extract our blocks just like we did with the Euclidean distance hierarchical clustering results in the previous handout:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">6</span>)</span>
+<span id="cb21-2"><a href="#cb21-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        BAM-BAM          BARNEY           BETTY        FELDSPAR            FRED 
+              1               2               2               3               2 
+   HEADMISTRESS      HERDMASTER            LAVA           LEACH          MORRIS 
+              4               3               2               5               4 
+      MRS SLATE         PEBBLES PEBBLES BAM-BAM        PILTDOWN      POINDEXTER 
+              2               1               5               6               5 
+         PYRITE           SLATE           WILMA 
+              6               2               2 </code></pre>
+</div>
+</div>
+<p>This analysis now puts <span class="math inline">\(\{Barney, Betty, Fred, Lava, Mrs. Slate, Slate, Wilma\}\)</span> in the second block of equivalent actors (shown as the right-most cluster of actors in the dendrogram).</p>
 </section>
 <section id="generalized-similarities" class="level2">
 <h2 class="anchored" data-anchor-id="generalized-similarities">Generalized Similarities</h2>
@@ -694,41 +710,41 @@ I 0.00 0.67 0.67 0.25 0.25 0.25 0.00 0.75 1.00</code></pre>
 <p>This measure nicely captures the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn’t matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in <span class="math inline">\(p\)</span> + <span class="math inline">\(q\)</span> versus <span class="math inline">\(p\)</span> + <span class="math inline">\(r\)</span> as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem.</p>
 <p>A function that implements this idea looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   SimRank.in <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
-<span id="cb21-2"><a href="#cb21-2"></a>      d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
-<span id="cb21-3"><a href="#cb21-3"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
-<span id="cb21-4"><a href="#cb21-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
-<span id="cb21-5"><a href="#cb21-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb21-6"><a href="#cb21-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb21-7"><a href="#cb21-7"></a>      m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb21-8"><a href="#cb21-8"></a>      <span class="cf">while</span>(m <span class="sc">&lt;</span> iter) {</span>
-<span id="cb21-9"><a href="#cb21-9"></a>          <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb21-10"><a href="#cb21-10"></a>               <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb21-11"><a href="#cb21-11"></a>                    <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
-<span id="cb21-12"><a href="#cb21-12"></a>                        a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) </span>
-<span id="cb21-13"><a href="#cb21-13"></a>                        b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) </span>
-<span id="cb21-14"><a href="#cb21-14"></a>                        Sij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-15"><a href="#cb21-15"></a>                        <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
-<span id="cb21-16"><a href="#cb21-16"></a>                           <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
-<span id="cb21-17"><a href="#cb21-17"></a>                              Sij <span class="ot">&lt;-</span> Sij <span class="sc">+</span> S[k, l] <span class="co">#i's similarity to j</span></span>
-<span id="cb21-18"><a href="#cb21-18"></a>                           }</span>
-<span id="cb21-19"><a href="#cb21-19"></a>                        }</span>
-<span id="cb21-20"><a href="#cb21-20"></a>                        S[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
-<span id="cb21-21"><a href="#cb21-21"></a>                        S[j, i] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
-<span id="cb21-22"><a href="#cb21-22"></a>                    }</span>
-<span id="cb21-23"><a href="#cb21-23"></a>               }</span>
-<span id="cb21-24"><a href="#cb21-24"></a>          }</span>
-<span id="cb21-25"><a href="#cb21-25"></a>         m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb21-26"><a href="#cb21-26"></a>      }</span>
-<span id="cb21-27"><a href="#cb21-27"></a>   <span class="fu">return</span>(S)</span>
-<span id="cb21-28"><a href="#cb21-28"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   SimRank.in <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
+<span id="cb23-2"><a href="#cb23-2"></a>      d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
+<span id="cb23-3"><a href="#cb23-3"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb23-4"><a href="#cb23-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb23-5"><a href="#cb23-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb23-6"><a href="#cb23-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb23-7"><a href="#cb23-7"></a>      m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb23-8"><a href="#cb23-8"></a>      <span class="cf">while</span>(m <span class="sc">&lt;</span> iter) {</span>
+<span id="cb23-9"><a href="#cb23-9"></a>          <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb23-10"><a href="#cb23-10"></a>               <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb23-11"><a href="#cb23-11"></a>                    <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb23-12"><a href="#cb23-12"></a>                        a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) </span>
+<span id="cb23-13"><a href="#cb23-13"></a>                        b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) </span>
+<span id="cb23-14"><a href="#cb23-14"></a>                        Sij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb23-15"><a href="#cb23-15"></a>                        <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb23-16"><a href="#cb23-16"></a>                           <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb23-17"><a href="#cb23-17"></a>                              Sij <span class="ot">&lt;-</span> Sij <span class="sc">+</span> S[k, l] <span class="co">#i's similarity to j</span></span>
+<span id="cb23-18"><a href="#cb23-18"></a>                           }</span>
+<span id="cb23-19"><a href="#cb23-19"></a>                        }</span>
+<span id="cb23-20"><a href="#cb23-20"></a>                        S[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
+<span id="cb23-21"><a href="#cb23-21"></a>                        S[j, i] <span class="ot">&lt;-</span> C<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="sc">*</span> Sij</span>
+<span id="cb23-22"><a href="#cb23-22"></a>                    }</span>
+<span id="cb23-23"><a href="#cb23-23"></a>               }</span>
+<span id="cb23-24"><a href="#cb23-24"></a>          }</span>
+<span id="cb23-25"><a href="#cb23-25"></a>         m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb23-26"><a href="#cb23-26"></a>      }</span>
+<span id="cb23-27"><a href="#cb23-27"></a>   <span class="fu">return</span>(S)</span>
+<span id="cb23-28"><a href="#cb23-28"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Note that this function calculates <code>SimRank</code> using each node’s in-neighbors (this doesn’t matter if the graph is undirected).</p>
 <p>Let’s try it out in the <em>Flintstones</em> graph using <span class="math inline">\(\alpha = 0.95\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
-<span id="cb22-2"><a href="#cb22-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank.in</span>(A, <span class="fl">0.95</span>)</span>
-<span id="cb22-3"><a href="#cb22-3"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank.in</span>(A, <span class="fl">0.95</span>)</span>
+<span id="cb24-3"><a href="#cb24-3"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                BAM-BAM BARNEY BETTY FELDSPAR FRED
 BAM-BAM            1.00   0.46  0.47     0.52 0.47
@@ -753,14 +769,26 @@ WILMA              0.47   0.47  0.48     0.48 0.47</code></pre>
 </div>
 <p>We can transform the generalized similarities to distances and plot:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
-<span id="cb24-2"><a href="#cb24-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb24-3"><a href="#cb24-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
+<span id="cb26-2"><a href="#cb26-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb26-3"><a href="#cb26-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout5_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+<p><img src="handout5_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">6</span>)</span>
+<span id="cb27-2"><a href="#cb27-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        BAM-BAM          BARNEY           BETTY        FELDSPAR            FRED 
+              1               2               3               4               2 
+   HEADMISTRESS      HERDMASTER            LAVA           LEACH          MORRIS 
+              5               4               3               6               5 
+      MRS SLATE         PEBBLES PEBBLES BAM-BAM        PILTDOWN      POINDEXTER 
+              3               1               6               4               6 
+         PYRITE           SLATE           WILMA 
+              4               3               3 </code></pre>
 </div>
 </div>
-<p>Which returns an intuitive role partition.</p>
+<p>Which returns a somewhat different role partition than the metrics relying on structural equivalence. In the SimRank equivalence partition, <span class="math inline">\(\{Fred, Barney\}\)</span> are in their own standalone class, while <span class="math inline">\(\{Betty, Wilma, Slate, Mrs. Slate, Lava\}\)</span> appear as a separate cluster.</p>
 </section>
 <section id="global-similarity-indices" class="level2">
 <h2 class="anchored" data-anchor-id="global-similarity-indices">Global Similarity Indices</h2>
@@ -777,17 +805,17 @@ WILMA              0.47   0.47  0.48     0.48 0.47</code></pre>
 <p>This is the so-called <strong>local path similarity index</strong> <span class="citation" data-cites="lu_etal09">(<a href="#ref-lu_etal09" role="doc-biblioref">Lü, Jin, and Zhou 2009</a>)</span>. Obviously, structurally equivalent nodes will be counted as similar by this metric (lots of paths of length two between them) but also nodes indirectly connected by many paths of length three, but to a lesser extent given the discount parameter <span class="math inline">\(\alpha\)</span> (a number between zero and one).</p>
 <p>A function that does this is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   local.path <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.5</span>) {</span>
-<span id="cb25-2"><a href="#cb25-2"></a>      A2 <span class="ot">&lt;-</span> A <span class="sc">%*%</span> A</span>
-<span id="cb25-3"><a href="#cb25-3"></a>      S <span class="ot">&lt;-</span> A2 <span class="sc">+</span> alpha<span class="sc">*</span>(A2 <span class="sc">%*%</span> A)</span>
-<span id="cb25-4"><a href="#cb25-4"></a>   <span class="fu">return</span>(S)</span>
-<span id="cb25-5"><a href="#cb25-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   local.path <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.5</span>) {</span>
+<span id="cb29-2"><a href="#cb29-2"></a>      A2 <span class="ot">&lt;-</span> A <span class="sc">%*%</span> A</span>
+<span id="cb29-3"><a href="#cb29-3"></a>      S <span class="ot">&lt;-</span> A2 <span class="sc">+</span> alpha<span class="sc">*</span>(A2 <span class="sc">%*%</span> A)</span>
+<span id="cb29-4"><a href="#cb29-4"></a>   <span class="fu">return</span>(S)</span>
+<span id="cb29-5"><a href="#cb29-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Here’s how the local path similarity looks in the <em>Flintstones</em> network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
-<span id="cb26-2"><a href="#cb26-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">local.path</span>(A)</span>
-<span id="cb26-3"><a href="#cb26-3"></a>   S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g.flint))</span>
+<span id="cb30-2"><a href="#cb30-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">local.path</span>(A)</span>
+<span id="cb30-3"><a href="#cb30-3"></a>   S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             BAM-BAM BARNEY BETTY FELDSPAR FRED HEADMISTRESS HERDMASTER LAVA
 BAM-BAM         20.0   29.5  30.5      6.5 31.5         12.5        9.5 25.0
@@ -835,19 +863,19 @@ MORRIS         4.0    6.0</code></pre>
 <p>Where <span class="math inline">\(\mathbf{I}\)</span> is the <strong>identity matrix</strong> (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the <strong>matrix inverse</strong> operation (most matrices are invertible, unless they are weird).</p>
 <p>A function to compute the <strong>Katz similarity</strong> between all node pairs is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">min.alpha =</span> <span class="fl">0.05</span>) {</span>
-<span id="cb28-2"><a href="#cb28-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(A)) <span class="co">#creating identity matrix</span></span>
-<span id="cb28-3"><a href="#cb28-3"></a>      alpha <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>, <span class="at">min =</span> min.alpha, <span class="at">max =</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>])</span>
-<span id="cb28-4"><a href="#cb28-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> A) </span>
-<span id="cb28-5"><a href="#cb28-5"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb28-6"><a href="#cb28-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">min.alpha =</span> <span class="fl">0.05</span>) {</span>
+<span id="cb32-2"><a href="#cb32-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(A)) <span class="co">#creating identity matrix</span></span>
+<span id="cb32-3"><a href="#cb32-3"></a>      alpha <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="dv">1</span>, <span class="at">min =</span> min.alpha, <span class="at">max =</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>])</span>
+<span id="cb32-4"><a href="#cb32-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> A) </span>
+<span id="cb32-5"><a href="#cb32-5"></a>      <span class="fu">return</span>(S)</span>
+<span id="cb32-6"><a href="#cb32-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose <span class="math inline">\(\alpha\)</span> to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in line 3 (set the seed to get reproducible answers). Line 4 computes the actual Katz similarity using the native <code>R</code> function <code>solve</code> to find the relevant matrix inverse.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
 <p>In the <em>Flintstones</em> network the Katz similarity looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
-<span id="cb29-2"><a href="#cb29-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">katz.sim</span>(A)</span>
-<span id="cb29-3"><a href="#cb29-3"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb33-2"><a href="#cb33-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">katz.sim</span>(A)</span>
+<span id="cb33-3"><a href="#cb33-3"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             BAM-BAM BARNEY BETTY FELDSPAR FRED HEADMISTRESS HERDMASTER LAVA
 BAM-BAM         1.03   0.08  0.09     0.01 0.09         0.01       0.01 0.03
@@ -883,19 +911,19 @@ MORRIS        0.01   1.01</code></pre>
 <p>So, the <strong>LHN Similarity</strong> is just the Katz similarity weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends.</p>
 <p>Which leads to the function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   LHN.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.9</span>) {</span>
-<span id="cb31-2"><a href="#cb31-2"></a>      D <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="fu">diag</span>(<span class="fu">rowSums</span>(A))) <span class="co">#inverse of degree matrix</span></span>
-<span id="cb31-3"><a href="#cb31-3"></a>      lambda <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="co">#first eigenvalue of adjacency matrix</span></span>
-<span id="cb31-4"><a href="#cb31-4"></a>      S <span class="ot">&lt;-</span> D <span class="sc">%*%</span> <span class="fu">solve</span>((alpha <span class="sc">*</span> A)<span class="sc">/</span>lambda) <span class="sc">%*%</span> D <span class="co">#LHN index</span></span>
-<span id="cb31-5"><a href="#cb31-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb31-6"><a href="#cb31-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb31-7"><a href="#cb31-7"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb31-8"><a href="#cb31-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   LHN.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.9</span>) {</span>
+<span id="cb35-2"><a href="#cb35-2"></a>      D <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="fu">diag</span>(<span class="fu">rowSums</span>(A))) <span class="co">#inverse of degree matrix</span></span>
+<span id="cb35-3"><a href="#cb35-3"></a>      lambda <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="co">#first eigenvalue of adjacency matrix</span></span>
+<span id="cb35-4"><a href="#cb35-4"></a>      S <span class="ot">&lt;-</span> D <span class="sc">%*%</span> <span class="fu">solve</span>((alpha <span class="sc">*</span> A)<span class="sc">/</span>lambda) <span class="sc">%*%</span> D <span class="co">#LHN index</span></span>
+<span id="cb35-5"><a href="#cb35-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb35-6"><a href="#cb35-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb35-7"><a href="#cb35-7"></a>      <span class="fu">return</span>(S)</span>
+<span id="cb35-8"><a href="#cb35-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And the <em>Flintstones</em> result:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">LHN.sim</span>(A)</span>
-<span id="cb32-2"><a href="#cb32-2"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">LHN.sim</span>(A)</span>
+<span id="cb36-2"><a href="#cb36-2"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                BAM-BAM BARNEY BETTY FELDSPAR  FRED
 BAM-BAM           -0.09   0.01  0.01    -0.16 -0.01
@@ -920,33 +948,55 @@ WILMA              0.01   0.00  0.02     0.09  0.00</code></pre>
 </div>
 <p>Note that as <span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> discuss, the entries in the <strong>LHN</strong> version of the similarity <span class="math inline">\(\mathbf{S}\)</span> can be either positive or negative. Negative entries are nodes that are <em>surprisingly</em> dissimilar given their degrees, and positive numbers indicating node pairs that are <em>surprisingly</em> similar. Numbers closer to zero are nodes that are neither similar nor dissimilar given their degrees.</p>
 <p>Here we can see that Barney and Fred are actually not that similar to one another (after we take into account their very high degree) and that Barney is actually most similar to Feldspar (and Fred even more so).</p>
+<p>Because the LHN similarities have negative and positive values, they already define a distance between nodes in the graph, like the correlation distance. So if we wanted to find blocks of actors using this similarity criterion, all we need to do is:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(S)</span>
+<span id="cb38-2"><a href="#cb38-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb38-3"><a href="#cb38-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout5_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   blocks <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">8</span>)</span>
+<span id="cb39-2"><a href="#cb39-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        BAM-BAM          BARNEY           BETTY        FELDSPAR            FRED 
+              1               2               1               3               2 
+   HEADMISTRESS      HERDMASTER            LAVA           LEACH          MORRIS 
+              4               5               1               6               7 
+      MRS SLATE         PEBBLES PEBBLES BAM-BAM        PILTDOWN      POINDEXTER 
+              8               1               2               1               8 
+         PYRITE           SLATE           WILMA 
+              1               8               2 </code></pre>
+</div>
+</div>
+<p>It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data.</p>
 </section>
 <section id="appendix" class="level2">
 <h2 class="anchored" data-anchor-id="appendix">Appendix</h2>
 <p>A more general version of the function to compute <code>SimRank</code> looks like this <span class="citation" data-cites="fouss_etal16">(partly based on <a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 84</a>, algorithm 2.4)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">sigma =</span> <span class="fl">0.0001</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) {</span>
-<span id="cb34-2"><a href="#cb34-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
-<span id="cb34-3"><a href="#cb34-3"></a>      d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">colSums</span>(A) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb34-4"><a href="#cb34-4"></a>      e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, n, <span class="dv">1</span>)</span>
-<span id="cb34-5"><a href="#cb34-5"></a>      Q <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(<span class="fu">t</span>(e) <span class="sc">%*%</span> A), n, n)</span>
-<span id="cb34-6"><a href="#cb34-6"></a>      <span class="fu">diag</span>(Q) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">diag</span>(Q)</span>
-<span id="cb34-7"><a href="#cb34-7"></a>      Q <span class="ot">&lt;-</span> A <span class="sc">%*%</span> Q</span>
-<span id="cb34-8"><a href="#cb34-8"></a>      Q[<span class="fu">is.nan</span>(Q)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb34-9"><a href="#cb34-9"></a>      diff <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb34-10"><a href="#cb34-10"></a>      k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb34-11"><a href="#cb34-11"></a>      K <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
-<span id="cb34-12"><a href="#cb34-12"></a>      <span class="cf">while</span>(diff <span class="sc">&gt;</span> sigma) {</span>
-<span id="cb34-13"><a href="#cb34-13"></a>         K.old <span class="ot">&lt;-</span> K</span>
-<span id="cb34-14"><a href="#cb34-14"></a>         K.p <span class="ot">&lt;-</span> alpha <span class="sc">*</span> <span class="fu">t</span>(Q) <span class="sc">%*%</span> K <span class="sc">%*%</span> Q</span>
-<span id="cb34-15"><a href="#cb34-15"></a>         K <span class="ot">&lt;-</span> K.p <span class="sc">-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(<span class="fu">diag</span>(K.p)), n, n) <span class="sc">+</span> <span class="fu">diag</span>(d, n, n)</span>
-<span id="cb34-16"><a href="#cb34-16"></a>         diff <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(K.old)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(K)))</span>
-<span id="cb34-17"><a href="#cb34-17"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb34-18"><a href="#cb34-18"></a>      }</span>
-<span id="cb34-19"><a href="#cb34-19"></a>      <span class="fu">rownames</span>(K) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb34-20"><a href="#cb34-20"></a>      <span class="fu">colnames</span>(K) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb34-21"><a href="#cb34-21"></a>      <span class="fu">return</span>(K)</span>
-<span id="cb34-22"><a href="#cb34-22"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">sigma =</span> <span class="fl">0.0001</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) {</span>
+<span id="cb41-2"><a href="#cb41-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb41-3"><a href="#cb41-3"></a>      d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">colSums</span>(A) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb41-4"><a href="#cb41-4"></a>      e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, n, <span class="dv">1</span>)</span>
+<span id="cb41-5"><a href="#cb41-5"></a>      Q <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(<span class="fu">t</span>(e) <span class="sc">%*%</span> A), n, n)</span>
+<span id="cb41-6"><a href="#cb41-6"></a>      <span class="fu">diag</span>(Q) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">diag</span>(Q)</span>
+<span id="cb41-7"><a href="#cb41-7"></a>      Q <span class="ot">&lt;-</span> A <span class="sc">%*%</span> Q</span>
+<span id="cb41-8"><a href="#cb41-8"></a>      Q[<span class="fu">is.nan</span>(Q)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb41-9"><a href="#cb41-9"></a>      diff <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb41-10"><a href="#cb41-10"></a>      k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb41-11"><a href="#cb41-11"></a>      K <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb41-12"><a href="#cb41-12"></a>      <span class="cf">while</span>(diff <span class="sc">&gt;</span> sigma) {</span>
+<span id="cb41-13"><a href="#cb41-13"></a>         K.old <span class="ot">&lt;-</span> K</span>
+<span id="cb41-14"><a href="#cb41-14"></a>         K.p <span class="ot">&lt;-</span> alpha <span class="sc">*</span> <span class="fu">t</span>(Q) <span class="sc">%*%</span> K <span class="sc">%*%</span> Q</span>
+<span id="cb41-15"><a href="#cb41-15"></a>         K <span class="ot">&lt;-</span> K.p <span class="sc">-</span> <span class="fu">diag</span>(<span class="fu">as.vector</span>(<span class="fu">diag</span>(K.p)), n, n) <span class="sc">+</span> <span class="fu">diag</span>(d, n, n)</span>
+<span id="cb41-16"><a href="#cb41-16"></a>         diff <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(K.old)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(K)))</span>
+<span id="cb41-17"><a href="#cb41-17"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb41-18"><a href="#cb41-18"></a>      }</span>
+<span id="cb41-19"><a href="#cb41-19"></a>      <span class="fu">rownames</span>(K) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb41-20"><a href="#cb41-20"></a>      <span class="fu">colnames</span>(K) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb41-21"><a href="#cb41-21"></a>      <span class="fu">return</span>(K)</span>
+<span id="cb41-22"><a href="#cb41-22"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 
