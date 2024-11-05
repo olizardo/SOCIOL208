@@ -275,7 +275,7 @@ Which makes $\mathbf{B}$ **doubly centered** a neat but so far useless property.
 
 ## Using the Modularity Matrix to Find Communities
 
-Here's a more useful property. Remember the network distribution game we played to defined our various reflective status measure in Handout 3? What if we played it with the modularity matrix? 
+Here's a more useful property. Remember the network distribution game we played to defined our various reflective status measure in Handout 3? 
 
 ```{r}
    status1 <- function(A) {
@@ -293,6 +293,8 @@ Here's a more useful property. Remember the network distribution game we played 
    return(as.vector(x))
    }
 ```
+
+What if we played it with the modularity matrix? 
 
 ```{r}
    s <- status1(Bu)
@@ -390,15 +392,10 @@ So we need an approach that *tries out* splitting one of the original two commun
 Here's one way of doing that:
 
 ```{r}
-   split.mult <- function(x, s = 0.01) {
-      B <- mod.mat.u(x)
-      vol <- sum(as.matrix(as_adjacency_matrix(x)))
-      split.res <- split.two(B)
-      u <- split.res$dummy
-      v <- split.res$v
+   split.mult <- function(B, vol, u, v, s = 0.01) {
       split <- list()
-      delta.Q <- rep(0, 2)
-      for (i in 1:2) {
+      delta.Q <- rep(0, max(v))
+      for (i in 1:max(v)) {
          old.Q <- t(u[, i]) %*% B %*% u[, i]
          sub <- which(u[, i] == 1)
          new.B <- B[sub, sub]
@@ -420,12 +417,15 @@ Here's one way of doing that:
    }
 ```
 
-This function uses our `split.two` function to create an original binary split, and then checks to see if any of the two sub-communities should be split in two by comparing the modularities pre and post second partition. 
+This function uses the output of the `split.two` function to check if any of the two sub-communities should be split in two further ones by comparing the modularities pre and post second partition. 
 
 Here are the results applied to the `law_friends` network:
 
 ```{r}
-   s <- split.mult(ug)
+   s <- split.mult(B = Bu, 
+                   vol = sum(as.matrix(as_adjacency_matrix(ug))), 
+                   u = split.two(Bu)$dummy, 
+                   v = split.two(Bu)$v)
    s
 ```
 
@@ -459,7 +459,28 @@ And visualize them as follows:
 
 Which shows the new three-community partition!
 
-Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06] in a single function called `cluster_leading_eigevector`. To use it, just feed it the relevant graph:
+Now let's say we wanted to check if we should *further* split any of these three communities into two. All we need to do is create "dummy" variables for the new three community partition and feed these (and the three community membership vector) to the `split.mult` function:
+
+```{r}
+   c1 <- rep(0, length(s$v))
+   c2 <- rep(0, length(s$v))
+   c3 <- rep(0, length(s$v))
+   c1[which(s$v==1)] <- 1
+   c2[which(s$v==2)] <- 1
+   c3[which(s$v==3)] <- 1
+   dummies <- cbind(c1, c2, c3)
+   s <- split.mult(B = Bu, 
+                   vol = sum(as.matrix(as_adjacency_matrix(ug))), 
+                   u = dummies, 
+                   v = s$v)
+   s
+```
+
+Here, the the three modularity split checks failed, as given by the `delta.Q` vector. So no further splits were made (hence the `split` object is an empty list). This tells us that according to this method, three communities is the optimal partition. 
+
+Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06] in a single function called `cluster_leading_eigevector`. 
+
+To use it, just feed it the relevant graph:
 
 ```{r}
    le.res <- cluster_leading_eigen(ug)
@@ -554,9 +575,9 @@ Which is pretty close to what we got using the leading eigenvector method.
 
 ## Community Detection Using Edge Betweenness
 
-A final approach to community detection with good sociological bona fides relies on **edge betweenness** a concept we covered on the centrality handout. And edge has high betweenness if many other pairs of nodes need to use to reach one another via shortest paths. 
+A final approach to community detection with good sociological bona fides relies on **edge betweenness**, a concept we covered on the centrality handout. And edge has high betweenness if many other pairs of nodes need to use to reach one another via shortest paths. 
 
-It follows that if we iteratively identify high betweenness edges, removing the top one, recalculate the edge betweenness and remove *that* top one (or flip a coin if two are tied) we have an algorithm for identifying communities as those subgraphs that end up being disconnected after removing the bridges [@girvan_newman02]. 
+It follows that if we iteratively identify high betweenness edges, removing the top one, recalculate the edge betweenness on the resulting edge-deleted subgraph, and remove *that* top one (or flip a coin if two are tied) we have an algorithm for identifying communities as those subgraphs that end up being disconnected after removing the bridges [@girvan_newman02]. 
 
 Note that like the leading eigenvector method, this approach is **divisive** with all nodes starting in a single cluster, then that cluster splitting in two, and so forth. This algorithm is implemented in `igraph` in the function `cluster_edge_betweenness`. 
 
@@ -574,11 +595,11 @@ Interestingly, even though this is a divisive algorithm, the results can be pres
    plot(hc)
 ```
 
-Note that the edge betweenness provides a different picture of the community structure of the network. This is not surprising because it is based on graph theoretic principles and not on null model principles like the modularity. 
+Note that the edge betweenness provides a different picture of the community structure of the network. This is not surprising because it is based on graph theoretic principles and not on null model principles like the modularity: The picture here is of two broad communities (in the middle) surrounded by many smaller islands, including some singletons. 
 
-The picture here is of two broad communities (in the middle) surrounded by smaller islands, including some singletons. 
+We can, of course, combine the modularity and edge-betweenness criteria by trying out dendrogram cuts until we find one with the highest modularity. 
 
-We can, of course, combine the modularity and edge-betweenness criteria by trying out divisions that have the highest modularity. A simple function that does that looks like:
+A simple function that does that looks like:
 
 ```{r}
    top.mod <- function(x, g, m) {
@@ -602,7 +623,7 @@ Which seems to recommend we divide the graph into 23 communities! This is, of co
 ```
 
 
-Another thing we can do with the `edge_betweenness` output is that we can highlight the edges identified as **bridges** during the divisive process, as this information is stored in the object `bridges`. We can use it to create an edge color vector that will highlight the bridges in red:
+Another thing we can do with the `edge_betweenness` function output is that we can highlight the edges identified as **bridges** during the divisive process, as this information is stored in the object `bridges`. We can use this vector of edge ids to create an edge color vector that will highlight the bridges in red:
 
 ```{r}
 #| echo: false
@@ -631,9 +652,6 @@ Another thing we can do with the `edge_betweenness` output is that we can highli
 ```
 
 And now we plot:
-
-
-
 
 ```{r}
 #| fig-height: 10
