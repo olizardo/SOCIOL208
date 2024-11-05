@@ -44,7 +44,7 @@ Let's move to a real example. Below are two plots of the advice network from the
 
 ```{r}
 #| fig-height: 10
-#| fig-width: 20
+#| fig-width: 10
 #| fig-subcap:
 #|   - "Law Firm Friendship Network by Status"
 #|   - "Law Firm Friendship Network by Gender"
@@ -448,9 +448,8 @@ And visualize them as follows:
 #| fig-height: 10
 #| fig-width: 10
 #| fig-subcap:
-#|   - "Law Firm Friendship Network by The Best Three-Community Partition According to the Modularity"
+#|   - "Law Firm Friendship Network by The Best Three-Community Partition Using the Leading Eigenvector of the Modularity Matrix Approach"
    V(ug)$color <- s$v
-   levels(s$v) <- c(1,2,3)
    set.seed(123)
    plot(ug, 
      vertex.size=6, vertex.frame.color="lightgray", 
@@ -463,14 +462,14 @@ Which shows the new three-community partition!
 Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06] in a single function called `cluster_leading_eigevector`. To use it, just feed it the relevant graph:
 
 ```{r}
-   comm.res <- cluster_leading_eigen(ug)
+   le.res <- cluster_leading_eigen(ug)
 ```
 
 And examine the `membership` object stored in the results list:
 
 ```{r}
-   names(comm.res$membership) <- 1:length(comm.res$membership)
-   comm.res$membership
+   names(le.res$membership) <- 1:length(le.res$membership)
+   le.res$membership
 ```
 
 Which returns identical community assignments as above (but with the labels between communities 2 and 3 flipped).
@@ -481,7 +480,7 @@ Remember we began this handout using an exogenous criterion (law firm status as 
 
 ```{r}
    library(kableExtra)
-   t <- table(V(ug)$status, comm.res$membership)
+   t <- table(V(ug)$status, le.res$membership)
    kbl(t, row.names = TRUE, align = "c", format = "html") %>%
       column_spec(1, bold = TRUE) %>% 
       kable_styling(full_width = TRUE,
@@ -492,7 +491,163 @@ This is just a **contingency table** listing status in the rows (1 = partner) an
 
 We find that community one (the most coherent; in orange) is composed of `r round((1 - 3/27)*100)`% of partners. So it is a high status clique. Community three (in blue) on the other hand is composed of 100% of associates, a less dense, but completely (low) status homogeneous clique. Finally community two (green) is a status-mixed clique, composed of nine partners and seven associates. 
 
-So in this network, both status and endogenous group dynamics seem to be at play. 
+So in this network, both status and endogenous group dynamics seem to be at play.
+
+## An Agglomerative Approach Based on the Modularity
+
+The leading eigenvector approach discussed above is a **divisive** clustering algorithm. All nodes begin in one community, then we split in two, then we try to split one of those two into two other ones (if the modularity increases) and so forth.
+
+But as we noted in the previous handout, another way to cluster is *bottom up*. All nodes begin in their own singleton cluster, and we join nodes if they maximize some criterion, in this case,  the modularity. We then join new nodes to that group if they increase the modularity, otherwise we try other joins, until we can't increase the modularity any longer.
+
+This **agglomerative** approach to clustering is not guaranteed to reach some kind of global maximum, but it can work in most applied settings even at the risk of getting stuck in a local optimum. 
+
+@newman04 developed an agglomerative algorithm that optimizes the modularity, a more recent version of which is included in an `igraph` function called `cluster_fast_greedy` [@clauset_etal04]. 
+
+Let's try it out to see how it works:
+
+```{r}
+   fg.res <- cluster_fast_greedy(ug)
+```
+
+The resulting list object has various sub-objects as components. One of them is called `merges` which gives a history of the various merges that resulted in the final communities. This means that we can view the results as a **dendrogram** just like we did with structural similarity analyses based on hierarchical clustering of  a distance matrix. 
+
+To do this we just transform the resulting object into an `hclust` object and plot:
+
+```{r}
+   hc <- as.hclust(fg.res)
+   par(cex = 0.5) #smaller labels
+   plot(hc)
+```
+
+Which gives us the sense that the network is divided into three communities like we saw earlier. If wanted to see which nodes are in which, we could just cut the dendrogram at $k = 3$:
+
+```{r}
+   library(dendextend)
+   cutree(hc, k = 3)
+```
+
+Which provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).
+
+Of course, this information was already stored in our results in the `membership` object:
+
+```{r}
+   names(fg.res$membership) <- 1:68
+   
+```
+
+And visualizing the resulting three-community partition:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+#| fig-subcap:
+#|   - "Law Firm Friendship Network Partitioned According to Agglomerative Clustering Based on Optimizing the Modularity"
+   set.seed(123)
+   V(g)$color <- fg.res$membership
+   plot(ug, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+Which is pretty close to what we got using the leading eigenvector method. 
+
+## Community Detection Using Edge Betweenness
+
+A final approach to community detection with good sociological bona fides relies on **edge betweenness** a concept we covered on the centrality handout. And edge has high betweenness if many other pairs of nodes need to use to reach one another via shortest paths. 
+
+It follows that if we iteratively identify high betweenness edges, removing the top one, recalculate the edge betweenness and remove *that* top one (or flip a coin if two are tied) we have an algorithm for identifying communities as those subgraphs that end up being disconnected after removing the bridges [@girvan_newman02]. 
+
+Note that like the leading eigenvector method, this approach is **divisive** with all nodes starting in a single cluster, then that cluster splitting in two, and so forth. This algorithm is implemented in `igraph` in the function `cluster_edge_betweenness`. 
+
+Let's see how it works:
+
+```{r}
+   eb.res <- cluster_edge_betweenness(ug, directed = FALSE)
+```
+
+Interestingly, even though this is a divisive algorithm, the results can be presented as a dendrogram, but storing top down divisions rather than bottom up merges:
+
+```{r}
+   hc <- as.hclust(eb.res)
+   par(cex = 0.5) #smaller labels
+   plot(hc)
+```
+
+Note that the edge betweenness provides a different picture of the community structure of the network. This is not surprising because it is based on graph theoretic principles and not on null model principles like the modularity. 
+
+The picture here is of two broad communities (in the middle) surrounded by smaller islands, including some singletons. 
+
+We can, of course, combine the modularity and edge-betweenness criteria by trying out divisions that have the highest modularity. A simple function that does that looks like:
+
+```{r}
+   top.mod <- function(x, g, m) {
+      k <- 1:m
+      Q <- rep(0, m)
+      tab <- cbind(k, Q)
+      for (i in 2:m) {
+         c <- cutree(x, i)
+         tab[i, 2] <- round(modularity(g, c, directed = FALSE), 3)
+      }
+   return(tab)
+   }
+   top.mod(hc, ug, 25)
+```
+
+Which seems to recommend we divide the graph into 23 communities! This is, of course, what is stored in the `membership` object:
+
+```{r}
+   names(eb.res$membership) <- 1:68
+   eb.res$membership
+```
+
+
+Another thing we can do with the `edge_betweenness` output is that we can highlight the edges identified as **bridges** during the divisive process, as this information is stored in the object `bridges`. We can use it to create an edge color vector that will highlight the bridges in red:
+
+```{r}
+#| echo: false
+   c25 <- c(
+     "dodgerblue2", "#E31A1C", # red
+     "green4",
+     "#6A3D9A", # purple
+     "#FF7F00", # orange
+     "black", "gold1",
+     "skyblue2", "#FB9A99", # lt pink
+     "palegreen2",
+     "#CAB2D6", # lt purple
+     "#FDBF6F", # lt orange
+     "gray70", "khaki2",
+     "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+     "darkturquoise", "green1", "yellow4", "yellow3",
+     "darkorange4", "brown"
+   )
+```
+
+```{r}
+   V(ug)$color <- c25[eb.res$membership]
+   e.col <- rep("lightblue", ecount(ug))
+   e.col[eb.res$bridges] <- "red"
+   E(ug)$color <- e.col
+```
+
+And now we plot:
+
+
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+#| fig-subcap:
+#|   - "Law Firm Friendship Network Partitioned According to the Edge Betweenness Algorithm with Number of Communities that Maximize the Modularity (Bridge Edges in Red)"
+   set.seed(123)
+   plot(ug, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+
 
 
 
