@@ -51,20 +51,20 @@ Let's move to a real example. Below are two plots of the advice network from the
 #| echo: false
    library(networkdata)
    library(igraph)
-set.seed(123)
-   g <- law_friends
-   g <- subgraph(g, degree(g) >= 2)
-   V(g)$color <- V(g)$status
-   plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
-set.seed(123)
-   V(g)$color <- V(g)$gender
-   plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+   set.seed(123)
+      g <- law_friends
+      g <- subgraph(g, degree(g) >= 2)
+      V(g)$color <- V(g)$status
+      plot(g, 
+        vertex.size=6, vertex.frame.color="lightgray", 
+        vertex.label = NA, edge.arrow.size = 0.25,
+        vertex.label.dist=1, edge.curved=0.2)
+   set.seed(123)
+      V(g)$color <- V(g)$gender
+      plot(g, 
+        vertex.size=6, vertex.frame.color="lightgray", 
+        vertex.label = NA, edge.arrow.size = 0.25,
+        vertex.label.dist=1, edge.curved=0.2)
 ```
 
 Let's see an example of the modularity computed using our "bag of links" framework. Below is a quick function that uses `dplyr` code to take a graph as input and return and **edge list** data frame containing the "community membership" of each node by some characteristic given by the second input into the function.
@@ -141,7 +141,7 @@ Note that while the "bag of links" idea is good for showing the basic probabilis
 A function that does this looks like:
 
 ```{r}
-mod.Q2 <- function(x, c) {
+   mod.Q2 <- function(x, c) {
    A <- as.matrix(as_adjacency_matrix(x))
    vol <- sum(A)
    Q <- 0
@@ -196,7 +196,13 @@ $$
 
 Where $k^{out}_i$ is node $i$'s outdegree and $k^{in}_j$ is node j's indegree. Note that the modularity matrix has the same "observed minus expected" structure as the formulas for the modularity. In this case we compare whether we see a link from $i$ to $j$ as given by $a_{ij}$ against the probability of observing a link in a graph in which nodes connect at random with probability proportional to their degrees (as given by the right-hand side fraction). 
 
-A function to compute the modularity matrix by looping through every element of the adjacency matrix looks like:
+Note that if the graph is undirected, the modularity is just:
+
+$$
+b_{ij} = a_{ij} - \frac{k_ik_j}{\sum_i\sum_j a_{ij}}
+$$
+
+A function to compute the modularity matrix by looping through every element of the adjacency matrix for a directed graph looks like:
 
 ```{r}
    mod.mat <- function(x){
@@ -230,11 +236,39 @@ Of course `igraph` has a function, called `modularity_matrix`, which gives us th
    round(B[1:10, 1:10], 3)
 ```
 
+In the case of an undirected graph, computing the modularity is even simpler:
+
+```{r}
+   mod.mat.u <- function(x){
+      A <- as.matrix(as_adjacency_matrix(x))
+      d <- rowSums(A) #degrees
+      vol <- sum(A)
+      n <- nrow(A)
+      B <- A - (d %*% t(d)/vol)
+   return(B)
+   }
+```
+
+Let's see the function in action:
+
+```{r}
+   ug <- as_undirected(g, mode = "collapse")
+   Bu <- mod.mat.u(ug)
+   round(Bu[1:10, 1:10], 2)
+```
+
+Which gives us the same results as using `igraph`:
+
+```{r}
+   Bu <- modularity_matrix(ug, directed = FALSE)
+   round(Bu[1:10, 1:10], 2)
+```
+
 The modularity matrix has some interesting properties. For instance, *both* its rows and columns sum to zero:
 
 ```{r}
-   round(rowSums(B), 2)
-   round(colSums(B), 2)
+   round(rowSums(Bu), 2)
+   round(colSums(Bu), 2)
 ```
 
 Which makes $\mathbf{B}$ **doubly centered** a neat but so far useless property. 
@@ -259,8 +293,8 @@ Here's a more useful property. Remember the network distribution game we played 
 ```
 
 ```{r}
-   C <- status1(B)
-   round(C,2)
+   s <- status1(Bu)
+   round(s,2)
 ```
 
 This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actual a **partition** of the original graph into two communities? 
@@ -272,15 +306,17 @@ Let's see some evidence for these claims in real data.
 First, let's turn the "status" vector into a community indicator vector. We assign all nodes with scores larger than zero to one community and nodes with scores equal to zero or less to the other one:
 
 ```{r}
-   C[C >0] <- 1
-   C[C<=0] <- 2
+   C <- rep(0, length(s))
+   C[which(s<=0)] <- 1
+   C[which(s >0)] <- 2
+   names(C) <- 1:length(C)
    C
 ```
 
 And for the big check:
 
 ```{r}
-   modularity(g, C)
+   modularity(ug, C)
 ```
 
 Which is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. 
@@ -292,9 +328,9 @@ Here's some visual evidence:
 #| fig-width: 10
 #| fig-subcap:
 #|   - "Law Firm Friendship Network by The Best Binary Partition According to the Modularity"
-   V(g)$color <- C
+   V(ug)$color <- C
    set.seed(123)
-   plot(g, 
+   plot(ug, 
      vertex.size=6, vertex.frame.color="lightgray", 
      vertex.label = NA, edge.arrow.size = 0.25,
      vertex.label.dist=1, edge.curved=0.2)
@@ -302,7 +338,7 @@ Here's some visual evidence:
 
 Which definitely looks like an optimal clustering into two groups based on friendship!
 
-Of course, you may also remember from the status handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector ($\mathbf{v}$:
+Of course, you may also remember from the status handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
 
 $$
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
@@ -311,7 +347,7 @@ $$
 Solving for $\mathbf{v}$ in the equation above will give us the community memberships of the nodes. In `R` you can do this using the native `eigen` function like we did for the status scores:
 
 ```{r}
-   v <- Re(eigen(B)$vectors[, 1]) * -1
+   v <- eigen(Bu)$vectors[, 1] 
    round(v, 2)
 ```
 
@@ -321,9 +357,10 @@ We can package all of the steps above into a simple function:
 
 ```{r}
    split.two <- function(x) {
-      v <- Re(eigen(x)$vectors[,1]) * -1
-      v[v > 0] <- 1
-      v[v <=0] <- 2
+      e <- eigen(x)$vectors[, 1]
+      v <- rep(0, length(e))
+      v[e<= 0] <- 1
+      v[e > 0] <- 2
       names(v) <- 1:length(v)
       c1 <- rep(0, length(v))
       c2 <- rep(0, length(v))
@@ -337,8 +374,7 @@ We can package all of the steps above into a simple function:
 And check to see if it works:
 
 ```{r}
-   split.two(modularity_matrix(g))$v
-   head(split.two(modularity_matrix(g))$dummy)
+   split.two(Bu)$v
 ```
 
 Indeed it splits the nodes in a graph into two modularity maximizing communities. 
@@ -348,8 +384,8 @@ It is clear that this approach hints at a divisive partitioning strategy, where 
 Here's one way of doing that:
 
 ```{r}
-   split.mult <- function(x, s = 0) {
-      B <- modularity_matrix(x)
+   split.mult <- function(x, s = 0.01) {
+      B <- mod.mat.u(x)
       vol <- sum(as.matrix(as_adjacency_matrix(x)))
       split.res <- split.two(B)
       u <- split.res$dummy
@@ -369,9 +405,12 @@ Here's one way of doing that:
          if (delta.Q[i] > s) {
             split[[i]] <- new.v
             names(split[[i]]) <- which(u[, i] == 1)
-         }
+            }
+         else if (delta.Q[i] <= s) {
+            split[[i]] <- NULL
+            }
       }
-   return(list(delta.Q = delta.Q, v = v, split = split))
+   return(list(delta.Q = round(delta.Q, 3), v = v, split = split))
    }
 ```
 
@@ -380,11 +419,11 @@ This function uses our `split.two` function to create an original binary split, 
 Here are the results applied to the `law_friends` network:
 
 ```{r}
-   s <- split.mult(g)
+   s <- split.mult(ug)
    s
 ```
 
-The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity got worse (difference between old and new is below zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties so that splitting it makes everything worse (that's the orange nodes in the figure above).
+The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties so that splitting it makes no difference (that's the orange nodes in the figure above).
 
 Nevertheless, the test in the second community returned a positive result, indicating we should split it in two. Because we left one of the original communities alone, the resulting network will have three communities after splitting the second one in two. 
 
@@ -404,14 +443,31 @@ And visualize them as follows:
 #| fig-width: 10
 #| fig-subcap:
 #|   - "Law Firm Friendship Network by The Best Three-Community Partition According to the Modularity"
-   V(g)$color <- s$v
+   V(ug)$color <- s$v
    set.seed(123)
-   plot(g, 
+   plot(ug, 
      vertex.size=6, vertex.frame.color="lightgray", 
      vertex.label = NA, edge.arrow.size = 0.25,
      vertex.label.dist=1, edge.curved=0.2)
 ```
 
 Which shows the new three-community partition!
+
+Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06] in a single function called `cluster_leading_eigevector`. To use it, just feed it the relevant graph:
+
+```{r}
+   comm.res <- cluster_leading_eigen(ug)
+```
+
+And examine the `membership` object stored in the results list:
+
+```{r}
+   names(comm.res$membership) <- 1:length(comm.res$membership)
+   comm.res$membership
+```
+
+Which returns identical community assignments as above (but with the labels between communities 2 and 3 flipped).
+
+
 
 
