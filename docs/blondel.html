@@ -211,12 +211,12 @@ div.csl-indent {
 </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="false">Handouts</a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="false">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">Handouts</a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 ">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./handout1.html" class="sidebar-item-text sidebar-link">Basic Network Statistics</a>
@@ -254,7 +254,17 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./blondel.html" class="sidebar-item-text sidebar-link active">Role Similarity Across Graphs</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./handout6.html" class="sidebar-item-text sidebar-link">Community Structure</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ahn.html" class="sidebar-item-text sidebar-link">Assigning Nodes to Multiple Communities</a>
   </div>
 </li>
       </ul>
@@ -286,7 +296,15 @@ div.csl-indent {
 </nav>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#computing-node-similarities-across-different-graphs" id="toc-computing-node-similarities-across-different-graphs" class="nav-link active" data-scroll-target="#computing-node-similarities-across-different-graphs">Computing Node Similarities Across Different Graphs</a></li>
+  <li><a href="#equivalence-to-hits" id="toc-equivalence-to-hits" class="nav-link" data-scroll-target="#equivalence-to-hits">Equivalence to HITS</a></li>
+  <li><a href="#computing-a-brokerage-score" id="toc-computing-a-brokerage-score" class="nav-link" data-scroll-target="#computing-a-brokerage-score">Computing a Brokerage Score</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/blondel.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -311,7 +329,7 @@ div.csl-indent {
 <p>Sometimes we may want to figure out how similar a given node’s position in one social network is to that of another node in a <em>different</em> network. This calls for a method that could allow us to compare how similar a node in one graph is to <em>other nodes</em> in <em>another graph</em>.</p>
 <p>A particularly interesting version of this problem arises when we have information on the same set of nodes across different set of relations. In that case, we may be interested in answering the question as to whether nodes occupy similar or dissimilar positions across the networks defined by the different relations.</p>
 <p><span class="citation" data-cites="blondel_etal04">Blondel et al. (<a href="#ref-blondel_etal04" role="doc-biblioref">2004</a>)</span> describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute status scores from directed graphs (like PageRank and HITS) but this time to <em>compute similarity</em> scores between <em>pairs</em> of nodes <em>across</em> graphs.</p>
-<p>The idea, just like with the status scores, is that the two set of nodes in each graph start with the same similarity scores, and then we update them as we traverse the connectivity structure of the two graphs.</p>
+<p>The idea, just like with the status scores, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs.</p>
 <p>So let’s say the adjacency matrix of the first graph is <span class="math inline">\(\mathbf{A}\)</span> and that of the second graph is <span class="math inline">\(\mathbf{B}\)</span>. The first graph has <span class="math inline">\(n_A\)</span> number of nodes and the corresponding quantity in the second graph is <span class="math inline">\(n_B\)</span> our target similarity matrix <span class="math inline">\(\mathbf{Z}\)</span>, comparing the node sets in the two graphs, will therefore be of dimensions <span class="math inline">\(n_A \times n_B\)</span>.</p>
 <p>We initialize <span class="math inline">\(z_{ij}(0) = 1\)</span> for all <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>; that is, <span class="math inline">\(\mathbf{Z}(0)\)</span> is a matrix full of ones. At each time step subsequent to that, we fill up the <span class="math inline">\(\mathbf{Z}\)</span> matrix with new values according to:</p>
 <p><span class="math display">\[
@@ -321,14 +339,17 @@ div.csl-indent {
 <p><span class="math display">\[
 \mathbf{Z}(t &gt; 0) = \frac{\mathbf{Z}}{||\mathbf{Z}||_2}
 \]</span></p>
-<p>Let us see how this would work with real data. Let us start with the case of the same set of nodes measured across two different relational networks. Here, we will use Krackhardt’s high tech manager’s data which contains directed adjacency relations based on both <em>friendship</em> and <em>advice</em> nominations.</p>
+<section id="computing-node-similarities-across-different-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="computing-node-similarities-across-different-graphs">Computing Node Similarities Across Different Graphs</h2>
+<p>Let us see how this would work with real data. We will compare two subgraphs of the larger <code>law_advice</code> network <span class="citation" data-cites="lazega01">(<a href="#ref-lazega01" role="doc-biblioref">Lazega 2001</a>)</span> from the <code>networkdata</code> package. This is a directed <em>advice-seeking</em> network so a node goes <em>from</em> advisee to adviser.</p>
+<p>We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both parterns and associates). They look lik this:</p>
 <div class="cell quarto-layout-panel">
 <div class="quarto-layout-row quarto-layout-valign-top">
 <div class="cell-output-display quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="blondel_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="768"></p>
-<p></p><figcaption class="figure-caption">Older Men Partner graph</figcaption><p></p>
+<p></p><figcaption class="figure-caption">Older Men Partners</figcaption><p></p>
 </figure>
 </div>
 </div>
@@ -338,13 +359,13 @@ div.csl-indent {
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="blondel_files/figure-html/unnamed-chunk-1-2.png" class="img-fluid figure-img" width="768"></p>
-<p></p><figcaption class="figure-caption">Women graph</figcaption><p></p>
+<p></p><figcaption class="figure-caption">Women Lawyers</figcaption><p></p>
 </figure>
 </div>
 </div>
 </div>
 </div>
-<p>A function to compute the <strong>Blondel similarity</strong> can be written as:</p>
+<p>A function to compute the <strong>Blondel similarity</strong> as described earlier can be written as:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   blondel.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, B) {</span>
 <span id="cb1-2"><a href="#cb1-2"></a>      K <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(B), <span class="fu">nrow</span>(A))</span>
@@ -375,6 +396,9 @@ div.csl-indent {
 <span id="cb1-27"><a href="#cb1-27"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">K =</span> K, <span class="at">k =</span> k, <span class="at">diff =</span> diff))</span>
 <span id="cb1-28"><a href="#cb1-28"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Which is modeled after our status game function but instead of computing a vector of scores we are populating a whole matrix!</p>
+<p>The basic task is to figure out which nodes from the first matrix are most similar to which nodes from the second. That is, given these two networks can be identify actors who play similar roles in each?</p>
+<p>And here are the results presented in tabular form:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(kableExtra)</span>
 <span id="cb2-2"><a href="#cb2-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g1))</span>
@@ -699,6 +723,14 @@ div.csl-indent {
 
 </div>
 </div>
+<p>In the table each column is normalized by its maximum, so a 1.0 in that column tells us that that node (from the first network) is maximally similar to the corresponding row node (from the second network).</p>
+<p>For instance, node 5 in the women’s lawyers graph (a highly central node in terms of being an adviser) is most similar to node 1 in the older men partner’s graph (also a highly central node in terms of being an adviser).</p>
+<p>Node 9 in the women lawyer’s graph, who’s mostly an advise-seeker, is most similar to node 5 in the older men partner graph who’s also an advise-seeker. So it looks like it works!</p>
+</section>
+<section id="equivalence-to-hits" class="level2">
+<h2 class="anchored" data-anchor-id="equivalence-to-hits">Equivalence to HITS</h2>
+<p>One neat thing that <span class="citation" data-cites="blondel_etal04">Blondel et al. (<a href="#ref-blondel_etal04" role="doc-biblioref">2004</a>)</span> show is that we can also take a network and compare it to ideal-typical small graphs and get scores for how much that node resembles each of the nodes in the ideal-typical structure.</p>
+<p>More specifically, they show that if we can run their algorithm to compare any network to the following two-node graph:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   g <span class="ot">&lt;-</span> <span class="fu">make_empty_graph</span>(<span class="dv">2</span>)</span>
 <span id="cb3-2"><a href="#cb3-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">add_edges</span>(g, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
@@ -713,6 +745,8 @@ div.csl-indent {
 <p><img src="blondel_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>In which case, the result “similarity” scores, will be equivalent to the Hub and Authority scores!</p>
+<p>We can check that this is the case for the women’s lawyers advice graph:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
 <span id="cb4-2"><a href="#cb4-2"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span>
@@ -867,19 +901,26 @@ div.csl-indent {
 
 </div>
 </div>
+<p>The first two columns are the scores using the function to compute the Blondel et al.&nbsp;similarity to each of the two nodes in the Hub/Authority micro-graph and the third and fourth columns are the scores we get from the <code>igraph</code> function <code>hits scores</code>, which as we can see, are identical.</p>
+</section>
+<section id="computing-a-brokerage-score" class="level2">
+<h2 class="anchored" data-anchor-id="computing-a-brokerage-score">Computing a Brokerage Score</h2>
+<p>Of course in a directed graph, there are more than two ideal typical “roles.” In addition to “sender” (Hub) or “receiver” (Authority) we may also have “intermediaries” or “pass along” nodes. We can thus get an “intermediary” score for each node by comparing any network to the following three-node graph:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   g <span class="ot">&lt;-</span> <span class="fu">make_empty_graph</span>(<span class="dv">3</span>)</span>
 <span id="cb5-2"><a href="#cb5-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">add_edges</span>(g, <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>, <span class="dv">2</span>,<span class="dv">3</span>))</span>
-<span id="cb5-3"><a href="#cb5-3"></a>   <span class="fu">plot</span>(g, </span>
-<span id="cb5-4"><a href="#cb5-4"></a>        <span class="at">edge.arrow.size=</span><span class="dv">1</span>, </span>
-<span id="cb5-5"><a href="#cb5-5"></a>        <span class="at">vertex.color=</span><span class="st">"tan2"</span>, </span>
-<span id="cb5-6"><a href="#cb5-6"></a>        <span class="at">vertex.size=</span><span class="dv">12</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb5-7"><a href="#cb5-7"></a>        <span class="at">vertex.label.color=</span><span class="st">"black"</span>, <span class="at">vertex.label.cex=</span><span class="fl">1.5</span>, </span>
-<span id="cb5-8"><a href="#cb5-8"></a>        <span class="at">vertex.label.dist=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-3"><a href="#cb5-3"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Hub"</span>, <span class="st">"Broker"</span>, <span class="st">"Authority"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4"></a>   <span class="fu">plot</span>(g, </span>
+<span id="cb5-5"><a href="#cb5-5"></a>        <span class="at">edge.arrow.size=</span><span class="dv">1</span>, </span>
+<span id="cb5-6"><a href="#cb5-6"></a>        <span class="at">vertex.color=</span><span class="st">"tan2"</span>, </span>
+<span id="cb5-7"><a href="#cb5-7"></a>        <span class="at">vertex.size=</span><span class="dv">12</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb5-8"><a href="#cb5-8"></a>        <span class="at">vertex.label.color=</span><span class="st">"black"</span>, <span class="at">vertex.label.cex=</span><span class="fl">1.5</span>, </span>
+<span id="cb5-9"><a href="#cb5-9"></a>        <span class="at">vertex.label.dist=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="blondel_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>Here are the results for the women lawyers graph:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
 <span id="cb6-2"><a href="#cb6-2"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span>
@@ -894,9 +935,9 @@ div.csl-indent {
  <thead>
   <tr>
    <th style="text-align:left;">   </th>
-   <th style="text-align:center;"> 1 </th>
-   <th style="text-align:center;"> 2 </th>
-   <th style="text-align:center;"> 3 </th>
+   <th style="text-align:center;"> Hub </th>
+   <th style="text-align:center;"> Broker </th>
+   <th style="text-align:center;"> Authority </th>
   </tr>
  </thead>
 <tbody>
@@ -1013,13 +1054,18 @@ div.csl-indent {
 
 </div>
 </div>
+<p>Columns one and three gives us versions of the Hub and Authority scores (respectively), but column two now gives us a “score” for how much the row node resembles and intermediary (or broker) in the network. We can see that the “purest” broker in the women’s advice network is node 11.</p>
 
 
 
+</section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-blondel_etal04" class="csl-entry" role="doc-biblioentry">
 Blondel, Vincent D, Anahı́ Gajardo, Maureen Heymans, Pierre Senellart, and Paul Van Dooren. 2004. <span>“A Measure of Similarity Between Graph Vertices: Applications to Synonym Extraction and Web Searching.”</span> <em>SIAM Review</em> 46 (4): 647–66.
+</div>
+<div id="ref-lazega01" class="csl-entry" role="doc-biblioentry">
+Lazega, Emmanuel. 2001. <em>The Collegial Phenomenon: The Social Mechanisms of Cooperation Among Peers in a Corporate Law Partnership</em>. Oxford University Press.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

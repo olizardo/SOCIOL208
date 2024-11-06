@@ -17,7 +17,7 @@ A particularly interesting version of this problem arises when we have informati
 
 @blondel_etal04 describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute status scores from directed graphs (like PageRank and HITS) but this time to *compute similarity* scores between *pairs* of nodes *across* graphs. 
 
-The idea, just like with the status scores, is that the two set of nodes in each graph start with the same similarity scores, and then we update them as we traverse the connectivity structure of the two graphs. 
+The idea, just like with the status scores, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs. 
 
 So let's say the adjacency matrix of the first graph is $\mathbf{A}$ and that of the second graph is $\mathbf{B}$. The first graph has $n_A$ number of nodes and the corresponding quantity in the second graph is $n_B$ our target similarity matrix $\mathbf{Z}$, comparing the node sets in the two graphs, will therefore be of dimensions $n_A \times n_B$. 
 
@@ -33,7 +33,11 @@ $$
 \mathbf{Z}(t > 0) = \frac{\mathbf{Z}}{||\mathbf{Z}||_2}
 $$
 
-Let us see how this would work with real data. Let us start with the case of the same set of nodes measured across two different relational networks. Here, we will use Krackhardt's high tech manager's data which contains directed adjacency relations based on both *friendship* and *advice* nominations.
+## Computing Node Similarities Across Different Graphs 
+
+Let us see how this would work with real data. We will compare two subgraphs of the larger `law_advice` network [@lazega01] from the `networkdata` package. This is a directed *advice-seeking* network so a node goes *from* advisee to adviser. 
+
+We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both parterns and associates). They look lik this:
 
 ```{r}
 #| echo: false
@@ -41,8 +45,8 @@ Let us see how this would work with real data. Let us start with the case of the
 #| fig-height: 8
 #| layout-ncol: 1
 #| fig-subcap:
-#|   - "Older Men Partner graph"
-#|   - "Women graph"
+#|   - "Older Men Partners"
+#|   - "Women Lawyers"
    library(networkdata)
    library(igraph)
    library(ggraph)
@@ -66,7 +70,7 @@ Let us see how this would work with real data. Let us start with the case of the
         vertex.label.dist=1, edge.curved=0.2)
 ```
 
-A function to compute the **Blondel similarity** can be written as:
+A function to compute the **Blondel similarity** as described earlier can be written as:
 
 ```{r}
    blondel.sim <- function(A, B) {
@@ -99,6 +103,11 @@ A function to compute the **Blondel similarity** can be written as:
    }
 ```
 
+Which is modeled after our status game function but instead of computing a vector of scores we are populating a whole matrix!
+
+The basic task is to figure out which nodes from the first matrix are most similar to which nodes from the second. That is, given these two networks can be identify actors who play similar roles in each?
+
+And here are the results presented in tabular form:
 
 ```{r}
    library(kableExtra)
@@ -111,6 +120,17 @@ A function to compute the **Blondel similarity** can be written as:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
+In the table each column is normalized by its maximum, so a 1.0 in that column tells us that that node (from the first network) is maximally similar to the corresponding row node (from the second network). 
+
+For instance, node 5 in the women's lawyers graph (a highly central node in terms of being an adviser) is most similar to node 1 in the older men partner's graph (also a highly central node in terms of being an adviser). 
+
+Node 9 in the women lawyer's graph, who's mostly an advise-seeker, is most similar to node 5 in the older men partner graph who's also an advise-seeker. So it looks like it works!
+
+## Equivalence to HITS
+
+One neat thing that @blondel_etal04 show is that we can also take a network and compare it to ideal-typical small graphs and get scores for how much that node resembles each of the nodes in the ideal-typical structure. 
+
+More specifically, they show that if we can run their algorithm to compare any network to the following two-node graph:
 
 ```{r}
    g <- make_empty_graph(2)
@@ -124,6 +144,10 @@ A function to compute the **Blondel similarity** can be written as:
         vertex.label.dist=-3)
 ```
 
+In which case, the result "similarity" scores, will be equivalent to the Hub and Authority scores! 
+
+We can check that this is the case for the women's lawyers advice graph:
+
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
    B <- as.matrix(as_adjacency_matrix(g2))
@@ -136,9 +160,16 @@ A function to compute the **Blondel similarity** can be written as:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
+The first two columns are the scores using the function to compute the Blondel et al. similarity to each of the two nodes in the Hub/Authority micro-graph and the third and fourth columns are the scores we get from the `igraph` function `hits scores`, which as we can see, are identical. 
+
+## Computing a Brokerage Score
+
+Of course in a directed graph, there are more than two ideal typical "roles." In addition to "sender" (Hub) or "receiver" (Authority) we may also have "intermediaries" or "pass along" nodes. We can thus get an "intermediary" score for each node by comparing any network to the following three-node graph:
+
 ```{r}
    g <- make_empty_graph(3)
    g <- add_edges(g, c(1,2, 2,3))
+   V(g)$name <- c("Hub", "Broker", "Authority")
    plot(g, 
         edge.arrow.size=1, 
         vertex.color="tan2", 
@@ -146,6 +177,8 @@ A function to compute the **Blondel similarity** can be written as:
         vertex.label.color="black", vertex.label.cex=1.5, 
         vertex.label.dist=2)
 ```
+
+Here are the results for the women lawyers graph:
 
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
@@ -157,4 +190,5 @@ A function to compute the **Blondel similarity** can be written as:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
+Columns one and three gives us versions of the Hub and Authority scores (respectively), but column two now gives us a "score" for how much the row node resembles and intermediary (or broker) in the network. We can see that the "purest" broker in the women's advice network is node 11. 
 
