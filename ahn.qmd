@@ -1,0 +1,184 @@
+---
+title: "Assigning Nodes to Multiple Communities"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In the previous handout, we examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
+
+Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan's edge betweenness), we compute pairwise *similarities* between links like we did in handout 5. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
+
+Let's see how it works.
+
+First we load data from an undirected graph:
+
+```{r}
+   library(igraph)
+   library(networkdata)
+   g <- movie_559
+
+```
+
+And we plot:
+
+```{r}
+#| fig-cap: "The Pulp Fiction Movie Network."
+#| fig-subcap:
+#|   - "Original Graph."
+#|   - "Nodes Clusterered Into Communities According to the Modularity." 
+#| layout-ncol: 1
+#| fig-width: 8
+#| fig-height: 8
+#| echo: false
+   set.seed(123)
+   plot(g, 
+   vertex.size=5, vertex.frame.color="lightgray", 
+   vertex.label = V(g)$name, edge.arrow.size = 0.25,
+   vertex.label.dist=2, vertex.label.cex = 0.7)
+   le.res <- cluster_fast_greedy(g)
+   V(g)$color <- le.res$membership
+   set.seed(123)
+   plot(g, 
+   vertex.size=5, vertex.frame.color="lightgray", 
+   vertex.label = V(g)$name, edge.arrow.size = 0.25,
+   vertex.label.dist=2, vertex.label.cex = 0.7)
+```
+
+The key idea behind link clustering is that *similar* links should be assigned to the same clusters. How do we compute the similarity between links? 
+
+According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_k$) are themselves similar. To measure the similarity between these two nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action, like Jaccard, cosine, or Dice.
+
+The first step is thus to build a link by link similarity matrix based on this idea. The following function loops through each *pair of links* in the graph and computes the similarity between two links featuring a common node $v_k$  based on the Jaccard vertex similarity of the two other nodes:
+
+```{r}
+    edge.sim <- function(x) {
+      el <- as_edgelist(x)
+      A <- as.matrix(as_adjacency_matrix(x))
+      S <- A %*% A #shared neighbors
+      d <- degree(x)
+      E <- nrow(el)
+      E.sim <- matrix(0, E, E)
+      for (e1 in 1:E) {
+        for (e2 in 1:E) {
+          if (e1 < e2 & sum(as.numeric(intersect(el[e1,], el[e2,])!="0"))==1) {
+              v <- setdiff(union(el[e1,], el[e2,]), intersect(el[e1,], el[e2,]))
+              E.sim[e1, e2] <- S[v[1], v[2]]/(S[v[1], v[2]] + d[v[1]] + d[v[2]])
+              E.sim[e2, e1] <- S[v[1], v[2]]/(S[v[1], v[2]] + d[v[1]] + d[v[2]])
+            }
+          }
+        }
+    return(round(E.sim, 3))
+    }
+```
+
+The function takes the graph as input and returns an inter-link similarity matrix of dimensions $E \times E$ where $E$ is the number of edges in the graph:
+
+```{r}
+    E.sim <- edge.sim(g)
+    E.sim[1:10, 1:10]
+```
+
+We can then transform the link similarities into distances, and cluster them:
+
+```{r}
+    D <- 1 - E.sim
+    D <- as.dist(D)
+    hc.res <- hclust(D, method = "ward.D2")
+```
+
+The resulting dendrogram looks like this:
+
+```{r}
+    par(cex = 0.5)
+    plot(hc.res)
+```
+
+The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E = 102$ in this case), and the clusters are "link communities" [@ahn_etal10].
+
+
+As we noted, because it is the links that got clustered, the nodes incident to each link can go to more than one cluster (because nodes with degree $k>1$ will be incident to multiple links). 
+
+The following function uses the dendrogram information to return a list of node assingments to multiple communities, controlled by the parameter `k`:
+
+```{r} 
+    create.clus <- function(x, k) {
+      library(dendextend)
+      link.clus <- cutree(x, k = k)
+      link.dat <- data.frame(as_edgelist(g), link.clus)
+      clus.list <- list()
+      for (i in 1:max(link.clus)) {
+        sub.dat <- link.dat[link.dat$link.clus == i, ]
+        clus.list[[i]] <- unique(c(sub.dat[, 1], sub.dat[, 2]))
+        }
+    return(clus.list)
+    }
+```
+
+Let's see the list with twelve overlapping communities:
+
+```{r}
+    C <- create.clus(hc.res, k = 12)
+    C
+```
+
+Because there are nodes that belong to multiple communities, the resulting actor by community ties form a **two-mode network**. 
+
+We can see re-construct this network from the list of community memberships for each node using this function:
+
+```{r}
+    create.two <- function(x) {
+      v <- unique(unlist(x))
+      B <- as.numeric(v %in% x[[1]])
+      for(j in 2:length(x)) {
+        B <- cbind(B, as.numeric(v %in% x[[j]]))
+      }
+      rownames(B) <- v
+      colnames(B) <- paste("c", 1:12, sep = "")
+      return(B)
+      }
+```
+
+Here's the two mode matrix of characters by communities:
+
+```{r}
+    B <- create.two(C)
+    B
+```
+
+And the matrix of inter-community ties based on shared characters:
+
+```{r}
+    M <- t(B) %*% B
+    M
+```
+
+And we can visualize the nodes connected to multiple communities as follows: 
+
+```{r}
+#| fig-width: 12
+#| fig-height: 12
+    library(RColorBrewer)
+    set.seed(45)
+    g <- graph_from_biadjacency_matrix(B)
+    V(g)$type <- bipartite_mapping(g)$type
+    V(g)$shape <- ifelse(V(g)$type, "square", "circle")
+    V(g)$color <- c(rep("orange", 38), 
+                    c(brewer.pal(8, "Paired"), brewer.pal(4, "Dark2"))) 
+    E(g)$color <- "lightgray"
+    plot(g, 
+    vertex.size=5, vertex.frame.color="lightgray", 
+    vertex.label = V(g)$name,
+    vertex.label.dist=1, vertex.label.cex = 1)
+```
+
+
+
+
+
