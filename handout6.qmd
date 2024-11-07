@@ -299,7 +299,42 @@ Which we can readily check in `R`:
    as.numeric(t(s) %*% B %*% s)/(2 * sum(A))
 ```
 
-Neat! It makes sense (given the name of the matrix) that we can compute the modularity from $\mathbf{B}$.
+You can think of the $\mathbf{s}$ vector as identifying the binary community membership via **contrast coding**. 
+
+We can also use the modularity matrix to find the modularity of a partition via **dummy coding**. To do this, we create two vectors for each level of the group membership variable with $u^{(1)}_i = 1$ when when node $i$ is a partner (otherwise $u^{(1)}_i = 0$), and $u^{(2)}_i = 1$ when when node $i$ is an associate (otherwise $u^{(2)}_i = 0$).
+
+In `R` we can do this as follows:
+
+```{r}
+   u1 <- rep(0, length(V(g)$status))
+   u2 <- rep(0, length(V(g)$status))
+   u1[which(V(g)$status==1)] <- 1
+   u2[which(V(g)$status==2)] <- 1
+```
+
+We then join the two vectors into a matrix $\mathbf{U}$ of dimensions $n \times 2$:
+
+```{r}
+   U <- cbind(u1, u2)
+   head(U)
+   tail(U)
+```
+
+Once we have this matrix, the modularity of the partition is given by:
+
+$$
+\frac{tr(U^TBU)}{\sum_i\sum_ja_{ij}}
+$$
+
+Where $tr$ denotes the **trace** operation in a matrix, namely, taking the sum of its diagonal elements. 
+
+We can check that this gives us the correct solution in `R` as follows:
+
+```{r}
+   sum(diag(t(U) %*% B %*% U))/sum(A)
+```
+
+Neat! It makes sense (given the name of the matrix) that we can compute the modularity from $\mathbf{B}$, and we can do it in multiple ways.
 
 ## Using the Modularity Matrix to Find Communities
 
@@ -424,13 +459,13 @@ Here's one way of doing that:
       split <- list()
       delta.Q <- rep(0, max(v))
       for (i in 1:max(v)) {
-         old.Q <- t(u[, i]) %*% B %*% u[, i]
+         old.Q <- t(u[, i]) %*% B %*% u[, i] #Using dummy coding to compute Q
          sub <- which(u[, i] == 1)
          new.B <- B[sub, sub]
          new.u <- split.two(new.B)$dummy
          new.v <- split.two(new.B)$v
-         Q1 <- t(new.u[, 1]) %*% new.B %*% new.u[, 1]
-         Q2 <- t(new.u[, 2]) %*% new.B %*% new.u[, 2]
+         Q1 <- t(new.u[, 1]) %*% new.B %*% new.u[, 1] #Using dummy coding to compute Q
+         Q2 <- t(new.u[, 2]) %*% new.B %*% new.u[, 2] #Using dummy coding to compute Q
          new.Q <- Q1 + Q2
          delta.Q[i] <- (new.Q - old.Q) * (1/vol)
          if (delta.Q[i] > s) {

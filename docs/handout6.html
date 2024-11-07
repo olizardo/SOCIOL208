@@ -647,31 +647,76 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <pre><code>[1] 0.2715221</code></pre>
 </div>
 </div>
-<p>Neat! It makes sense (given the name of the matrix) that we can compute the modularity from <span class="math inline">\(\mathbf{B}\)</span>.</p>
+<p>You can think of the <span class="math inline">\(\mathbf{s}\)</span> vector as identifying the binary community membership via <strong>contrast coding</strong>.</p>
+<p>We can also use the modularity matrix to find the modularity of a partition via <strong>dummy coding</strong>. To do this, we create two vectors for each level of the group membership variable with <span class="math inline">\(u^{(1)}_i = 1\)</span> when when node <span class="math inline">\(i\)</span> is a partner (otherwise <span class="math inline">\(u^{(1)}_i = 0\)</span>), and <span class="math inline">\(u^{(2)}_i = 1\)</span> when when node <span class="math inline">\(i\)</span> is an associate (otherwise <span class="math inline">\(u^{(2)}_i = 0\)</span>).</p>
+<p>In <code>R</code> we can do this as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   u1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(<span class="fu">V</span>(g)<span class="sc">$</span>status))</span>
+<span id="cb36-2"><a href="#cb36-2"></a>   u2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(<span class="fu">V</span>(g)<span class="sc">$</span>status))</span>
+<span id="cb36-3"><a href="#cb36-3"></a>   u1[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>status<span class="sc">==</span><span class="dv">1</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb36-4"><a href="#cb36-4"></a>   u2[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>status<span class="sc">==</span><span class="dv">2</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We then join the two vectors into a matrix <span class="math inline">\(\mathbf{U}\)</span> of dimensions <span class="math inline">\(n \times 2\)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   U <span class="ot">&lt;-</span> <span class="fu">cbind</span>(u1, u2)</span>
+<span id="cb37-2"><a href="#cb37-2"></a>   <span class="fu">head</span>(U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     u1 u2
+[1,]  1  0
+[2,]  1  0
+[3,]  1  0
+[4,]  1  0
+[5,]  1  0
+[6,]  1  0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   <span class="fu">tail</span>(U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      u1 u2
+[63,]  0  1
+[64,]  0  1
+[65,]  0  1
+[66,]  0  1
+[67,]  0  1
+[68,]  0  1</code></pre>
+</div>
+</div>
+<p>Once we have this matrix, the modularity of the partition is given by:</p>
+<p><span class="math display">\[
+\frac{tr(U^TBU)}{\sum_i\sum_ja_{ij}}
+\]</span></p>
+<p>Where <span class="math inline">\(tr\)</span> denotes the <strong>trace</strong> operation in a matrix, namely, taking the sum of its diagonal elements.</p>
+<p>We can check that this gives us the correct solution in <code>R</code> as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   <span class="fu">sum</span>(<span class="fu">diag</span>(<span class="fu">t</span>(U) <span class="sc">%*%</span> B <span class="sc">%*%</span> U))<span class="sc">/</span><span class="fu">sum</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2715221</code></pre>
+</div>
+</div>
+<p>Neat! It makes sense (given the name of the matrix) that we can compute the modularity from <span class="math inline">\(\mathbf{B}\)</span>, and we can do it in multiple ways.</p>
 </section>
 <section id="using-the-modularity-matrix-to-find-communities" class="level2">
 <h2 class="anchored" data-anchor-id="using-the-modularity-matrix-to-find-communities">Using the Modularity Matrix to Find Communities</h2>
 <p>Here’s an even more useful property of the modularity matrix. Remember the network distribution game we played to defined our various reflective status measure in Handout 3?</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(A) {</span>
-<span id="cb36-2"><a href="#cb36-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co">#number of actors</span></span>
-<span id="cb36-3"><a href="#cb36-3"></a>      x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, n) <span class="co">#initial status vector set to all ones</span></span>
-<span id="cb36-4"><a href="#cb36-4"></a>      w <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
-<span id="cb36-5"><a href="#cb36-5"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
-<span id="cb36-6"><a href="#cb36-6"></a>      <span class="cf">while</span> (w <span class="sc">&gt;</span> <span class="fl">0.0001</span>) {</span>
-<span id="cb36-7"><a href="#cb36-7"></a>          o.x <span class="ot">&lt;-</span> x <span class="co">#old status scores</span></span>
-<span id="cb36-8"><a href="#cb36-8"></a>          x <span class="ot">&lt;-</span> A <span class="sc">%*%</span> x <span class="co">#new scores a function of old scores and adjacency matrix</span></span>
-<span id="cb36-9"><a href="#cb36-9"></a>          x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scores</span></span>
-<span id="cb36-10"><a href="#cb36-10"></a>          w <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co">#diff. between new and old scores</span></span>
-<span id="cb36-11"><a href="#cb36-11"></a>          k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#incrementing while counter</span></span>
-<span id="cb36-12"><a href="#cb36-12"></a>      }</span>
-<span id="cb36-13"><a href="#cb36-13"></a>   <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
-<span id="cb36-14"><a href="#cb36-14"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(A) {</span>
+<span id="cb43-2"><a href="#cb43-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co">#number of actors</span></span>
+<span id="cb43-3"><a href="#cb43-3"></a>      x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, n) <span class="co">#initial status vector set to all ones</span></span>
+<span id="cb43-4"><a href="#cb43-4"></a>      w <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
+<span id="cb43-5"><a href="#cb43-5"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
+<span id="cb43-6"><a href="#cb43-6"></a>      <span class="cf">while</span> (w <span class="sc">&gt;</span> <span class="fl">0.0001</span>) {</span>
+<span id="cb43-7"><a href="#cb43-7"></a>          o.x <span class="ot">&lt;-</span> x <span class="co">#old status scores</span></span>
+<span id="cb43-8"><a href="#cb43-8"></a>          x <span class="ot">&lt;-</span> A <span class="sc">%*%</span> x <span class="co">#new scores a function of old scores and adjacency matrix</span></span>
+<span id="cb43-9"><a href="#cb43-9"></a>          x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scores</span></span>
+<span id="cb43-10"><a href="#cb43-10"></a>          w <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co">#diff. between new and old scores</span></span>
+<span id="cb43-11"><a href="#cb43-11"></a>          k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#incrementing while counter</span></span>
+<span id="cb43-12"><a href="#cb43-12"></a>      }</span>
+<span id="cb43-13"><a href="#cb43-13"></a>   <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
+<span id="cb43-14"><a href="#cb43-14"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>What if we played it with the modularity matrix?</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">status1</span>(Bu)</span>
-<span id="cb37-2"><a href="#cb37-2"></a>   <span class="fu">round</span>(s,<span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">status1</span>(Bu)</span>
+<span id="cb44-2"><a href="#cb44-2"></a>   <span class="fu">round</span>(s,<span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] -0.10 -0.14 -0.02 -0.21 -0.03  0.00  0.01 -0.05 -0.21 -0.18 -0.16 -0.24
 [13] -0.13 -0.06 -0.04 -0.12 -0.24  0.08 -0.03 -0.17 -0.18 -0.15 -0.09 -0.14
@@ -686,11 +731,11 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <p>Let’s see some evidence for these claims in real data.</p>
 <p>First, let’s turn the “status” vector into a community indicator vector. We assign all nodes with scores larger than zero to one community and nodes with scores equal to zero or less to the other one:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   C <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s))</span>
-<span id="cb39-2"><a href="#cb39-2"></a>   C[<span class="fu">which</span>(s<span class="sc">&lt;=</span><span class="dv">0</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb39-3"><a href="#cb39-3"></a>   C[<span class="fu">which</span>(s <span class="sc">&gt;</span><span class="dv">0</span>)] <span class="ot">&lt;-</span> <span class="dv">2</span></span>
-<span id="cb39-4"><a href="#cb39-4"></a>   <span class="fu">names</span>(C) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(C)</span>
-<span id="cb39-5"><a href="#cb39-5"></a>   C</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   C <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s))</span>
+<span id="cb46-2"><a href="#cb46-2"></a>   C[<span class="fu">which</span>(s<span class="sc">&lt;=</span><span class="dv">0</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb46-3"><a href="#cb46-3"></a>   C[<span class="fu">which</span>(s <span class="sc">&gt;</span><span class="dv">0</span>)] <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb46-4"><a href="#cb46-4"></a>   <span class="fu">names</span>(C) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(C)</span>
+<span id="cb46-5"><a href="#cb46-5"></a>   C</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  1  1  1  2  2  1  1  1  1  1  1  1  1  1  1  2  1  1  1  1  1  1  1  1 
@@ -702,7 +747,7 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 </div>
 <p>And for the big check:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   <span class="fu">modularity</span>(ug, C)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">modularity</span>(ug, C)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.2935153</code></pre>
 </div>
@@ -710,16 +755,16 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <p>Which is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition.</p>
 <p>Here’s some visual evidence:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> C</span>
-<span id="cb43-2"><a href="#cb43-2"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb43-3"><a href="#cb43-3"></a>   <span class="fu">plot</span>(ug, </span>
-<span id="cb43-4"><a href="#cb43-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb43-5"><a href="#cb43-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
-<span id="cb43-6"><a href="#cb43-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> C</span>
+<span id="cb50-2"><a href="#cb50-2"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb50-3"><a href="#cb50-3"></a>   <span class="fu">plot</span>(ug, </span>
+<span id="cb50-4"><a href="#cb50-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb50-5"><a href="#cb50-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
+<span id="cb50-6"><a href="#cb50-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout6_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="960"></p>
 <p></p><figcaption class="figure-caption">Law Firm Friendship Network by The Best Binary Partition According to the Modularity</figcaption><p></p>
 </figure>
 </div>
@@ -732,8 +777,8 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 \]</span></p>
 <p>Solving for <span class="math inline">\(\mathbf{v}\)</span> in the equation above will give us the community memberships of the nodes. In <code>R</code> you can do this using the native <code>eigen</code> function like we did for the status scores:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   v <span class="ot">&lt;-</span> <span class="fu">eigen</span>(Bu)<span class="sc">$</span>vectors[, <span class="dv">1</span>] </span>
-<span id="cb44-2"><a href="#cb44-2"></a>   <span class="fu">round</span>(v, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1"></a>   v <span class="ot">&lt;-</span> <span class="fu">eigen</span>(Bu)<span class="sc">$</span>vectors[, <span class="dv">1</span>] </span>
+<span id="cb51-2"><a href="#cb51-2"></a>   <span class="fu">round</span>(v, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] -0.10 -0.14 -0.02 -0.21 -0.03  0.00  0.01 -0.05 -0.21 -0.18 -0.16 -0.24
 [13] -0.13 -0.06 -0.04 -0.12 -0.24  0.08 -0.03 -0.17 -0.18 -0.15 -0.09 -0.14
@@ -746,23 +791,23 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <p>Which look like the same values we obtained earlier.</p>
 <p>We can package all of the steps above into a simple function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   split.two <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb46-2"><a href="#cb46-2"></a>      e <span class="ot">&lt;-</span> <span class="fu">eigen</span>(x)<span class="sc">$</span>vectors[, <span class="dv">1</span>]</span>
-<span id="cb46-3"><a href="#cb46-3"></a>      v <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(e))</span>
-<span id="cb46-4"><a href="#cb46-4"></a>      v[e<span class="sc">&lt;=</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb46-5"><a href="#cb46-5"></a>      v[e <span class="sc">&gt;</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">2</span></span>
-<span id="cb46-6"><a href="#cb46-6"></a>      <span class="fu">names</span>(v) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(v)</span>
-<span id="cb46-7"><a href="#cb46-7"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(v))</span>
-<span id="cb46-8"><a href="#cb46-8"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(v))</span>
-<span id="cb46-9"><a href="#cb46-9"></a>      c1[<span class="fu">which</span>(v <span class="sc">==</span> <span class="dv">1</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb46-10"><a href="#cb46-10"></a>      c2[<span class="fu">which</span>(v <span class="sc">==</span> <span class="dv">2</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb46-11"><a href="#cb46-11"></a>      dummy <span class="ot">&lt;-</span> <span class="fu">cbind</span>(c1, c2)</span>
-<span id="cb46-12"><a href="#cb46-12"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">v =</span> v, <span class="at">dummy =</span> dummy))</span>
-<span id="cb46-13"><a href="#cb46-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1"></a>   split.two <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb53-2"><a href="#cb53-2"></a>      e <span class="ot">&lt;-</span> <span class="fu">eigen</span>(x)<span class="sc">$</span>vectors[, <span class="dv">1</span>]</span>
+<span id="cb53-3"><a href="#cb53-3"></a>      v <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(e))</span>
+<span id="cb53-4"><a href="#cb53-4"></a>      v[e<span class="sc">&lt;=</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb53-5"><a href="#cb53-5"></a>      v[e <span class="sc">&gt;</span> <span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb53-6"><a href="#cb53-6"></a>      <span class="fu">names</span>(v) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(v)</span>
+<span id="cb53-7"><a href="#cb53-7"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(v))</span>
+<span id="cb53-8"><a href="#cb53-8"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(v))</span>
+<span id="cb53-9"><a href="#cb53-9"></a>      c1[<span class="fu">which</span>(v <span class="sc">==</span> <span class="dv">1</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb53-10"><a href="#cb53-10"></a>      c2[<span class="fu">which</span>(v <span class="sc">==</span> <span class="dv">2</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb53-11"><a href="#cb53-11"></a>      dummy <span class="ot">&lt;-</span> <span class="fu">cbind</span>(c1, c2)</span>
+<span id="cb53-12"><a href="#cb53-12"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">v =</span> v, <span class="at">dummy =</span> dummy))</span>
+<span id="cb53-13"><a href="#cb53-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And check to see if it works:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">split.two</span>(Bu)<span class="sc">$</span>v</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">split.two</span>(Bu)<span class="sc">$</span>v</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  1  1  1  2  2  1  1  1  1  1  1  1  1  1  1  2  1  1  1  1  1  1  1  1 
@@ -778,38 +823,38 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <p>So we need an approach that <em>tries out</em> splitting one of the original two communities into two smaller ones, checks the new modularity, compares it with the old, and only goes ahead with the partition if the new modularity is larger than the old one.</p>
 <p>Here’s one way of doing that:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   split.mult <span class="ot">&lt;-</span> <span class="cf">function</span>(B, vol, u, v, <span class="at">s =</span> <span class="fl">0.01</span>) {</span>
-<span id="cb49-2"><a href="#cb49-2"></a>      split <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb49-3"><a href="#cb49-3"></a>      delta.Q <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">max</span>(v))</span>
-<span id="cb49-4"><a href="#cb49-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(v)) {</span>
-<span id="cb49-5"><a href="#cb49-5"></a>         old.Q <span class="ot">&lt;-</span> <span class="fu">t</span>(u[, i]) <span class="sc">%*%</span> B <span class="sc">%*%</span> u[, i]</span>
-<span id="cb49-6"><a href="#cb49-6"></a>         sub <span class="ot">&lt;-</span> <span class="fu">which</span>(u[, i] <span class="sc">==</span> <span class="dv">1</span>)</span>
-<span id="cb49-7"><a href="#cb49-7"></a>         new.B <span class="ot">&lt;-</span> B[sub, sub]</span>
-<span id="cb49-8"><a href="#cb49-8"></a>         new.u <span class="ot">&lt;-</span> <span class="fu">split.two</span>(new.B)<span class="sc">$</span>dummy</span>
-<span id="cb49-9"><a href="#cb49-9"></a>         new.v <span class="ot">&lt;-</span> <span class="fu">split.two</span>(new.B)<span class="sc">$</span>v</span>
-<span id="cb49-10"><a href="#cb49-10"></a>         Q1 <span class="ot">&lt;-</span> <span class="fu">t</span>(new.u[, <span class="dv">1</span>]) <span class="sc">%*%</span> new.B <span class="sc">%*%</span> new.u[, <span class="dv">1</span>]</span>
-<span id="cb49-11"><a href="#cb49-11"></a>         Q2 <span class="ot">&lt;-</span> <span class="fu">t</span>(new.u[, <span class="dv">2</span>]) <span class="sc">%*%</span> new.B <span class="sc">%*%</span> new.u[, <span class="dv">2</span>]</span>
-<span id="cb49-12"><a href="#cb49-12"></a>         new.Q <span class="ot">&lt;-</span> Q1 <span class="sc">+</span> Q2</span>
-<span id="cb49-13"><a href="#cb49-13"></a>         delta.Q[i] <span class="ot">&lt;-</span> (new.Q <span class="sc">-</span> old.Q) <span class="sc">*</span> (<span class="dv">1</span><span class="sc">/</span>vol)</span>
-<span id="cb49-14"><a href="#cb49-14"></a>         <span class="cf">if</span> (delta.Q[i] <span class="sc">&gt;</span> s) {</span>
-<span id="cb49-15"><a href="#cb49-15"></a>            split[[i]] <span class="ot">&lt;-</span> new.v</span>
-<span id="cb49-16"><a href="#cb49-16"></a>            <span class="fu">names</span>(split[[i]]) <span class="ot">&lt;-</span> <span class="fu">which</span>(u[, i] <span class="sc">==</span> <span class="dv">1</span>)</span>
-<span id="cb49-17"><a href="#cb49-17"></a>            }</span>
-<span id="cb49-18"><a href="#cb49-18"></a>         <span class="cf">else</span> <span class="cf">if</span> (delta.Q[i] <span class="sc">&lt;=</span> s) {</span>
-<span id="cb49-19"><a href="#cb49-19"></a>            split[[i]] <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb49-20"><a href="#cb49-20"></a>            }</span>
-<span id="cb49-21"><a href="#cb49-21"></a>      }</span>
-<span id="cb49-22"><a href="#cb49-22"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">delta.Q =</span> <span class="fu">round</span>(delta.Q, <span class="dv">3</span>), <span class="at">v =</span> v, <span class="at">split =</span> split))</span>
-<span id="cb49-23"><a href="#cb49-23"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>   split.mult <span class="ot">&lt;-</span> <span class="cf">function</span>(B, vol, u, v, <span class="at">s =</span> <span class="fl">0.01</span>) {</span>
+<span id="cb56-2"><a href="#cb56-2"></a>      split <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb56-3"><a href="#cb56-3"></a>      delta.Q <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">max</span>(v))</span>
+<span id="cb56-4"><a href="#cb56-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(v)) {</span>
+<span id="cb56-5"><a href="#cb56-5"></a>         old.Q <span class="ot">&lt;-</span> <span class="fu">t</span>(u[, i]) <span class="sc">%*%</span> B <span class="sc">%*%</span> u[, i] <span class="co">#Using dummy coding to compute Q</span></span>
+<span id="cb56-6"><a href="#cb56-6"></a>         sub <span class="ot">&lt;-</span> <span class="fu">which</span>(u[, i] <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb56-7"><a href="#cb56-7"></a>         new.B <span class="ot">&lt;-</span> B[sub, sub]</span>
+<span id="cb56-8"><a href="#cb56-8"></a>         new.u <span class="ot">&lt;-</span> <span class="fu">split.two</span>(new.B)<span class="sc">$</span>dummy</span>
+<span id="cb56-9"><a href="#cb56-9"></a>         new.v <span class="ot">&lt;-</span> <span class="fu">split.two</span>(new.B)<span class="sc">$</span>v</span>
+<span id="cb56-10"><a href="#cb56-10"></a>         Q1 <span class="ot">&lt;-</span> <span class="fu">t</span>(new.u[, <span class="dv">1</span>]) <span class="sc">%*%</span> new.B <span class="sc">%*%</span> new.u[, <span class="dv">1</span>] <span class="co">#Using dummy coding to compute Q</span></span>
+<span id="cb56-11"><a href="#cb56-11"></a>         Q2 <span class="ot">&lt;-</span> <span class="fu">t</span>(new.u[, <span class="dv">2</span>]) <span class="sc">%*%</span> new.B <span class="sc">%*%</span> new.u[, <span class="dv">2</span>] <span class="co">#Using dummy coding to compute Q</span></span>
+<span id="cb56-12"><a href="#cb56-12"></a>         new.Q <span class="ot">&lt;-</span> Q1 <span class="sc">+</span> Q2</span>
+<span id="cb56-13"><a href="#cb56-13"></a>         delta.Q[i] <span class="ot">&lt;-</span> (new.Q <span class="sc">-</span> old.Q) <span class="sc">*</span> (<span class="dv">1</span><span class="sc">/</span>vol)</span>
+<span id="cb56-14"><a href="#cb56-14"></a>         <span class="cf">if</span> (delta.Q[i] <span class="sc">&gt;</span> s) {</span>
+<span id="cb56-15"><a href="#cb56-15"></a>            split[[i]] <span class="ot">&lt;-</span> new.v</span>
+<span id="cb56-16"><a href="#cb56-16"></a>            <span class="fu">names</span>(split[[i]]) <span class="ot">&lt;-</span> <span class="fu">which</span>(u[, i] <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb56-17"><a href="#cb56-17"></a>            }</span>
+<span id="cb56-18"><a href="#cb56-18"></a>         <span class="cf">else</span> <span class="cf">if</span> (delta.Q[i] <span class="sc">&lt;=</span> s) {</span>
+<span id="cb56-19"><a href="#cb56-19"></a>            split[[i]] <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb56-20"><a href="#cb56-20"></a>            }</span>
+<span id="cb56-21"><a href="#cb56-21"></a>      }</span>
+<span id="cb56-22"><a href="#cb56-22"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">delta.Q =</span> <span class="fu">round</span>(delta.Q, <span class="dv">3</span>), <span class="at">v =</span> v, <span class="at">split =</span> split))</span>
+<span id="cb56-23"><a href="#cb56-23"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This function uses the output of the <code>split.two</code> function to check if any of the two sub-communities should be split in two further ones by comparing the modularities pre and post second partition.</p>
 <p>Here are the results applied to the <code>law_friends</code> network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">split.mult</span>(<span class="at">B =</span> Bu, </span>
-<span id="cb50-2"><a href="#cb50-2"></a>                   <span class="at">vol =</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(ug))), </span>
-<span id="cb50-3"><a href="#cb50-3"></a>                   <span class="at">u =</span> <span class="fu">split.two</span>(Bu)<span class="sc">$</span>dummy, </span>
-<span id="cb50-4"><a href="#cb50-4"></a>                   <span class="at">v =</span> <span class="fu">split.two</span>(Bu)<span class="sc">$</span>v)</span>
-<span id="cb50-5"><a href="#cb50-5"></a>   s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">split.mult</span>(<span class="at">B =</span> Bu, </span>
+<span id="cb57-2"><a href="#cb57-2"></a>                   <span class="at">vol =</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(ug))), </span>
+<span id="cb57-3"><a href="#cb57-3"></a>                   <span class="at">u =</span> <span class="fu">split.two</span>(Bu)<span class="sc">$</span>dummy, </span>
+<span id="cb57-4"><a href="#cb57-4"></a>                   <span class="at">v =</span> <span class="fu">split.two</span>(Bu)<span class="sc">$</span>v)</span>
+<span id="cb57-5"><a href="#cb57-5"></a>   s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$delta.Q
 [1] 0.000 0.048
@@ -838,8 +883,8 @@ $split[[2]]
 <p>Note that the function returns the original two-split named vector of communities assignments <code>v</code>, a <code>NULL</code> result for the first split, and a new vector assigning nodes in the second original split to two other communities (<code>split[[2]]</code>).</p>
 <p>We now create a new three-community vector from these results:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   s<span class="sc">$</span>v[<span class="fu">names</span>(s<span class="sc">$</span>split[[<span class="dv">2</span>]])] <span class="ot">&lt;-</span> s<span class="sc">$</span>split[[<span class="dv">2</span>]] <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb52-2"><a href="#cb52-2"></a>   s<span class="sc">$</span>v</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1"></a>   s<span class="sc">$</span>v[<span class="fu">names</span>(s<span class="sc">$</span>split[[<span class="dv">2</span>]])] <span class="ot">&lt;-</span> s<span class="sc">$</span>split[[<span class="dv">2</span>]] <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb59-2"><a href="#cb59-2"></a>   s<span class="sc">$</span>v</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  1  1  1  3  3  1  1  1  1  1  1  1  1  1  1  3  1  1  1  1  1  1  1  1 
@@ -851,16 +896,16 @@ $split[[2]]
 </div>
 <p>And visualize them as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> s<span class="sc">$</span>v</span>
-<span id="cb54-2"><a href="#cb54-2"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb54-3"><a href="#cb54-3"></a>   <span class="fu">plot</span>(ug, </span>
-<span id="cb54-4"><a href="#cb54-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb54-5"><a href="#cb54-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
-<span id="cb54-6"><a href="#cb54-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> s<span class="sc">$</span>v</span>
+<span id="cb61-2"><a href="#cb61-2"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb61-3"><a href="#cb61-3"></a>   <span class="fu">plot</span>(ug, </span>
+<span id="cb61-4"><a href="#cb61-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb61-5"><a href="#cb61-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
+<span id="cb61-6"><a href="#cb61-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout6_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="960"></p>
 <p></p><figcaption class="figure-caption">Law Firm Friendship Network by The Best Three-Community Partition Using the Leading Eigenvector of the Modularity Matrix Approach</figcaption><p></p>
 </figure>
 </div>
@@ -869,18 +914,18 @@ $split[[2]]
 <p>Which shows the new three-community partition.</p>
 <p>Now let’s say we wanted to check if we should <em>further</em> split any of these three communities into two. All we need to do is create “dummy” variables for the new three community partition and feed these (and the three community membership vector) to the <code>split.mult</code> function, while keeping <em>the original</em> modularity matrix <span class="citation" data-cites="newman06b">(<a href="#ref-newman06b" role="doc-biblioref">Newman 2006a</a>)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   c1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
-<span id="cb55-2"><a href="#cb55-2"></a>   c2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
-<span id="cb55-3"><a href="#cb55-3"></a>   c3 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
-<span id="cb55-4"><a href="#cb55-4"></a>   c1[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">1</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb55-5"><a href="#cb55-5"></a>   c2[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">2</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb55-6"><a href="#cb55-6"></a>   c3[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">3</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb55-7"><a href="#cb55-7"></a>   dummies <span class="ot">&lt;-</span> <span class="fu">cbind</span>(c1, c2, c3)</span>
-<span id="cb55-8"><a href="#cb55-8"></a>   s <span class="ot">&lt;-</span> <span class="fu">split.mult</span>(<span class="at">B =</span> Bu, </span>
-<span id="cb55-9"><a href="#cb55-9"></a>                   <span class="at">vol =</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(ug))), </span>
-<span id="cb55-10"><a href="#cb55-10"></a>                   <span class="at">u =</span> dummies, </span>
-<span id="cb55-11"><a href="#cb55-11"></a>                   <span class="at">v =</span> s<span class="sc">$</span>v)</span>
-<span id="cb55-12"><a href="#cb55-12"></a>   s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   c1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
+<span id="cb62-2"><a href="#cb62-2"></a>   c2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
+<span id="cb62-3"><a href="#cb62-3"></a>   c3 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">length</span>(s<span class="sc">$</span>v))</span>
+<span id="cb62-4"><a href="#cb62-4"></a>   c1[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">1</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb62-5"><a href="#cb62-5"></a>   c2[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">2</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb62-6"><a href="#cb62-6"></a>   c3[<span class="fu">which</span>(s<span class="sc">$</span>v<span class="sc">==</span><span class="dv">3</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb62-7"><a href="#cb62-7"></a>   dummies <span class="ot">&lt;-</span> <span class="fu">cbind</span>(c1, c2, c3)</span>
+<span id="cb62-8"><a href="#cb62-8"></a>   s <span class="ot">&lt;-</span> <span class="fu">split.mult</span>(<span class="at">B =</span> Bu, </span>
+<span id="cb62-9"><a href="#cb62-9"></a>                   <span class="at">vol =</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(ug))), </span>
+<span id="cb62-10"><a href="#cb62-10"></a>                   <span class="at">u =</span> dummies, </span>
+<span id="cb62-11"><a href="#cb62-11"></a>                   <span class="at">v =</span> s<span class="sc">$</span>v)</span>
+<span id="cb62-12"><a href="#cb62-12"></a>   s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$delta.Q
 [1]  0.000  0.000 -0.002
@@ -901,12 +946,12 @@ list()</code></pre>
 <p>Of course, if you are working on your project, you don’t have to mess with all of the functions above, because <code>igraph</code> has implemented Newman’s leading eigenvector (of the modularity matrix) community detection method <span class="citation" data-cites="newman06b">(<a href="#ref-newman06b" role="doc-biblioref">Newman 2006a</a>)</span> in a single function called <code>cluster_leading_eigen</code>.</p>
 <p>To use it, just feed it the relevant graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   le.res <span class="ot">&lt;-</span> <span class="fu">cluster_leading_eigen</span>(ug)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   le.res <span class="ot">&lt;-</span> <span class="fu">cluster_leading_eigen</span>(ug)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And examine the <code>membership</code> object stored in the results list:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   <span class="fu">names</span>(le.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(le.res<span class="sc">$</span>membership)</span>
-<span id="cb58-2"><a href="#cb58-2"></a>   le.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="fu">names</span>(le.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(le.res<span class="sc">$</span>membership)</span>
+<span id="cb65-2"><a href="#cb65-2"></a>   le.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  1  1  1  2  2  1  1  1  1  1  1  1  1  1  1  2  1  1  1  1  1  1  1  1 
@@ -922,12 +967,12 @@ list()</code></pre>
 <h2 class="anchored" data-anchor-id="communities-versus-exogeneous-attributes">Communities versus Exogeneous Attributes</h2>
 <p>Remember we began this handout using an exogenous criterion (law firm status as partner or associate) to examine the community structure of the network (which does pretty well according to the modularity). But now we have also used a pure link-based approach to finding communities. How do they compare? Here’s a way to find out:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb60-2"><a href="#cb60-2"></a>   t <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">V</span>(ug)<span class="sc">$</span>status, le.res<span class="sc">$</span>membership)</span>
-<span id="cb60-3"><a href="#cb60-3"></a>   <span class="fu">kbl</span>(t, <span class="at">row.names =</span> <span class="cn">TRUE</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb60-4"><a href="#cb60-4"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb60-5"><a href="#cb60-5"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb60-6"><a href="#cb60-6"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb67-2"><a href="#cb67-2"></a>   t <span class="ot">&lt;-</span> <span class="fu">table</span>(<span class="fu">V</span>(ug)<span class="sc">$</span>status, le.res<span class="sc">$</span>membership)</span>
+<span id="cb67-3"><a href="#cb67-3"></a>   <span class="fu">kbl</span>(t, <span class="at">row.names =</span> <span class="cn">TRUE</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb67-4"><a href="#cb67-4"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb67-5"><a href="#cb67-5"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb67-6"><a href="#cb67-6"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -969,22 +1014,22 @@ list()</code></pre>
 <p><span class="citation" data-cites="newman04">Newman (<a href="#ref-newman04" role="doc-biblioref">2004</a>)</span> developed an agglomerative algorithm that optimizes the modularity, a more recent version of which is included in an <code>igraph</code> function called <code>cluster_fast_greedy</code> <span class="citation" data-cites="clauset_etal04">(<a href="#ref-clauset_etal04" role="doc-biblioref">Clauset, Newman, and Moore 2004</a>)</span>.</p>
 <p>Let’s try it out to see how it works:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1"></a>   fg.res <span class="ot">&lt;-</span> <span class="fu">cluster_fast_greedy</span>(ug)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   fg.res <span class="ot">&lt;-</span> <span class="fu">cluster_fast_greedy</span>(ug)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The resulting list object has various sub-objects as components. One of them is called <code>merges</code> which gives a history of the various merges that resulted in the final communities. This means that we can view the results as a <strong>dendrogram</strong> just like we did with structural similarity analyses based on hierarchical clustering of a distance matrix.</p>
 <p>To do this we just transform the resulting object into an <code>hclust</code> object and plot:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   hc <span class="ot">&lt;-</span> <span class="fu">as.hclust</span>(fg.res)</span>
-<span id="cb62-2"><a href="#cb62-2"></a>   <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.5</span>) <span class="co">#smaller labels</span></span>
-<span id="cb62-3"><a href="#cb62-3"></a>   <span class="fu">plot</span>(hc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   hc <span class="ot">&lt;-</span> <span class="fu">as.hclust</span>(fg.res)</span>
+<span id="cb69-2"><a href="#cb69-2"></a>   <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.5</span>) <span class="co">#smaller labels</span></span>
+<span id="cb69-3"><a href="#cb69-3"></a>   <span class="fu">plot</span>(hc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout6_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid" width="672"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-38-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Which gives us the sense that the network is divided into three communities like we saw earlier. If wanted to see which nodes are in which, we could just cut the dendrogram at <span class="math inline">\(k = 3\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   <span class="fu">library</span>(dendextend)</span>
-<span id="cb63-2"><a href="#cb63-2"></a>   <span class="fu">cutree</span>(hc, <span class="at">k =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   <span class="fu">library</span>(dendextend)</span>
+<span id="cb70-2"><a href="#cb70-2"></a>   <span class="fu">cutree</span>(hc, <span class="at">k =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  2  1  2  2  2  1  1  1  1  1  1  2  1  1  1  2  1  1  1  1  1  1  2  1 
@@ -997,8 +1042,8 @@ list()</code></pre>
 <p>Which provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).</p>
 <p>Of course, this information was already stored in our results in the <code>membership</code> object:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="fu">names</span>(fg.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">68</span></span>
-<span id="cb65-2"><a href="#cb65-2"></a>   fg.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1"></a>   <span class="fu">names</span>(fg.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">68</span></span>
+<span id="cb72-2"><a href="#cb72-2"></a>   fg.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  2  1  2  2  2  1  1  1  1  1  1  2  1  1  1  2  1  1  1  1  1  1  2  1 
@@ -1010,16 +1055,16 @@ list()</code></pre>
 </div>
 <p>And visualizing the resulting three-community partition:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb67-2"><a href="#cb67-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>color <span class="ot">&lt;-</span> fg.res<span class="sc">$</span>membership</span>
-<span id="cb67-3"><a href="#cb67-3"></a>   <span class="fu">plot</span>(ug, </span>
-<span id="cb67-4"><a href="#cb67-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb67-5"><a href="#cb67-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
-<span id="cb67-6"><a href="#cb67-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb74-2"><a href="#cb74-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>color <span class="ot">&lt;-</span> fg.res<span class="sc">$</span>membership</span>
+<span id="cb74-3"><a href="#cb74-3"></a>   <span class="fu">plot</span>(ug, </span>
+<span id="cb74-4"><a href="#cb74-4"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb74-5"><a href="#cb74-5"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
+<span id="cb74-6"><a href="#cb74-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout6_files/figure-html/unnamed-chunk-38-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-41-1.png" class="img-fluid figure-img" width="960"></p>
 <p></p><figcaption class="figure-caption">Law Firm Friendship Network Partitioned According to Agglomerative Clustering Based on Optimizing the Modularity</figcaption><p></p>
 </figure>
 </div>
@@ -1034,32 +1079,32 @@ list()</code></pre>
 <p>Note that like the leading eigenvector method, this approach is <strong>divisive</strong> with all nodes starting in a single cluster, then that cluster splitting in two, and so forth. This algorithm is implemented in <code>igraph</code> in the function <code>cluster_edge_betweenness</code>.</p>
 <p>Let’s see how it works:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   eb.res <span class="ot">&lt;-</span> <span class="fu">cluster_edge_betweenness</span>(ug, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1"></a>   eb.res <span class="ot">&lt;-</span> <span class="fu">cluster_edge_betweenness</span>(ug, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Interestingly, even though this is a divisive algorithm, the results can be presented as a dendrogram, but storing top down divisions rather than bottom up merges:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   hc <span class="ot">&lt;-</span> <span class="fu">as.hclust</span>(eb.res)</span>
-<span id="cb69-2"><a href="#cb69-2"></a>   <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.5</span>) <span class="co">#smaller labels</span></span>
-<span id="cb69-3"><a href="#cb69-3"></a>   <span class="fu">plot</span>(hc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1"></a>   hc <span class="ot">&lt;-</span> <span class="fu">as.hclust</span>(eb.res)</span>
+<span id="cb76-2"><a href="#cb76-2"></a>   <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.5</span>) <span class="co">#smaller labels</span></span>
+<span id="cb76-3"><a href="#cb76-3"></a>   <span class="fu">plot</span>(hc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout6_files/figure-html/unnamed-chunk-40-1.png" class="img-fluid" width="672"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-43-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Note that the edge betweenness provides a different picture of the community structure of the network. This is not surprising because it is based on graph theoretic principles and not on null model principles like the modularity: The picture here is of two broad communities (in the middle) surrounded by many smaller islands, including some singletons.</p>
 <p>We can, of course, combine the modularity and edge-betweenness criteria by trying out dendrogram cuts until we find one with the highest modularity.</p>
 <p>A simple function that does that looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   top.mod <span class="ot">&lt;-</span> <span class="cf">function</span>(x, g, m) {</span>
-<span id="cb70-2"><a href="#cb70-2"></a>      k <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>m</span>
-<span id="cb70-3"><a href="#cb70-3"></a>      Q <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, m)</span>
-<span id="cb70-4"><a href="#cb70-4"></a>      tab <span class="ot">&lt;-</span> <span class="fu">cbind</span>(k, Q)</span>
-<span id="cb70-5"><a href="#cb70-5"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>m) {</span>
-<span id="cb70-6"><a href="#cb70-6"></a>         c <span class="ot">&lt;-</span> <span class="fu">cutree</span>(x, i)</span>
-<span id="cb70-7"><a href="#cb70-7"></a>         tab[i, <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">modularity</span>(g, c, <span class="at">directed =</span> <span class="cn">FALSE</span>), <span class="dv">3</span>)</span>
-<span id="cb70-8"><a href="#cb70-8"></a>      }</span>
-<span id="cb70-9"><a href="#cb70-9"></a>   <span class="fu">return</span>(tab)</span>
-<span id="cb70-10"><a href="#cb70-10"></a>   }</span>
-<span id="cb70-11"><a href="#cb70-11"></a>   <span class="fu">top.mod</span>(hc, ug, <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1"></a>   top.mod <span class="ot">&lt;-</span> <span class="cf">function</span>(x, g, m) {</span>
+<span id="cb77-2"><a href="#cb77-2"></a>      k <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span>m</span>
+<span id="cb77-3"><a href="#cb77-3"></a>      Q <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, m)</span>
+<span id="cb77-4"><a href="#cb77-4"></a>      tab <span class="ot">&lt;-</span> <span class="fu">cbind</span>(k, Q)</span>
+<span id="cb77-5"><a href="#cb77-5"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>m) {</span>
+<span id="cb77-6"><a href="#cb77-6"></a>         c <span class="ot">&lt;-</span> <span class="fu">cutree</span>(x, i)</span>
+<span id="cb77-7"><a href="#cb77-7"></a>         tab[i, <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">modularity</span>(g, c, <span class="at">directed =</span> <span class="cn">FALSE</span>), <span class="dv">3</span>)</span>
+<span id="cb77-8"><a href="#cb77-8"></a>      }</span>
+<span id="cb77-9"><a href="#cb77-9"></a>   <span class="fu">return</span>(tab)</span>
+<span id="cb77-10"><a href="#cb77-10"></a>   }</span>
+<span id="cb77-11"><a href="#cb77-11"></a>   <span class="fu">top.mod</span>(hc, ug, <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       k     Q
  [1,]  1 0.000
@@ -1091,8 +1136,8 @@ list()</code></pre>
 </div>
 <p>Which seems to recommend we divide the graph into 23 communities! This is, of course, what is stored in the <code>membership</code> object:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1"></a>   <span class="fu">names</span>(eb.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">68</span></span>
-<span id="cb72-2"><a href="#cb72-2"></a>   eb.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1"></a>   <span class="fu">names</span>(eb.res<span class="sc">$</span>membership) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">68</span></span>
+<span id="cb79-2"><a href="#cb79-2"></a>   eb.res<span class="sc">$</span>membership</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 
  1  1  2  1  3  4  2  1  1  1  1  1  1  5  6  1  1  3  7  1  1  1  1  1  1  1 
@@ -1107,22 +1152,22 @@ list()</code></pre>
 
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> c25[eb.res<span class="sc">$</span>membership]</span>
-<span id="cb74-2"><a href="#cb74-2"></a>   e.col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"lightblue"</span>, <span class="fu">ecount</span>(ug))</span>
-<span id="cb74-3"><a href="#cb74-3"></a>   e.col[eb.res<span class="sc">$</span>bridges] <span class="ot">&lt;-</span> <span class="st">"red"</span></span>
-<span id="cb74-4"><a href="#cb74-4"></a>   <span class="fu">E</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> e.col</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1"></a>   <span class="fu">V</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> c25[eb.res<span class="sc">$</span>membership]</span>
+<span id="cb81-2"><a href="#cb81-2"></a>   e.col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"lightblue"</span>, <span class="fu">ecount</span>(ug))</span>
+<span id="cb81-3"><a href="#cb81-3"></a>   e.col[eb.res<span class="sc">$</span>bridges] <span class="ot">&lt;-</span> <span class="st">"red"</span></span>
+<span id="cb81-4"><a href="#cb81-4"></a>   <span class="fu">E</span>(ug)<span class="sc">$</span>color <span class="ot">&lt;-</span> e.col</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now we plot:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb75-2"><a href="#cb75-2"></a>   <span class="fu">plot</span>(ug, </span>
-<span id="cb75-3"><a href="#cb75-3"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb75-4"><a href="#cb75-4"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
-<span id="cb75-5"><a href="#cb75-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb82-2"><a href="#cb82-2"></a>   <span class="fu">plot</span>(ug, </span>
+<span id="cb82-3"><a href="#cb82-3"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb82-4"><a href="#cb82-4"></a>     <span class="at">vertex.label =</span> <span class="cn">NA</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
+<span id="cb82-5"><a href="#cb82-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout6_files/figure-html/unnamed-chunk-45-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="handout6_files/figure-html/unnamed-chunk-48-1.png" class="img-fluid figure-img" width="960"></p>
 <p></p><figcaption class="figure-caption">Law Firm Friendship Network Partitioned According to the Edge Betweenness Algorithm with Number of Communities that Maximize the Modularity (Bridge Edges in Red)</figcaption><p></p>
 </figure>
 </div>
