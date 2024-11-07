@@ -20,7 +20,7 @@ So whether a network has community structure, and whether a given guess as to wh
 
 But first, we need to develop a criterion for whether a given partition of the network into mutually exclusive node subsets is actually producing *communities* as we defined them earlier. This criterion should be independent of particular methods and algorithms that claim to find communities, so that way we can compare them with one another and see whether the partitions they recommend yield actual communities.
 
-Mark Newman, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). 
+Mark @newman06a, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). 
 
 ## A bag of links
 
@@ -188,15 +188,15 @@ But at least now you know what's going on inside of it!
 
 Obviously, the modularity wouldn't be a famous method if it was just a way of measuring the goodness of a community partition produced by other methods. It itself can be used to find community partitions by using a method that somehow produces node partition that find the largest values that it can take in a graph.
 
-A useful tool in this quest is what is called the **modularity matrix** ($\mathbf{B}$), which is defined as a variation on the adjacency matrix ($\mathbf{A}$), with each cell $b_{ij}$ taking having the value:
+A useful tool in this quest is the **modularity matrix** $\mathbf{B}$ [@newman06a], which is defined as a variation on the adjacency matrix $\mathbf{A}$, each cell of the modularity matrix $b_{ij}$ takes the value:
 
 $$
 b_{ij} = a_{ij} - \frac{k^{out}_ik^{in}_j}{\sum_i\sum_j a_{ij}}
 $$
 
-Where $k^{out}_i$ is node $i$'s outdegree and $k^{in}_j$ is node j's indegree. Note that the modularity matrix has the same "observed minus expected" structure as the formulas for the modularity. In this case we compare whether we see a link from $i$ to $j$ as given by $a_{ij}$ against the probability of observing a link in a graph in which nodes connect at random with probability proportional to their degrees (as given by the right-hand side fraction). 
+Where $k^{out}_i$ is node $i$'s outdegree and $k^{in}_j$ is node j's indegree. Note that the modularity matrix has the same "observed minus expected" structure as the formulas for the modularity. In this case we compare whether we see a link from $i$ to $j$ as given by $a_{ij}$ against the chances of observing a link in a graph in which nodes connect at random with probability proportional to their degrees (as given by the right-hand side fraction). 
 
-Note that if the graph is undirected, the modularity is just:
+Note that if the graph is undirected, the modularity matrix is just:
 
 $$
 b_{ij} = a_{ij} - \frac{k_ik_j}{\sum_i\sum_j a_{ij}}
@@ -227,7 +227,7 @@ Peeking inside the resulting matrix:
    round(mod.mat(g)[1:10, 1:10], 3)
 ```
 
-Interestingly, the matrix has some negative entries, some positive entries and some close to or actually zero. We interpret these as follows: If an entry is negative it means that a link between the row and column nodes is much less likely to happened than expected given the each node's degrees, a positive entry indicates the opposite; a larger than expected chance of a link forming. Entries close to zero indicate those nodes have odds close to random chance of forming a tie.
+Interestingly, the matrix has some negative entries, some positive entries and some close to or actually zero. We interpret these as follows: If an entry is negative it means that a link between the row and column nodes is much less likely to happen than expected given the each node's degrees, a positive entry indicates the opposite; a larger than expected chance of a link forming. Entries close to zero indicate those nodes have odds close to random chance of forming a tie.
 
 Of course `igraph` has a function, called `modularity_matrix`, which gives us the same result:
 
@@ -275,7 +275,7 @@ Which makes $\mathbf{B}$ **doubly centered** a neat but so far useless property.
 
 ## Using the Modularity Matrix to Find the Modularity of a Partition
 
-A more interesting property of the modularity matrix is that we can use to compute the modularity of a given binary partition. Let's take status in the `law_friends` network as an example. 
+A more interesting property of the modularity matrix is that we can use it to compute the actual modularity of a given binary partition of the network into clusters. Let's take status in the `law_friends` network as an example. 
 
 First we create a new vector $\mathbf{s}$ that equals one when node $i$ is in the first group (partners) and minus one when node $i$ is in the second group (associates):
 
@@ -299,7 +299,7 @@ Which we can readily check in `R`:
    as.numeric(t(s) %*% B %*% s)/(2 * sum(A))
 ```
 
-Neat! It makes sense (given the name) that we can compute the modularity from $\mathbf{B}$.
+Neat! It makes sense (given the name of the matrix) that we can compute the modularity from $\mathbf{B}$.
 
 ## Using the Modularity Matrix to Find Communities
 
@@ -370,7 +370,7 @@ Here's some visual evidence:
 
 Which definitely looks like an optimal clustering into two groups based on friendship!
 
-Of course, you may also remember from the status handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
+Of course, you may also remember from the [Status and Prestige](https://olizardo.github.io/SOCIOL208/handout3.html) handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
 
 $$
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
@@ -487,7 +487,7 @@ And visualize them as follows:
 
 Which shows the new three-community partition.
 
-Now let's say we wanted to check if we should *further* split any of these three communities into two. All we need to do is create "dummy" variables for the new three community partition and feed these (and the three community membership vector) to the `split.mult` function, while keeping *the original* modularity matrix [@newman06]:
+Now let's say we wanted to check if we should *further* split any of these three communities into two. All we need to do is create "dummy" variables for the new three community partition and feed these (and the three community membership vector) to the `split.mult` function, while keeping *the original* modularity matrix [@newman06b]:
 
 ```{r}
    c1 <- rep(0, length(s$v))
@@ -506,7 +506,7 @@ Now let's say we wanted to check if we should *further* split any of these three
 
 Here, the the three modularity split checks failed, as given by the `delta.Q` vector. So no further splits were made (hence the `split` object is an empty list). This tells us that according to this method, three communities is the optimal partition. 
 
-Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06] in a single function called `cluster_leading_eigen`. 
+Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06b] in a single function called `cluster_leading_eigen`. 
 
 To use it, just feed it the relevant graph:
 
