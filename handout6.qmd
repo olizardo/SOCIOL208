@@ -43,11 +43,13 @@ So the formula for the modularity subtracts the observed probability of finding 
 Let's move to a real example. Below are two plots of the advice network from the `law_friends` data from the `networkdata` package. The first shows the nodes colored by status in the firm (partners versus associates) and the other shows the nodes colored by gender. It is pretty evident that there is more community by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.
 
 ```{r}
-#| fig-height: 10
-#| fig-width: 10
+#| label: fig-friends
+#| fig-height: 12
+#| fig-width: 12
 #| fig-subcap:
 #|   - "Law Firm Friendship Network by Status"
 #|   - "Law Firm Friendship Network by Gender"
+#| layout-ncol: 2
 #| echo: false
    library(networkdata)
    library(igraph)
@@ -386,24 +388,7 @@ And for the big check:
    modularity(ug, C)
 ```
 
-Which is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. 
-
-Here's some visual evidence:
-
-```{r}
-#| fig-height: 10
-#| fig-width: 10
-#| fig-subcap:
-#|   - "Law Firm Friendship Network by The Best Binary Partition According to the Modularity"
-   V(ug)$color <- C
-   set.seed(123)
-   plot(ug, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
-```
-
-Which definitely looks like an optimal clustering into two groups based on friendship!
+Which is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is indeed an optimal binary partition of the `law_friends` network.
 
 Of course, you may also remember from the [Status and Prestige](https://olizardo.github.io/SOCIOL208/handout3.html) handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
 
@@ -505,13 +490,24 @@ We now create a new three-community vector from these results:
    s$v
 ```
 
-And visualize them as follows:
+@fig-mod-2 shows the results of the three-community partition.
 
 ```{r}
-#| fig-height: 10
-#| fig-width: 10
+#| label: fig-mod
+#| fig-height: 12
+#| fig-width: 12
 #| fig-subcap:
+#|   - "Law Firm Friendship Network by The Best Binary Partition According to the Modularity"
 #|   - "Law Firm Friendship Network by The Best Three-Community Partition Using the Leading Eigenvector of the Modularity Matrix Approach"
+#| layout-ncol: 2
+#| echo: false
+   V(ug)$color <- C
+   set.seed(123)
+   plot(ug, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+   
    V(ug)$color <- s$v
    set.seed(123)
    plot(ug, 
@@ -519,8 +515,6 @@ And visualize them as follows:
      vertex.label = NA, edge.arrow.size = 0.25,
      vertex.label.dist=1, edge.curved=0.2)
 ```
-
-Which shows the new three-community partition.
 
 Now let's say we wanted to check if we should *further* split any of these three communities into two. All we need to do is create "dummy" variables for the new three community partition and feed these (and the three community membership vector) to the `split.mult` function, while keeping *the original* modularity matrix [@newman06b]:
 

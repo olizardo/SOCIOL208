@@ -1,0 +1,104 @@
+---
+title: "Two Mode Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Two Mode Networks
+
+This handout deals with the network analysis of two-mode networks. Note that in the literature there is some terminological slippage. Two-mode networks are a type of social network. By definition two mode networks can be represented using rectangular adjacency matrices (sometimes called **affiliation matrices** in sociology). 
+
+In this case, two mode networks fall under the general category of "two mode data." Any data set that has information on two types of entities (e.g., people and variables) is two-mode data so two-mode networks are just a special case of two-mode data.
+
+In this sense, a useful distinction, due to Borgatti & Everett, is useful. This is that between the "modes" and the "ways" of a data matrix. So most data matrices are two-ways, in that they have at least two dimensions (e.g., the row and column dimensions). 
+
+But some data matrices (like the usual adjacency matrix in regular network data) only collect information on a single type of entity, so they are "one mode, two ways." But sometimes we have network data on two sets of entities, in which case, we use a data matrix that has "two modes" (sets of nodes) *and* "two ways" (rows and columns).
+
+So what makes a network a "two mode network"? Well, a two mode network is different from a regular network, because it has two sets of nodes not just one. So instead of $V$ now we have $V_1$ and $V_2$. Moreover, the edges in a two-mode network only go from nodes in one set to nodes in the other set; there are no within-node-set edges. 
+
+## Bipartite Graphs
+
+This restriction makes the graph that represents a two mode network a special kind of graph called a **bipartite graph**. A graph is bipartite if the set of nodes in the graph can be divided into two groups, such that relations go from nodes in one set to nodes in the other set. For instance, a dating network with 100% heterosexual people in it will yield a bipartite graph based on the dating relation, with men in one set and women on the other node set. 
+
+So whether or not a graph is bipartite is something you can check for. 
+
+Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fifteen social events [@breiger74]:
+
+```{r}
+   library(igraph)
+   library(networkdata)
+   g <- southern_women
+```
+
+Now we already know this is a bipartite graph. However, let's say you are new and you've never heard of these data. You can check whether the graph you loaded up is bipartite or not by using the `igraph` function `is_bipartite`:
+
+```{r}
+   is_bipartite(g)
+```
+
+Which returns `TRUE` as an answer. Had we loaded up any old non-bipartite graph, the answer would have been:
+
+```{r}
+   g.whatever <- movie_45
+   is_bipartite(g.whatever)
+```
+
+Which makes sense because that's just a regular old graph. 
+
+Note that if we check the bipartite graph object, it looks like any other `igraph` object:
+
+```{r}
+   g
+```
+
+But we can tell that the graph is a two mode network because we have links starting with people with old lady names from the 1930s (which are also the names of a bunch of kids in middle school in 2024) and ending with events that have dates in them. So the (undirected) edge is $person-event$. The graph is undirected because the "membership" or "attendance" relation between a person and an organization/event doesn't have a natural directionality. 
+
+Another way of checking the "bipartiteness" of a graph is by using `igraph`'s `bipartite_mapping` function. Let's see what it does:
+
+```{r}
+   bipartite_mapping(g)
+```
+
+This function takes the candidate bipartite graph as inpute and returns to objects: `res` is just a check to see if the graph is actually bipartite (`TRUE` in this case), `type` is a logical vector of dimensions $N + M$ (where $N$ is the number of nodes in one set and $M$ is the number of nodes in the other set) dividing the nodes into two groups. Here people get `FALSE` and events get `TRUE`. 
+
+We can add this as a node attribute to our graph so that way we know which node is in which set:
+
+```{r}
+   V(g)$type <- bipartite_mapping(g)$type
+```
+
+## The Affiliation Matrix
+
+Once you have your bipartite graph loaded up, you may want (if the graph is small enough) to check out the graph's affiliation matrix. This works just like before, except that now we use the `as_biadjacency_matrix` function:
+
+```{r}
+   A <- as.matrix(as_biadjacency_matrix(g))
+   A
+```
+
+In this matrix we list one set of nodes in the rows and the other set is in the columns. Each cell $a_{ij} = 1$ if row node $i$ is affiliated with column node $j$, otherwise $a_{ij} = 0$.
+
+## Degree
+In a two-mode network, there are two degree sets, each corresponding to one set of nodes. For the people, in this case, their degree (centrality) is just the number of events they attend, and for the groups, it's just the number of people that attend each event. 
+
+We can get each from the affiliation matrix. The degree of the people are just the row sums:
+
+```{r}
+   rowSums(A)
+```
+
+And the degree of the events are just the column sums:
+
+```{r}
+   colSums(A)
+```
+
+
+

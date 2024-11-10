@@ -1,0 +1,81 @@
+---
+title: "An Agglomertive Approach to Community Detection"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+```{r}
+   library(networkdata)
+   library(igraph)
+```
+
+```{r}
+    louvain <- function(x)  {
+      iter <- 0
+      n.moves <- 1
+      Q <- modularity_matrix(x, directed = FALSE)
+      v.names <- V(x)$name
+      while(n.moves != 0) {
+        n.moves <- 0
+        if (iter == 0) {
+          I <- diag(1, vcount(x), vcount(x)) #identity matrix
+          U <- I
+          l <- 1:vcount(x)
+          names(l) <- 1:vcount(x)
+          A <- as.matrix(as_adjacency_matrix(x))
+          vol <- sum(A)
+          }
+        for (i in 1:vcount(x)) {
+          u.k <- U[, l[i]] #i's group
+          N <- unique(as.numeric(neighbors(x, i))) #i's neighbors
+          adj.clus <- l[N] #adjacent clusters
+          e.i <- I[, i]
+          Q.delta <- 0
+          k <- 1
+          for (j in N) { #populating Q.delta vector
+            u.l <- U[, adj.clus[k]] #j's group
+            Q.new <- (t(u.k - e.i) %*% Q %*% (u.k - e.i) + 
+                      t(u.l + e.i) %*% Q %*% (u.l + e.i))
+            Q.old <- (t(u.k) %*% Q %*% u.k) + (t(u.l) %*% Q %*% u.l)
+            Q.delta[k] <- (Q.new - Q.old)/vol
+            k <- k + 1
+            } #end j for loop
+          max.Q <- max(Q.delta)
+          max.Q.pos <- which(Q.delta == max.Q)
+          if (max.Q > 0 & length(max.Q.pos) == 1) {
+            j <- N[max.Q.pos]
+            U[i, l[i]] <- 0
+            U[i, l[j]] <- 1
+            n.moves <- n.moves + 1
+            } #end if
+          if (max.Q > 0 & length(max.Q.pos) > 1) {
+            j <- N[sample(max.Q.pos, 1)]
+            U[i, l[i]] <- 0
+            U[i, l[j]] <- 1
+            n.moves <- n.moves + 1
+            } #end if
+          } # end i loop
+        U <- U[, colSums(U)> 0] #eliminating zero columns
+        for (k in 1:ncol(U)) {
+          l[which(U[, k] == 1)] <- k #re-assigning node labels
+          }
+        #print(l)
+        print(n.moves)
+        A.new <- t(U) %*% A %*% U #coarsening adjacency matrix
+        x <- graph_from_adjacency_matrix(A.new, mode = "undirected")
+        iter <- iter + 1
+        } #end while
+      rownames(U) <- v.names
+      return(list(U, l))
+      } #end function
+  g <- movie_651
+  louvain(g)
+```
+
