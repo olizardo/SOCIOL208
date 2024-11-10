@@ -350,33 +350,81 @@ Thus repackaging our vertex similarity function for the two mode case, we have:
       }
 ```
 
-Using this function to compute the Cosine similarity between people yields:
+Using this function to compute the Jaccard similarity between people yields:
 
 ```{r}
-   C.p <- vertex.sim(g)$C.p
-   rownames(C.p) <- rownames(A)
-   colnames(C.p) <- rownames(A)
-   round(C.p, 2)
+   J.p <- vertex.sim(g)$J.p
+   rownames(J.p) <- rownames(A)
+   colnames(J.p) <- rownames(A)
+   round(J.p, 2)
 ```
 
 And, of course, once we have a similarity we can cluster nodes based on approximate structural equivalence by transforming proximities to distances:
 
 ```{r}
-   D <- as.dist(1- C.p)
-   hc.res <- hclust(D, method = "ward.D2")
-   plot(hc.res)
+   D <- as.dist(1- J.p)
+   hc.p <- hclust(D, method = "ward.D2")
+   plot(hc.p)
 ```
 
 And for events:
 
 ```{r}
-   C.g <- vertex.sim(g)$C.g
-   rownames(C.g) <- colnames(A)
-   colnames(C.g) <- colnames(A)
-   D <- as.dist(1- C.g)
-   hc.res <- hclust(D, method = "ward.D2")
-   plot(hc.res)
+   J.g <- vertex.sim(g)$J.g
+   rownames(J.g) <- colnames(A)
+   colnames(J.g) <- colnames(A)
+   D <- as.dist(1- J.g)
+   hc.g <- hclust(D, method = "ward.D2")
+   plot(hc.g)
 ```
+
+We can then derive cluster memberships for people and groups from the `hclust` object:
+
+```{r}
+   library(dendextend)
+   clus.p <- sort(cutree(hc.p, 4)) #selecting four clusters for people
+   clus.p
+   clus.g <- sort(cutree(hc.g, 3)) #selecting three clusters for groups
+   clus.g
+```
+
+And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 (p. 210, table 5):
+
+```{r}
+   library(ggcorrplot)
+   p <- ggcorrplot(t(A[names(clus.p), names(clus.g)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 7.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
+   p
+```
+
+Which reveals a number of almost complete (one-blocks) and almost null (zero-blocks) in the social structure, with a reduced image matrix that looks like:
+
+```{r}
+   library(kableExtra)
+   IM <- matrix(0, 4, 3)
+   IM[1, ] <- c(0, 1, 0)
+   IM[2, ] <- c(0, 1, 1)
+   IM[3, ] <- c(0, 1, 0)
+   IM[4, ] <- c(1, 1, 0)
+   rownames(IM) <- c("P.Block1", "P.Block2", "P.Block3", "P.Block4")
+   colnames(IM) <- c("E.Block1", "E.Block2", "E.Block3")
+   kbl(IM, format = "html", , align = "c") %>% 
+      column_spec(1, bold = TRUE) %>% 
+      kable_styling(full_width = TRUE,
+                     bootstrap_options = c("hover", "condensed", "responsive"))
+
+```
+
 
 ## Status and Prestige
 
