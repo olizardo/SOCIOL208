@@ -29,7 +29,7 @@ This restriction makes the graph that represents a two mode network a special ki
 
 So whether or not a graph is bipartite is something you can check for. 
 
-Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fifteen social events [@breiger74]:
+Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fourteen social events [@breiger74]:
 
 ```{r}
    library(igraph)
@@ -58,9 +58,13 @@ Note that if we check the bipartite graph object, it looks like any other `igrap
    g
 ```
 
-But we can tell that the graph is a two mode network because we have links starting with people with old lady names from the 1930s (which are also the names of a bunch of kids in middle school in 2024) and ending with events that have dates in them. So the (undirected) edge is $person-event$. The graph is undirected because the "membership" or "attendance" relation between a person and an organization/event doesn't have a natural directionality. 
+But we can tell that the graph is a two mode network because we have links starting with people with old lady names from the 1930s (which are also the names of a bunch of kids in middle school in 2024) and ending with events that have dates in them. So the (undirected) edge is $person-event$. 
 
-Another way of checking the "bipartiteness" of a graph is by using `igraph`'s `bipartite_mapping` function. Let's see what it does:
+The graph is undirected because the "membership" or "attendance" relation between a person and an organization/event doesn't have a natural directionality. 
+
+Another way of checking the "bipartiteness" of a graph in `igraph` is by using the `bipartite_mapping` function. 
+
+Let's see what it does:
 
 ```{r}
    bipartite_mapping(g)
@@ -76,7 +80,9 @@ We can add this as a node attribute to our graph so that way we know which node 
 
 ## The Affiliation Matrix
 
-Once you have your bipartite graph loaded up, you may want (if the graph is small enough) to check out the graph's affiliation matrix. This works just like before, except that now we use the `as_biadjacency_matrix` function:
+Once you have your bipartite graph loaded up, you may want (if the graph is small enough) to check out the graph's affiliation matrix $A$. 
+
+This works just like before, except that now we use the `as_biadjacency_matrix` function:
 
 ```{r}
    A <- as.matrix(as_biadjacency_matrix(g))
@@ -84,6 +90,41 @@ Once you have your bipartite graph loaded up, you may want (if the graph is smal
 ```
 
 In this matrix we list one set of nodes in the rows and the other set is in the columns. Each cell $a_{ij} = 1$ if row node $i$ is affiliated with column node $j$, otherwise $a_{ij} = 0$.
+
+## Basic Two Mode Network Statistics
+
+From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges number.
+
+The number of nodes on the people side $N$ is just the number of rows of $A$:
+
+```{r}
+   nrow(A)
+```
+
+And the number of events/groups $M$ is just the number of columns:
+
+```{r}
+   ncol(A)
+```
+
+Finally, the number of edges $E$ is just the sum of all the entries of $A$:
+
+```{r}
+   sum(A)
+```
+
+As we saw in the case of one-mode networks, one of the most basic network statistics that can be derived from the above quantities is the density. In a two-mode network, this is given by:
+
+$$
+d = \frac{E}{N \times M}
+$$
+
+Where $E$ is the number of edges in the network. In our case we can compute the density as follows:
+
+```{r}
+   d <- sum(A)/(nrow(A) * ncol(A))
+   d
+```
 
 ## Degree
 In a two-mode network, there are two degree sets, each corresponding to one set of nodes. For the people, in this case, their degree (centrality) is just the number of events they attend, and for the groups, it's just the number of people that attend each event. 
@@ -99,6 +140,45 @@ And the degree of the events are just the column sums:
 ```{r}
    colSums(A)
 ```
+
+As @borgatti_everett97 note, if we want *normalized* degree centrality measures, we need to divide by either $M$ (for people) or $N$ (for events). That is, for people we use the number of events as the norm (as this is the theoretical maximum) and for events the number of people.
+
+So for people, normalized degree is:
+
+```{r}
+   round(rowSums(A)/ncol(A), 3)
+```
+
+And for events:
+
+```{r}
+   round(colSums(A)/nrow(A), 3)
+```
+
+## Geodesic Distances
+
+Geodesic distances work a bit different in two mode networks because of the only between-node-sets edges restriction. 
+
+For instance, the minimum geodesic distance $g{ii'}$ between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group. 
+
+In the same way, a group $g$ cannot be at geodesic distance less than three from a person $p*$ who is not a member, because the shortest path is $g-p-g^*-p^*$. 
+
+That is, there has to be some other group $g^*$ shared by a member of the group $p$ and the other person $p^*$ for the shortest path between $g$ and a non-member to obtain, and that involves three links at minimum. 
+
+For if in `igraph` we use the `distances` function on a bipartite graph, we get:
+
+```{r}
+   distances(g)
+```
+
+Which is a square matrix of dimensions $(N + M) \times (N + M)$; that's $(18 + 14) \times (18 + 14) = 32 \times 32$ in our case. 
+
+We can check in `R`:
+
+```{r}
+   dim(distances(g))
+```
+
 
 
 
