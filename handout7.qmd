@@ -70,7 +70,7 @@ Let's see what it does:
    bipartite_mapping(g)
 ```
 
-This function takes the candidate bipartite graph as inpute and returns to objects: `res` is just a check to see if the graph is actually bipartite (`TRUE` in this case), `type` is a logical vector of dimensions $N + M$ (where $N$ is the number of nodes in one set and $M$ is the number of nodes in the other set) dividing the nodes into two groups. Here people get `FALSE` and events get `TRUE`. 
+This function takes the candidate bipartite graph as input and returns to objects: `res` is just a check to see if the graph is actually bipartite (`TRUE` in this case), `type` is a logical vector of dimensions $N + M$ (where $N$ is the number of nodes in one set and $M$ is the number of nodes in the other set) dividing the nodes into two groups. Here people get `FALSE` and events get `TRUE`. 
 
 We can add this as a node attribute to our graph so that way we know which node is in which set:
 
@@ -93,7 +93,7 @@ In this matrix we list one set of nodes in the rows and the other set is in the 
 
 ## Basic Two Mode Network Statistics
 
-From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges number.
+From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges figure.
 
 The number of nodes on the people side $N$ is just the number of rows of $A$:
 
@@ -159,13 +159,13 @@ And for events:
 
 Geodesic distances work a bit different in two mode networks because of the only between-node-sets edges restriction. 
 
-For instance, the minimum geodesic distance $g{ii'}$ between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group. 
+For instance, the minimum geodesic distance $g_{ii'}$ between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group (if the person is a member of the group). 
 
 In the same way, a group $g$ cannot be at geodesic distance less than three from a person $p*$ who is not a member, because the shortest path is $g-p-g^*-p^*$. 
 
-That is, there has to be some other group $g^*$ shared by a member of the group $p$ and the other person $p^*$ for the shortest path between $g$ and a non-member to obtain, and that involves three links at minimum. 
+That is, there has to be some other group $g^*$ shared between a member $p$ of the focal group $g$ and another person $p^*$ for the shortest path between $g$ and the non-member $p^*$ to exist, and that involves three links at minimum: $g-p$, $p-g^*$, and $g^*-p^*$. This means that the links in paths in two-mode networks always alternate between persons and group nodes.
 
-For if in `igraph` we use the `distances` function on a bipartite graph, we get:
+Beyond that geodesic distances work the same way. In `igraph` when we use the `distances` function on a bipartite graph, we get:
 
 ```{r}
    distances(g)
@@ -305,34 +305,44 @@ Thus repackaging our vertex similarity function for the two mode case, we have:
       A <- as.matrix(as_biadjacency_matrix(x))
       M <- nrow(A) #number of persons
       N <- ncol(A) #number of groups
-      p.names <- rownames(A)
-      g.names <- colnames(A)
       p.d <- rowSums(A) #person degrees
       g.d <- colSums(A) #group degrees
       P <- A %*% t(A) #person projection
       G <- t(A) %*% A #group projection
-      J.p <- matrix(0, M, M)
-      J.g <- matrix(0, N, N)
-      C.p <- matrix(0, M, M)
-      C.g <- matrix(0, N, N)
-      D.p <- matrix(0, M, M)
-      D.g <- matrix(0, N, N)
-      L.p <- matrix(0, M, M)
-      L.g <- matrix(0, N, N)
+      J.p <- diag(1, M, M)
+      J.g <- diag(1, N, N)
+      C.p <- diag(1, M, M)
+      C.g <- diag(1, N, N)
+      D.p <- diag(1, M, M)
+      D.g <- diag(1, N, N)
+      L.p <- diag(1, M, M)
+      L.g <- diag(1, N, N)
       for (i in 1:M) {
          for (j in 1:M) {
-            J.p[i,j] <- P[i,j]/(P[i,j] + p.d[i] + p.d[j])
-            C.p[i,j] <- P[i,j]/(sqrt(p.d[i] * p.d[j]))
-            D.p[i,j] <- (2*P[i,j])/(2*P[i,j] + p.d[i] + p.d[j])
-            L.p[i,j] <- P[i,j]/(p.d[i] * p.d[j])
+            if (i < j) {
+               J.p[i,j] <- P[i,j]/(P[i,j] + p.d[i] + p.d[j])
+               J.p[j,i] <- P[i,j]/(P[i,j] + p.d[i] + p.d[j])
+               C.p[i,j] <- P[i,j]/(sqrt(p.d[i] * p.d[j]))
+               C.p[j,i] <- P[i,j]/(sqrt(p.d[i] * p.d[j]))
+               D.p[i,j] <- (2*P[i,j])/(2*P[i,j] + p.d[i] + p.d[j])
+               D.p[j,i] <- (2*P[i,j])/(2*P[i,j] + p.d[i] + p.d[j])
+               L.p[i,j] <- P[i,j]/(p.d[i] * p.d[j])
+               L.p[j,i] <- P[i,j]/(p.d[i] * p.d[j])
+               }
             }
          }
       for (i in 1:N) {
          for (j in 1:N) {
-            J.g[i,j] <- G[i,j]/(G[i,j] + g.d[i] + g.d[j])
-            C.g[i,j] <- G[i,j]/(sqrt(g.d[i] * g.d[j]))
-            D.g[i,j] <- (2*G[i,j])/(2*G[i,j] + g.d[i] + g.d[j])
-            L.g[i,j] <- G[i,j]/(g.d[i] * g.d[j])
+            if (i < j) {
+               J.g[i,j] <- G[i,j]/(G[i,j] + g.d[i] + g.d[j])
+               J.g[j,i] <- G[i,j]/(G[i,j] + g.d[i] + g.d[j])
+               C.g[i,j] <- G[i,j]/(sqrt(g.d[i] * g.d[j]))
+               C.g[j,i] <- G[i,j]/(sqrt(g.d[i] * g.d[j]))
+               D.g[i,j] <- (2*G[i,j])/(2*G[i,j] + g.d[i] + g.d[j])
+               D.g[j,i] <- (2*G[i,j])/(2*G[i,j] + g.d[i] + g.d[j])
+               L.g[i,j] <- G[i,j]/(g.d[i] * g.d[j])
+               L.g[j,i] <- G[i,j]/(g.d[i] * g.d[j])
+               }
             }
          }
       return(list(J.p = J.p, C.p = C.p, D.p = D.p, L.p = L.p,
@@ -372,9 +382,11 @@ And for events:
 
 Measures of status and prestige are particularly applicable to two mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
 
-For instance, when it comes to **eigenvector**-style measures, the neat idea that *people are central if they belong to central groups and groups and central if their members are central people* (with people centrality defined by membership in central groups) can be effectively captured by these metrics.
+For instance, when it comes to **eigenvector**-style measures, the neat idea that *people are central if they belong to central groups and groups and central if their members are central people* (with people centrality defined by membership in central groups) can be effectively captured by these metrics [@bonacich91].
 
-Thus if $x$ are the status scores for people, and $y$ are the status scores for groups, then the $x$ scores should be given by the sum of the $y$ scores of the groups each person belongs, and the $y$ scores should be given by the sum of the $x$ scores of their members. In mathese:
+Thus if $x$ are the status scores for people, and $y$ are the status scores for groups, then the $x$ scores should be given by the sum of the $y$ scores of the groups each person belongs, and the $y$ scores should be given by the sum of the $x$ scores of their members. 
+
+In mathese:
 
 $$
 x = \mathbf{A}^Ty
@@ -384,7 +396,7 @@ $$
 y = \mathbf{A}x
 $$
 
-Once again, producing another instance of a cat chasing its own tail (we need to $y$ to figure out $x$ and we need to know $x$ to figure out $y$). 
+Once again, producing another instance of a cat chasing its own tail (we need to know the values of $y$ to figure out the values of $x$ and we need to know the values of $x$ to figure out the values of $y$). 
 
 How do we proceed? Well, let's bring back our trusty status distribution game:
 
@@ -456,7 +468,7 @@ In the Southern Women data the dual centralities are:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-We can of course play our status game with degree-normalized versions of the affiliation matrix (a.k.a.) PageRank.
+We can of course play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).
 
 First we need to create **row stochastic** versions of $\mathbf{A}$ and $\mathbf{A}^T$. Recall that a matrix is row stochastic if their rows sum to one. 
 

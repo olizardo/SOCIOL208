@@ -412,7 +412,7 @@ $type
      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE      TRUE </code></pre>
 </div>
 </div>
-<p>This function takes the candidate bipartite graph as inpute and returns to objects: <code>res</code> is just a check to see if the graph is actually bipartite (<code>TRUE</code> in this case), <code>type</code> is a logical vector of dimensions <span class="math inline">\(N + M\)</span> (where <span class="math inline">\(N\)</span> is the number of nodes in one set and <span class="math inline">\(M\)</span> is the number of nodes in the other set) dividing the nodes into two groups. Here people get <code>FALSE</code> and events get <code>TRUE</code>.</p>
+<p>This function takes the candidate bipartite graph as input and returns to objects: <code>res</code> is just a check to see if the graph is actually bipartite (<code>TRUE</code> in this case), <code>type</code> is a logical vector of dimensions <span class="math inline">\(N + M\)</span> (where <span class="math inline">\(N\)</span> is the number of nodes in one set and <span class="math inline">\(M\)</span> is the number of nodes in the other set) dividing the nodes into two groups. Here people get <code>FALSE</code> and events get <code>TRUE</code>.</p>
 <p>We can add this as a node attribute to our graph so that way we know which node is in which set:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>type <span class="ot">&lt;-</span> <span class="fu">bipartite_mapping</span>(g)<span class="sc">$</span>type</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -451,7 +451,7 @@ FLORA        0   0    0    0    0    0    0    0   1    0    1   0     0   0</co
 </section>
 <section id="basic-two-mode-network-statistics" class="level2">
 <h2 class="anchored" data-anchor-id="basic-two-mode-network-statistics">Basic Two Mode Network Statistics</h2>
-<p>From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges number.</p>
+<p>From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges figure.</p>
 <p>The number of nodes on the people side <span class="math inline">\(N\)</span> is just the number of rows of <span class="math inline">\(A\)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">nrow</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -538,10 +538,10 @@ d = \frac{E}{N \times M}
 <section id="geodesic-distances" class="level2">
 <h2 class="anchored" data-anchor-id="geodesic-distances">Geodesic Distances</h2>
 <p>Geodesic distances work a bit different in two mode networks because of the only between-node-sets edges restriction.</p>
-<p>For instance, the minimum geodesic distance <span class="math inline">\(g{ii'}\)</span> between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group.</p>
+<p>For instance, the minimum geodesic distance <span class="math inline">\(g_{ii'}\)</span> between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group (if the person is a member of the group).</p>
 <p>In the same way, a group <span class="math inline">\(g\)</span> cannot be at geodesic distance less than three from a person <span class="math inline">\(p*\)</span> who is not a member, because the shortest path is <span class="math inline">\(g-p-g^*-p^*\)</span>.</p>
-<p>That is, there has to be some other group <span class="math inline">\(g^*\)</span> shared by a member of the group <span class="math inline">\(p\)</span> and the other person <span class="math inline">\(p^*\)</span> for the shortest path between <span class="math inline">\(g\)</span> and a non-member to obtain, and that involves three links at minimum.</p>
-<p>For if in <code>igraph</code> we use the <code>distances</code> function on a bipartite graph, we get:</p>
+<p>That is, there has to be some other group <span class="math inline">\(g^*\)</span> shared between a member <span class="math inline">\(p\)</span> of the focal group <span class="math inline">\(g\)</span> and another person <span class="math inline">\(p^*\)</span> for the shortest path between <span class="math inline">\(g\)</span> and the non-member <span class="math inline">\(p^*\)</span> to exist, and that involves three links at minimum: <span class="math inline">\(g-p\)</span>, <span class="math inline">\(p-g^*\)</span>, and <span class="math inline">\(g^*-p^*\)</span>. This means that the links in paths in two-mode networks always alternate between persons and group nodes.</p>
+<p>Beyond that geodesic distances work the same way. In <code>igraph</code> when we use the <code>distances</code> function on a bipartite graph, we get:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   <span class="fu">distances</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -832,39 +832,49 @@ FLORA         1     1         1      1    2     1       1      2     2</code></p
 <span id="cb45-2"><a href="#cb45-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(x))</span>
 <span id="cb45-3"><a href="#cb45-3"></a>      M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co">#number of persons</span></span>
 <span id="cb45-4"><a href="#cb45-4"></a>      N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A) <span class="co">#number of groups</span></span>
-<span id="cb45-5"><a href="#cb45-5"></a>      p.names <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb45-6"><a href="#cb45-6"></a>      g.names <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb45-7"><a href="#cb45-7"></a>      p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#person degrees</span></span>
-<span id="cb45-8"><a href="#cb45-8"></a>      g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co">#group degrees</span></span>
-<span id="cb45-9"><a href="#cb45-9"></a>      P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co">#person projection</span></span>
-<span id="cb45-10"><a href="#cb45-10"></a>      G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co">#group projection</span></span>
-<span id="cb45-11"><a href="#cb45-11"></a>      J.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, M, M)</span>
-<span id="cb45-12"><a href="#cb45-12"></a>      J.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, N, N)</span>
-<span id="cb45-13"><a href="#cb45-13"></a>      C.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, M, M)</span>
-<span id="cb45-14"><a href="#cb45-14"></a>      C.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, N, N)</span>
-<span id="cb45-15"><a href="#cb45-15"></a>      D.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, M, M)</span>
-<span id="cb45-16"><a href="#cb45-16"></a>      D.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, N, N)</span>
-<span id="cb45-17"><a href="#cb45-17"></a>      L.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, M, M)</span>
-<span id="cb45-18"><a href="#cb45-18"></a>      L.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, N, N)</span>
-<span id="cb45-19"><a href="#cb45-19"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb45-20"><a href="#cb45-20"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb45-21"><a href="#cb45-21"></a>            J.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb45-22"><a href="#cb45-22"></a>            C.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
-<span id="cb45-23"><a href="#cb45-23"></a>            D.p[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb45-24"><a href="#cb45-24"></a>            L.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
-<span id="cb45-25"><a href="#cb45-25"></a>            }</span>
-<span id="cb45-26"><a href="#cb45-26"></a>         }</span>
-<span id="cb45-27"><a href="#cb45-27"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb45-28"><a href="#cb45-28"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb45-29"><a href="#cb45-29"></a>            J.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb45-30"><a href="#cb45-30"></a>            C.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
-<span id="cb45-31"><a href="#cb45-31"></a>            D.g[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb45-32"><a href="#cb45-32"></a>            L.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
-<span id="cb45-33"><a href="#cb45-33"></a>            }</span>
-<span id="cb45-34"><a href="#cb45-34"></a>         }</span>
-<span id="cb45-35"><a href="#cb45-35"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
-<span id="cb45-36"><a href="#cb45-36"></a>                  <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g))</span>
-<span id="cb45-37"><a href="#cb45-37"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb45-5"><a href="#cb45-5"></a>      p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#person degrees</span></span>
+<span id="cb45-6"><a href="#cb45-6"></a>      g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co">#group degrees</span></span>
+<span id="cb45-7"><a href="#cb45-7"></a>      P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co">#person projection</span></span>
+<span id="cb45-8"><a href="#cb45-8"></a>      G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co">#group projection</span></span>
+<span id="cb45-9"><a href="#cb45-9"></a>      J.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb45-10"><a href="#cb45-10"></a>      J.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb45-11"><a href="#cb45-11"></a>      C.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb45-12"><a href="#cb45-12"></a>      C.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb45-13"><a href="#cb45-13"></a>      D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb45-14"><a href="#cb45-14"></a>      D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb45-15"><a href="#cb45-15"></a>      L.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb45-16"><a href="#cb45-16"></a>      L.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb45-17"><a href="#cb45-17"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb45-18"><a href="#cb45-18"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb45-19"><a href="#cb45-19"></a>            <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb45-20"><a href="#cb45-20"></a>               J.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb45-21"><a href="#cb45-21"></a>               J.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb45-22"><a href="#cb45-22"></a>               C.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb45-23"><a href="#cb45-23"></a>               C.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb45-24"><a href="#cb45-24"></a>               D.p[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb45-25"><a href="#cb45-25"></a>               D.p[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb45-26"><a href="#cb45-26"></a>               L.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb45-27"><a href="#cb45-27"></a>               L.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb45-28"><a href="#cb45-28"></a>               }</span>
+<span id="cb45-29"><a href="#cb45-29"></a>            }</span>
+<span id="cb45-30"><a href="#cb45-30"></a>         }</span>
+<span id="cb45-31"><a href="#cb45-31"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb45-32"><a href="#cb45-32"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb45-33"><a href="#cb45-33"></a>            <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb45-34"><a href="#cb45-34"></a>               J.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb45-35"><a href="#cb45-35"></a>               J.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb45-36"><a href="#cb45-36"></a>               C.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb45-37"><a href="#cb45-37"></a>               C.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb45-38"><a href="#cb45-38"></a>               D.g[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb45-39"><a href="#cb45-39"></a>               D.g[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb45-40"><a href="#cb45-40"></a>               L.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb45-41"><a href="#cb45-41"></a>               L.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb45-42"><a href="#cb45-42"></a>               }</span>
+<span id="cb45-43"><a href="#cb45-43"></a>            }</span>
+<span id="cb45-44"><a href="#cb45-44"></a>         }</span>
+<span id="cb45-45"><a href="#cb45-45"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
+<span id="cb45-46"><a href="#cb45-46"></a>                  <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g))</span>
+<span id="cb45-47"><a href="#cb45-47"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Using this function to compute the Cosine similarity between people yields:</p>
 <div class="cell">
@@ -938,15 +948,16 @@ FLORA      0.35  0.35      0.29   0.27 0.50  0.32    0.50   1.00  1.00</code></p
 <section id="status-and-prestige" class="level2">
 <h2 class="anchored" data-anchor-id="status-and-prestige">Status and Prestige</h2>
 <p>Measures of status and prestige are particularly applicable to two mode networks. The reason is that the <em>reflective</em> principle behind these measures interacts nicely with the <em>duality</em> principle.</p>
-<p>For instance, when it comes to <strong>eigenvector</strong>-style measures, the neat idea that <em>people are central if they belong to central groups and groups and central if their members are central people</em> (with people centrality defined by membership in central groups) can be effectively captured by these metrics.</p>
-<p>Thus if <span class="math inline">\(x\)</span> are the status scores for people, and <span class="math inline">\(y\)</span> are the status scores for groups, then the <span class="math inline">\(x\)</span> scores should be given by the sum of the <span class="math inline">\(y\)</span> scores of the groups each person belongs, and the <span class="math inline">\(y\)</span> scores should be given by the sum of the <span class="math inline">\(x\)</span> scores of their members. In mathese:</p>
+<p>For instance, when it comes to <strong>eigenvector</strong>-style measures, the neat idea that <em>people are central if they belong to central groups and groups and central if their members are central people</em> (with people centrality defined by membership in central groups) can be effectively captured by these metrics <span class="citation" data-cites="bonacich91">(<a href="#ref-bonacich91" role="doc-biblioref">Bonacich 1991</a>)</span>.</p>
+<p>Thus if <span class="math inline">\(x\)</span> are the status scores for people, and <span class="math inline">\(y\)</span> are the status scores for groups, then the <span class="math inline">\(x\)</span> scores should be given by the sum of the <span class="math inline">\(y\)</span> scores of the groups each person belongs, and the <span class="math inline">\(y\)</span> scores should be given by the sum of the <span class="math inline">\(x\)</span> scores of their members.</p>
+<p>In mathese:</p>
 <p><span class="math display">\[
 x = \mathbf{A}^Ty
 \]</span></p>
 <p><span class="math display">\[
 y = \mathbf{A}x
 \]</span></p>
-<p>Once again, producing another instance of a cat chasing its own tail (we need to <span class="math inline">\(y\)</span> to figure out <span class="math inline">\(x\)</span> and we need to know <span class="math inline">\(x\)</span> to figure out <span class="math inline">\(y\)</span>).</p>
+<p>Once again, producing another instance of a cat chasing its own tail (we need to know the values of <span class="math inline">\(y\)</span> to figure out the values of <span class="math inline">\(x\)</span> and we need to know the values of <span class="math inline">\(x\)</span> to figure out the values of <span class="math inline">\(y\)</span>).</p>
 <p>How do we proceed? Well, let’s bring back our trusty status distribution game:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(A) {</span>
@@ -1166,7 +1177,7 @@ y = \mathbf{A}x
 
 </div>
 </div>
-<p>We can of course play our status game with degree-normalized versions of the affiliation matrix (a.k.a.) PageRank.</p>
+<p>We can of course play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).</p>
 <p>First we need to create <strong>row stochastic</strong> versions of <span class="math inline">\(\mathbf{A}\)</span> and <span class="math inline">\(\mathbf{A}^T\)</span>. Recall that a matrix is row stochastic if their rows sum to one.</p>
 <p>We can do this as follows:</p>
 <div class="cell">
