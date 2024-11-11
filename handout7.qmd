@@ -426,7 +426,7 @@ Which reveals a number of almost complete (one-blocks) and almost null (zero-blo
 ```
 
 
-## Status and Prestige
+## Eigenvector Status
 
 Measures of status and prestige are particularly applicable to two mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
 
@@ -473,6 +473,7 @@ For people this would be:
 
 ```{r}
    p.s <- status1(P)
+   names(p.s) <- rownames(P)
    round(p.s, 3)
 ```
 
@@ -480,6 +481,7 @@ And for groups:
 
 ```{r}
    g.s <- status1(G)
+   names(g.s) <- colnames(A)
    round(g.s, 3)
 ```
 
@@ -516,7 +518,30 @@ In the Southern Women data the dual centralities are:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-We can of course play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).
+## Core and Periphery
+
+As noted by @borgatti_everett00, the Bonacich Eigenvector scores are also a model of a core-periphery partition in the two mode network. This is already evident in the *definition* of the dual centralities: Popular actors (who participate in many events) make the events they participate in more central, and central events (that have many actors) become central when they attract the popular kids. 
+
+So the Eigenvector scores can be used to partition any two mode network into a core (popular kids, popular events) and a periphery (less popular kids, less popular events). All we need to do to see the partition is to re-order the rows and columns of the affiliation matrix according to the value of the magnitude of the Eigenvector scores for people and events:
+
+```{r}
+   p <- ggcorrplot(t(A[order(p.s), order(g.s)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 10.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 8.5, linewidth = 2, color = "blue")
+   p
+```
+
+Here the upper-right block reveals the core actors and events in the network; namely, the events almost universally attended by the most active participants [@everett_borgatti13, table 2].
+
+
+## PageRankStatus
+We can, of course, also play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).
 
 First we need to create **row stochastic** versions of $\mathbf{A}$ and $\mathbf{A}^T$. Recall that a matrix is row stochastic if their rows sum to one. 
 
@@ -583,4 +608,19 @@ Which leads to the following PageRank centrality rankings for persons and groups
 
 The PageRank two-mode scores lead to a different ranking of the nodes, because now people are central if they belong to *selective* (not just large) groups and groups are central if their members are *discerning* (not just very active) people. 
 
+Just like before we can use the PageRank scores to reveal a pattern in the affiliation matrix:
+
+```{r}
+   p <- ggcorrplot(t(A[order(pr.p), order(-pr.g)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_abline(intercept = 0, slope = 1.26, linewidth = 2, color = "blue")
+   p
+```
+
+In the PageRank status score setup, events are ordered (from left to right) by popularity (most popular events on the left) and actors are ordered by activity (from top to bottom; active actors on top), creating a purely triangular pattern. 
 
