@@ -386,6 +386,8 @@ Using this function to compute the Jaccard similarity between people yields:
    round(J.p, 2)
 ```
 
+## Structural Equivalence
+
 And, of course, once we have a similarity we can cluster nodes based on approximate structural equivalence by transforming proximities to distances:
 
 ```{r}
@@ -415,7 +417,7 @@ We can then derive cluster memberships for people and groups from the `hclust` o
    clus.g
 ```
 
-And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 (p. 210, table 5):
+And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 [p. 210, table 5]:
 
 ```{r}
    library(ggcorrplot)
@@ -515,11 +517,11 @@ And for groups:
 Lo and behold, these are the status scores we seek. It turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices [@bonacich91]:
 
 $$
-\\lambda x = (\mathbf{A}\mathbf{A}^T)x
+\lambda x = (\mathbf{A}\mathbf{A}^T)x
 $$
 
 $$
-\\lambda y = (\mathbf{A}^T\mathbf{A})y
+\lambda y = (\mathbf{A}^T\mathbf{A})y
 $$
 
 Neat! The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones with the most central (highest activity) members. 
@@ -567,7 +569,7 @@ So the Eigenvector scores can be used to partition any two mode network into a c
 Here the upper-right block reveals the core actors and events in the network; namely, the events almost universally attended by the most active participants [@everett_borgatti13, table 2].
 
 
-## PageRank Status for Two Mode Networks
+## PageRank Status 
 We can, of course, also play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).
 
 First we need to create **row stochastic** versions of $\mathbf{A}$ and $\mathbf{A}^T$. Recall that a matrix is row stochastic if their rows sum to one. 
@@ -648,7 +650,7 @@ Let's peek inside one of these matrices:
    round(P.pp[1:10, 1:10], 2)
 ```
 
-What are these numbers? Well, they can be interpreted as *probabilities* that a random walker would start at the row node and, following any $\{person-group-person'-group'-person''-group''(\ldots)person^X\}$ sequence of hops will end pass through the column person. Thus, higher values indicate an *affinity* or *proximity* between the people (and the groups in the corresponding matrix).
+What are these numbers? Well, they can be interpreted as *probabilities* that a random walker starting at the row node and, following any sequence of $person-group-person'-group'$ hops, will reach the column person. Thus, higher values indicate an *affinity* or *proximity* between the people (and the groups in the corresponding matrix).
 
 We can now play the PageRank status game on the transpose of $\mathbf{P}_{PP}$ and $\mathbf{P}_{GG}$, just like we did in the one-mode case, to get the scores we want:
 
@@ -693,13 +695,13 @@ Just like before we can use the PageRank scores to reveal a pattern in the affil
    p
 ```
 
-In the PageRank status score setup, events are ordered (from left to right) by popularity (most popular events on the left) and actors are ordered by activity (from top to bottom; active actors on top), creating a purely triangular pattern. 
+In the PageRank status score setup, events are ordered (from left to right) by popularity (most popular events on the left) and actors are ordered by activity (from top to bottom; active actors on top), creating a purely triangular pattern. Core actors and core events are in the upper-right block.
 
 ## Correspondence Analysis
 
 **Correspondence Analysis** (CA) a relatively simple way to analyze and visualize two-mode data. In fact, we have already computed most of what we need to perform a CA of the two-mode network when figuring out the PageRank Status scores. However, there are a few additional computational details to discuss. 
 
-First, let us review the idea of an **eigendecomposition** of a square matrix. Let's say we have the following matrix $\mathbf{B}$:
+First, let us review the idea of an **eigendecomposition** of a square matrix. Let's say we have the following matrix $\mathbf{B}$ of dimensions $3 \times 3$:
 
 ```{r}
    set.seed(567)
@@ -707,7 +709,7 @@ First, let us review the idea of an **eigendecomposition** of a square matrix. L
    B
 ```
 
-Most matrices like this can be decomposed into two other matrices $\mathbf{U}$ and $\mathbf{\lambda}$, such that the following equation is true:
+Most matrices like this can be decomposed into two other matrices $\mathbf{U}$ and $\mathbf{\lambda}$, such that the following matrix multiplication equation is true:
 
 $$
 \mathbf{B} = \mathbf{U}\mathbf{\lambda}\mathbf{U}^{-1}
@@ -717,7 +719,7 @@ Both $\mathbf{U}$ and $\mathbf{\lambda}$ are of the same dimensions as the origi
 
 The column values of $\mathbf{U}$ are called the **eigenvectors** of $\mathbf{B}$ and the diagonal values of $\mathbf{\lambda}$ are called the **eigenvalues** of $\mathbf{B}$.
 
-In `R` you can find the values that yield the eigendecomposition of any matrix (if one exists) using the function `eigen`. 
+In `R` you can find the values that yield the eigendecomposition of any square matrix (if one exists) using the function `eigen`. 
 
 So in our case this would be:
 
@@ -739,11 +741,13 @@ We can check that these two elements can help us reconstruct the original matrix
 
 Which are indeed the original values of $\mathbf{B}$!
 
-Now, the idea is that we can perform this eigendecomposition with any matrix, including a network adjacency matrix or a proximity matrix derived from it like the ones we used to calculate the PageRank Status scores earlier. In fact, we have already done that in part, because the status scores compute the first column (leading eigenvector) of the $\mathbf{U}$ matrix for any proximity or adjacency matrix you feed into it.
+Now, the idea is that we can perform this eigendecomposition with any matrix, including a network adjacency matrix or a proximity matrix derived from it like the ones we used to calculate the PageRank Status scores earlier. 
+
+In fact, we have already done that in part many times before, because the status scores compute the first column (leading eigenvector) of the $\mathbf{U}$ matrix for any proximity or adjacency matrix you feed into it.
 
 The key point is that once you have the eigendecomposition of the matrix, and the full set of eigenvectors stored in $\mathbf{U}$, you can always choose the first few columns of $\mathbf{U}$, which gives us the best *low dimensional approximation* of the original matrix. 
 
-CA is based on this principle, and it works with the eigendecomposition of the matrices $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ as we defined them earlier:
+CA is based on this principle, and it works with the eigendecomposition of the square matrices $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ as we defined them earlier:
 
 ```{r}
    CA.p <- eigen(P.pp)
@@ -766,7 +770,7 @@ So the two matrices have identical eigenvalues, and the first one is 1.0. Let's 
    round(CA.g$vectors[, 1:3], 2)
 ```
 
-So this is interesting. The first eigenvector of the decomposition of both $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ is just the same number for each person and group. Note that this is the eigenvector that is associated with the first eigenvalue which happens to be $\lambda = 1.0$.
+So this is interesting. The first eigenvector of the decomposition of both $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ is just the same number for each person and group. Note that this is the eigenvector that is associated with the first eigenvalue which happens to be $\lambda_1 = 1.0$.
 
 So it looks like the first eigenvector is a pretty useless quantity (a constant) so we can discard it, keeping all the other ones. Now the old second eigenvector is the first, the old third is the second, and so on:
 
@@ -854,6 +858,8 @@ The three events in the middle $\{3/15, 9/16, 4/8\}$ don't seem to differentiate
 However, the events to the left (with clusters of participants in the lower-left) and to the right of the x-axis (with clusters of participants in the upper-right) are attended preferentially by distinct groups of participants; they thus appear at the extreme left and right positions of the first dimension of the CA diagram. 
 
 In the same way, the four people in the middle $\{Ruth, Dorothy, Pearl, Verne\}$ only attend the undifferentiated, popular events, so that means that they are not strongly associated with either cluster of actors (and thus appear near the origin in the CA diagram). The top and bottom participants, by contrast, appear to the extreme right and left in the CA diagram, indicating a strong association with the underlying dimensions.
+
+Note the similarity between this blocking and that obtained from the structural equivalence analysis.
 
 
 
