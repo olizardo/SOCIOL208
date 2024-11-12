@@ -15,11 +15,13 @@ In the [last handout](https://olizardo.github.io/SOCIOL208/handout2.html), we sa
 
 ## Networks as Prisms
 
-There is, however, another strong and well-motivated intuition as to what it means to be "well-placed" in a network. Here the ties in the network are seen less as "pipes" that transmit stuff and more like "prisms" that *reflect* on you [@podolny01]. Another way of thinking about this second version of well-placedness is that what is transmitted through the network is the *network itself*, or more accurately, the *importance*, *status*, and *prestige* of the people you are connected to.
+There is, however, another strong and well-motivated intuition as to what it means to be "well-placed" in a network. Here the ties in the network are seen less as "pipes" that transmit stuff and more like "prisms" that *reflect* on you [@podolny01]. 
+
+One way to think about this second version of well-placedness is that what is transmitted through the network is the *network itself*, or more accurately, the *importance*, *status*, and *prestige* of the people you are connected to, preferably flowing *from* them (high status people) to *you*.
 
 Under this interpretation, actors get status and prestige in the network from being connected to prestigious and high status others. Those others, in turn, get their status from being connected to high status others, and so *ad infinitum*. 
 
-One way of quantifying this idea goes like this. If $\mathbf{x}$ is a vector containing the desired status scores, then the status of each actor should be equal to:
+One way of quantifying this idea goes like this. If $\mathbf{x}$ is a vector containing the desired status scores, then the status of actor $i$ should be equal to:
 
 $$
    x_i = \sum_{j} a_{ij}x_j
@@ -43,17 +45,19 @@ $$
    \lambda\mathbf{x} = A\mathbf{x}
 $$
 
-Where $\lambda$ is just a plain old number (a scalar). Once again conditional of the aforementioned mild conditions being met, we can search for a value $\lambda$ while also filling up the $\mathbf{x}$ vector with another set of values until we make the above equality true. 
+Where $\lambda$ is just a plain old number (a scalar). Once again conditional of the aforementioned mild conditions being met, we can iteratively search for a value $\lambda$, fix it, then fill up the $\mathbf{x}$ vector with another set of values, fix those, search for a new $\lambda$, and continue until we have values of $\lambda$ and $\mathbf{x}$ that make the above equality true. 
 
 When we do that successfully, we say that the value of $\lambda$ we hit upon is an **eigenvalue** of the matrix $\mathbf{A}$ and the values of the vector $\mathbf{x}$ we came up with are an **eigenvector** of the same matrix (technically in the above equation a right eigenvector). 
 
 Eigenvalues and eigenvectors, like Don Quixote and Sancho Panza, come in pairs, because you need a unique combination of both to solve the equation. Typically, a given matrix (like an adjacency matrix) will have multiple $\lambda/\mathbf{x}$ pairs that will solve the equation. Together the whole set $\lambda/\mathbf{x}$ pairs that make the equation true are the **eigenvalues** and **eigenvectors** of the matrix. 
 
+## Eigenvalues, Eigenvectors, Oh My!
+
 Note that all of this obscure talk about eigenvalues and eigenvectors is just matrix math stuff. It has nothing to do with networks and social structure.
 
 In contrast, because the big three centrality measures have a direct foundation in graph theory, and graph theory is an isomorphic **model** of social structures (points map to actor and lines map to relations) the "math" we do with graph theory is **directly** meaningful as a model of networks (the counts of the number of edges incident to a node is the count of other actors they someone is directly connected to). 
 
-Eigenvalues and eigenvectors are not a model of social structure in the way graph theory is (their first scientific application was in Physics). They are just a mechanical math fix to a circular equation problem. 
+Eigenvalues and eigenvectors are not a model of social structure in the way graph theory is (their first scientific application was in Chemistry and Physics). They are just a mechanical math fix to a circular equation problem. 
 
 This is why it's a mistake to introduce network measures of status and prestige by jumping directly to the machinery of linear algebra (or worse talk about the idea of **eigenvector centrality** which means nothing to most people). 
 
@@ -72,7 +76,7 @@ We will use a data set collected by David Krackhardt on the friendships of 21 ma
 ```{r}
    library(networkdata)
    library(igraph)
-   g <- as.undirected(ht_friends)
+   g <- as.undirected(ht_friends, mode = "collapse")
 ```
 
 This is what the network looks like:
@@ -124,7 +128,7 @@ Lines 1-5 initialize various quantities, most importantly the initial status vec
 
 Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 0.0001$) as checked in line 10. 
 
-Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely. In base `R`, the `type = "E"` normalization implements the **euclidean vector norm**, by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
+Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
 
 And here's the resulting (row) vector of status scores for each node:
 
@@ -145,7 +149,7 @@ What if I told you that this vector is the same as that given by the leading (fi
 Which is of course what is computed by the `eigen_centrality` function in `igraph`:
 
 ```{r}
-   round(eigen_centrality(g)$vector, 3) #igraph automatically normalizes
+   round(eigen_centrality(g)$vector, 3) #igraph automatically normalizes the scores
 ```
 
 So, the "eigenvector centralities" are just the limit scores produced by the status distribution process implemented in the `status1` function!
@@ -163,17 +167,58 @@ When treated as a structural index of connectivity in a graph (aka a centrality 
        caption = "Top Ten Eigenvector Scores.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-
-
 Most other measures of status in networks are constructed using similar principles. What changes is the *model* of how status is distributed in the system. That's why scary and non-intuitive stuff about eigenvectors or whatever is misleading.
 
 Other measures are designed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in **directed graphs**, by for instance, differentiating status derived from outgoing links from that derived from incoming links. 
 
 Let's see some examples of these alternative cases.
 
+## Bonacich Prestige
+
+In a classic paper, Philip @bonacich72 noted the above connection between different ways people conceptualized status and prestige in networks and the leading eigenvector of the adjacency matrix. He then noted that we can extend similar ideas to the directed case.
+
+Here, people get status from *receiving* nominations from high status others (i.e., those who receive a lot of nominations), whose partners also get status from receiving a lot of nominations from high status others, and so forth.
+
+This means that in a directed system of relations, status distribution operates primarily via the **in-degree** of each node, so that if $\mathbf{A}$ is the asymmetric adjacency matrix corresponding to the directed graph, then if we play our status game on the *transpose* of this matrix $\mathbf{A}^T$ we will get the scores we seek [@fouss_etal16, p. 204]. 
+
+Recall that in transposing the matrix of a directed graph, we change it from being a *from/to* matrix (nodes in the rows send ties to nodes in the columns) to a *to/from* matrix: Nodes in the rows *receive* ties from nodes in the columns. So we want to play our status game in this matrix, because we want to rank nodes according to their receipt of ties from high-status others. 
+
+Let's see a real-life example, this time using the *directed* version of the Krackhardt friendship nomination network among the high-tech managers:
+
+```{r}
+   g <- ht_friends
+   A <- as.matrix(as_adjacency_matrix(g))
+   s <- status1(t(A))
+   s <- s/max(s)
+   round(s, 3)
+```
+
+Which are the same scores we would have gotten using the `eigen_centrality` function in `igraph` with the argument `directed` set to `TRUE`:
+
+```{r}
+   round(eigen_centrality(g, directed = TRUE)$vector, 3)
+```
+
+And, like before, we can treat these scores as centrality measures and rank the nodes in the graph according to them. 
+
+Here are the top ten nodes:
+
+```{r}
+#| echo: false
+   nodes <- 1:vcount(g)
+   eig.cent <- round(s, 3)
+   eig.dat <- data.frame(Nodes = nodes, Eigen.Cent = eig.cent, In.Deg.Cent = degree(g, mode = "in"))
+   eig.dat <- eig.dat[order(eig.dat$Eigen.Cent, decreasing = TRUE), ]
+   kbl(eig.dat[1:10, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Ten Eigenvector Scores for a Directed Graph.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+While the to in-degree centrality node (2) gets the top Eigenvector Centrality scores, we see mmanny nodes with equal in-degree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* connections you have. 
+
 ## A Degree-Dependent Model of Status (AKA PageRank)
 
-Note that the model of status distribution implied by the traditional **eigenvector centrality** implies that each node distributes the same amount of status *independently* of the number of connection it has; status just replicates. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
+Note that the model of status distribution implied by the Bonacich's **Eigenvector Centrality** just reviewed implies that each node distributes the same amount of status *independently* of the number of connection it has; status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
 
 This is why the eigenvector idea rewards nodes who are connected to popular others more. Even though everyone begins with a single unit of status, well-connected nodes by degree end up having more of it to distribute. 
 
@@ -181,9 +226,11 @@ But what if status dissipated proportionately to the number of connections one h
 
 In that case, the node with a hundred friend would only have 1/100 of status unites to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to *discerning* others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately. 
 
-How would we implement this model? First, let's create a variation of the adjacency matrix called the $\mathbf{P}$ matrix:
+How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix:
 
 ```{r}
+   g <- as.undirected(ht_friends, mode = "collapse")
+   A <- as.matrix(as_adjacency_matrix(g))
    P <- A/rowSums(A)
 ```
 
@@ -219,7 +266,9 @@ This will come in handy in a second.
 
 The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a large indegree in $\mathbf{P}$. 
 
-Now we can just adapt the the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
+Now we can just adapt the the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. 
+
+So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
 
 ```{r}
    s2 <- round(status1(t(P)), 3)
