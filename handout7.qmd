@@ -515,11 +515,11 @@ And for groups:
 Lo and behold, these are the status scores we seek. It turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices [@bonacich91]:
 
 $$
-\lambda x = (\mathbf{A}\mathbf{A}^T)x
+\\lambda x = (\mathbf{A}\mathbf{A}^T)x
 $$
 
 $$
-\lambda y = (\mathbf{A}^T\mathbf{A})y
+\\lambda y = (\mathbf{A}^T\mathbf{A})y
 $$
 
 Neat! The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones with the most central (highest activity) members. 
@@ -567,12 +567,24 @@ So the Eigenvector scores can be used to partition any two mode network into a c
 Here the upper-right block reveals the core actors and events in the network; namely, the events almost universally attended by the most active participants [@everett_borgatti13, table 2].
 
 
-## PageRankStatus
+## PageRank Status for Two Mode Networks
 We can, of course, also play our status game with degree-normalized versions of the affiliation matrix (a.k.a. PageRank).
 
 First we need to create **row stochastic** versions of $\mathbf{A}$ and $\mathbf{A}^T$. Recall that a matrix is row stochastic if their rows sum to one. 
 
-We can do this as follows:
+For the people, we can do this by taking the original affiliation matrix, and pre-multiplying it by a **diagonal square matrix** $\mathbf{D}_P^{-1}$ of dimensions $M \times M$ containing the *inverse* of the degrees of each person in affiliation network along the diagonals and zeros everywhere else, yielding the row-stochastic matrix $\mathbf{P}_P$ of dimensions $M \times N$:
+
+$$
+\mathbf{P}_P = \mathbf{D}_P^{-1}\mathbf{A}
+$$
+
+And we can do the same with the groups, except that we pre-multiply the *transpose* of the original affiliation matrix by $\mathbf{D}_G^{-1}$ which is an $N \times N$ matrix containing the inverse of the size of each group along the diagonals and zero everywhere else, this yields the matrix $\mathbf{P}_G$ of dimensions $N \times M$:
+
+$$
+\mathbf{P}_G = \mathbf{D}_G^{-1}\mathbf{A}^T
+$$
+
+In `R` can compute $\mathbf{P}_P$ and $\mathbf{P}_G$ as follows:
 
 ```{r}
    D.p <- diag(1/rowSums(A))
@@ -581,8 +593,6 @@ We can do this as follows:
    P.g <- D.g %*% t(A)
 ```
 
-Where `D.p` is a **diagonal matrix** containing the inverse of the people degrees in the diagonal and zeroes everywhere elese and `D.g` contains the inverse of the group degrees in the diagonal and zero everywhere else. 
-
 And we can check that both `P.p` (for people) and `P.g` (groups) are row stochastic:
 
 ```{r}
@@ -590,7 +600,30 @@ And we can check that both `P.p` (for people) and `P.g` (groups) are row stochas
    rowSums(P.g)
 ```
 
-Great! Now, we compute the degree-normalized projections:
+And that they are of the predicted dimensions:
+
+```{r}
+   dim(P.p)
+   dim(P.g)
+```
+
+Great! Now, we can obtain the *degree-normalized projections* for people by multiplying $\mathbf{P}_P$ times $\mathbf{P}_G$:
+
+$$
+\mathbf{P}_{PP} = \mathbf{P}_P\mathbf{P}_G
+$$
+
+Which produces the matrix $\mathbf{P}_{PP}$ a square $M \times M$ matrix containing the *degree-normalized similarities* between each person.
+
+We then do the same for groups:
+
+$$
+\mathbf{P}_{GG} = \mathbf{P}_G\mathbf{P}_P
+$$
+
+Which produces the matrix $\mathbf{P}_{GG}$ a square $N \times N$ matrix containing the *degree-normalized similarities* between each group.
+
+In `R` we obtain these matrices as follows:
 
 ```{r}
    P.pp <- P.p %*% P.g
@@ -604,9 +637,20 @@ Which are still row stochastic--but now square--matrices:
 ```{r}
    rowSums(P.pp)
    rowSums(P.gg)
+   dim(P.pp)
+   dim(P.gg)
 ```
 
-We now can play the PageRank status game on the transpose of each to get the scores we want:
+Let's peek inside one of these matrices:
+
+
+```{r}
+   round(P.pp[1:10, 1:10], 2)
+```
+
+What are these numbers? Well, they can be interpreted as *probabilities* that a random walker would start at the row node and, following any $\{person-group-person'-group'-person''-group''(\ldots)person^X\}$ sequence of hops will end pass through the column person. Thus, higher values indicate an *affinity* or *proximity* between the people (and the groups in the corresponding matrix).
+
+We can now play the PageRank status game on the transpose of $\mathbf{P}_{PP}$ and $\mathbf{P}_{GG}$, just like we did in the one-mode case, to get the scores we want:
 
 ```{r}
    pr.p <- status1(t(P.pp))
@@ -650,4 +694,160 @@ Just like before we can use the PageRank scores to reveal a pattern in the affil
 ```
 
 In the PageRank status score setup, events are ordered (from left to right) by popularity (most popular events on the left) and actors are ordered by activity (from top to bottom; active actors on top), creating a purely triangular pattern. 
+
+## Correspondence Analysis
+
+**Correspondence Analysis** (CA) a relatively simple way to analyze and visualize two-mode data. In fact, we have already computed most of what we need to perform a CA of the two-mode network when figuring out the PageRank Status scores. 
+
+First, let us review the idea of an **eigendecomposition** of a square matrix. Let's say we have the following matrix $\mathbf{B}$:
+
+```{r}
+   set.seed(567)
+   B <- matrix(round(runif(9), 2), nrow = 3, ncol = 3)
+   B
+```
+
+Most matrices like this can be decomposed into two other matrices $\mathbf{U}$ and $\mathbf{\lambda}$, such that the following equation is true:
+
+$$
+\mathbf{B} = \mathbf{U}\mathbf{\lambda}\mathbf{U}^{-1}
+$$
+
+Both $\mathbf{U}$ and $\mathbf{\lambda}$ are of the same dimensions as the original, with $\mathbf{U}$ having numbers in each cell and $\mathbf{\lambda}$ being a matrix with values along the diagonals and zeros everywhere else. 
+
+The column values of $\mathbf{U}$ are called the **eigenvectors** of $\mathbf{B}$ and the diagonal values of $\mathbf{\lambda}$ are called the **eigenvalues** of $\mathbf{B}$.
+
+In `R` you can find the values that yield the eigendecomposition of any matrix (if one exists) using the function `eigen` (along with the `Re` function to return real, not imaginary numbers). So in our case this would be:
+
+```{r}
+   eig.res <- eigen(B)
+   eig.res
+```
+
+The function `eigen` returns a list with two components, one called `values` are the diagonal values of $\mathbf{\lambda}$, and the other one called `vectors` is the eigenvector matrix $\mathbf{U}$.
+
+We can check that these two elements can help us reconstruct the original matrix as follows:
+
+```{r}
+   lambda <- diag(eig.res$values)
+   U <- eig.res$vectors
+   B.rec <- U %*% lambda %*% solve(U)
+   B.rec
+```
+
+Which are indeed the original values of $\mathbf{B}$!
+
+Now, the idea is that we can do this with any matrix, including a network adjacency matrix or a proximity matrix derived from it like the ones we used to calculate the PageRank Status scores earlier. Choosing the first few columns of the result $\mathbf{U}$ then gives us the best low dimensional approximation of the original matrix. 
+
+CA is based on this principle, and it works on the matrices $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ as we defined them earlier:
+
+```{r}
+   CA.p <- eigen(P.pp)
+   CA.g <- eigen(P.gg)
+```
+
+Let's see what we have here:
+
+```{r}
+   round(CA.p$values, 2)
+   round(CA.g$values, 2)
+```
+
+So the two matrices have identical eigenvalues, and the first one is 1.0. Let's check out the first three eigenvectors:
+
+```{r}
+   rownames(CA.p$vectors) <- rownames(A)
+   rownames(CA.g$vectors) <- colnames(A)
+   round(CA.p$vectors[, 1:3], 2)
+   round(CA.g$vectors[, 1:3], 2)
+```
+
+So this is interesting. The first eigenvector of the decomposition of both $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ is just the same number for each person and group. Note that this is the eigenvector that is associated with the first eigenvalue which happens to be $\lambda = 1.0$.
+
+So it looks like the first eigenvector is a pretty useless quantity (a constant) so we can discard it, keeping all the other ones. Now the old second eigenvector is the first, the old third is the second, and so on:
+
+```{r}
+   eig.vec.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
+   eig.vec.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
+```
+
+Note that the rest of the eigenvalues (discarding the 1.0 one) are arranged in descending order:
+
+```{r}
+   round(CA.p$values[2:10], 2)
+```
+
+The magnitude of the eigenvalue tells us how important is the related eigenvector in containing information about the original matrix. So it looks like here, the first two eigenvectors contain a good chunk of the info:
+
+```{r}
+   round(sum(CA.p$values[2:3])/sum(CA.p$values[2:length(CA.p$values)]), 2)
+```
+
+Because the magnitude of the eigenvectors don't have a natural scale, it is common to normalize to have a variance of 1.0. 
+
+We can do this as follows:
+
+```{r}
+   N <- sum(A)
+   d.p <- diag(rowSums(A))
+   d.g <- diag(colSums(A))
+   for (i in 1:nrow(A)-1) {
+      norm <- as.numeric(t(eig.vec.p[, i]) %*% d.p %*% eig.vec.p[, i])
+      eig.vec.p[, i] <- eig.vec.p[, i] * sqrt(N/norm)
+   }
+   for (j in 1:ncol(A)-1) {
+      norm <- as.numeric(t(eig.vec.g[, j]) %*% d.g %*% eig.vec.g[, j])
+      eig.vec.g[, j] <- eig.vec.g[, j] * sqrt(N/norm)
+      }
+```
+
+And we can use the first two normalized eigenvectors to plot the persons and groups in a common space:
+
+```{r}
+   plot.dat <- data.frame(rbind(eig.vec.p[, 1:2], eig.vec.g[, 1:2])) %>% 
+      cbind(type = as.factor(c(rep(1, 18), rep(2, 14))))
+   library(ggplot2)
+   library(ggrepel)
+   p <- ggplot(data = plot.dat, aes(X1, y = X2, color = type))
+   p <- p + geom_hline(aes(yintercept = 0), color = "gray")
+   p <- p + geom_vline(aes(xintercept = 0), color = "gray")
+   p <- p + geom_text_repel(aes(label = rownames(plot.dat)), 
+                            max.overlaps = 20, size = 2.75)
+   p <- p + theme_minimal()
+   p <- p + theme(legend.position = "none",
+                  axis.title = element_text(size = 14),
+                  axis.text = element_text(size = 12))
+   p <- p + scale_color_manual(values = c("red", "blue"))
+   p <- p + labs(x = "First Dimension", y = "Second Dimension")
+   p
+```
+
+In this space, people with the most similar patterns of memberships to the most similar groups are placed close to one another. In the same way, groups with the most similar members are placed closed to one another. 
+
+Also like before, we can use the scores obtained from the CA analysis to re-arrange the rows and columns of the original matrix to reveal blocks of maximally similar persons and events:
+
+```{r}
+   p <- ggcorrplot(t(A[order(eig.vec.p[,1]), order(eig.vec.g[,1])]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 8.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 10.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
+   p
+```
+
+Here the CA analysis seems to have detected to cluster of actors who preferentially attend two distinct clusters of events!
+
+
+
+
+
+
+
+
+
 
