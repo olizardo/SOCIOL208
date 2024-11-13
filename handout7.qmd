@@ -1,5 +1,5 @@
 ---
-title: "Two Mode Networks"
+title: "Two-Mode Networks"
 execute: 
   eval: true
   echo: true
@@ -11,25 +11,27 @@ format:
       code-line-numbers: true
 ---
 
-## Two Mode Networks
+## Two-Mode Networks
 
-This handout deals with the network analysis of two-mode networks. Note that in the literature there is some terminological slippage. Two-mode networks are a type of social network. By definition two mode networks can be represented using rectangular adjacency matrices (sometimes called **affiliation matrices** in sociology). 
+This handout deals with the network analysis of two-mode networks. Note that in the literature there is some terminological slippage. Two-mode networks are a type of social network. By definition two-mode networks can be represented using rectangular adjacency matrices (sometimes called **affiliation matrices** in sociology). 
 
-In this case, two mode networks fall under the general category of "two mode data." Any data set that has information on two types of objects (e.g., people and variables) is two-mode data so two-mode networks are just a special case of two-mode data.
+In this case, two-mode networks fall under the general category of "two-mode data." Any data set that has information on two types of objects (e.g., people and variables) is two-mode data so two-mode networks are just a special case of two-mode data.
 
 In this sense, a useful distinction, due to Borgatti & Everett, is useful. This is that between the "modes" and the "ways" of a data matrix. So most data matrices are two-ways, in that they have at least two dimensions (e.g., the row and column dimensions). 
 
-But some data matrices (like the usual adjacency matrix in regular network data) only collect information on a single type of entity, so they are "one mode, two ways." But sometimes we have network data on two sets of objects, in which case, we use a data matrix that has "two modes" (sets of nodes) *and* "two ways" (rows and columns).
+But some data matrices (like the usual adjacency matrix in regular network data) only collect information on a single type of entity, so they are "one mode, two ways." But sometimes we have network data on two sets of objects, in which case, we use a data matrix that has "two-modes" (sets of nodes) *and* "two ways" (rows and columns).
 
-So what makes a network a "two mode network"? Well, a two mode network is different from a regular network, because it has two sets of nodes not just one. So instead of $V$ now we have $V_1$ and $V_2$. Moreover, the edges in a two-mode network only go from nodes in one set to nodes in the other set; there are no within-node-set edges. 
+So what makes a network a "two-mode network"? Well, a two-mode network is different from a regular network, because it has two sets of nodes not just one. So instead of $V$ now we have $V_1$ and $V_2$. Moreover, the edges in a two-mode network only go from nodes in one set to nodes in the other set; there are no within-node-set edges. 
 
 ## Bipartite Graphs
 
-This restriction makes the graph that represents a two mode network a special kind of graph called a **bipartite graph**. A graph is bipartite if the set of nodes in the graph can be divided into two groups, such that relations go from nodes in one set to nodes in the other set. For instance, a dating network with 100% heterosexual people in it will yield a bipartite graph based on the dating relation, with men in one set and women on the other node set. 
+This restriction makes the graph that represents a two-mode network a special kind of graph called a **bipartite graph**. A graph is bipartite if the set of nodes in the graph can be divided into two groups, such that relations go from nodes in one set to nodes in the other set. 
+
+Note that bipartite graphs can be be used to represent both two-mode and regular one mode networks, as long as the above condition holds. For instance, a dating network with 100% heterosexual people in it will yield a bipartite graph based on the dating relation, with men in one set and women on the other node set, even though it's a one-mode network. 
 
 So whether or not a graph is bipartite is something you can check for. 
 
-Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fourteen social events [@breiger74]:
+Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history: For a classic sampling of such analyses see [here](https://www.csc2.ncsu.edu/faculty/mpsingh/local/Social/f16/wrap/readings/Freeman-social-groups.pdf)) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fourteen social events [@breiger74]:
 
 ```{r}
    library(igraph)
@@ -58,7 +60,7 @@ Note that if we check the bipartite graph object, it looks like any other `igrap
    g
 ```
 
-But we can tell that the graph is a two mode network because we have links starting with people with old lady names from the 1930s (which are also the names of a bunch of kids in middle school in 2024) and ending with events that have dates in them. So the (undirected) edge is $person-event$. 
+But we can tell that the graph is a two-mode network because we have links starting with people with old lady names from the 1930s (which are also the names of a bunch of kids in middle school in 2024) and ending with events that have dates in them. So the (undirected) edge is $person-event$. 
 
 The graph is undirected because the "membership" or "attendance" relation between a person and an organization/event doesn't have a natural directionality. 
 
@@ -70,7 +72,7 @@ Let's see what it does:
    bipartite_mapping(g)
 ```
 
-This function takes the candidate bipartite graph as input and returns to objects: `res` is just a check to see if the graph is actually bipartite (`TRUE` in this case), `type` is a logical vector of dimensions $N + M$ (where $N$ is the number of nodes in one set and $M$ is the number of nodes in the other set) dividing the nodes into two groups. Here people get `FALSE` and events get `TRUE`. 
+This function takes the candidate bipartite graph as input and returns to objects: `res` is just a check to see if the graph is actually bipartite (`TRUE` in this case), `type` is a logical vector of dimensions $M + N$ (where $M$ is the number of nodes in the person set and $N$ is the number of nodes in the event set) dividing the nodes into two groups. Here people get `FALSE` and events get `TRUE`, but this designations are arbitrary (a kind of dummy coding; `FALSE` = 0 and `TRUE` = 1). 
 
 We can add this as a node attribute to our graph so that way we know which node is in which set:
 
@@ -78,7 +80,7 @@ We can add this as a node attribute to our graph so that way we know which node 
    V(g)$type <- bipartite_mapping(g)$type
 ```
 
-## The Affiliation Matrix
+## The Bi-Adjacency (Affiliation) Matrix
 
 Once you have your bipartite graph loaded up, you may want (if the graph is small enough) to check out the graph's affiliation matrix $A$. 
 
@@ -91,9 +93,33 @@ This works just like before, except that now we use the `as_biadjacency_matrix` 
 
 In this matrix we list one set of nodes in the rows and the other set is in the columns. Each cell $a_{ij} = 1$ if row node $i$ is affiliated with column node $j$, otherwise $a_{ij} = 0$.
 
-## Basic Two Mode Network Statistics
+Note that if we were to use the regular `as_adjacency_matrix` function on a bipartite graph, we get a curious version of the adjacency matrix:
 
-From the affiliation (bi-adjacency) matrix we can calculate some basic network statistics. We have two number of nodes to calculate, but only one number of edges figure.
+```{r}
+   B <- as.matrix(as_adjacency_matrix(g))
+   B
+```
+
+This matrix is of dimensions $(M + N) \times (M + N)$, which is $(18 + 14) \times (18 + 14) = 32 \times 32$ in the Southern Women data. 
+
+The adjacency matrix of a bipartite graph necessarily has to big "blocks" of zeroes in it corresponding to where the links between nodes in the same set would be (but aren't because this is a two-mode network). 
+
+So the regular adjacency matrix of a bipartite graph $\mathbf{B}$ has the following form [@fouss_etal16, p. 12]:
+
+$$
+\mathbf{B} = \left[
+\begin{matrix}
+\mathbf{O}_{M \times M} & \mathbf{A}_{M \times N} \\
+\mathbf{A}^T_{N \times M} & \mathbf{O}_{N \times N}
+\end{matrix}
+\right]
+$$
+
+Where $\mathbf{O}$ is just the all zeros matrix of the relevant dimensions, and $\mathbf{A}$ is the bi-adjacency (affiliation) matrix as defined earlier. 
+
+## Basic two-mode Network Statistics
+
+We can calculate some basic network statistics from the affiliation (bi-adjacency) matrix. We have two number of nodes to calculate, but only one quantity for the number of edges.
 
 The number of nodes on the people side $N$ is just the number of rows of $A$:
 
@@ -108,6 +134,38 @@ And the number of events/groups $M$ is just the number of columns:
 ```
 
 Finally, the number of edges $E$ is just the sum of all the entries of $A$:
+
+```{r}
+   sum(A)
+```
+
+Note that if you were to use the `igraph` function `vcount` on the original graph object, you get the wrong answer:
+
+```{r}
+   vcount(g)
+```
+
+That's because `vcount` is working with the $32 \times 32$ regular adjacency matrix, not the bi-adjacency matrix. Here, `vcount` is returning the *total* number of nodes in the graph summing across the two sets, which is $M + N$. 
+
+If you wanted to get the right answer for each set of edges from the regular `igraph` graph object, you could use the `type` node attribute we defined earlier along with the `subgraph` function:
+
+```{r}
+   vcount(subgraph(g, V(g)$type == FALSE))
+```
+
+Which gives us the number of women. For the events we do the same thing:
+
+```{r}
+   vcount(subgraph(g, V(g)$type == TRUE))
+```
+
+However, because there's only one set of edges, `ecount` still gives us the right answer:
+
+```{r}
+   ecount(g)
+```
+
+Which is the same as:
 
 ```{r}
    sum(A)
@@ -137,14 +195,32 @@ So we have:
    min.d.g
 ```
 
+However, note that because there's only one set of undirected edges, the total number of edges incident to each node in each of the two sets is always going to be the same.
+
+That means that there's only one sum of degrees. So the sum of degrees for people:
+
+```{r}
+   sum(rowSums(A))
+```
+
+Is the same as the sum of degrees of events:
+
+```{r}
+   sum(colSums(A))
+```
+
+Note that in a bipartite graph, therefore, the sum of degrees of nodes in each node set is equal to the $|E|$, the number of edges in the graph!
+
 ### Density
-As we saw in the case of one-mode networks, one of the most basic network statistics that can be derived from the above quantities is the density. In a two-mode network, this is given by:
+As we saw in the case of one-mode networks, one of the most basic network statistics that can be derived from the above quantities is the **density** (observed number of edges divided by maximum possible number of edges in the graph). 
+
+In a two-mode network, density is given by:
 
 $$
-d = \frac{E}{N \times M}
+d = \frac{|E|}{N \times M}
 $$
 
-Where $E$ is the number of edges in the network. In our case we can compute the density as follows:
+Where $|E|$ is the number of edges in the network. In our case we can compute the density as follows:
 
 ```{r}
    d <- sum(A)/(nrow(A) * ncol(A))
@@ -166,6 +242,12 @@ And the degree of the events are just the column sums:
    colSums(A)
 ```
 
+The `igraph` function `degree` will also give us the right answer, but in the form of a single vector including both people and events:
+
+```{r}
+   degree(g)
+```
+
 As @borgatti_everett97 note, if we want *normalized* degree centrality measures, we need to divide by either $M$ (for people) or $N$ (for events). That is, for people we use the number of events as the norm (as this is the theoretical maximum) and for events the number of people.
 
 So for people, normalized degree is:
@@ -180,9 +262,16 @@ And for events:
    round(colSums(A)/nrow(A), 3)
 ```
 
+Or with `igraph`:
+
+```{r}
+   round(degree(g)/c(rep(14, 18), rep(18, 14)), 3)
+```
+
+
 ## Geodesic Distances
 
-Geodesic distances work a bit different in two mode networks because of the only between-node-sets edges restriction. 
+Geodesic distances work a bit different in two-mode networks because of the only between-node-sets edges restriction. 
 
 For instance, the minimum geodesic distance $g_{ii'}$ between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group (if the person is a member of the group). 
 
@@ -206,7 +295,7 @@ We can check in `R`:
 
 As we can see in the distance matrix, distances between nodes in the same set are even $g_{ii'|jj'} = \{2, 4, \ldots\}$ but distances in nodes in different sets are odd $g_{ij|ji} = \{1, 3, \ldots\}$. Beyond this hiccup, distances can be interpreted in the same way as one-mode networks.
 
-## Closeness Centrality in Two Mode Networks
+## Closeness Centrality in two-mode Networks
 
 This means that (unnormalized) closeness centrality works the same way as it does in regular networks:
 
@@ -252,9 +341,9 @@ And normalized closeness is:
 
 Which are the same numbers in @borgatti_everett97 [table 1, column 6].
 
-## Betweenness Centrality in Two Mode Networks
+## Betweenness Centrality in two-mode Networks
 
-As @borgatti_everett97 also note, the normalizations for betweenness centrality in the two mode case are a bit more involved. This is because they depend on which node set is larger than the other. 
+As @borgatti_everett97 also note, the normalizations for betweenness centrality in the two-mode case are a bit more involved. This is because they depend on which node set is larger than the other. 
 
 For the larger node set, which in our case is the people, the normalization is:
 
@@ -325,7 +414,7 @@ The off-diagonal entries of these square person by person (group by group) matri
 
 Note that the one-mode projections are unnormalized similarity matrices just like in the case of regular networks. That means that if we have the degrees of nodes in each mode, we can transform this matrix into any of the **normalized vertex similarity** metrics we discussed before, including Jaccard, Cosine, Dice, LHN, and so on. 
 
-Thus repackaging our vertex similarity function for the two mode case, we have:
+Thus repackaging our vertex similarity function for the two-mode case, we have:
 
 ```{r}
    vertex.sim <- function(x) {
@@ -454,10 +543,142 @@ Which reveals a number of almost complete (one-blocks) and almost null (zero-blo
 
 ```
 
+## Generalized Vertex Similarity
+
+Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the same objects (groups), and two objects (groups) are similar if they are chosen by the same people. 
+
+We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* objects, and two objects are similar if they are chosen by *similar* people.
+
+This leads to the same problem setup that inspired the **SimRank** approach [@jeh_widom02]. 
+
+A function to compute the SimRank similarity between nodes in a two mode network goes as follows:
+
+```{r}
+   TM.SimRank <- function(A, C = 0.8, iter = 10) {
+        nr <- nrow(A)
+        nc <- ncol(A)
+        dr <- rowSums(A)
+        dc <- colSums(A)
+        Sr <- diag(1, nr, nr) #baseline similarity: every node maximally similar to themselves
+        Sc <- diag(1, nc, nc) #baseline similarity: every node maximally similar to themselves
+        rn <- rownames(A)
+        cn <- colnames(A)
+        rownames(Sr) <- rn
+        colnames(Sr) <- rn
+        rownames(Sc) <- cn
+        colnames(Sc) <- cn
+        m <- 1
+        while(m < iter) {
+             Sr.pre <- Sr
+             Sc.pre <- Sc
+             for(i in 1:nr) {
+                  for(j in 1:nr) {
+                       if (i != j) {
+                            a <- names(which(A[i, ] == 1)) #objects chosen by i
+                            b <- names(which(A[j, ] == 1)) #objects chosen by j
+                            Scij <- 0
+                            for (k in a) {
+                                 for (l in b) {
+                                      Scij <- Scij + Sc[k, l] #i's similarity to j
+                                 }
+                            }
+                            Sr[i, j] <- C/(dr[i] * dr[j]) * Scij
+                       }
+                  }
+             }
+             for(i in 1:nc) {
+                  for(j in 1:nc) {
+                       if (i != j) {
+                            a <- names(which(A[, i] == 1)) #people who chose object i
+                            b <- names(which(A[, j] == 1)) #people who chose object j
+                            Srij <- 0
+                            for (k in a) {
+                                 for (l in b) {
+                                      Srij <- Srij + Sr[k, l] #i's similarity to j
+                                 }
+                            }
+                            Sc[i, j] <- C/(dc[i] * dc[j]) * Srij
+                       }
+                  }
+             }
+             m <- m + 1
+        }
+        return(list(Sr = Sr, Sc = Sc))
+   }
+```
+
+This function takes the bi-adjacency matrix $\mathbf{A}$ as input and returns two similarity matrices: One for the people (row objects) and the other one for the groups (column objects).
+
+Here's how that would work in the Southern Women data. First we compute the SimRank scores:
+
+```{r}
+   sim.res <- TM.SimRank(A)
+```
+
+Then we peek inside the people similarity matrix:
+
+```{r}
+   round(sim.res$Sr[1:10, 1:10], 3)
+```
+
+And the group similarity matrix:
+
+```{r}
+   round(sim.res$Sc[1:10, 1:10], 3)
+```
+
+Like before we can use these results to define two sets of distances:
+
+```{r}
+   D.p <- as.dist(1 - sim.res$Sr)
+   D.g <- as.dist(1 - sim.res$Sc)
+```
+
+Subject to hierarchical clustering:
+
+```{r}
+   hc.p <- hclust(D.p, method = "ward.D2")
+   hc.g <- hclust(D.g, method = "ward.D2")
+```
+
+And plot:
+
+```{r}
+   plot(hc.p)
+   plot(hc.g)
+```
+
+Get cluster memberships for people and groups from the `hclust` object:
+
+```{r}
+   clus.p <- sort(cutree(hc.p, 4)) #selecting four clusters for people
+   clus.p
+   clus.g <- sort(cutree(hc.g, 3)) #selecting three clusters for groups
+   clus.g
+```
+
+And block the bi-adjacency matrix:
+
+```{r}
+   p <- ggcorrplot(t(A[names(clus.p), names(clus.g)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 7.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 8.5, linewidth = 2, color = "blue")
+   p
+```
+
+Which produces a familiar block partition of persons and events. 
 
 ## Eigenvector Status
 
-Measures of status and prestige are particularly applicable to two mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
+Measures of status and prestige are particularly applicable to two-mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
 
 For instance, when it comes to **eigenvector**-style measures, the neat idea that *people are central if they belong to central groups and groups and central if their members are central people* (with people centrality defined by membership in central groups) can be effectively captured by these metrics [@bonacich91].
 
@@ -549,9 +770,9 @@ In the Southern Women data the dual centralities are:
 
 ## Core and Periphery
 
-As noted by @borgatti_everett00, the Bonacich Eigenvector scores are also a model of a core-periphery partition in the two mode network. This is already evident in the *definition* of the dual centralities: Popular actors (who participate in many events) make the events they participate in more central, and central events (that have many actors) become central when they attract the popular kids. 
+As noted by @borgatti_everett00, the Bonacich Eigenvector scores are also a model of a core-periphery partition in the two-mode network. This is already evident in the *definition* of the dual centralities: Popular actors (who participate in many events) make the events they participate in more central, and central events (that have many actors) become central when they attract the popular kids. 
 
-So the Eigenvector scores can be used to partition any two mode network into a core (popular kids, popular events) and a periphery (less popular kids, less popular events). All we need to do to see the partition is to re-order the rows and columns of the affiliation matrix according to the value of the magnitude of the Eigenvector scores for people and events:
+So the Eigenvector scores can be used to partition any two-mode network into a core (popular kids, popular events) and a periphery (less popular kids, less popular events). All we need to do to see the partition is to re-order the rows and columns of the affiliation matrix according to the value of the magnitude of the Eigenvector scores for people and events:
 
 ```{r}
    p <- ggcorrplot(t(A[order(p.s), order(g.s)]), 
