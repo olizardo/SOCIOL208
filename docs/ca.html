@@ -600,41 +600,88 @@ FLORA     -0.24  0.33  0.66</code></pre>
 </div>
 <p>Which tells us that the first two eigenvectors account for about 57% of the action (or more precisely we could reconstruct the original matrix with 57% accuracy using just these two eigenvectors and associated eigenvalues).</p>
 <p>Because the magnitude of the CA eigenvectors don’t have a natural scale, it is common to normalize them to have a variance of 1.0 <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 399</a>)</span>, and the multiplying them by the square root of the eigenvalue corresponding to that dimension, so that the new variance is scaled to the importance of that dimension.</p>
-<p>We can perform the no using the following function:</p>
+<p>We can perform the normalization of the raw CA scores using the following function, which performs CA on the affiliation matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   norm.CA.vec <span class="ot">&lt;-</span> <span class="cf">function</span>(ev.p, ev.g, ev, x) {</span>
-<span id="cb41-2"><a href="#cb41-2"></a>      N <span class="ot">&lt;-</span> <span class="fu">sum</span>(x)</span>
-<span id="cb41-3"><a href="#cb41-3"></a>      D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">rowSums</span>(x))</span>
-<span id="cb41-4"><a href="#cb41-4"></a>      D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">colSums</span>(x))</span>
-<span id="cb41-5"><a href="#cb41-5"></a>      Z.uni.p <span class="ot">&lt;-</span> ev.p</span>
-<span id="cb41-6"><a href="#cb41-6"></a>      Z.uni.g <span class="ot">&lt;-</span> ev.g</span>
-<span id="cb41-7"><a href="#cb41-7"></a>      Z.val.p <span class="ot">&lt;-</span> ev.p</span>
-<span id="cb41-8"><a href="#cb41-8"></a>      Z.val.g <span class="ot">&lt;-</span> ev.g</span>
-<span id="cb41-9"><a href="#cb41-9"></a>      ev <span class="ot">&lt;-</span> ev[<span class="fu">which</span>(ev <span class="sc">&gt;</span> <span class="fl">0.001</span>)]</span>
-<span id="cb41-10"><a href="#cb41-10"></a>      m <span class="ot">&lt;-</span> <span class="fu">length</span>(ev)</span>
-<span id="cb41-11"><a href="#cb41-11"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>m) {</span>
-<span id="cb41-12"><a href="#cb41-12"></a>         norm <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">t</span>(ev.p[, i]) <span class="sc">%*%</span> D.p <span class="sc">%*%</span> ev.p[, i])</span>
-<span id="cb41-13"><a href="#cb41-13"></a>         Z.uni.p[, i] <span class="ot">&lt;-</span> ev.p[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(N<span class="sc">/</span>norm) <span class="co">#normalizing to unit variance</span></span>
-<span id="cb41-14"><a href="#cb41-14"></a>         Z.val.p[, i] <span class="ot">&lt;-</span> Z.uni.p[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(ev[i]) <span class="co">#normalizing to square root of eigenvalue</span></span>
-<span id="cb41-15"><a href="#cb41-15"></a>         norm <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">t</span>(ev.g[, i]) <span class="sc">%*%</span> D.g <span class="sc">%*%</span> ev.g[, i])</span>
-<span id="cb41-16"><a href="#cb41-16"></a>         Z.uni.g[, i] <span class="ot">&lt;-</span> ev.g[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(N<span class="sc">/</span>norm) <span class="co">#normalizing to unit variance</span></span>
-<span id="cb41-17"><a href="#cb41-17"></a>         Z.val.g[, i] <span class="ot">&lt;-</span> Z.uni.g[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(ev[i]) <span class="co">#normalizing to square root of eigenvalue</span></span>
-<span id="cb41-18"><a href="#cb41-18"></a>      }</span>
-<span id="cb41-19"><a href="#cb41-19"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Z.uni.p =</span> Z.uni.p, <span class="at">Z.uni.g =</span> Z.uni.g,</span>
-<span id="cb41-20"><a href="#cb41-20"></a>               <span class="at">Z.val.p =</span> Z.val.p, <span class="at">Z.val.g =</span> Z.val.g))</span>
-<span id="cb41-21"><a href="#cb41-21"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   norm.CA.vec <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">s =</span> <span class="fl">0.000001</span>) {</span>
+<span id="cb41-2"><a href="#cb41-2"></a>      CA.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(<span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">rowSums</span>(x)) <span class="sc">%*%</span> x <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">colSums</span>(x)) <span class="sc">%*%</span> <span class="fu">t</span>(x)) <span class="co">#person CA</span></span>
+<span id="cb41-3"><a href="#cb41-3"></a>      CA.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(<span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">colSums</span>(x)) <span class="sc">%*%</span> <span class="fu">t</span>(x) <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">rowSums</span>(x)) <span class="sc">%*%</span> x) <span class="co">#group CA</span></span>
+<span id="cb41-4"><a href="#cb41-4"></a>      ev <span class="ot">&lt;-</span> CA.p<span class="sc">$</span>values[<span class="dv">2</span><span class="sc">:</span><span class="fu">length</span>(CA.p<span class="sc">$</span>values)]</span>
+<span id="cb41-5"><a href="#cb41-5"></a>      ev <span class="ot">&lt;-</span> ev[<span class="fu">which</span>(ev <span class="sc">&gt;</span> s)]</span>
+<span id="cb41-6"><a href="#cb41-6"></a>      m <span class="ot">&lt;-</span> <span class="fu">length</span>(ev)</span>
+<span id="cb41-7"><a href="#cb41-7"></a>      CA.p <span class="ot">&lt;-</span> CA.p<span class="sc">$</span>vectors[, <span class="dv">2</span><span class="sc">:</span><span class="fu">ncol</span>(CA.p<span class="sc">$</span>vectors)]</span>
+<span id="cb41-8"><a href="#cb41-8"></a>      CA.g <span class="ot">&lt;-</span> CA.g<span class="sc">$</span>vectors[, <span class="dv">2</span><span class="sc">:</span><span class="fu">ncol</span>(CA.g<span class="sc">$</span>vectors)]</span>
+<span id="cb41-9"><a href="#cb41-9"></a>      <span class="fu">rownames</span>(CA.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb41-10"><a href="#cb41-10"></a>      <span class="fu">rownames</span>(CA.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb41-11"><a href="#cb41-11"></a>      Z.u.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(x), m)</span>
+<span id="cb41-12"><a href="#cb41-12"></a>      Z.u.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">ncol</span>(x), m)</span>
+<span id="cb41-13"><a href="#cb41-13"></a>      Z.v.p <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(x), m)</span>
+<span id="cb41-14"><a href="#cb41-14"></a>      Z.v.g <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">ncol</span>(x), m)</span>
+<span id="cb41-15"><a href="#cb41-15"></a>      <span class="fu">rownames</span>(Z.u.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(x)</span>
+<span id="cb41-16"><a href="#cb41-16"></a>      <span class="fu">rownames</span>(Z.u.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(x)</span>
+<span id="cb41-17"><a href="#cb41-17"></a>      <span class="fu">rownames</span>(Z.v.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(x)</span>
+<span id="cb41-18"><a href="#cb41-18"></a>      <span class="fu">rownames</span>(Z.v.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(x)</span>
+<span id="cb41-19"><a href="#cb41-19"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>m) {</span>
+<span id="cb41-20"><a href="#cb41-20"></a>         norm.p <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">t</span>(CA.p[, i]) <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="fu">rowSums</span>(x)) <span class="sc">%*%</span> CA.p[, i]) <span class="co">#person norm</span></span>
+<span id="cb41-21"><a href="#cb41-21"></a>         Z.u.p[, i] <span class="ot">&lt;-</span> CA.p[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(A)<span class="sc">/</span>norm.p) <span class="co">#normalizing to unit variance</span></span>
+<span id="cb41-22"><a href="#cb41-22"></a>         Z.v.p[, i] <span class="ot">&lt;-</span> Z.u.p[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(ev[i]) <span class="co">#normalizing to square root of eigenvalue</span></span>
+<span id="cb41-23"><a href="#cb41-23"></a>         norm.g <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">t</span>(CA.g[, i]) <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="fu">colSums</span>(x)) <span class="sc">%*%</span> CA.g[, i]) <span class="co">#group norm</span></span>
+<span id="cb41-24"><a href="#cb41-24"></a>         Z.u.g[, i] <span class="ot">&lt;-</span> CA.g[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fu">sum</span>(A)<span class="sc">/</span>norm.g) <span class="co">#normalizing to unit variance</span></span>
+<span id="cb41-25"><a href="#cb41-25"></a>         Z.v.g[, i] <span class="ot">&lt;-</span> Z.u.g[, i] <span class="sc">*</span> <span class="fu">sqrt</span>(ev[i]) <span class="co">#normalizing to square root of eigenvalue</span></span>
+<span id="cb41-26"><a href="#cb41-26"></a>      }</span>
+<span id="cb41-27"><a href="#cb41-27"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Z.u.p =</span> Z.u.p, <span class="at">Z.u.g =</span> Z.u.g,</span>
+<span id="cb41-28"><a href="#cb41-28"></a>               <span class="at">Z.v.p =</span> Z.v.p, <span class="at">Z.v.g =</span> Z.v.g))</span>
+<span id="cb41-29"><a href="#cb41-29"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Let’s see this it at work:</p>
+<p>This function takes the bi-adjacency matrix as input and returns two new set of normalized CA scores for both persons and groups as output. The normalized CA scores are stored in four separate matrices: <span class="math inline">\(\mathbf{Z_P^U}, \mathbf{Z_G^U}, \mathbf{Z_P^V}, \mathbf{Z_G^V}\)</span>.</p>
+<p>One person-group set of scores is normalized to unit variance (<code>Z.u.p</code> and <code>Z.u.g</code>) and the other person-group set of scores is normalized to the scale of the eigenvalue corresponding to each CA dimension for both persons and groups (<code>Z.v.p</code> and <code>Z.v.g</code>).</p>
+<p>Let’s see the normalization function at work, extracting the first two dimensions for persons and groups (the first two columns of each <span class="math inline">\(\mathbf{Z}\)</span> matrix):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   norm.CA.res <span class="ot">&lt;-</span> <span class="fu">norm.CA.vec</span>(<span class="at">ev.p =</span> eig.vec.p,</span>
-<span id="cb42-2"><a href="#cb42-2"></a>                              <span class="at">ev.g =</span> eig.vec.g,</span>
-<span id="cb42-3"><a href="#cb42-3"></a>                              <span class="at">ev =</span> eig.vals,</span>
-<span id="cb42-4"><a href="#cb42-4"></a>                              <span class="at">x =</span> A)</span>
-<span id="cb42-5"><a href="#cb42-5"></a>   uni.p <span class="ot">&lt;-</span> norm.CA.res<span class="sc">$</span>Z.uni.p[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
-<span id="cb42-6"><a href="#cb42-6"></a>   uni.g <span class="ot">&lt;-</span> norm.CA.res<span class="sc">$</span>Z.uni.g[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
-<span id="cb42-7"><a href="#cb42-7"></a>   val.p <span class="ot">&lt;-</span> norm.CA.res<span class="sc">$</span>Z.val.p[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
-<span id="cb42-8"><a href="#cb42-8"></a>   val.g <span class="ot">&lt;-</span> norm.CA.res<span class="sc">$</span>Z.val.g[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
-<span id="cb42-9"><a href="#cb42-9"></a>   val.p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   CA.res <span class="ot">&lt;-</span> <span class="fu">norm.CA.vec</span>(A)</span>
+<span id="cb42-2"><a href="#cb42-2"></a>   uni.p <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>Z.u.p[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb42-3"><a href="#cb42-3"></a>   uni.g <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>Z.u.g[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb42-4"><a href="#cb42-4"></a>   val.p <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>Z.v.p[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb42-5"><a href="#cb42-5"></a>   val.g <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>Z.v.g[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>]</span>
+<span id="cb42-6"><a href="#cb42-6"></a>   uni.p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                 [,1]        [,2]
+EVELYN    -1.00935794  0.19962447
+LAURA     -1.06396353 -0.07032253
+THERESA   -0.82553977  0.14350026
+BRENDA    -1.07983480 -0.08999353
+CHARLOTTE -1.22918873 -0.06520538
+FRANCES   -1.00673193 -0.10256132
+ELEANOR   -0.64518617 -0.20651096
+PEARL     -0.04906417  0.37464689
+RUTH      -0.21222459  0.17125231
+VERNE      0.54752709 -0.23086049
+MYRNA      1.04406532 -0.57762222
+KATHERINE  1.32000890 -1.33315576
+SYLVIA     1.10215756 -1.20098272
+NORA       1.10060029 -0.18947222
+HELEN      1.01998177  0.43644453
+DOROTHY    0.38262672  0.55043536
+OLIVIA     1.38369940  3.98445104
+FLORA      1.38369940  3.98445104</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   uni.g</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>            [,1]         [,2]
+6/27  -1.3270393 -0.023191783
+3/2   -1.2200165 -0.160952061
+4/12  -1.3077437 -0.004437348
+9/26  -1.3080099 -0.083156536
+2/25  -1.1161267  0.004472906
+5/19  -0.7226826 -0.013033973
+3/15  -0.1623265  0.230478905
+9/16  -0.0428859  0.244777194
+4/8    0.6489879 -0.866742846
+6/10   1.4107620  1.014127280
+2/23   1.5428690 -3.635496407
+4/7    1.2908513  0.913209386
+11/21  1.4825938  1.606917934
+8/3    1.4825938  1.606917934</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   val.p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                 [,1]        [,2]
 EVELYN    -0.79943960  0.11278306
@@ -656,7 +703,7 @@ DOROTHY    0.30305102  0.31098283
 OLIVIA     1.09592846  2.25111963
 FLORA      1.09592846  2.25111963</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   val.g</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   val.g</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             [,1]         [,2]
 6/27  -1.05105209 -0.013102803
@@ -679,18 +726,18 @@ FLORA      1.09592846  2.25111963</code></pre>
 </section>
 <section id="the-duality-of-ca-scores-between-persons-and-groups" class="level2">
 <h2 class="anchored" data-anchor-id="the-duality-of-ca-scores-between-persons-and-groups">The Duality of CA Scores Between Persons and Groups</h2>
-<p>Just like with the eigenvector centrality there is a <em>duality</em> between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the sum of the scores assigned to each group on that dimension and vice versa <span class="citation" data-cites="faust97">(<a href="#ref-faust97" role="doc-biblioref">Faust 1997, 171</a>)</span>.</p>
+<p>Just like as we saw with the eigenvector centrality in the last handout, there is a <em>duality</em> between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the scores assigned to each group on that dimension and vice versa <span class="citation" data-cites="faust97">(<a href="#ref-faust97" role="doc-biblioref">Faust 1997, 171</a>)</span>.</p>
 <p>The main difference is that this time we sum scores across the <span class="math inline">\(\mathbf{P_P}\)</span> and <span class="math inline">\(\mathbf{P_G}\)</span> matrices rather than the original affiliation matrix and its transpose, resulting in <em>degree-weighted</em> sums of scores for both persons and groups.</p>
 <p>So for any given person, on any given dimension, let’s say <span class="math inline">\(EVELYN\)</span>, her CA score is given by the sum of the (unit variance normalized) CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn’s row of the <span class="math inline">\(\mathbf{P_P}\)</span> matrix):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   <span class="fu">sum</span>(P.p[<span class="st">"EVELYN"</span>, ] <span class="sc">*</span> uni.g[, <span class="dv">1</span>]) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">sum</span>(P.p[<span class="st">"EVELYN"</span>, ] <span class="sc">*</span> uni.g[, <span class="dv">1</span>]) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.7994396</code></pre>
 </div>
 </div>
 <p>Which is the same as the (eigenvalue variance) normalized score we obtained via CA for <span class="math inline">\(EVELYN\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   val.p[<span class="st">"EVELYN"</span>, <span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   val.p[<span class="st">"EVELYN"</span>, <span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    EVELYN 
 -0.7994396 </code></pre>
@@ -698,14 +745,14 @@ FLORA      1.09592846  2.25111963</code></pre>
 </div>
 <p>A similar story applies to groups. Each group score is the group-size-weighted sum of the (unit variance normalized) CA scores of the people who join it:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">sum</span>(P.g[<span class="st">"6/27"</span>, ] <span class="sc">*</span> uni.p[, <span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">sum</span>(P.g[<span class="st">"6/27"</span>, ] <span class="sc">*</span> uni.p[, <span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -1.051052</code></pre>
 </div>
 </div>
 <p>Which is the same as the (eigenvalue variance normalized) score we obtained via CA:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>    val.g[<span class="st">"6/27"</span>, <span class="dv">1</span>]  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1"></a>    val.g[<span class="st">"6/27"</span>, <span class="dv">1</span>]  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     6/27 
 -1.051052 </code></pre>
@@ -715,26 +762,26 @@ FLORA      1.09592846  2.25111963</code></pre>
 </section>
 <section id="visualizing-two-mode-networks-using-ca" class="level2">
 <h2 class="anchored" data-anchor-id="visualizing-two-mode-networks-using-ca">Visualizing Two-Mode Networks Using CA</h2>
-<p>And, finally, we can use the first two (eigenvalue variance) normalized eigenvectors to plot the persons and groups in a common two-dimensional space:</p>
+<p>And, finally, we can use the first two (eigenvalue variance) normalized CA scores to plot the persons and groups in a common two-dimensional space:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   val.g[, <span class="dv">2</span>] <span class="ot">&lt;-</span> val.g[, <span class="dv">2</span>]<span class="sc">*-</span><span class="dv">1</span> <span class="co">#flippling sign of group scores on second dimension for plotting purposes</span></span>
-<span id="cb54-2"><a href="#cb54-2"></a>   plot.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">rbind</span>(val.p, val.g)) <span class="sc">%&gt;%</span> </span>
-<span id="cb54-3"><a href="#cb54-3"></a>      <span class="fu">cbind</span>(<span class="at">type =</span> <span class="fu">as.factor</span>(<span class="fu">c</span>(<span class="fu">rep</span>(<span class="dv">1</span>, <span class="dv">18</span>), <span class="fu">rep</span>(<span class="dv">2</span>, <span class="dv">14</span>))))</span>
-<span id="cb54-4"><a href="#cb54-4"></a>   <span class="fu">library</span>(ggplot2)</span>
-<span id="cb54-5"><a href="#cb54-5"></a>   <span class="co"># install.packages("ggrepel")</span></span>
-<span id="cb54-6"><a href="#cb54-6"></a>   <span class="fu">library</span>(ggrepel)</span>
-<span id="cb54-7"><a href="#cb54-7"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plot.dat, <span class="fu">aes</span>(<span class="at">x =</span> X1, <span class="at">y =</span> X2, <span class="at">color =</span> type))</span>
-<span id="cb54-8"><a href="#cb54-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> <span class="dv">0</span>), <span class="at">color =</span> <span class="st">"gray"</span>)</span>
-<span id="cb54-9"><a href="#cb54-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="fu">aes</span>(<span class="at">xintercept =</span> <span class="dv">0</span>), <span class="at">color =</span> <span class="st">"gray"</span>)</span>
-<span id="cb54-10"><a href="#cb54-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_text_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">rownames</span>(plot.dat)), </span>
-<span id="cb54-11"><a href="#cb54-11"></a>                            <span class="at">max.overlaps =</span> <span class="dv">20</span>, <span class="at">size =</span> <span class="fl">2.75</span>)</span>
-<span id="cb54-12"><a href="#cb54-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
-<span id="cb54-13"><a href="#cb54-13"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
-<span id="cb54-14"><a href="#cb54-14"></a>                  <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>),</span>
-<span id="cb54-15"><a href="#cb54-15"></a>                  <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
-<span id="cb54-16"><a href="#cb54-16"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>))</span>
-<span id="cb54-17"><a href="#cb54-17"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"First Dimension"</span>, <span class="at">y =</span> <span class="st">"Second Dimension"</span>) <span class="sc">+</span> <span class="fu">ylim</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">3</span>) <span class="sc">+</span> <span class="fu">xlim</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="dv">2</span>)</span>
-<span id="cb54-18"><a href="#cb54-18"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   val.g[, <span class="dv">2</span>] <span class="ot">&lt;-</span> val.g[, <span class="dv">2</span>]<span class="sc">*-</span><span class="dv">1</span> <span class="co">#flippling sign of group scores on second dimension for plotting purposes</span></span>
+<span id="cb58-2"><a href="#cb58-2"></a>   plot.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">rbind</span>(val.p, val.g)) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-3"><a href="#cb58-3"></a>      <span class="fu">cbind</span>(<span class="at">type =</span> <span class="fu">as.factor</span>(<span class="fu">c</span>(<span class="fu">rep</span>(<span class="dv">1</span>, <span class="dv">18</span>), <span class="fu">rep</span>(<span class="dv">2</span>, <span class="dv">14</span>))))</span>
+<span id="cb58-4"><a href="#cb58-4"></a>   <span class="fu">library</span>(ggplot2)</span>
+<span id="cb58-5"><a href="#cb58-5"></a>   <span class="co"># install.packages("ggrepel")</span></span>
+<span id="cb58-6"><a href="#cb58-6"></a>   <span class="fu">library</span>(ggrepel)</span>
+<span id="cb58-7"><a href="#cb58-7"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plot.dat, <span class="fu">aes</span>(<span class="at">x =</span> X1, <span class="at">y =</span> X2, <span class="at">color =</span> type))</span>
+<span id="cb58-8"><a href="#cb58-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="fu">aes</span>(<span class="at">yintercept =</span> <span class="dv">0</span>), <span class="at">color =</span> <span class="st">"gray"</span>)</span>
+<span id="cb58-9"><a href="#cb58-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="fu">aes</span>(<span class="at">xintercept =</span> <span class="dv">0</span>), <span class="at">color =</span> <span class="st">"gray"</span>)</span>
+<span id="cb58-10"><a href="#cb58-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_text_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">rownames</span>(plot.dat)), </span>
+<span id="cb58-11"><a href="#cb58-11"></a>                            <span class="at">max.overlaps =</span> <span class="dv">20</span>, <span class="at">size =</span> <span class="fl">2.75</span>)</span>
+<span id="cb58-12"><a href="#cb58-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb58-13"><a href="#cb58-13"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb58-14"><a href="#cb58-14"></a>                  <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>),</span>
+<span id="cb58-15"><a href="#cb58-15"></a>                  <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
+<span id="cb58-16"><a href="#cb58-16"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"red"</span>, <span class="st">"blue"</span>))</span>
+<span id="cb58-17"><a href="#cb58-17"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"First Dimension"</span>, <span class="at">y =</span> <span class="st">"Second Dimension"</span>) <span class="sc">+</span> <span class="fu">ylim</span>(<span class="sc">-</span><span class="fl">1.5</span>, <span class="dv">3</span>) <span class="sc">+</span> <span class="fu">xlim</span>(<span class="sc">-</span><span class="fl">1.5</span>, <span class="fl">1.5</span>)</span>
+<span id="cb58-18"><a href="#cb58-18"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="ca_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -742,19 +789,20 @@ FLORA      1.09592846  2.25111963</code></pre>
 <p>In this space, people with the most similar patterns of memberships to the most similar groups are placed close to one another. In the same way, groups with the most similar members are placed closed to one another.</p>
 <p>Also like before, we can use the scores obtained from the CA analysis to re-arrange the rows and columns of the original matrix to reveal blocks of maximally similar persons and events:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   <span class="fu">library</span>(ggcorrplot)</span>
-<span id="cb55-2"><a href="#cb55-2"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">order</span>(eig.vec.p[,<span class="dv">1</span>]), <span class="fu">order</span>(eig.vec.g[,<span class="dv">1</span>])]), </span>
-<span id="cb55-3"><a href="#cb55-3"></a>                   <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
-<span id="cb55-4"><a href="#cb55-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
-<span id="cb55-5"><a href="#cb55-5"></a>                  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
-<span id="cb55-6"><a href="#cb55-6"></a>                  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
-<span id="cb55-7"><a href="#cb55-7"></a>                  )</span>
-<span id="cb55-8"><a href="#cb55-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
-<span id="cb55-9"><a href="#cb55-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb55-10"><a href="#cb55-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">10.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb55-11"><a href="#cb55-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb55-12"><a href="#cb55-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb55-13"><a href="#cb55-13"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1"></a>   <span class="fu">library</span>(ggcorrplot)</span>
+<span id="cb59-2"><a href="#cb59-2"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">order</span>(val.p[,<span class="dv">1</span>]), <span class="fu">order</span>(val.g[,<span class="dv">1</span>])]), </span>
+<span id="cb59-3"><a href="#cb59-3"></a>                   <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
+<span id="cb59-4"><a href="#cb59-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
+<span id="cb59-5"><a href="#cb59-5"></a>                  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb59-6"><a href="#cb59-6"></a>                  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb59-7"><a href="#cb59-7"></a>                  )</span>
+<span id="cb59-8"><a href="#cb59-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
+<span id="cb59-9"><a href="#cb59-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb59-10"><a href="#cb59-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb59-11"><a href="#cb59-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb59-12"><a href="#cb59-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb59-13"><a href="#cb59-13"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb59-14"><a href="#cb59-14"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="ca_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
 </div>

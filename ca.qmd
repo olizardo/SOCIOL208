@@ -201,43 +201,54 @@ Which tells us that the first two eigenvectors account for about 57% of the acti
 
 Because the magnitude of the CA eigenvectors don't have a natural scale, it is common to normalize them to have a variance of 1.0 [@fouss_etal16, p. 399], and the multiplying them by the square root of the eigenvalue corresponding to that dimension, so that the new variance is scaled to the importance of that dimension. 
 
-We can perform the no using the following function:
+We can perform the normalization of the raw CA scores using the following function, which performs CA on the affiliation matrix:
 
 ```{r}
-   norm.CA.vec <- function(ev.p, ev.g, ev, x) {
-      N <- sum(x)
-      D.p <- diag(rowSums(x))
-      D.g <- diag(colSums(x))
-      Z.uni.p <- ev.p
-      Z.uni.g <- ev.g
-      Z.val.p <- ev.p
-      Z.val.g <- ev.g
-      ev <- ev[which(ev > 0.001)]
+   norm.CA.vec <- function(x, s = 0.000001) {
+      CA.p <- eigen(diag(1/rowSums(x)) %*% x %*% diag(1/colSums(x)) %*% t(x)) #person CA
+      CA.g <- eigen(diag(1/colSums(x)) %*% t(x) %*% diag(1/rowSums(x)) %*% x) #group CA
+      ev <- CA.p$values[2:length(CA.p$values)]
+      ev <- ev[which(ev > s)]
       m <- length(ev)
+      CA.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
+      CA.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
+      rownames(CA.p) <- rownames(A)
+      rownames(CA.g) <- colnames(A)
+      Z.u.p <- matrix(0, nrow(x), m)
+      Z.u.g <- matrix(0, ncol(x), m)
+      Z.v.p <- matrix(0, nrow(x), m)
+      Z.v.g <- matrix(0, ncol(x), m)
+      rownames(Z.u.p) <- rownames(x)
+      rownames(Z.u.g) <- colnames(x)
+      rownames(Z.v.p) <- rownames(x)
+      rownames(Z.v.g) <- colnames(x)
       for (i in 1:m) {
-         norm <- as.numeric(t(ev.p[, i]) %*% D.p %*% ev.p[, i])
-         Z.uni.p[, i] <- ev.p[, i] * sqrt(N/norm) #normalizing to unit variance
-         Z.val.p[, i] <- Z.uni.p[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
-         norm <- as.numeric(t(ev.g[, i]) %*% D.g %*% ev.g[, i])
-         Z.uni.g[, i] <- ev.g[, i] * sqrt(N/norm) #normalizing to unit variance
-         Z.val.g[, i] <- Z.uni.g[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
+         norm.p <- as.numeric(t(CA.p[, i]) %*% diag(rowSums(x)) %*% CA.p[, i]) #person norm
+         Z.u.p[, i] <- CA.p[, i] * sqrt(sum(A)/norm.p) #normalizing to unit variance
+         Z.v.p[, i] <- Z.u.p[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
+         norm.g <- as.numeric(t(CA.g[, i]) %*% diag(colSums(x)) %*% CA.g[, i]) #group norm
+         Z.u.g[, i] <- CA.g[, i] * sqrt(sum(A)/norm.g) #normalizing to unit variance
+         Z.v.g[, i] <- Z.u.g[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
       }
-   return(list(Z.uni.p = Z.uni.p, Z.uni.g = Z.uni.g,
-               Z.val.p = Z.val.p, Z.val.g = Z.val.g))
+   return(list(Z.u.p = Z.u.p, Z.u.g = Z.u.g,
+               Z.v.p = Z.v.p, Z.v.g = Z.v.g))
    }
 ```
 
-Let's see this it at work:
+This function takes the bi-adjacency matrix as input and returns two new set of normalized CA scores for both persons and groups as output. The normalized CA scores are stored in four separate matrices: $\mathbf{Z_P^U}, \mathbf{Z_G^U}, \mathbf{Z_P^V}, \mathbf{Z_G^V}$. 
+
+One person-group set of scores is normalized to unit variance (`Z.u.p` and `Z.u.g`) and the other person-group set of scores is normalized to the scale of the eigenvalue corresponding to each CA dimension for both persons and groups (`Z.v.p` and `Z.v.g`).
+
+Let's see the normalization function at work, extracting the first two dimensions for persons and groups (the first two columns of each $\mathbf{Z}$ matrix):
 
 ```{r}
-   norm.CA.res <- norm.CA.vec(ev.p = eig.vec.p,
-                              ev.g = eig.vec.g,
-                              ev = eig.vals,
-                              x = A)
-   uni.p <- norm.CA.res$Z.uni.p[, 1:2]
-   uni.g <- norm.CA.res$Z.uni.g[, 1:2]
-   val.p <- norm.CA.res$Z.val.p[, 1:2]
-   val.g <- norm.CA.res$Z.val.g[, 1:2]
+   CA.res <- norm.CA.vec(A)
+   uni.p <- CA.res$Z.u.p[, 1:2]
+   uni.g <- CA.res$Z.u.g[, 1:2]
+   val.p <- CA.res$Z.v.p[, 1:2]
+   val.g <- CA.res$Z.v.g[, 1:2]
+   uni.p
+   uni.g
    val.p
    val.g
 ```
@@ -246,7 +257,7 @@ Great! Now we have two sets (unit variance versus eigenvalue variance) of normal
 
 ## The Duality of CA Scores Between Persons and Groups
 
-Just like with the eigenvector centrality there is a *duality* between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the scores assigned to each group on that dimension and vice versa [@faust97, 171]. 
+Just like as we saw with the eigenvector centrality in the last handout, there is a *duality* between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the scores assigned to each group on that dimension and vice versa [@faust97, 171]. 
 
 The main difference is that this time we sum scores across the $\mathbf{P_P}$ and $\mathbf{P_G}$ matrices rather than the original affiliation matrix and its transpose, resulting in *degree-weighted* sums of scores for both persons and groups.
 
@@ -278,7 +289,7 @@ Neat! Duality at work.
 
 ## Visualizing Two-Mode Networks Using CA
 
-And, finally, we can use the first two (eigenvalue variance) normalized eigenvectors to plot the persons and groups in a common two-dimensional space:
+And, finally, we can use the first two (eigenvalue variance) normalized CA scores to plot the persons and groups in a common two-dimensional space:
 
 ```{r}
    val.g[, 2] <- val.g[, 2]*-1 #flippling sign of group scores on second dimension for plotting purposes
@@ -297,7 +308,7 @@ And, finally, we can use the first two (eigenvalue variance) normalized eigenvec
                   axis.title = element_text(size = 14),
                   axis.text = element_text(size = 12))
    p <- p + scale_color_manual(values = c("red", "blue"))
-   p <- p + labs(x = "First Dimension", y = "Second Dimension") + ylim(-3, 3) + xlim(-2, 2)
+   p <- p + labs(x = "First Dimension", y = "Second Dimension") + ylim(-1.5, 3) + xlim(-1.5, 1.5)
    p
 ```
 
@@ -307,7 +318,7 @@ Also like before, we can use the scores obtained from the CA analysis to re-arra
 
 ```{r}
    library(ggcorrplot)
-   p <- ggcorrplot(t(A[order(eig.vec.p[,1]), order(eig.vec.g[,1])]), 
+   p <- ggcorrplot(t(A[order(val.p[,1]), order(val.g[,1])]), 
                    colors = c("white", "white", "red")) 
    p <- p + theme(legend.position = "none", 
                   axis.text.y = element_text(size = 8),
@@ -315,7 +326,8 @@ Also like before, we can use the scores obtained from the CA analysis to re-arra
                   )
    p <- p + scale_x_discrete(position = "top") 
    p <- p + geom_hline(yintercept = 6.5, linewidth = 2, color = "blue")
-   p <- p + geom_hline(yintercept = 10.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
    p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
    p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
    p
