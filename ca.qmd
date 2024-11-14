@@ -59,7 +59,7 @@ Now, the idea is that we can perform this eigendecomposition with any matrix, in
 
 The more important thing is that, once you have the eigendecomposition of a matrix, and the full set of eigenvectors stored in $\mathbf{U}$, the first few columns of $\mathbf{U}$, gives us the best *low dimensional approximation* of the original matrix. 
 
-## The CA Matrix
+## Obtaining the Matrices We Need
 
 CA boils down to the eigendecomposition of a suitable matrix, derived from the original affiliation (bi-adjacency) matrix of a two-mode network. 
 
@@ -79,22 +79,22 @@ $$
 \mathbf{P}_G = \mathbf{D}_G^{-1}\mathbf{A}^T
 $$
 
-In `R` can compute $\mathbf{P}_P$ and $\mathbf{P}_G$ as follows:
+In `R` can compute $\mathbf{P}_P$ and $\mathbf{P}_G$, using the classic Southern Women two-mode data, as follows:
 
 ```{r}
    library(igraph)
    library(networkdata)
-   g <- southern_women
-   A <- as.matrix(as_biadjacency_matrix(g))
-   D.p <- diag(1/rowSums(A))
+   g <- southern_women #southern women data
+   A <- as.matrix(as_biadjacency_matrix(g)) #bi-adjacency matrix
+   D.p <- diag(1/rowSums(A)) #inverse of degree matrix of persons
    P.p <- D.p %*% A
-   rownames(P.p) <- rownames(A)
-   D.g <- diag(1/colSums(A))
+   rownames(P.p) <- rownames(A) 
+   D.g <- diag(1/colSums(A)) #inverse of degree matrix of groups
    P.g <- D.g %*% t(A)
    rownames(P.g) <- colnames(A)
 ```
 
-And we can check that both `P.p` (for people) and `P.g` (groups) are row stochastic:
+And we can check that both $\mathbf{P}_P$ and $\mathbf{P}_G$ are indeed row stochastic:
 
 ```{r}
    rowSums(P.p)
@@ -143,12 +143,13 @@ Which are still row stochastic--but now square--matrices:
 Let's peek inside one of these matrices:
 
 ```{r}
-   round(P.pp[1:10, 1:10], 2)
+   round(head(P.pp), 3)
 ```
 
 What are these numbers? Well, they can be interpreted as *probabilities* that a random walker starting at the row node and, following any sequence of $person-group-person'-group'$ hops, will reach the column person. Thus, higher values indicate an *affinity* or *proximity* between the people (and the groups in the corresponding matrix).
 
-## The Duality of CA Scores Between Persons and Groups
+## Performing CA
+
 We went through all these steps because CA is equivalent to the eigendecomposition of the two last square matrices we obtained, namely, $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$:
 
 ```{r}
@@ -188,69 +189,100 @@ Note that the rest of the eigenvalues (discarding the 1.0 one) are arranged in d
    round(eig.vals, 3)
 ```
 
-The magnitude of the eigenvalue tells us how important is the related eigenvector in containing information about the original matrix. So it looks like here, the first two eigenvectors contain a good chunk of the info:
+The magnitude of the eigenvalue tells us how important is the related eigenvector in containing information about the original matrix. It looks like here, the first two eigenvectors contain a good chunk of the info. 
+
+We can check how much exactly by computing the ratio between the sum of the first two eigenvalues over the sum of all the eigenvalues:
 
 ```{r}
    round(sum(eig.vals[1:2])/sum(eig.vals), 2)
 ```
 
-Which says that the first two eigenvectors account for about 57% of the action (or more precisely we could reconstruct the original matrix with 57% accuracy using just these two eigenvectors and associated eigenvalues). 
+Which tells us that the first two eigenvectors account for about 57% of the action (or more precisely we could reconstruct the original matrix with 57% accuracy using just these two eigenvectors and associated eigenvalues). 
 
-Because the magnitude of the CA eigenvectors don't have a natural scale, it is common to normalize them to have a variance of 1.0 [@fouss_etal16, p. 399]. 
+Because the magnitude of the CA eigenvectors don't have a natural scale, it is common to normalize them to have a variance of 1.0 [@fouss_etal16, p. 399], and the multiplying them by the square root of the eigenvalue corresponding to that dimension, so that the new variance is scaled to the importance of that dimension. 
 
-We can do this as follows:
+We can perform the no using the following function:
 
 ```{r}
-   N <- sum(A)
-   d.p <- diag(rowSums(A))
-   d.g <- diag(colSums(A))
-   eig.vec.g[, 2] <- eig.vec.g[, 2] * -1
-   for (i in 1:nrow(A)-1) {
-      norm <- as.numeric(t(eig.vec.p[, i]) %*% d.p %*% eig.vec.p[, i])
-      eig.vec.p[, i] <- eig.vec.p[, i] * sqrt(N/norm)
-   }
-   for (j in 1:ncol(A)-1) {
-      norm <- as.numeric(t(eig.vec.g[, j]) %*% d.g %*% eig.vec.g[, j])
-      eig.vec.g[, j] <- eig.vec.g[, j] * sqrt(N/norm)
+   norm.CA.vec <- function(ev.p, ev.g, ev, x) {
+      N <- sum(x)
+      D.p <- diag(rowSums(x))
+      D.g <- diag(colSums(x))
+      Z.uni.p <- ev.p
+      Z.uni.g <- ev.g
+      Z.val.p <- ev.p
+      Z.val.g <- ev.g
+      ev <- ev[which(ev > 0.001)]
+      m <- length(ev)
+      for (i in 1:m) {
+         norm <- as.numeric(t(ev.p[, i]) %*% D.p %*% ev.p[, i])
+         Z.uni.p[, i] <- ev.p[, i] * sqrt(N/norm) #normalizing to unit variance
+         Z.val.p[, i] <- Z.uni.p[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
+         norm <- as.numeric(t(ev.g[, i]) %*% D.g %*% ev.g[, i])
+         Z.uni.g[, i] <- ev.g[, i] * sqrt(N/norm) #normalizing to unit variance
+         Z.val.g[, i] <- Z.uni.g[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
       }
+   return(list(Z.uni.p = Z.uni.p, Z.uni.g = Z.uni.g,
+               Z.val.p = Z.val.p, Z.val.g = Z.val.g))
+   }
 ```
 
-Just like with the eigenvector centrality there is a *duality* between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the sum of the scores assigned to each group on that dimension and vice versa [@faust97, 171]. 
+Let's see this it at work:
+
+```{r}
+   norm.CA.res <- norm.CA.vec(ev.p = eig.vec.p,
+                              ev.g = eig.vec.g,
+                              ev = eig.vals,
+                              x = A)
+   uni.p <- norm.CA.res$Z.uni.p[, 1:2]
+   uni.g <- norm.CA.res$Z.uni.g[, 1:2]
+   val.p <- norm.CA.res$Z.val.p[, 1:2]
+   val.g <- norm.CA.res$Z.val.g[, 1:2]
+   val.p
+   val.g
+```
+
+Great! Now we have two sets (unit variance versus eigenvalue variance) of normalized CA scores for persons and groups on the first two dimensions. 
+
+## The Duality of CA Scores Between Persons and Groups
+
+Just like with the eigenvector centrality there is a *duality* between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the scores assigned to each group on that dimension and vice versa [@faust97, 171]. 
 
 The main difference is that this time we sum scores across the $\mathbf{P_P}$ and $\mathbf{P_G}$ matrices rather than the original affiliation matrix and its transpose, resulting in *degree-weighted* sums of scores for both persons and groups.
 
-So for any given person, on any given dimension, let's say $EVELYN$, her CA score is given by the sum of the CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn's row of the $\mathbf{P_P}$ matrix):
+So for any given person, on any given dimension, let's say $EVELYN$, her CA score is given by the sum of the (unit variance normalized) CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn's row of the $\mathbf{P_P}$ matrix):
 
 ```{r}
-   sum(P.p["EVELYN", ] * eig.vec.g[, 1])
+   sum(P.p["EVELYN", ] * uni.g[, 1]) 
 ```
 
-Which is the same as the score we obtained via CA for $EVELYN$ multiplied by the (square root of the) relevant eigenvalue:
+Which is the same as the (eigenvalue variance) normalized score we obtained via CA for $EVELYN$:
 
 ```{r}
-   eig.vec.p["EVELYN", 1] * sqrt(eig.vals[1]) 
+   val.p["EVELYN", 1]
 ```
 
-A similar story applies to groups. Each group score is the group-size-weighted sum of the CA scores of the people who join it:
+A similar story applies to groups. Each group score is the group-size-weighted sum of the (unit variance normalized) CA scores of the people who join it:
 
 ```{r}
-   sum(P.g["6/27", ] * eig.vec.p[, 1])
+   sum(P.g["6/27", ] * uni.p[, 1])
 ```
 
-Which is the same as the score we obtained via CA for this group multiplied by the (square root of the) relevant eigenvalue:
+Which is the same as the (eigenvalue variance normalized) score we obtained via CA:
 
 ```{r}
-    eig.vec.g["6/27", 1] * sqrt(eig.vals[1]) 
+    val.g["6/27", 1]  
 ```
 
-Neat!
+Neat! Duality at work.
 
 ## Visualizing Two-Mode Networks Using CA
 
-And, finally, we can use the first two normalized eigenvectors to plot the persons and groups in a common two-dimensional space:
+And, finally, we can use the first two (eigenvalue variance) normalized eigenvectors to plot the persons and groups in a common two-dimensional space:
 
 ```{r}
-   plot.dat <- data.frame(rbind(eig.vec.p[, 1:2], eig.vec.g[, 1:2])) %>% 
+   val.g[, 2] <- val.g[, 2]*-1 #flippling sign of group scores on second dimension for plotting purposes
+   plot.dat <- data.frame(rbind(val.p, val.g)) %>% 
       cbind(type = as.factor(c(rep(1, 18), rep(2, 14))))
    library(ggplot2)
    # install.packages("ggrepel")
@@ -265,7 +297,7 @@ And, finally, we can use the first two normalized eigenvectors to plot the perso
                   axis.title = element_text(size = 14),
                   axis.text = element_text(size = 12))
    p <- p + scale_color_manual(values = c("red", "blue"))
-   p <- p + labs(x = "First Dimension", y = "Second Dimension") + ylim(-4, 4) + xlim(-2, 2)
+   p <- p + labs(x = "First Dimension", y = "Second Dimension") + ylim(-3, 3) + xlim(-2, 2)
    p
 ```
 
