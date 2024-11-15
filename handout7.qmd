@@ -115,6 +115,21 @@ $$
 
 Where $\mathbf{O}$ is just the all zeros matrix of the relevant dimensions, and $\mathbf{A}$ is the bi-adjacency (affiliation) matrix as defined earlier. Thus, the bipartite adjacency matrix necessarily has two big diagonal "zero blocks" in it (upper-left and lower-right) corresponding to where the links between nodes in the same set would be (but necessarily aren't because this is a two-mode network). The non-zero blocks are just the affiliation matrix (upper-right) and its transpose(lower-left).
 
+## Bipartiteness as "Anti-Community"
+
+Recall from the previous handout, that community structure is defined by clusters of nodes that have more connections among themselves than they do with outsiders. If you think about it, a bipartite graph has the exact oppossite of this going on. Nodes of the same type have *zero* connections among themselves, and they have *all* their connections with nodes of the other group!
+
+So that means that *bipartite structure* is the mirror image of *community structure* (in the two group case). This also means that if we were to compute the modularity of a bipartite graph, using the node type as the grouping variable we should get the theoretical minimum of this measure (which you may recall is $Q = -\frac{1}{2}$).
+
+Let's try it out, by computing the modularity from the bipartite adjacency matrix of the Southern Women data, using node type as the grouping variable:
+
+```{r}
+   V(g)$comm <- as.numeric(bipartite_mapping(g)$type) + 1
+   modularity(g, V(g)$comm)
+```
+
+And indeed, we recover the theoretical minimum value of the modularity [@brandes07, p. 173]! This also means that this method can be used to test whether a graph is bipartite, or whether any network *approximates* bipartiteness [@newman06b, p. 13]. Values that are close to $-0.5$ would indicate that the network in question has bipartite structure. 
+
 ## Basic Two-Mode Network Statistics
 
 We can calculate some basic network statistics from the affiliation (bi-adjacency) matrix. We have two number of nodes to calculate, but only one quantity for the number of edges.
@@ -413,7 +428,7 @@ The off-diagonal entries of these square person by person (group by group) matri
 In `igraph` the  relevant function is called `bipartite_projection`. It takes a graph as an input and returns a list containing `igraph` graph objects of both projections by default:
 
 ```{r}
-   Proj <-  bipartite_projection(g)
+   Proj <- bipartite_projection(g)
    G.p <- Proj[[1]]
    G.g <- Proj[[2]]
 ```
@@ -849,8 +864,7 @@ Another way of thinking of the eigenvector centrality of each node in this conte
 So for any person, let's say $EVELYN$, their eigenvector centrality is equal to:
 
 ```{r}
-   weight <- 1/sqrt(eig.p$values[1])
-   sum(A["EVELYN", ] * g.s) * weight
+   sum(A["EVELYN", ] * g.s) * 1/sqrt(eig.p$values[1])
 ```
 
 Which is indeed Evelyn's Eigenvector score. 
@@ -858,7 +872,7 @@ Which is indeed Evelyn's Eigenvector score.
 The same goes for the eigenvector score of groups, which are just a weighted sum of the Eigenvector centralities of the people who belong to them:
 
 ```{r}
-   sum(A[, "6/27"] * p.s) *weight
+   sum(A[, "6/27"] * p.s) *1/sqrt(eig.p$values[1])
 ```
 
 Which is indeed the eigenvector score for the event held on 6/27. Duality at work!
