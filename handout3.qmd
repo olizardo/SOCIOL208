@@ -452,7 +452,7 @@ You may have noticed that the Hubs and Authorities approach is the equivalent of
 
 But we can imagine a world in which we want to penalize the number of hub and authority points that everyone gets by each node's in and outdegree. That is, authorities that are pointed to by selective hubs should get more credit than authorities that are pointed to by non-selective hubs. In the same way, hubs that point to authorities that are pointed to by more selective hubs, should be get more hub points for their trouble. 
 
-So the idea is to combine the HITS reflective centrality idea with PageRank's degree-weighting scheme. We can do this by using a variation of the status game we used for HITS, developed by @lempel_moran01.^[They called their approach SALSA an acronym for the also impossible to remember title of "Stochastic Approach for Link Structure Analysis."] Instead of using them the original adjacency matrix $\mathbf{A}$ we use a couple of degree weighted variations:
+So the idea is to combine the HITS reflective centrality idea with PageRank's degree-weighting scheme. We can do this by using a variation of the status game we used for HITS, developed by @lempel_moran01.^[They called their approach SALSA an acronym for the also impossible to remember title of "Stochastic Approach for Link Structure Analysis."] Instead of using the original adjacency matrix $\mathbf{A}$ and its transpose $\mathbf{A}^T$ we use a couple of degree weighted variations:
 
 $$
 \mathbf{P}^h = \mathbf{D}_{(in)}^{-1}\mathbf{A}^T
@@ -506,6 +506,33 @@ Let's see it in action:
    round(salsa$h/max(salsa$h), 2)
    round(salsa$a/max(salsa$a), 2)
 ```
+
+Neat! Also, like with HITS, it is clear that these scores are the leading eigenvectors of two matrices $\mathbf{M^h}$ and $\mathbf{M^a}$, given by the product of $\mathbf{P^h}$ and $\mathbf{P^a}$:
+
+$$
+\mathbf{M}^h = (\mathbf{P^h})^T(\mathbf{P^a})^T
+$$
+
+$$
+\mathbf{M}^a = (\mathbf{P^a})^T(\mathbf{P^h})^T
+$$
+
+Which we can check as follows:
+
+```{r}
+   Pa <- A/rowSums(A) #row normalized adjacency matrix
+   Ph <- t(A)/colSums(A) #row normalized transpose of adjacency matrix
+   M.h <- t(Ph) %*% t(Pa)
+   M.a <- t(Pa) %*% t(Ph)
+   h <- Re(eigen(M.h)$vectors[,1]) *-1 
+   a <- Re(eigen(M.a)$vectors[,1]) *-1
+   round(h/max(h), 2)
+   round(a/max(a), 2)
+```
+
+Which are the same numbers we obtained via our reflective status game!
+
+## A Final Ranking of Prestige Scores
 
 Like before, we can treat the PageRank, Hub, and Authority Scores (regular and SALSA) as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes stack up according to the different status criteria:
 

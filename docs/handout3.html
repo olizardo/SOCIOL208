@@ -277,6 +277,11 @@ div.csl-indent {
   <a href="./ca.html" class="sidebar-item-text sidebar-link">Correspondence Analysis (CA) of Two-Mode Networks</a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./spectral.html" class="sidebar-item-text sidebar-link">Community Detection Using Spectral Clustering</a>
+  </div>
+</li>
       </ul>
   </li>
       </ul>
@@ -317,6 +322,7 @@ div.csl-indent {
   <li><a href="#a-degree-dependent-model-of-status-aka-pagerank" id="toc-a-degree-dependent-model-of-status-aka-pagerank" class="nav-link" data-scroll-target="#a-degree-dependent-model-of-status-aka-pagerank">A Degree-Dependent Model of Status (AKA PageRank)</a></li>
   <li><a href="#hubs-and-authorities" id="toc-hubs-and-authorities" class="nav-link" data-scroll-target="#hubs-and-authorities">Hubs and Authorities</a></li>
   <li><a href="#a-degree-dependent-model-of-hubs-and-authorities-aka-salsa" id="toc-a-degree-dependent-model-of-hubs-and-authorities-aka-salsa" class="nav-link" data-scroll-target="#a-degree-dependent-model-of-hubs-and-authorities-aka-salsa">A Degree-Dependent Model of Hubs and Authorities (AKA SALSA)</a></li>
+  <li><a href="#a-final-ranking-of-prestige-scores" id="toc-a-final-ranking-of-prestige-scores" class="nav-link" data-scroll-target="#a-final-ranking-of-prestige-scores">A Final Ranking of Prestige Scores</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout3.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -911,7 +917,7 @@ div.csl-indent {
 <h2 class="anchored" data-anchor-id="a-degree-dependent-model-of-hubs-and-authorities-aka-salsa">A Degree-Dependent Model of Hubs and Authorities (AKA SALSA)</h2>
 <p>You may have noticed that the Hubs and Authorities approach is the equivalent of the eigenvector centrality for directed networks. Therefore, it is subject to the same critique that the PageRank centralities levies at the eigenvector centrality, because it assumes that each authority receives the same number of authority points from every hub that points to them irrespective of those hubs’ outdegree. In the same way, it assumes that every hub receives the same number of hub points from the authorities they point to irrespective of those authorities’ indegree.</p>
 <p>But we can imagine a world in which we want to penalize the number of hub and authority points that everyone gets by each node’s in and outdegree. That is, authorities that are pointed to by selective hubs should get more credit than authorities that are pointed to by non-selective hubs. In the same way, hubs that point to authorities that are pointed to by more selective hubs, should be get more hub points for their trouble.</p>
-<p>So the idea is to combine the HITS reflective centrality idea with PageRank’s degree-weighting scheme. We can do this by using a variation of the status game we used for HITS, developed by <span class="citation" data-cites="lempel_moran01">Lempel and Moran (<a href="#ref-lempel_moran01" role="doc-biblioref">2001</a>)</span>.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a> Instead of using them the original adjacency matrix <span class="math inline">\(\mathbf{A}\)</span> we use a couple of degree weighted variations:</p>
+<p>So the idea is to combine the HITS reflective centrality idea with PageRank’s degree-weighting scheme. We can do this by using a variation of the status game we used for HITS, developed by <span class="citation" data-cites="lempel_moran01">Lempel and Moran (<a href="#ref-lempel_moran01" role="doc-biblioref">2001</a>)</span>.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a> Instead of using the original adjacency matrix <span class="math inline">\(\mathbf{A}\)</span> and its transpose <span class="math inline">\(\mathbf{A}^T\)</span> we use a couple of degree weighted variations:</p>
 <p><span class="math display">\[
 \mathbf{P}^h = \mathbf{D}_{(in)}^{-1}\mathbf{A}^T
 \]</span></p>
@@ -961,6 +967,36 @@ div.csl-indent {
 [16] 0.44 0.50 0.83 0.22 0.44 0.83</code></pre>
 </div>
 </div>
+<p>Neat! Also, like with HITS, it is clear that these scores are the leading eigenvectors of two matrices <span class="math inline">\(\mathbf{M^h}\)</span> and <span class="math inline">\(\mathbf{M^a}\)</span>, given by the product of <span class="math inline">\(\mathbf{P^h}\)</span> and <span class="math inline">\(\mathbf{P^a}\)</span>:</p>
+<p><span class="math display">\[
+\mathbf{M}^h = (\mathbf{P^h})^T(\mathbf{P^a})^T
+\]</span></p>
+<p><span class="math display">\[
+\mathbf{M}^a = (\mathbf{P^a})^T(\mathbf{P^h})^T
+\]</span></p>
+<p>Which we can check as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1"></a>   Pa <span class="ot">&lt;-</span> A<span class="sc">/</span><span class="fu">rowSums</span>(A) <span class="co">#row normalized adjacency matrix</span></span>
+<span id="cb66-2"><a href="#cb66-2"></a>   Ph <span class="ot">&lt;-</span> <span class="fu">t</span>(A)<span class="sc">/</span><span class="fu">colSums</span>(A) <span class="co">#row normalized transpose of adjacency matrix</span></span>
+<span id="cb66-3"><a href="#cb66-3"></a>   M.h <span class="ot">&lt;-</span> <span class="fu">t</span>(Ph) <span class="sc">%*%</span> <span class="fu">t</span>(Pa)</span>
+<span id="cb66-4"><a href="#cb66-4"></a>   M.a <span class="ot">&lt;-</span> <span class="fu">t</span>(Pa) <span class="sc">%*%</span> <span class="fu">t</span>(Ph)</span>
+<span id="cb66-5"><a href="#cb66-5"></a>   h <span class="ot">&lt;-</span> <span class="fu">Re</span>(<span class="fu">eigen</span>(M.h)<span class="sc">$</span>vectors[,<span class="dv">1</span>]) <span class="sc">*-</span><span class="dv">1</span> </span>
+<span id="cb66-6"><a href="#cb66-6"></a>   a <span class="ot">&lt;-</span> <span class="fu">Re</span>(<span class="fu">eigen</span>(M.a)<span class="sc">$</span>vectors[,<span class="dv">1</span>]) <span class="sc">*-</span><span class="dv">1</span></span>
+<span id="cb66-7"><a href="#cb66-7"></a>   <span class="fu">round</span>(h<span class="sc">/</span><span class="fu">max</span>(h), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0.30 0.15 0.75 0.60 0.75 0.05 0.40 0.40 0.65 0.70 0.15 0.10 0.30 0.20 1.00
+[16] 0.20 0.25 0.85 0.55 0.60 0.55</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   <span class="fu">round</span>(a<span class="sc">/</span><span class="fu">max</span>(a), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0.72 1.00 0.28 0.44 0.28 0.56 0.72 0.56 0.22 0.50 0.61 0.39 0.22 0.56 0.22
+[16] 0.44 0.50 0.83 0.22 0.44 0.83</code></pre>
+</div>
+</div>
+<p>Which are the same numbers we obtained via our reflective status game!</p>
+</section>
+<section id="a-final-ranking-of-prestige-scores" class="level2">
+<h2 class="anchored" data-anchor-id="a-final-ranking-of-prestige-scores">A Final Ranking of Prestige Scores</h2>
 <p>Like before, we can treat the PageRank, Hub, and Authority Scores (regular and SALSA) as “centralities” defined over nodes in the graph. In that case we might be interested in how different nodes stack up according to the different status criteria:</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -982,7 +1018,7 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 2 </td>
    <td style="text-align:center;"> 0.57 </td>
-   <td style="text-align:center;"> 0.18 </td>
+   <td style="text-align:center;"> 0.15 </td>
    <td style="text-align:center;"> 1.00 </td>
    <td style="text-align:center;"> 0.15 </td>
    <td style="text-align:center;"> 1.00 </td>
@@ -991,8 +1027,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 18 </td>
    <td style="text-align:center;"> 0.44 </td>
-   <td style="text-align:center;"> 0.80 </td>
-   <td style="text-align:center;"> 0.87 </td>
+   <td style="text-align:center;"> 0.85 </td>
+   <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 0.85 </td>
    <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 15 </td>
@@ -1000,8 +1036,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 21 </td>
    <td style="text-align:center;"> 1.00 </td>
-   <td style="text-align:center;"> 0.60 </td>
-   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.55 </td>
+   <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 0.55 </td>
    <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 15 </td>
@@ -1009,8 +1045,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 1 </td>
    <td style="text-align:center;"> 0.30 </td>
-   <td style="text-align:center;"> 0.37 </td>
-   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.30 </td>
+   <td style="text-align:center;"> 0.72 </td>
    <td style="text-align:center;"> 0.30 </td>
    <td style="text-align:center;"> 0.72 </td>
    <td style="text-align:center;"> 13 </td>
@@ -1018,8 +1054,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 7 </td>
    <td style="text-align:center;"> 0.64 </td>
-   <td style="text-align:center;"> 0.49 </td>
-   <td style="text-align:center;"> 0.68 </td>
+   <td style="text-align:center;"> 0.40 </td>
+   <td style="text-align:center;"> 0.72 </td>
    <td style="text-align:center;"> 0.40 </td>
    <td style="text-align:center;"> 0.72 </td>
    <td style="text-align:center;"> 13 </td>
@@ -1027,8 +1063,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 11 </td>
    <td style="text-align:center;"> 0.24 </td>
-   <td style="text-align:center;"> 0.21 </td>
-   <td style="text-align:center;"> 0.77 </td>
+   <td style="text-align:center;"> 0.15 </td>
+   <td style="text-align:center;"> 0.61 </td>
    <td style="text-align:center;"> 0.15 </td>
    <td style="text-align:center;"> 0.61 </td>
    <td style="text-align:center;"> 11 </td>
@@ -1036,8 +1072,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 6 </td>
    <td style="text-align:center;"> 0.44 </td>
-   <td style="text-align:center;"> 0.06 </td>
-   <td style="text-align:center;"> 0.64 </td>
+   <td style="text-align:center;"> 0.05 </td>
+   <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 0.05 </td>
    <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 10 </td>
@@ -1045,8 +1081,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 8 </td>
    <td style="text-align:center;"> 0.26 </td>
-   <td style="text-align:center;"> 0.49 </td>
-   <td style="text-align:center;"> 0.71 </td>
+   <td style="text-align:center;"> 0.40 </td>
+   <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 0.40 </td>
    <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 10 </td>
@@ -1054,8 +1090,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 14 </td>
    <td style="text-align:center;"> 0.27 </td>
-   <td style="text-align:center;"> 0.28 </td>
-   <td style="text-align:center;"> 0.68 </td>
+   <td style="text-align:center;"> 0.20 </td>
+   <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 0.20 </td>
    <td style="text-align:center;"> 0.56 </td>
    <td style="text-align:center;"> 10 </td>
@@ -1063,8 +1099,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 10 </td>
    <td style="text-align:center;"> 0.18 </td>
-   <td style="text-align:center;"> 0.67 </td>
-   <td style="text-align:center;"> 0.61 </td>
+   <td style="text-align:center;"> 0.70 </td>
+   <td style="text-align:center;"> 0.50 </td>
    <td style="text-align:center;"> 0.70 </td>
    <td style="text-align:center;"> 0.50 </td>
    <td style="text-align:center;"> 9 </td>
@@ -1093,7 +1129,7 @@ div.csl-indent {
    <td style="text-align:center;"> 15 </td>
    <td style="text-align:center;"> 0.10 </td>
    <td style="text-align:center;"> 1.00 </td>
-   <td style="text-align:center;"> 0.27 </td>
+   <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 1.00 </td>
    <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 20 </td>
@@ -1101,8 +1137,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 18 </td>
    <td style="text-align:center;"> 0.44 </td>
-   <td style="text-align:center;"> 0.80 </td>
-   <td style="text-align:center;"> 0.87 </td>
+   <td style="text-align:center;"> 0.85 </td>
+   <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 0.85 </td>
    <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 17 </td>
@@ -1110,8 +1146,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 3 </td>
    <td style="text-align:center;"> 0.16 </td>
-   <td style="text-align:center;"> 0.84 </td>
-   <td style="text-align:center;"> 0.36 </td>
+   <td style="text-align:center;"> 0.75 </td>
+   <td style="text-align:center;"> 0.28 </td>
    <td style="text-align:center;"> 0.75 </td>
    <td style="text-align:center;"> 0.28 </td>
    <td style="text-align:center;"> 15 </td>
@@ -1119,8 +1155,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 5 </td>
    <td style="text-align:center;"> 0.10 </td>
-   <td style="text-align:center;"> 0.84 </td>
-   <td style="text-align:center;"> 0.33 </td>
+   <td style="text-align:center;"> 0.75 </td>
+   <td style="text-align:center;"> 0.28 </td>
    <td style="text-align:center;"> 0.75 </td>
    <td style="text-align:center;"> 0.28 </td>
    <td style="text-align:center;"> 15 </td>
@@ -1128,8 +1164,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 10 </td>
    <td style="text-align:center;"> 0.18 </td>
-   <td style="text-align:center;"> 0.67 </td>
-   <td style="text-align:center;"> 0.61 </td>
+   <td style="text-align:center;"> 0.70 </td>
+   <td style="text-align:center;"> 0.50 </td>
    <td style="text-align:center;"> 0.70 </td>
    <td style="text-align:center;"> 0.50 </td>
    <td style="text-align:center;"> 14 </td>
@@ -1137,8 +1173,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 9 </td>
    <td style="text-align:center;"> 0.09 </td>
-   <td style="text-align:center;"> 0.77 </td>
-   <td style="text-align:center;"> 0.29 </td>
+   <td style="text-align:center;"> 0.65 </td>
+   <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 0.65 </td>
    <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 13 </td>
@@ -1146,8 +1182,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 4 </td>
    <td style="text-align:center;"> 0.28 </td>
-   <td style="text-align:center;"> 0.71 </td>
-   <td style="text-align:center;"> 0.50 </td>
+   <td style="text-align:center;"> 0.60 </td>
+   <td style="text-align:center;"> 0.44 </td>
    <td style="text-align:center;"> 0.60 </td>
    <td style="text-align:center;"> 0.44 </td>
    <td style="text-align:center;"> 12 </td>
@@ -1155,8 +1191,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 20 </td>
    <td style="text-align:center;"> 0.20 </td>
-   <td style="text-align:center;"> 0.69 </td>
-   <td style="text-align:center;"> 0.59 </td>
+   <td style="text-align:center;"> 0.60 </td>
+   <td style="text-align:center;"> 0.44 </td>
    <td style="text-align:center;"> 0.60 </td>
    <td style="text-align:center;"> 0.44 </td>
    <td style="text-align:center;"> 12 </td>
@@ -1164,8 +1200,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 19 </td>
    <td style="text-align:center;"> 0.09 </td>
-   <td style="text-align:center;"> 0.58 </td>
-   <td style="text-align:center;"> 0.32 </td>
+   <td style="text-align:center;"> 0.55 </td>
+   <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 0.55 </td>
    <td style="text-align:center;"> 0.22 </td>
    <td style="text-align:center;"> 11 </td>
@@ -1173,8 +1209,8 @@ div.csl-indent {
   <tr>
    <td style="text-align:center;"> 21 </td>
    <td style="text-align:center;"> 1.00 </td>
-   <td style="text-align:center;"> 0.60 </td>
-   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.55 </td>
+   <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 0.55 </td>
    <td style="text-align:center;"> 0.83 </td>
    <td style="text-align:center;"> 11 </td>
