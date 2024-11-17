@@ -94,27 +94,86 @@ In fact, we have already done a partial version of the matrix eigendecomposition
 
 The more important thing is that, once you have the eigendecomposition of a matrix, and the full set of eigenvectors stored in $\mathbf{U}$, the first few columns of $\mathbf{U}$, gives us the best *low dimensional approximation* of the original matrix. 
 
+For instance, in the above case, the one-dimensional (also called "rank one") approximation of the original matrix is given by:
+
+$$
+\mathbf{B}_{1-dim} = u_1\lambda_1u_1^T
+$$
+
+Where $u$ is just the first column (eigenvector) of $\mathbf{U}$, and $\lambda_1$ is just the first eigenvalue. 
+
+In `R` we can do this approximation as follows:
+
+```{r}
+   u.1 <- as.matrix(U[, 1]) #column vector
+   B.1dim <- u.1 %*% lambda[1, 1] %*% t(u.1)
+   round(B.1dim, 2)
+```
+
+Which are not quite the same as the original values of $\mathbf{B}$, but they are not wildly far off either. 
+
+If we wanted to be more accurate, however, we would use a *two-dimensional* approximation (rank two) and thus use more of the information:
+
+$$
+\mathbf{B}_{2-dim} = u_1\lambda_1u_1^T + u_2\lambda_2u_2^T
+$$
+
+In `R`:
+
+```{r}
+   u.2 <- as.matrix(U[, 2])
+   B.2dim <- u.1 %*% lambda[1, 1] %*% t(u.1) + u.2 %*% lambda[2, 2] %*% t(u.2)
+   round(B.2dim, 2)
+```
+
+Which are not the same as the original, but are now a bit closer!
+
+Of course, if we wanted to reconstruct the original matrix, all we have to do is add the product of the eigenvector, eigenvalue, and transpose of the eigenvector across all three dimensions of the matrix:
+
+```{r}
+   u.3 <- as.matrix(U[, 3])
+   B.3dim <- 
+      u.1 %*% lambda[1, 1] %*% t(u.1) + 
+      u.2 %*% lambda[2, 2] %*% t(u.2) + 
+      u.3 %*% lambda[3, 3] %*% t(u.3)
+   round(B.3dim, 2)
+```
+
+Which reconstructs the original values. 
+
+So in general, if you have a symmetric square matrix $\mathbf{B}$ of dimensions $k \times k$, and you obtain an eigenvalue decomposition of $\mathbf{B}$ with eigenvectors stored in the columns of $\mathbf{U}$ and eigenvalues in $\lambda$, then the rank-$p$ approximation of the original matrix is given by:
+ 
+$$
+\mathbf{B}_{rank-p} = \sum_{m = 1}^p u_{m}\lambda_mu_m^T
+$$
+
+When $p = k$, the equation above gives you the original matrix back. When $p<k$ you get the best guess as to what the original was, given $p$ dimensions.
+
 ## Obtaining the Matrices We Need for CA
 
-Two-mode CA boils down to the eigendecomposition of a suitable matrix, derived from the original affiliation (bi-adjacency) matrix of a two-mode network. So which matrix should be use for CA? 
+As you might have already guessed, two-mode CA boils down to the eigendecomposition of a suitable matrix, derived from the original affiliation (bi-adjacency) matrix of a two-mode network. 
+
+The goal is to come up with a low-rank (usually two-dimensional) approximation of the original affiliation network using the eigenvectors and eigenvalues obtained from the decomposition, as we did above with our toy example.
+
+So which matrix should be use for CA? 
 
 Let's find out:
 
 First we need to create **row stochastic** versions of the affiliation matrix and its transpose $\mathbf{A}$ and $\mathbf{A}^T$. Recall that a matrix is row stochastic if their rows sum to one. 
 
-For the people, we can do this by taking the original affiliation matrix, and pre-multiplying it by a **diagonal square matrix** $\mathbf{D}_P^{-1}$ of dimensions $M \times M$ containing the *inverse* of the degrees of each person in the affiliation network along the diagonals and zeros everywhere else, yielding the row-stochastic matrix $\mathbf{P}_P$ of dimensions $M \times N$:
+For the people, we can do this by taking the original affiliation matrix, and pre-multiplying it by a **diagonal square matrix** $\mathbf{D}_P^{-1}$ of dimensions $M \times M$ containing the *inverse* of the degrees of each person in the affiliation network along the diagonals and zeros everywhere else, yielding the row-stochastic matrix $\mathbf{P}_{PG}$ of dimensions $M \times N$:
 
 $$
-\mathbf{P}_P = \mathbf{D}_P^{-1}\mathbf{A}
+\mathbf{P}_{PG} = \mathbf{D}_P^{-1}\mathbf{A}
 $$
 
-And we can do the same with the groups, except that we pre-multiply the *transpose* of the original affiliation matrix by $\mathbf{D}_G^{-1}$ which is an $N \times N$ matrix containing the inverse of the size of each group along the diagonals and zero everywhere else, this yields the matrix $\mathbf{P}_G$ of dimensions $N \times M$:
+And we can do the same with the groups, except that we pre-multiply the *transpose* of the original affiliation matrix by $\mathbf{D}_G^{-1}$ which is an $N \times N$ matrix containing the inverse of the size of each group along the diagonals and zero everywhere else, this yields the matrix $\mathbf{P}_{GP}$ of dimensions $N \times M$:
 
 $$
-\mathbf{P}_G = \mathbf{D}_G^{-1}\mathbf{A}^T
+\mathbf{P}_{GP} = \mathbf{D}_G^{-1}\mathbf{A}^T
 $$
 
-In `R` can compute $\mathbf{P}_P$ and $\mathbf{P}_G$, using the classic Southern Women two-mode data, as follows:
+In `R` can compute $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$, using the classic Southern Women two-mode data, as follows:
 
 ```{r}
    library(igraph)
@@ -122,31 +181,31 @@ In `R` can compute $\mathbf{P}_P$ and $\mathbf{P}_G$, using the classic Southern
    g <- southern_women #southern women data
    A <- as.matrix(as_biadjacency_matrix(g)) #bi-adjacency matrix
    D.p <- diag(1/rowSums(A)) #inverse of degree matrix of persons
-   P.p <- D.p %*% A
-   rownames(P.p) <- rownames(A) 
+   P.pg <- D.p %*% A
+   rownames(P.pg) <- rownames(A) 
    D.g <- diag(1/colSums(A)) #inverse of degree matrix of groups
-   P.g <- D.g %*% t(A)
-   rownames(P.g) <- colnames(A)
+   P.gp <- D.g %*% t(A)
+   rownames(P.gp) <- colnames(A)
 ```
 
-And we can check that both $\mathbf{P}_P$ and $\mathbf{P}_G$ are indeed row stochastic:
+And we can check that both $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$ are indeed row stochastic:
 
 ```{r}
-   rowSums(P.p)
-   rowSums(P.g)
+   rowSums(P.pg)
+   rowSums(P.gp)
 ```
 
 And that they are of the predicted dimensions:
 
 ```{r}
-   dim(P.p)
-   dim(P.g)
+   dim(P.pg)
+   dim(P.pg)
 ```
 
-Great! Now, we can obtain the *degree-normalized projections* for people by multiplying $\mathbf{P}_P$ times $\mathbf{P}_G$:
+Great! Now, we can obtain the *degree-normalized projections* for people by multiplying $\mathbf{P}_{PG}$ times $\mathbf{P}_{GP}$:
 
 $$
-\mathbf{P}_{PP} = \mathbf{P}_P\mathbf{P}_G
+\mathbf{P}_{PP} = \mathbf{P}_{PG}\mathbf{P}_{GP}
 $$
 
 Which produces the matrix $\mathbf{P}_{PP}$ a square $M \times M$ matrix containing the *degree-normalized similarities* between each pair of people.
@@ -154,7 +213,7 @@ Which produces the matrix $\mathbf{P}_{PP}$ a square $M \times M$ matrix contain
 We then do the same for groups:
 
 $$
-\mathbf{P}_{GG} = \mathbf{P}_G\mathbf{P}_P
+\mathbf{P}_{GG} = \mathbf{P}_{GP}\mathbf{P}_{PG}
 $$
 
 Which produces the matrix $\mathbf{P}_{GG}$ a square $N \times N$ matrix containing the *degree-normalized similarities* between each pair of groups.
@@ -162,8 +221,8 @@ Which produces the matrix $\mathbf{P}_{GG}$ a square $N \times N$ matrix contain
 In `R` we obtain these matrices as follows:
 
 ```{r}
-   P.pp <- P.p %*% P.g
-   P.gg <- P.g %*% P.p
+   P.pp <- P.pg %*% P.gp
+   P.gg <- P.gp %*% P.pg
 ```
 
 Which are still row stochastic--but now square--matrices:
@@ -242,8 +301,12 @@ We can perform the normalization of the raw CA scores using the following functi
 
 ```{r}
    norm.CA.vec <- function(x, s = 0.000001) {
-      CA.p <- eigen(diag(1/rowSums(x)) %*% x %*% diag(1/colSums(x)) %*% t(x)) #person CA
-      CA.g <- eigen(diag(1/colSums(x)) %*% t(x) %*% diag(1/rowSums(x)) %*% x) #group CA
+      D.p <- diag(rowSums(x)) #degree matrix for persons
+      D.g <- diag(colSums(x)) #degree matrix for groups
+      i.Dp <- solve(D.p) #inverse of degree matrix for persons
+      i.Dg <- solve(D.g) #inverse of degree matrix for groups
+      CA.p <- eigen(i.Dp %*% x %*% i.Dg %*% t(x)) #person CA
+      CA.g <- eigen(i.Dg %*% t(x) %*% i.Dp %*% x) #group CA
       ev <- CA.p$values[2:length(CA.p$values)]
       ev <- ev[which(ev > s)]
       m <- length(ev)
@@ -260,11 +323,13 @@ We can perform the normalization of the raw CA scores using the following functi
       rownames(Z.v.p) <- rownames(x)
       rownames(Z.v.g) <- colnames(x)
       for (i in 1:m) {
-         norm.p <- as.numeric(t(CA.p[, i]) %*% diag(rowSums(x)) %*% CA.p[, i]) #person norm
-         Z.u.p[, i] <- CA.p[, i] * sqrt(sum(A)/norm.p) #normalizing to unit variance
+         ev.p <- as.matrix(CA.p[, i])
+         ev.g <- as.matrix(CA.g[, i])
+         norm.p <- as.numeric(t(ev.p) %*% D.p %*% ev.p) #person norm
+         Z.u.p[, i] <- ev.p * sqrt(sum(A)/norm.p) #normalizing to unit variance
          Z.v.p[, i] <- Z.u.p[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
-         norm.g <- as.numeric(t(CA.g[, i]) %*% diag(colSums(x)) %*% CA.g[, i]) #group norm
-         Z.u.g[, i] <- CA.g[, i] * sqrt(sum(A)/norm.g) #normalizing to unit variance
+         norm.g <- as.numeric(t(ev.g) %*% D.g %*% ev.g) #group norm
+         Z.u.g[, i] <- ev.g * sqrt(sum(A)/norm.g) #normalizing to unit variance
          Z.v.g[, i] <- Z.u.g[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
       }
    return(list(Z.u.p = Z.u.p, Z.u.g = Z.u.g,
@@ -284,10 +349,10 @@ Let's see the normalization function at work, extracting the first two dimension
    uni.g <- CA.res$Z.u.g[, 1:2]
    val.p <- CA.res$Z.v.p[, 1:2]
    val.g <- CA.res$Z.v.g[, 1:2]
-   uni.p
-   uni.g
-   val.p
-   val.g
+   round(uni.p, 2)
+   round(uni.g, 2)
+   round(val.p, 2)
+   round(val.g, 2)
 ```
 
 Great! Now we have two sets (unit variance versus eigenvalue variance) of normalized CA scores for persons and groups on the first two dimensions. 
@@ -298,10 +363,10 @@ Just like as we saw with the eigenvector centrality in the last handout, there i
 
 The main difference is that this time we sum scores across the $\mathbf{P_P}$ and $\mathbf{P_G}$ matrices rather than the original affiliation matrix and its transpose, resulting in *degree-weighted* sums of scores for both persons and groups.
 
-So for any given person, on any given dimension, let's say $EVELYN$, her CA score is given by the sum of the (unit variance normalized) CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn's row of the $\mathbf{P_P}$ matrix):
+So for any given person, on any given dimension, let's say $EVELYN$, her CA score is given by the sum of the (unit variance normalized) CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn's row of the $\mathbf{P}_{PG}$ matrix):
 
 ```{r}
-   sum(P.p["EVELYN", ] * uni.g[, 1]) 
+   sum(P.pg["EVELYN", ] * uni.g[, 1]) 
 ```
 
 Which is the same as the (eigenvalue variance) normalized score we obtained via CA for $EVELYN$:
@@ -313,7 +378,7 @@ Which is the same as the (eigenvalue variance) normalized score we obtained via 
 A similar story applies to groups. Each group score is the group-size-weighted sum of the (unit variance normalized) CA scores of the people who join it:
 
 ```{r}
-   sum(P.g["6/27", ] * uni.p[, 1])
+   sum(P.gp["6/27", ] * uni.p[, 1])
 ```
 
 Which is the same as the (eigenvalue variance normalized) score we obtained via CA:
@@ -330,7 +395,7 @@ And, finally, we can use the first two (eigenvalue variance) normalized CA score
 
 ```{r}
    val.g[, 2] <- val.g[, 2]*-1 #flippling sign of group scores on second dimension for plotting purposes
-   plot.dat <- data.frame(rbind(val.p, val.g)) %>% 
+   plot.dat <- data.frame(rbind(uni.p, val.g)) %>% 
       cbind(type = as.factor(c(rep(1, 18), rep(2, 14))))
    library(ggplot2)
    # install.packages("ggrepel")
@@ -345,7 +410,8 @@ And, finally, we can use the first two (eigenvalue variance) normalized CA score
                   axis.title = element_text(size = 14),
                   axis.text = element_text(size = 12))
    p <- p + scale_color_manual(values = c("red", "blue"))
-   p <- p + labs(x = "First Dimension", y = "Second Dimension") + ylim(-1.5, 3) + xlim(-1.5, 1.5)
+   p <- p + labs(x = "First Dimension", y = "Second Dimension") 
+   p <- p + xlim(-2, 2) + ylim(-2, 4)
    p
 ```
 

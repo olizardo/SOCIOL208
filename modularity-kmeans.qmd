@@ -1,0 +1,332 @@
+---
+title: "Community Detection Using Spectral Clustering"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Spectral Clustering
+
+In the handout on communities, we saw how to use the leading (first) eigenvector of the modularity matrix to split a network in two (and then split those partitions in two and so on). 
+
+In the handout on CA, we saw that the eigendecomposition of a square matrix actually results in $p$ eigenvectors and eigenvalues (not just the leading or first). 
+
+We also learned from the eigendecomposition lesson that selecting some number $k < p$ of eigenvectors and eigenvalues helps us reconstruct the best approximation of the original matrix given that number of dimensions.
+
+Putting these three lessons together suggests a simple way to the multiple community detection in a network using the eigenvalues of a suitable matrix (along with standard clustering algorithms) that doesn't rely on the iteration of a divisive approach across different splits that only use one (the leading) eigenvector. This general approach to community detection is sometimes referred to as **spectral clustering**.^[Not as a reference to ghosts, but because the eigendecomposition of a matrix is sometimes also called the **spectral decomposition**.]
+
+## Clustering Using the Eigenvectors of the Laplacian
+
+The issue then becomes, *which* matrix should we use the eigenvalues and eigenvectors of? As suggested by @vonluxburg07, an obvious candidate is what is called the **graph Laplacian** ($\mathbf{L}$), which is given by:
+
+$$
+\mathbf{L} = \mathbf{D} - \mathbf{A}
+$$
+
+Where $\mathbf{D}$ is the graph's **degree matrix** a matrix with the degree vector of the graph along the diagonals and zeros everywhere else. 
+
+Like the modularity matrix, the $\mathbf{L}$ matrix is doubly-centered (rows and columns sum to zero), which means that one of the eigenvalues of $\mathbf{L}$ is guaranteed to be zero. The other interesting thing is that the second smallest eigenvalue of $\mathbf{L}$ (sometimes called the **Fiedler vector**) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).
+
+If we want to check for the existence of multiple groups, therefore, what we need to do is to create a new $n \times k$ matrix $\mathbf{U}$ composed of the $k$ eigenvectors of $\mathbf{L}$ associated with the $k$ *smallest* eigenvalues. 
+
+We then row-normalize each of these values (e.g., using the Eucledian norm) and use the $\mathbf{U}$ vector as input to a kmeans algorithm with known number of clusters [@fouss_etal16, p. 320]. 
+
+Let's see how that would work. Let's load the `law_friends` data from the `networkdata` package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout.
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- law_friends
+   g <- as_undirected(g, mode = "collapse")
+   g <- subgraph(g, degree(g)>=2) #removing low degree nodes
+```
+
+We can then write a function called `ratio.cut` that accomplishes what we described earlier. It looks like this:
+
+```{r}
+   ratio.cut <- function(x, k = 6) {
+         A <- as.matrix(as_adjacency_matrix(x))
+         D <- diag(degree(x))
+         n <- vcount(x)
+         L <- D - A
+         eig.L <- eigen(L)
+         b <- n - k
+         e <- n - 1
+         U <- eig.L$vectors[, b:e]
+         U <- U[, k:1]
+         for (i in 1:nrow(U)) {
+            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+            }
+      return(U)
+   }
+```
+
+This function takes a graph as input and produces the $\mathbf{U}$ matrix with $n$ rows and $k$ columns, with $k=6$ by default. It first computes the adjacency matrix (line 2), then the degree matrix (line 3), then the Laplacian matrix (line 5). It then computes the eigendecomposition of the Laplacian (line 6), row normalizes the values taken by the eigenvectors corresponding to the $k$ smallest eigenvalues in lines 10-13 (reverse-ordered from smallest to biggest in line 9), and returns the resulting matrix $\mathbf{U}$ in line 14.
+
+Let's see the function at work:
+
+```{r}
+   U <- ratio.cut(g)
+   round(U, 2)[1:10, ]
+```
+
+Which shows the corresponding values of $\mathbf{U}$ for each node across the six eigenvectors of the Laplacian we selected. 
+
+Now, the basic idea is to treat each of the normalized scores along the six eigenvectors as if they were "variables" or "features" in a standard kmeans clustering problem. The algorithm will then group nodes based on how similar their scores are on each six-dimensional vector. Similar nodes will correspond to communities (kmeans clusters) in our data. 
+
+Kmeans requires knowing how many groups we want in advanced (as opposed to hierarchical clustering). Since we don't know in advance which is the best community partition, we compute a bunch of partitions and check the modularity of each. 
+
+The following function computes cluster assignments of nodes up to ten partitions (starting from the minimum two):
+
+
+```{r}
+   k.cuts <- function(x, max = 9) {
+      clus <- list()
+      for (i in 1:max) {
+         set.seed(456) #setting seed because kmeans uses random starting nodes for cluster centroids
+         k <- i + 1
+         clus[[i]] <- kmeans(x, k)$cluster
+         }
+      return(clus)
+   }
+```
+
+This function takes $\mathbf{U}$ matrix as input and returns a nine-element list (with vectors of length $n$ as its elements) of cluster assignments for each node in the graph. Each vector corresponds to partitions $k = \{2, 3, \ldots 10\}$ respectively. 
+
+Let's see the clustering function at work:
+
+```{r}
+   clus <- k.cuts(U)
+   clus
+```
+
+Great! Now that we have our partitions, we need to check the modularity corresponding to each one of them. 
+
+We can do this with the following quick function:
+
+```{r}
+   mod.check <- function(x, c) {
+      k <- length(c)
+      m <- rep(0, k)
+      for (i in 1:k) {
+         m[i] <- modularity(x, c[[i]])
+         }
+      names(m) <- 2:(k+1)
+      return(m)
+      }
+```
+
+Which takes an `igraph` graph object and the list of cluster assignments as input and produces a vector of the same length as the list of cluster assignments with the modularity corresponding to that assignment.
+
+Let's see this function at work in our running example:
+
+```{r}
+   mod.res <- mod.check(g, clus)
+   round(mod.res, 3)
+```
+
+Which suggests that the three-cluster partition of the network (shown in @fig-friends-2) does pretty well in separating densely connected subgraphs ($Q = 0.36$). 
+
+Note that this partition looks a lot like the one we settled on using Newman's divisive leading eigenvector approach based on the modularity matrix: One core dense group of lawyers surrounded by a looser couple of communities.
+
+
+```{r}  
+#| label: fig-friends
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Ratio Cut"
+#| fig-subcap:
+#|   - "Original Network"
+#|   - "Maximum Modularity Solution)"
+#|   - "Four Community Solution"
+#|   - "Five Community Solution"
+#|   - "Six Community Solution"
+#|   - "Seven Community Solution"
+#| layout-ncol: 2
+#| echo: false
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+k <- max(which(mod.res == max(mod.res))) #maximum modularity solution
+V(g)$color <- clus[[2]]
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[3]] #four cluster solution
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[4]] #five cluster solution
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[5]] #four cluster solution
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[6]] #five cluster solution
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+Note also that the four, five, six and even seven-community partitions are not too shabby either. We can see those in @fig-friends-3-@fig-friends-6 as they reveal further insights into the group structure of the network beyond the main three-community division. 
+
+Note that further subdivisions of the network split the more loosely structured community in the upper-right, while the more densely linked community in the lower-left remains largely undisturbed. 
+
+
+## Clustering Using the Eigenvectors of the *Normalized* Laplacian
+
+We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix $\mathbf{L}$. Another approach is use a (degree) normalized version of the same matrix $\mathbf{\hat{L}}$, defined as follows:
+
+$$
+\mathbf{\hat{L}} = \mathbf{I} - \mathbf{D}^{-\frac{1}{2}}\mathbf{A}\mathbf{D}^{-\frac{1}{2}}
+$$
+
+Where everything else is as before and $\mathbf{I}$ is the identity matrix (an $n \times n$ matrix with ones along the diagonals and zero everywhere else), and $\mathbf{D}^{-\frac{1}{2}}$ is a matrix containing the inverse of the square root of degrees of each node ($1/\sqrt{k_i}$) in the diagonals and zeros everywhere else. 
+
+We can just adapt our previous `ratio.cut` function code to perform this new job:
+
+```{r}
+   norm.ratio.cut <- function(x, k = 6) {
+         A <- as.matrix(as_adjacency_matrix(x))
+         n <- vcount(x)
+         I <- diag(1, n, n)
+         D <- diag(1/sqrt(degree(x)))
+         L <- I - (D %*% A %*% D)
+         eig.L <- eigen(L)
+         b <- n - k
+         e <- n - 1
+         U <- eig.L$vectors[, b:e]
+         U <- U[, k:1]
+         for (i in 1:nrow(U)) {
+            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+            }
+      return(U)
+   }
+```
+
+Where we just have to modify the way we define the $\mathbf{D}$ and $\mathbf{L}$ matrices in lines 5 and 6 respectively, after creating the $\mathbf{I}$ matrix in line 4. 
+
+Now let's see if the normalized cut helps finds some communities:
+
+```{r}
+   U <- norm.ratio.cut(g)
+   clus <- k.cuts(U)
+   mod.res <- mod.check(g, clus)
+   round(mod.res, 3)
+```
+
+
+```{r}  
+#| label: fig-friends2
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Normalized Ratio Cut"
+#| fig-subcap:
+#|   - "Five Community Solution"
+#|   - "Six Community Solution"
+#| layout-ncol: 2
+#| echo: false
+
+V(g)$color <- clus[[4]]
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[5]] 
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+As we can see the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds ($Q = 0.35$), but suggests a finer grained partition, with the maximum at either five or six communities. 
+
+The resulting node clusters are shown in @fig-friends2-1 and @fig-friends2-2. 
+
+## Clustering Using the Eigenvectors of the Modularity Matrix
+
+As noted by @fender_etal17 [p. 1796], we can extend the spectral clustering approach based on the Laplacian and the normalized Laplacian to the modularity matrix $\mathbf{B}$. That is, we cluster the graph by embedding the nodes in a set of dimensions defined by the eigendecomposition of $\mathbf{B}$.
+
+The main difference is that rather than using the eigenvectors corresponding to the *smallest* eigenvalues (as we did with $\mathbf{L}$) we proceed in more typical fashion (as done with PCA and CA) and choose the eigenvectors corresponding to the *largest* ones. 
+
+This approach, once again, only requires small modifications to the one we used for the Laplacian:
+
+```{r}
+   mod.mat.cut <- function(x, k = 2) {
+         A <- as.matrix(as_adjacency_matrix(x))
+         n <- vcount(x)
+         d <- as.matrix(degree(x))
+         B <- A - (d %*% t(d))/sum(A)
+         eig.B <- eigen(B)
+         U <- eig.B$vectors[, 1:k]
+         for (i in 1:nrow(U)) {
+            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "F")
+            }
+      return(U)
+   }
+```
+
+The key difference here is that we compute the modularity matrix $\mathbf{B}$ rather than $\mathbf{L}$ from the adjacency matrix $\mathbf{A}$ in line 5; we then plug $\mathbf{B}$ into the `eigen` function and proceed with normalizing in the same way as before. 
+
+Another difference is that rather than using a large number of eigenvalues (e.g., $k = 6$), as we did when we were picking from the smallest ones, we now go for parsimony and pick a small rank (two-dimensional) representation of the original modularity matrix ($k = 2$).
+
+Let's see how this works:
+
+```{r}
+   U <- mod.mat.cut(g)
+   clus <- k.cuts(U)
+   mod.res <- mod.check(g, clus)
+   round(mod.res, 3)
+```
+
+We can see that the three-cluster solution does really well modularity-wise ($Q = 0.37$), however, the four cluster solution also seems promising. The resulting communities are shown in @fig-friends3-1 and @fig-friends3-2. 
+
+
+```{r}  
+#| label: fig-friends3
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Spectral Decomposition of the Modularity Matrix."
+#| fig-subcap:
+#|   - "Three Community Solution"
+#|   - "Four Community Solution"
+#| layout-ncol: 2
+#| echo: false
+
+V(g)$color <- clus[[2]]
+set.seed(123)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[3]] 
+set.seed(123)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
+As we can see, spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix produces a high-quality partition, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal. 
