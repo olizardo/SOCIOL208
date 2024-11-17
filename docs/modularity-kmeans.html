@@ -339,7 +339,8 @@ div.csl-indent {
 <p>In the handout on communities, we saw how to use the leading (first) eigenvector of the modularity matrix to split a network in two (and then split those partitions in two and so on).</p>
 <p>In the handout on CA, we saw that the eigendecomposition of a square matrix actually results in <span class="math inline">\(p\)</span> eigenvectors and eigenvalues (not just the leading or first).</p>
 <p>We also learned from the eigendecomposition lesson that selecting some number <span class="math inline">\(k &lt; p\)</span> of eigenvectors and eigenvalues helps us reconstruct the best approximation of the original matrix given that number of dimensions.</p>
-<p>Putting these three lessons together suggests a simple way to the multiple community detection in a network using the eigenvalues of a suitable matrix (along with standard clustering algorithms) that doesn’t rely on the iteration of a divisive approach across different splits that only use one (the leading) eigenvector. This general approach to community detection is sometimes referred to as <strong>spectral clustering</strong>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>Putting these three lessons together suggests a simple way to detect multiple communities in a network using the eigenvalues of a suitable matrix, along with standard clustering algorithms such as k-means clustering. This approach does not have to iterate between binary divisions based on a single (leading) eigenvector, but can instead use multiple eigenvectors at once to partition the data into any desired number of clusters.</p>
+<p>This general approach to community detection is sometimes referred to as <strong>spectral clustering</strong>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 </section>
 <section id="clustering-using-the-eigenvectors-of-the-laplacian" class="level2">
 <h2 class="anchored" data-anchor-id="clustering-using-the-eigenvectors-of-the-laplacian">Clustering Using the Eigenvectors of the Laplacian</h2>
@@ -348,10 +349,11 @@ div.csl-indent {
 \mathbf{L} = \mathbf{D} - \mathbf{A}
 \]</span></p>
 <p>Where <span class="math inline">\(\mathbf{D}\)</span> is the graph’s <strong>degree matrix</strong> a matrix with the degree vector of the graph along the diagonals and zeros everywhere else.</p>
-<p>Like the modularity matrix, the <span class="math inline">\(\mathbf{L}\)</span> matrix is doubly-centered (rows and columns sum to zero), which means that one of the eigenvalues of <span class="math inline">\(\mathbf{L}\)</span> is guaranteed to be zero. The other interesting thing is that the second smallest eigenvalue of <span class="math inline">\(\mathbf{L}\)</span> (sometimes called the <strong>Fiedler vector</strong>) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).</p>
+<p>Like the modularity matrix, the <span class="math inline">\(\mathbf{L}\)</span> matrix is doubly-centered (rows and columns sum to zero), which means, via some math other smarter people have worked out, that one of the eigenvalues of <span class="math inline">\(\mathbf{L}\)</span> is guaranteed to be zero.</p>
+<p>The other interesting thing is that the second smallest eigenvalue of <span class="math inline">\(\mathbf{L}\)</span> (sometimes called the <strong>Fiedler vector</strong>) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).</p>
 <p>If we want to check for the existence of multiple groups, therefore, what we need to do is to create a new <span class="math inline">\(n \times k\)</span> matrix <span class="math inline">\(\mathbf{U}\)</span> composed of the <span class="math inline">\(k\)</span> eigenvectors of <span class="math inline">\(\mathbf{L}\)</span> associated with the <span class="math inline">\(k\)</span> <em>smallest</em> eigenvalues.</p>
-<p>We then row-normalize each of these values (e.g., using the Eucledian norm) and use the <span class="math inline">\(\mathbf{U}\)</span> vector as input to a kmeans algorithm with known number of clusters <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 320</a>)</span>.</p>
-<p>Let’s see how that would work. Let’s load the <code>law_friends</code> data from the <code>networkdata</code> package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout.</p>
+<p>We then normalize the node-specific row-vector of values of the<span class="math inline">\(\mathbf{U}\)</span> matrix (e.g., using the Euclidean norm), and the use normalized <span class="math inline">\(\mathbf{U}\)</span> matrix as input to a k-means algorithm with a known number of clusters <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 320</a>)</span>.</p>
+<p>Let’s see how that would work. Let’s load the <code>law_friends</code> data from the <code>networkdata</code> package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout. The original data are directed, so we constrain them to be undirected and remove nodes with degree less than two:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
 <span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
@@ -359,7 +361,7 @@ div.csl-indent {
 <span id="cb1-4"><a href="#cb1-4"></a>   g <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
 <span id="cb1-5"><a href="#cb1-5"></a>   g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g)<span class="sc">&gt;=</span><span class="dv">2</span>) <span class="co">#removing low degree nodes</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We can then write a function called <code>ratio.cut</code> that accomplishes what we described earlier. It looks like this:</p>
+<p>We can then write a function called <code>ratio.cut</code> that accomplishes the eigendecomposition of the graph Laplacian matrix described earlier. It looks like this:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   ratio.cut <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">k =</span> <span class="dv">6</span>) {</span>
 <span id="cb2-2"><a href="#cb2-2"></a>         A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
@@ -370,7 +372,7 @@ div.csl-indent {
 <span id="cb2-7"><a href="#cb2-7"></a>         b <span class="ot">&lt;-</span> n <span class="sc">-</span> k</span>
 <span id="cb2-8"><a href="#cb2-8"></a>         e <span class="ot">&lt;-</span> n <span class="sc">-</span> <span class="dv">1</span></span>
 <span id="cb2-9"><a href="#cb2-9"></a>         U <span class="ot">&lt;-</span> eig.L<span class="sc">$</span>vectors[, b<span class="sc">:</span>e]</span>
-<span id="cb2-10"><a href="#cb2-10"></a>         U <span class="ot">&lt;-</span> U[, k<span class="sc">:</span><span class="dv">1</span>]</span>
+<span id="cb2-10"><a href="#cb2-10"></a>         U <span class="ot">&lt;-</span> U[, k<span class="sc">:</span><span class="dv">1</span>] <span class="co">#re-ordering columns from smallest to biggest</span></span>
 <span id="cb2-11"><a href="#cb2-11"></a>         <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(U)) {</span>
 <span id="cb2-12"><a href="#cb2-12"></a>            U[i, ] <span class="ot">&lt;-</span> U[i, ]<span class="sc">/</span><span class="fu">norm</span>(<span class="fu">as.matrix</span>(U[i, ]), <span class="at">type =</span> <span class="st">"E"</span>)</span>
 <span id="cb2-13"><a href="#cb2-13"></a>            }</span>
@@ -397,9 +399,9 @@ div.csl-indent {
 </div>
 </div>
 <p>Which shows the corresponding values of <span class="math inline">\(\mathbf{U}\)</span> for each node across the six eigenvectors of the Laplacian we selected.</p>
-<p>Now, the basic idea is to treat each of the normalized scores along the six eigenvectors as if they were “variables” or “features” in a standard kmeans clustering problem. The algorithm will then group nodes based on how similar their scores are on each six-dimensional vector. Similar nodes will correspond to communities (kmeans clusters) in our data.</p>
-<p>Kmeans requires knowing how many groups we want in advanced (as opposed to hierarchical clustering). Since we don’t know in advance which is the best community partition, we compute a bunch of partitions and check the modularity of each.</p>
-<p>The following function computes cluster assignments of nodes up to ten partitions (starting from the minimum two):</p>
+<p>Now, the basic idea is to treat each of the normalized scores along the six eigenvectors as if they were “variables” or “features” in a standard k-means clustering problem. The algorithm will then group nodes based on how similar their scores are on each six-dimensional vector. Similar nodes will correspond to communities (k-means clusters) in our data.</p>
+<p>K-means clustering requires knowing how many groups we want in advance (differently from hierarchical clustering). Since we don’t know which is the best community partition beforehand, we instead compute a bunch of partitions and check the modularity of each.</p>
+<p>The following function computes cluster assignments of the nodes in the graph up to ten partitions (starting from the minimum two):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   k.cuts <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">max =</span> <span class="dv">9</span>) {</span>
 <span id="cb5-2"><a href="#cb5-2"></a>      clus <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
@@ -411,7 +413,7 @@ div.csl-indent {
 <span id="cb5-8"><a href="#cb5-8"></a>      <span class="fu">return</span>(clus)</span>
 <span id="cb5-9"><a href="#cb5-9"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This function takes <span class="math inline">\(\mathbf{U}\)</span> matrix as input and returns a nine-element list (with vectors of length <span class="math inline">\(n\)</span> as its elements) of cluster assignments for each node in the graph. Each vector corresponds to partitions <span class="math inline">\(k = \{2, 3, \ldots 10\}\)</span> respectively.</p>
+<p>This function takes the <span class="math inline">\(\mathbf{U}\)</span> matrix as input and returns a nine-element list (with vectors of length <span class="math inline">\(n\)</span> as its elements) of cluster assignments for each node in the graph, corresponding to partitions <span class="math inline">\(k = \{2, 3, \ldots 10\}\)</span> respectively.</p>
 <p>Let’s see the clustering function at work:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   clus <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(U)</span>
@@ -544,7 +546,7 @@ div.csl-indent {
 </section>
 <section id="clustering-using-the-eigenvectors-of-the-normalized-laplacian" class="level2">
 <h2 class="anchored" data-anchor-id="clustering-using-the-eigenvectors-of-the-normalized-laplacian">Clustering Using the Eigenvectors of the <em>Normalized</em> Laplacian</h2>
-<p>We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix <span class="math inline">\(\mathbf{L}\)</span>. Another approach is use a (degree) normalized version of the same matrix <span class="math inline">\(\mathbf{\hat{L}}\)</span>, defined as follows:</p>
+<p>We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix <span class="math inline">\(\mathbf{L}\)</span>. Another approach is to use a (degree) normalized version of the same matrix <span class="math inline">\(\mathbf{\hat{L}}\)</span>, defined as follows:</p>
 <p><span class="math display">\[
 \mathbf{\hat{L}} = \mathbf{I} - \mathbf{D}^{-\frac{1}{2}}\mathbf{A}\mathbf{D}^{-\frac{1}{2}}
 \]</span></p>
@@ -569,7 +571,7 @@ div.csl-indent {
 <span id="cb11-16"><a href="#cb11-16"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Where we just have to modify the way we define the <span class="math inline">\(\mathbf{D}\)</span> and <span class="math inline">\(\mathbf{L}\)</span> matrices in lines 5 and 6 respectively, after creating the <span class="math inline">\(\mathbf{I}\)</span> matrix in line 4.</p>
-<p>Now let’s see if the normalized cut helps finds some communities:</p>
+<p>Now let’s see if the normalized cut can help us finds some communities:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   U <span class="ot">&lt;-</span> <span class="fu">norm.ratio.cut</span>(g)</span>
 <span id="cb12-2"><a href="#cb12-2"></a>   clus <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(U)</span>
@@ -603,7 +605,7 @@ div.csl-indent {
 <p></p><figcaption class="figure-caption">Figure&nbsp;2: Clustering of Nodes in the Law Firm Friendship Network Using the Normalized Ratio Cut</figcaption><p></p>
 </figure>
 </div>
-<p>As we can see the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds (<span class="math inline">\(Q = 0.35\)</span>), but suggests a finer grained partition, with the maximum at either five or six communities.</p>
+<p>As we can see, the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds (<span class="math inline">\(Q = 0.35\)</span>), but suggests a finer grained partition, with the maximum at either five or six communities.</p>
 <p>The resulting node clusters are shown in <a href="#fig-friends2-1">Figure&nbsp;2 (a)</a> and <a href="#fig-friends2-2">Figure&nbsp;2 (b)</a>.</p>
 </section>
 <section id="clustering-using-the-eigenvectors-of-the-modularity-matrix" class="level2">
@@ -620,7 +622,7 @@ div.csl-indent {
 <span id="cb14-6"><a href="#cb14-6"></a>         eig.B <span class="ot">&lt;-</span> <span class="fu">eigen</span>(B)</span>
 <span id="cb14-7"><a href="#cb14-7"></a>         U <span class="ot">&lt;-</span> eig.B<span class="sc">$</span>vectors[, <span class="dv">1</span><span class="sc">:</span>k]</span>
 <span id="cb14-8"><a href="#cb14-8"></a>         <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(U)) {</span>
-<span id="cb14-9"><a href="#cb14-9"></a>            U[i, ] <span class="ot">&lt;-</span> U[i, ]<span class="sc">/</span><span class="fu">norm</span>(<span class="fu">as.matrix</span>(U[i, ]), <span class="at">type =</span> <span class="st">"F"</span>)</span>
+<span id="cb14-9"><a href="#cb14-9"></a>            U[i, ] <span class="ot">&lt;-</span> U[i, ]<span class="sc">/</span><span class="fu">norm</span>(<span class="fu">as.matrix</span>(U[i, ]), <span class="at">type =</span> <span class="st">"E"</span>)</span>
 <span id="cb14-10"><a href="#cb14-10"></a>            }</span>
 <span id="cb14-11"><a href="#cb14-11"></a>      <span class="fu">return</span>(U)</span>
 <span id="cb14-12"><a href="#cb14-12"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>

@@ -19,7 +19,9 @@ In the handout on CA, we saw that the eigendecomposition of a square matrix actu
 
 We also learned from the eigendecomposition lesson that selecting some number $k < p$ of eigenvectors and eigenvalues helps us reconstruct the best approximation of the original matrix given that number of dimensions.
 
-Putting these three lessons together suggests a simple way to the multiple community detection in a network using the eigenvalues of a suitable matrix (along with standard clustering algorithms) that doesn't rely on the iteration of a divisive approach across different splits that only use one (the leading) eigenvector. This general approach to community detection is sometimes referred to as **spectral clustering**.^[Not as a reference to ghosts, but because the eigendecomposition of a matrix is sometimes also called the **spectral decomposition**.]
+Putting these three lessons together suggests a simple way to detect multiple communities in a network using the eigenvalues of a suitable matrix, along with standard clustering algorithms such as k-means clustering. This approach does not have to iterate between binary divisions based on a single (leading) eigenvector, but can instead use multiple eigenvectors at once to partition the data into any desired number of clusters. 
+
+This general approach to community detection is sometimes referred to as **spectral clustering**.^[Not as a reference to ghosts, but because the eigendecomposition of a matrix is sometimes also called the **spectral decomposition**.]
 
 ## Clustering Using the Eigenvectors of the Laplacian
 
@@ -31,13 +33,15 @@ $$
 
 Where $\mathbf{D}$ is the graph's **degree matrix** a matrix with the degree vector of the graph along the diagonals and zeros everywhere else. 
 
-Like the modularity matrix, the $\mathbf{L}$ matrix is doubly-centered (rows and columns sum to zero), which means that one of the eigenvalues of $\mathbf{L}$ is guaranteed to be zero. The other interesting thing is that the second smallest eigenvalue of $\mathbf{L}$ (sometimes called the **Fiedler vector**) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).
+Like the modularity matrix, the $\mathbf{L}$ matrix is doubly-centered (rows and columns sum to zero), which means, via some math other smarter people have worked out, that one of the eigenvalues of $\mathbf{L}$ is guaranteed to be zero. 
+
+The other interesting thing is that the second smallest eigenvalue of $\mathbf{L}$ (sometimes called the **Fiedler vector**) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).
 
 If we want to check for the existence of multiple groups, therefore, what we need to do is to create a new $n \times k$ matrix $\mathbf{U}$ composed of the $k$ eigenvectors of $\mathbf{L}$ associated with the $k$ *smallest* eigenvalues. 
 
-We then row-normalize each of these values (e.g., using the Eucledian norm) and use the $\mathbf{U}$ vector as input to a kmeans algorithm with known number of clusters [@fouss_etal16, p. 320]. 
+We then normalize the node-specific row-vector of values of the$\mathbf{U}$ matrix (e.g., using the Euclidean norm), and the use normalized $\mathbf{U}$ matrix as input to a k-means algorithm with a known number of clusters [@fouss_etal16, p. 320]. 
 
-Let's see how that would work. Let's load the `law_friends` data from the `networkdata` package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout.
+Let's see how that would work. Let's load the `law_friends` data from the `networkdata` package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout. The original data are directed, so we constrain them to be undirected and remove nodes with degree less than two:
 
 ```{r}
    library(networkdata)
@@ -47,7 +51,7 @@ Let's see how that would work. Let's load the `law_friends` data from the `netwo
    g <- subgraph(g, degree(g)>=2) #removing low degree nodes
 ```
 
-We can then write a function called `ratio.cut` that accomplishes what we described earlier. It looks like this:
+We can then write a function called `ratio.cut` that accomplishes the eigendecomposition of the graph Laplacian matrix described earlier. It looks like this:
 
 ```{r}
    ratio.cut <- function(x, k = 6) {
@@ -59,7 +63,7 @@ We can then write a function called `ratio.cut` that accomplishes what we descri
          b <- n - k
          e <- n - 1
          U <- eig.L$vectors[, b:e]
-         U <- U[, k:1]
+         U <- U[, k:1] #re-ordering columns from smallest to biggest
          for (i in 1:nrow(U)) {
             U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
             }
@@ -78,11 +82,11 @@ Let's see the function at work:
 
 Which shows the corresponding values of $\mathbf{U}$ for each node across the six eigenvectors of the Laplacian we selected. 
 
-Now, the basic idea is to treat each of the normalized scores along the six eigenvectors as if they were "variables" or "features" in a standard kmeans clustering problem. The algorithm will then group nodes based on how similar their scores are on each six-dimensional vector. Similar nodes will correspond to communities (kmeans clusters) in our data. 
+Now, the basic idea is to treat each of the normalized scores along the six eigenvectors as if they were "variables" or "features" in a standard k-means clustering problem. The algorithm will then group nodes based on how similar their scores are on each six-dimensional vector. Similar nodes will correspond to communities (k-means clusters) in our data. 
 
-Kmeans requires knowing how many groups we want in advanced (as opposed to hierarchical clustering). Since we don't know in advance which is the best community partition, we compute a bunch of partitions and check the modularity of each. 
+K-means clustering requires knowing how many groups we want in advance (differently from hierarchical clustering). Since we don't know which is the best community partition beforehand, we instead compute a bunch of partitions and check the modularity of each. 
 
-The following function computes cluster assignments of nodes up to ten partitions (starting from the minimum two):
+The following function computes cluster assignments of the nodes in the graph up to ten partitions (starting from the minimum two):
 
 
 ```{r}
@@ -97,7 +101,7 @@ The following function computes cluster assignments of nodes up to ten partition
    }
 ```
 
-This function takes $\mathbf{U}$ matrix as input and returns a nine-element list (with vectors of length $n$ as its elements) of cluster assignments for each node in the graph. Each vector corresponds to partitions $k = \{2, 3, \ldots 10\}$ respectively. 
+This function takes the $\mathbf{U}$ matrix as input and returns a nine-element list (with vectors of length $n$ as its elements) of cluster assignments for each node in the graph, corresponding to partitions $k = \{2, 3, \ldots 10\}$ respectively. 
 
 Let's see the clustering function at work:
 
@@ -195,7 +199,7 @@ Note that further subdivisions of the network split the more loosely structured 
 
 ## Clustering Using the Eigenvectors of the *Normalized* Laplacian
 
-We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix $\mathbf{L}$. Another approach is use a (degree) normalized version of the same matrix $\mathbf{\hat{L}}$, defined as follows:
+We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix $\mathbf{L}$. Another approach is to use a (degree) normalized version of the same matrix $\mathbf{\hat{L}}$, defined as follows:
 
 $$
 \mathbf{\hat{L}} = \mathbf{I} - \mathbf{D}^{-\frac{1}{2}}\mathbf{A}\mathbf{D}^{-\frac{1}{2}}
@@ -226,7 +230,7 @@ We can just adapt our previous `ratio.cut` function code to perform this new job
 
 Where we just have to modify the way we define the $\mathbf{D}$ and $\mathbf{L}$ matrices in lines 5 and 6 respectively, after creating the $\mathbf{I}$ matrix in line 4. 
 
-Now let's see if the normalized cut helps finds some communities:
+Now let's see if the normalized cut can help us finds some communities:
 
 ```{r}
    U <- norm.ratio.cut(g)
@@ -261,7 +265,7 @@ plot(g,
      vertex.label.dist=1, edge.curved=0.2)
 ```
 
-As we can see the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds ($Q = 0.35$), but suggests a finer grained partition, with the maximum at either five or six communities. 
+As we can see, the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds ($Q = 0.35$), but suggests a finer grained partition, with the maximum at either five or six communities. 
 
 The resulting node clusters are shown in @fig-friends2-1 and @fig-friends2-2. 
 
@@ -282,7 +286,7 @@ This approach, once again, only requires small modifications to the one we used 
          eig.B <- eigen(B)
          U <- eig.B$vectors[, 1:k]
          for (i in 1:nrow(U)) {
-            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "F")
+            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
             }
       return(U)
    }
