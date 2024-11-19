@@ -1,0 +1,166 @@
+---
+title: "Analyzing Ego Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Ego Networks and Ego Network Data
+
+An ego-network, is just a **subgraph** of a larger network that includes a node of interest ("ego"), all of the connections between ego and their neighbors (called "alters") and usually all of the connections between each of the alters. 
+
+**Ego network data** is social network data collected in such way (e.g., using standard social survey techniques) that you capture the ego networks of some set of people, usually a convenience sample or, more rarely, a probability sample of some population. 
+
+Once you have ego network data you can analyze each ego graph using the standard techniques we learned so far (if you are only interested in the structural characteristics of the ego graph).
+
+If you have attributes on each alter, you can alternatively compute measures of **diversity** to or **homophily** to get a sense of how likely ego is to connect to similar or diverse others.
+
+## The Clustering Coefficient
+
+Perhaps the most basic structural characteristic of an ego network is the density of the subgraph formed by all of the connections between the alters. This is called ego's **clustering coefficient**.  Let's see how it works:
+
+```{r}
+   library(networkdata)
+   g <- starwars[[4]]
+```
+
+As we said an ego graph is just a subgraph centered on a particular actor. So R2-D2's ego graph is just:
+
+```{r}
+   library(igraph)
+   N <- neighbors(g, "R2-D2")
+   r2d2 <- subgraph(g, c(which(V(g)$name == "R2-D2"), as.vector(N)))
+```
+
+And we can just plot it like we would any `igraph` object:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "R2-D2's Ego Network."
+   V(r2d2)$color <- c(1, rep(2, length(N)))
+   plot(r2d2, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     layout = layout_(r2d2, as_star()),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
+Note that we use the `as_star()` option for the layout, so that the ego is put in the center of the star graph surrounded by their alters.
+
+R2-D2's clustering coefficient is just the density of the graph that includes only the alters:
+
+```{r}
+   r2d2.alters <- r2d2 - vertex("R2-D2")
+   C <- round(edge_density(r2d2.alters), 2)
+   C
+```
+
+The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$ means that *none* of ego's alters are connected to one another and $C = 1$ means that *all* of ego's alters are connected to one another. In this case, $C = `r C`$ means that `r C*100`% of R2-D2's alters are connected (co-appear in scenes) with one another. 
+
+Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty `lapply` and `sapply` meta-functions:
+
+```{r}
+   create.ego <- function(x, w) {
+      alter.net <- subgraph(w, neighbors(w, x))
+      return(alter.net)
+      }
+   ego.graphs <- lapply(V(g)$name, create.ego, w = g)
+   head(ego.graphs)
+```
+
+First, we turn the code we used to find R2-D2's ego graph into a function, then we apply the function to each node in the network. The result is a `list` object with $|V| = `r vcount(g)`$ ego subgraphs composed of each node's alters and their connections. 
+
+Now, to find out the clustering coefficient of each node, we just type:
+
+```{r}
+   C <- round(sapply(ego.graphs, edge_density), 2)
+   names(C) <- V(g)$name
+   C
+```
+
+Note we have a couple of `NaN` values in the slots corresponding to Greedo and Jabba in the clustering coefficient vector. 
+
+Let's check out why:
+
+```{r}
+   degree(g)
+```
+
+Here we see the problem is that both Greedo and Jabba are singleton nodes (with degree equal to one), so it doesn't make sense to analyze their clustering coefficients because their ego graph is just an isolated node!
+
+We can just drop them and re-analyze:
+
+```{r}
+   g <- subgraph(g, degree(g)> 1)
+   ego.graphs <- lapply(V(g)$name, create.ego, w = g)
+   C <- round(sapply(ego.graphs, edge_density), 2)
+   names(C) <- V(g)$name
+   C
+```
+
+Much better!
+
+Note that in this analysis, Luke has the lowest clustering coefficient ($C = 0.34$) this usually indicates an ego whose alters are partitioned into distinct clusters (and hence they are not connected to one another), and ego is a mediator or *broker* between those clusters.
+
+Let's see what that looks like:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "Luke's Alters Network."
+   set.seed(456)
+   luke.alters <- subgraph(g, neighbors(g, "LUKE"))  
+   V(luke.alters)$color <- cluster_leading_eigen(luke.alters)$membership
+   plot(luke.alters, 
+     vertex.size=5, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.cex = 0.75, edge.color = "lightgray")
+```
+
+Note that in the ego graph that includes ego, each connected alter is a **triangle** in the ego graph. So the clustering coefficient is simply a count of the *number of undirected triangles that are centered on ego*, or the number of *cycles of length three centered on ego*. 
+
+So that means that the diagonals of the cube of the adjacency matrix also contain the information needed to compute the clustering coefficient:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+   A3 <- A %*% A %*% A
+   diag(A3)
+```
+
+So all we need to do is divide these numbers by the maximum possible number of undirected triangles that could be centered on a node, which is $k_i(k_i - 1)$ where $k_i$ is ego's degree:
+
+```{r}
+   k <- degree(g)
+   C <- diag(A3)/(k*(k - 1))
+   round(C, 2)
+```
+
+Which gives us the answer as before!
+
+Finally, from each ego's clustering coefficient (sometimes called the **local clustering coefficient** of each node) we can compute the graph's **global clustering coefficient** which is just the average this quantity across each node in the graph:
+
+$$
+C(G) = \frac{1}{N}\sum_iC_i
+$$
+
+In `R`:
+
+```{r}
+   C.glob <- mean(C)
+   round(C.glob, 2)
+```
+
+Which indicates a fairly clustered graph. 
+
+
+
+
+
+
