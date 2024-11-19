@@ -369,16 +369,16 @@ So we need to make our status game a bit more complicated (but not too much) to 
    status2 <- function(A) {
      n <- nrow(A)
      a <- rep(1, n)  #initializing authority scores
-     diff.a.h <- 1 #initializing diff.
-     while (diff.a.h >= 0.0001) {
+     diff.a <- 1 #initializing diff.
+     while (diff.a >= 0.0001) {
          o.a <- a #old authority scores
          h <- A %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
          h <- h/norm(h, type = "E")
          a <- t(A) %*% h #new authority scores a function of current hub scores of their in-neighbors
          a <- a/norm(a, type = "E")
-         diff.a.h <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
+         diff.a <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
          }
-   return(list(h = as.vector(a), a = as.vector(h)))
+   return(list(h = as.vector(h), a = as.vector(a)))
    }
 ```
 
@@ -446,121 +446,34 @@ As you may already be suspecting, the hub and authorities scores are the leading
 
 Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!
 
-## A Degree-Dependent Model of Hubs and Authorities (AKA SALSA)
-
-You may have noticed that the Hubs and Authorities approach is the equivalent of the eigenvector centrality for directed networks. Therefore, it is subject to the same critique that the PageRank centralities levies at the eigenvector centrality, because it assumes that each authority receives the same number of authority points from every hub that points to them irrespective of those hubs' outdegree. In the same way, it assumes that every hub receives the same number of hub points from the authorities they point to irrespective of those authorities' indegree. 
-
-But we can imagine a world in which we want to penalize the number of hub and authority points that everyone gets by each node's in and outdegree. That is, authorities that are pointed to by selective hubs should get more credit than authorities that are pointed to by non-selective hubs. In the same way, hubs that point to authorities that are pointed to by more selective hubs, should be get more hub points for their trouble. 
-
-So the idea is to combine the HITS reflective centrality idea with PageRank's degree-weighting scheme. We can do this by using a variation of the status game we used for HITS, developed by @lempel_moran01.^[They called their approach SALSA an acronym for the also impossible to remember title of "Stochastic Approach for Link Structure Analysis."] Instead of using the original adjacency matrix $\mathbf{A}$ and its transpose $\mathbf{A}^T$ we use a couple of degree weighted variations:
-
-$$
-\mathbf{P}^h = \mathbf{D}_{(in)}^{-1}\mathbf{A}^T
-$$
-
-$$
-\mathbf{P}^a = \mathbf{D}_{(out)}^{-1}\mathbf{A}
-$$
-
-Where $\mathbf{D}_{(in)}^{-1}$ is a **diagonal matrix** containing the inverse of the indegrees of each node ($1/\sum_ia_{ij}$) along the diagonals and zeros everywhere else (the inverse of the diagonals of $\mathbf{N}$ above) and $\mathbf{D}_{(out)}^{-1}$ is another diagonal matrix containing the inverse of the outdegrees of each node ($1/\sum_ja_{ij}$) along the diagonals and zeros everywhere else (the inverse of the diagonals of $\mathbf{M}$ above).
-
-Our new version of the HITS status game is then played using these matrices:
-
-$$  
-   x^h_i = \sum_j p^h_{ij} x^a_j
-$$
-
-$$
-   x^a_i = \sum_i p^a_{ij} x^h_i
-$$
-
-Here's a function that does all that we have said:
-
-
-```{r}
-   status3 <- function(A, e = 0.000001) { 
-      n <- nrow(A)
-      h <- rep(1, n)  #initializing hub scores
-      a <- rep(1, n)  #initializing authority scores
-      Pa <- A/rowSums(A) #row normalized adjacency matrix
-      Ph <- t(A)/colSums(A) #row normalized transpose of adjacency matrix
-      diff <- 1
-      while (diff > e) {
-         o.h <- h
-         a <- t(Pa) %*% h #authority scores a function of current hub scores weighted by the outdegree of the hubs pointing to the authority
-         a <- a/norm(a, type = "E")
-         h <- t(Ph) %*% a #hub scores a function of current authority scores weighted by the indegree of the authorities the hub points to
-         h <- h/norm(h, type = "E")
-         diff <- abs(sum(abs(o.h) - abs(h)))
-         }
-      return(list(a = as.vector(a), h = as.vector(h)))
-      }
-```
-
-This function takes the adjacency matrix as input and returns the SALSA versions of the HITS scores as output. 
-
-Let's see it in action:
-
-```{r}
-   salsa <- status3(A)
-   round(salsa$h/max(salsa$h), 2)
-   round(salsa$a/max(salsa$a), 2)
-```
-
-Neat! Also, like with HITS, it is clear that these scores are the leading eigenvectors of two matrices $\mathbf{M^h}$ and $\mathbf{M^a}$, given by the product of $\mathbf{P^h}$ and $\mathbf{P^a}$:
-
-$$
-\mathbf{M}^h = (\mathbf{P^h})^T(\mathbf{P^a})^T
-$$
-
-$$
-\mathbf{M}^a = (\mathbf{P^a})^T(\mathbf{P^h})^T
-$$
-
-Which we can check as follows:
-
-```{r}
-   Pa <- A/rowSums(A) #row normalized adjacency matrix
-   Ph <- t(A)/colSums(A) #row normalized transpose of adjacency matrix
-   M.h <- t(Ph) %*% t(Pa)
-   M.a <- t(Pa) %*% t(Ph)
-   h <- Re(eigen(M.h)$vectors[,1]) *-1 
-   a <- Re(eigen(M.a)$vectors[,1]) *-1
-   round(h/max(h), 2)
-   round(a/max(a), 2)
-```
-
-Which are the same numbers we obtained via our reflective status game!
-
 ## A Final Ranking of Prestige Scores
 
-Like before, we can treat the PageRank, Hub, and Authority Scores (regular and SALSA) as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes stack up according to the different status criteria:
+Like before, we can treat the Eigenvector, PageRank, Hub, and Authority Scores as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes in Krackhardt's High Tech Managers network stack up according to the different status criteria:
 
 ```{r}
 #| echo: false
    nodes <- 1:vcount(g)
-   pr.cent <- round(status1(t(G))/max(status1(t(G))), 2)
-   hu.cent <- round(h/max(h), 2)
-   au.cent <- round(a/max(a), 2)
-   shu.cent <- round(salsa$h/max(salsa$h), 2)
-   sau.cent <- round(salsa$a/max(salsa$a), 2)
-   cent.dat <- data.frame(Nodes = nodes, PageRank = pr.cent, 
-                          Hub.Score = hu.cent, Auth.Score = au.cent, 
-                          SALSA.hub = shu.cent, SALSA.Auth = sau.cent, 
-                          Indegree = degree(g, mode = "in"))
-   cent.dat <- cent.dat[order(cent.dat$Indegree, decreasing = TRUE), ]
-   kbl(cent.dat[1:10, ], 
+   eig.cent <- round(status1(t(A))/max(status1(t(A))), 3)
+   pgr.cent <- round(status1(t(G))/max(status1(t(G))), 3)
+   hus.cent <- round(status2(A)$h/max(status2(A)$h), 3)
+   aus.cent <- round(status2(A)$a/max(status2(A)$a), 3)
+   cent.dat1 <- data.frame(Node.ID = nodes, Eig.Cent = eig.cent,
+                           PageRank = pgr.cent, Hub.Score = hus.cent, 
+                           Auth.Score = aus.cent, Indegree = degree(g, mode = "in"))
+   cent.dat1 <- cent.dat1[order(cent.dat1$Indegree, decreasing = TRUE), ]
+   kbl(cent.dat1, 
        format = "html", align = "c", row.names = FALSE,
-       caption = "Top Ten Status and Prestige Scores Ordered by Indegree.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
-   
-   cent.dat <- data.frame(Nodes = nodes, PageRank = pr.cent, 
-                          Hub.Score = hu.cent, Auth.Score = au.cent, 
-                          SALSA.hub = shu.cent, SALSA.Auth = sau.cent, 
-                          Outdegree = degree(g, mode = "out"))
-   cent.dat <- cent.dat[order(cent.dat$Outdegree, decreasing = TRUE), ]
-   kbl(cent.dat[1:10, ], 
+       caption = "Top Prestige Scores Ordered by Indegree.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+      column_spec(1, bold = TRUE)
+
+   cent.dat2 <- data.frame(Node.ID = nodes, Eig.Cent = eig.cent,
+                           PageRank = pgr.cent, Hub.Score = hus.cent, 
+                           Auth.Score = aus.cent, Outdegree = degree(g, mode = "out"))
+   cent.dat2 <- cent.dat2[order(cent.dat2$Outdegree, decreasing = TRUE), ]
+   kbl(cent.dat2, 
        format = "html", align = "c", row.names = FALSE,
-       caption = "Top Ten Status and Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+       caption = "Top Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+      column_spec(1, bold = TRUE)
 ```
 
 

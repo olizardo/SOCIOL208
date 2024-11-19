@@ -316,6 +316,7 @@ div.csl-indent {
   <li><a href="#clustering-using-the-eigenvectors-of-the-laplacian" id="toc-clustering-using-the-eigenvectors-of-the-laplacian" class="nav-link" data-scroll-target="#clustering-using-the-eigenvectors-of-the-laplacian">Clustering Using the Eigenvectors of the Laplacian</a></li>
   <li><a href="#clustering-using-the-eigenvectors-of-the-normalized-laplacian" id="toc-clustering-using-the-eigenvectors-of-the-normalized-laplacian" class="nav-link" data-scroll-target="#clustering-using-the-eigenvectors-of-the-normalized-laplacian">Clustering Using the Eigenvectors of the <em>Normalized</em> Laplacian</a></li>
   <li><a href="#clustering-using-the-eigenvectors-of-the-modularity-matrix" id="toc-clustering-using-the-eigenvectors-of-the-modularity-matrix" class="nav-link" data-scroll-target="#clustering-using-the-eigenvectors-of-the-modularity-matrix">Clustering Using the Eigenvectors of the Modularity Matrix</a></li>
+  <li><a href="#clustering-two-mode-networks-using-ca" id="toc-clustering-two-mode-networks-using-ca" class="nav-link" data-scroll-target="#clustering-two-mode-networks-using-ca">Clustering Two-Mode Networks Using CA</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/spectral.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -673,7 +674,204 @@ div.csl-indent {
 <p></p><figcaption class="figure-caption">Figure&nbsp;3: Clustering of Nodes in the Law Firm Friendship Network Using the Spectral Decomposition of the Modularity Matrix.</figcaption><p></p>
 </figure>
 </div>
-<p>As we can see, spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix produces a high-quality partition, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal.</p>
+</section>
+<section id="clustering-two-mode-networks-using-ca" class="level2">
+<h2 class="anchored" data-anchor-id="clustering-two-mode-networks-using-ca">Clustering Two-Mode Networks Using CA</h2>
+<p>We can use a variant of the spectral clustering approach to find multiple communities in two-mode networks <span class="citation" data-cites="wu_etal22">(<a href="#ref-wu_etal22" role="doc-biblioref">Wu, Gu, and Yang 2022</a>)</span>. This approach combines Correspondence Analysis (CA)—which we covered in the previous handout—and k-means clustering on multiple dimensions.</p>
+<p>So let’s bring back our old friend, the Southern Women data:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   g <span class="ot">&lt;-</span> southern_women <span class="co">#southern women data</span></span>
+<span id="cb17-2"><a href="#cb17-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(g)) <span class="co">#bi-adjacency matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s also compute the bipartite modularity matrix:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   B <span class="ot">&lt;-</span> A <span class="sc">-</span> <span class="fu">matrix</span>(<span class="fu">rowSums</span>(A) <span class="sc">*</span> <span class="fu">colSums</span>(A), </span>
+<span id="cb18-2"><a href="#cb18-2"></a>                   <span class="at">nrow =</span> <span class="fu">nrow</span>(A), <span class="at">ncol =</span> <span class="fu">ncol</span>(A), <span class="at">byrow =</span> <span class="cn">TRUE</span>)<span class="sc">/</span><span class="fu">sum</span>(A)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>   n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>   Np <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>   names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rownames</span>(A), <span class="fu">colnames</span>(A))</span>
+<span id="cb18-6"><a href="#cb18-6"></a>   B2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n) <span class="co">#all zeros matrix of dimensions (p + g) X (p + g)</span></span>
+<span id="cb18-7"><a href="#cb18-7"></a>   B2[<span class="dv">1</span><span class="sc">:</span>Np, (Np <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span>n] <span class="ot">&lt;-</span> B <span class="co">#putting B in the top right block</span></span>
+<span id="cb18-8"><a href="#cb18-8"></a>   B2[(Np <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span>n, <span class="dv">1</span><span class="sc">:</span>Np] <span class="ot">&lt;-</span> <span class="fu">t</span>(B) <span class="co">#putting B transpose in the lower-left block</span></span>
+<span id="cb18-9"><a href="#cb18-9"></a>   <span class="fu">rownames</span>(B2) <span class="ot">&lt;-</span> names</span>
+<span id="cb18-10"><a href="#cb18-10"></a>   <span class="fu">colnames</span>(B2) <span class="ot">&lt;-</span> names</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now let’s find the CA scores. This time will use the canned function <code>CA</code> from the the package <code>FactoMineR</code></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   <span class="co">#install.packages("FactoMineR")</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">library</span>(FactoMineR)</span>
+<span id="cb19-3"><a href="#cb19-3"></a>   CA.res <span class="ot">&lt;-</span> <span class="fu">CA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>, <span class="at">ncp =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Which computes CA directly on the bi-adjacency matrix (the argument <code>ncp</code> asks to keep the first ten dimensions).</p>
+<p>We can now extract the CA scores for persons and groups fromm the resulting object:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   eig.vec.p <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>row<span class="sc">$</span>coord</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   eig.vec.g <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>col<span class="sc">$</span>coord</span>
+<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">head</span>(eig.vec.p)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>               Dim 1       Dim 2       Dim 3        Dim 4       Dim 5
+EVELYN    -0.7994396 -0.11278306  0.12856965  0.491615655  0.36993238
+LAURA     -0.8426887  0.03973055  0.11862978  0.286643489  0.10696165
+THERESA   -0.6538505 -0.08107422  0.03285721  0.066653892  0.11835519
+BRENDA    -0.8552592  0.05084420  0.26039689 -0.082978126  0.05028130
+CHARLOTTE -0.9735517  0.03683948  0.66023345 -0.774105247  0.08510784
+FRANCES   -0.7973597  0.05794469 -0.20558235 -0.001077288 -0.59307835
+                 Dim 6        Dim 7       Dim 8         Dim 9      Dim 10
+EVELYN    -0.007414199 -0.007447136 -0.02256155 -0.0160061655  0.08340311
+LAURA      0.519058804  0.358983310  0.06243870  0.1954326939 -0.10193085
+THERESA   -0.238792769  0.037114413  0.44547214 -0.1638696977  0.04645662
+BRENDA     0.060849392 -0.093559773 -0.53495958 -0.1262516982  0.02818219
+CHARLOTTE -0.721861078 -0.222554541  0.02152725 -0.0001022383 -0.04432666
+FRANCES    0.178454033 -0.648007177  0.12713961  0.3578859472 -0.29201035</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   <span class="fu">head</span>(eig.vec.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          Dim 1        Dim 2       Dim 3        Dim 4       Dim 5      Dim 6
+6/27 -1.0510521 -0.013102803  0.40045025  0.624502007  0.53693139  0.6062955
+3/2  -0.9662871 -0.090934069  0.22094083  0.758901614  0.60626508  0.2889617
+4/12 -1.0357695 -0.002506996  0.39252639 -0.005949514  0.07005287 -0.1110437
+9/26 -1.0359803 -0.046981456  0.64023822 -0.201296127  0.47641399 -0.7205873
+2/25 -0.8840034  0.002527085  0.00616034 -0.304708001 -0.31330029 -0.1008760
+5/19 -0.5723848 -0.007363883 -0.15907563  0.336653678 -0.55713599  0.3565649
+            Dim 7       Dim 8       Dim 9       Dim 10
+6/27  0.341243814 -0.78585220  0.09303009  0.022211664
+3/2   0.514095893  0.77040262  0.02721689  0.064255000
+4/12 -0.380608237  0.07861703  0.21614264 -0.322353047
+9/26 -0.284177968 -0.10776494 -0.40181489  0.196215569
+2/25  0.009376108  0.04679332  0.31794275  0.121060750
+5/19 -0.215101435  0.05292157 -0.34808611  0.004513752</code></pre>
+</div>
+</div>
+<p>Great! You can verify that these are the same scores we obtained in the last handout via a more elaborate route.</p>
+<p>Now, we can just create our <code>U</code> matrix by stacking the person and group scores using the first three dimensions:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   U <span class="ot">&lt;-</span> <span class="fu">rbind</span>(eig.vec.p, eig.vec.g)[, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>]</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   <span class="fu">head</span>(U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>               Dim 1       Dim 2       Dim 3
+EVELYN    -0.7994396 -0.11278306  0.12856965
+LAURA     -0.8426887  0.03973055  0.11862978
+THERESA   -0.6538505 -0.08107422  0.03285721
+BRENDA    -0.8552592  0.05084420  0.26039689
+CHARLOTTE -0.9735517  0.03683948  0.66023345
+FRANCES   -0.7973597  0.05794469 -0.20558235</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   <span class="fu">tail</span>(U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          Dim 1      Dim 2       Dim 3
+4/8   0.5140165 -0.4896890 -0.47959026
+6/10  1.1173628  0.5729577  0.23464730
+2/23  1.2219952 -2.0539686  0.69618973
+4/7   1.0223902  0.5159415 -0.04625319
+11/21 1.1742556  0.9078702  0.66121084
+8/3   1.1742556  0.9078702  0.66121084</code></pre>
+</div>
+</div>
+<p>Nice! Now we can just feed <code>U</code> to our <code>k.cuts</code> function to place persons and groups into cluster assignments beginning with two and ending with ten:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   clus <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(U)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Of course, we can’t use the <code>mod.check</code> function because that uses the standard method for checking the modularity in one-mode networks.</p>
+<p>So we need to come up with a custom method for the bipartite case.</p>
+<p>First, we need a function that takes a cluster assignment vector containing numbers for each cluster <span class="math inline">\(k = \{1, 2, 3, C\}\)</span> and turns it into a dummy coded cluster assignment matrix:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   make.dummies <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb29-2"><a href="#cb29-2"></a>      vals <span class="ot">&lt;-</span> <span class="fu">unique</span>(x)</span>
+<span id="cb29-3"><a href="#cb29-3"></a>      U <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">length</span>(x), <span class="fu">length</span>(vals))</span>
+<span id="cb29-4"><a href="#cb29-4"></a>      <span class="cf">for</span> (k <span class="cf">in</span> vals) {</span>
+<span id="cb29-5"><a href="#cb29-5"></a>         U[, k] <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(x <span class="sc">==</span> k)</span>
+<span id="cb29-6"><a href="#cb29-6"></a>      }</span>
+<span id="cb29-7"><a href="#cb29-7"></a>   <span class="fu">return</span>(U)</span>
+<span id="cb29-8"><a href="#cb29-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s test it out:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   <span class="fu">make.dummies</span>(clus[[<span class="dv">3</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>      [,1] [,2] [,3] [,4]
+ [1,]    0    1    0    0
+ [2,]    0    1    0    0
+ [3,]    0    1    0    0
+ [4,]    0    1    0    0
+ [5,]    0    1    0    0
+ [6,]    0    1    0    0
+ [7,]    0    1    0    0
+ [8,]    0    0    0    1
+ [9,]    0    0    0    1
+[10,]    0    0    0    1
+[11,]    0    0    0    1
+[12,]    1    0    0    0
+[13,]    1    0    0    0
+[14,]    1    0    0    0
+[15,]    1    0    0    0
+[16,]    0    0    0    1
+[17,]    0    0    1    0
+[18,]    0    0    1    0
+[19,]    0    1    0    0
+[20,]    0    1    0    0
+[21,]    0    1    0    0
+[22,]    0    1    0    0
+[23,]    0    1    0    0
+[24,]    0    1    0    0
+[25,]    0    1    0    0
+[26,]    0    0    0    1
+[27,]    0    0    0    1
+[28,]    1    0    0    0
+[29,]    0    0    1    0
+[30,]    1    0    0    0
+[31,]    1    0    0    0
+[32,]    1    0    0    0</code></pre>
+</div>
+</div>
+<p>Great! Looks like it works.</p>
+<p>Finally, we need to write a custom function for bipartite modularity checking across different assignments:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   mod.check2 <span class="ot">&lt;-</span> <span class="cf">function</span>(x, c, w) {</span>
+<span id="cb32-2"><a href="#cb32-2"></a>      k <span class="ot">&lt;-</span> <span class="fu">length</span>(c)</span>
+<span id="cb32-3"><a href="#cb32-3"></a>      m <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, k)</span>
+<span id="cb32-4"><a href="#cb32-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>k) {</span>
+<span id="cb32-5"><a href="#cb32-5"></a>         u <span class="ot">&lt;-</span> <span class="fu">make.dummies</span>(c[[i]])</span>
+<span id="cb32-6"><a href="#cb32-6"></a>         m[i] <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">diag</span>(<span class="fu">t</span>(u) <span class="sc">%*%</span> x <span class="sc">%*%</span> u))<span class="sc">/</span><span class="fu">sum</span>(w)</span>
+<span id="cb32-7"><a href="#cb32-7"></a>         }</span>
+<span id="cb32-8"><a href="#cb32-8"></a>   <span class="fu">names</span>(m) <span class="ot">&lt;-</span> <span class="dv">2</span><span class="sc">:</span>(k<span class="sc">+</span><span class="dv">1</span>)</span>
+<span id="cb32-9"><a href="#cb32-9"></a>   <span class="fu">return</span>(m)</span>
+<span id="cb32-10"><a href="#cb32-10"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function <code>mod.check2</code> needs three inputs: The bipartite modularity matrix, a list with different assignments of the nodes in the bipartite graph to different clusters, and the bipartite adjacency matrix. It returns a vector <code>m</code> with the modularities of each of the partitions in <code>c</code>.</p>
+<p>And, now, for the big reveal:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   <span class="fu">round</span>(<span class="fu">mod.check2</span>(B2, clus, <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    2     3     4     5     6     7     8     9    10 
+0.413 0.420 0.426 0.321 0.296 0.266 0.213 0.207 0.173 </code></pre>
+</div>
+</div>
+<p>Looks like the spectral clustering results favor a four-community partition although the more parsimonious three and binary community partitions also look pretty good.</p>
+<p>Here’s a plot of the three and four community solutions (since we already saw the binary partition in the CA handout:</p>
+<div id="fig-women" class="cell quarto-layout-panel">
+<figure class="figure">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 50.0%;justify-content: center;">
+<div id="fig-women-1" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="spectral_files/figure-html/fig-women-1.png" class="img-fluid figure-img" data-ref-parent="fig-women" width="1152"></p>
+<p></p><figcaption class="figure-caption">(a) Three Community Solution</figcaption><p></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 50.0%;justify-content: center;">
+<div id="fig-women-2" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="spectral_files/figure-html/fig-women-2.png" class="img-fluid figure-img" data-ref-parent="fig-women" width="1152"></p>
+<p></p><figcaption class="figure-caption">(b) Four Community Solution</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p></p><figcaption class="figure-caption">Figure&nbsp;4: Spectral Clustering of Nodes in the Southern Women Data.</figcaption><p></p>
+</figure>
+</div>
+<p>As we have seen, spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix (and CA in the bipartite case) produces a high-quality partition, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal.</p>
 
 
 
@@ -689,6 +887,9 @@ Fouss, François, Marco Saerens, and Masashi Shimbo. 2016. <em>Algorithms and Mo
 </div>
 <div id="ref-vonluxburg07" class="csl-entry" role="doc-biblioentry">
 Von Luxburg, Ulrike. 2007. <span>“A Tutorial on Spectral Clustering.”</span> <em>Statistics and Computing</em> 17: 395–416.
+</div>
+<div id="ref-wu_etal22" class="csl-entry" role="doc-biblioentry">
+Wu, Guolin, Changgui Gu, and Huijie Yang. 2022. <span>“A Spectral Method of Modularity for Community Detection in Bipartite Networks.”</span> <em>Europhysics Letters</em> 137 (3): 31001.
 </div>
 </div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
 
