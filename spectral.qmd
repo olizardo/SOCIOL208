@@ -23,7 +23,7 @@ Putting these three lessons together suggests a simple way to detect multiple co
 
 This general approach to community detection is sometimes referred to as **spectral clustering**.^[Not as a reference to ghosts, but because the eigendecomposition of a matrix is sometimes also called the **spectral decomposition**.]
 
-## Clustering Using the Eigenvectors of the Laplacian
+## Spectral Clustering Using the Eigenvectors of the Laplacian
 
 The issue then becomes, *which* matrix should we use the eigenvalues and eigenvectors of? As suggested by @vonluxburg07, an obvious candidate is what is called the **graph Laplacian** ($\mathbf{L}$), which is given by:
 
@@ -33,13 +33,13 @@ $$
 
 Where $\mathbf{D}$ is the graph's **degree matrix** a matrix with the degree vector of the graph along the diagonals and zeros everywhere else. 
 
-Like the modularity matrix, the $\mathbf{L}$ matrix is doubly-centered (rows and columns sum to zero), which means, via some math other smarter people have worked out, that one of the eigenvalues of $\mathbf{L}$ is guaranteed to be zero. 
+Like the modularity matrix, the $\mathbf{L}$ matrix is doubly-centered (rows and columns sum to zero), which means, via some math other smarter people have worked out, that, if $\mathbf{A}$ is connected, one of the eigenvalues of $\mathbf{L}$ is guaranteed to be zero.^[If $\mathbf{A}$ is not connected there will be as many zero eigenvalues in the eigendecomposition of $\mathbf{L}$ as there are components in $\mathbf{A}$.] 
 
-The other interesting thing is that the second smallest eigenvalue of $\mathbf{L}$ (sometimes called the **Fiedler vector**) provides the best two-community partition of the graph (just like the leading eigenvector of the modularity matrix does).
+The other interesting thing is that the second smallest (non-zero) eigenvalue of $\mathbf{L}$ (sometimes called the **Fiedler vector**) provides an optimal (e.g., minimizing the number of cross-community edges) two-community partition of the graph (just like we saw the leading eigenvector of the modularity matrix does).
 
-If we want to check for the existence of multiple groups, therefore, what we need to do is to create a new $n \times k$ matrix $\mathbf{U}$ composed of the $k$ eigenvectors of $\mathbf{L}$ associated with the $k$ *smallest* eigenvalues. 
+If we want to check for the existence of multiple groups, therefore, what we need to do is to create a new $n \times k$ matrix $\mathbf{U}$ composed of the $k$ eigenvectors of $\mathbf{L}$ associated with the $k$ *smallest* eigenvalues, arranged from smallest to biggest. 
 
-We then normalize the node-specific row-vector of values of the$\mathbf{U}$ matrix (e.g., using the Euclidean norm), and the use normalized $\mathbf{U}$ matrix as input to a k-means algorithm with a known number of clusters [@fouss_etal16, p. 320]. 
+We then normalize the node-specific row-vector of values of the$\mathbf{U}$ matrix (e.g., using the Euclidean norm), and the use normalized $\mathbf{U}$ matrix, which is an embedding of the node set of the graph in an k-dimensional Euclidean space, as input to a k-means algorithm with a known number of clusters [@fouss_etal16, p. 320]. 
 
 Let's see how that would work. Let's load the `law_friends` data from the `networkdata` package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout. The original data are directed, so we constrain them to be undirected and remove nodes with degree less than two:
 
@@ -199,7 +199,7 @@ Note also that the four, five, six and even seven-community partitions are not t
 Note that further subdivisions of the network split the more loosely structured community in the upper-right, while the more densely linked community in the lower-left remains largely undisturbed. 
 
 
-## Clustering Using the Eigenvectors of the *Normalized* Laplacian
+## Spectral Clustering Using the Eigenvectors of the *Normalized* Laplacian
 
 We saw how to cluster a network in a way that results in a good community partition using the Laplacian of the adjacency matrix $\mathbf{L}$. Another approach is to use a (degree) normalized version of the same matrix $\mathbf{\hat{L}}$, defined as follows:
 
@@ -273,6 +273,76 @@ As we can see, the normalized ratio cut approach performs almost as well as the 
 
 The resulting node clusters are shown in @fig-friends2-1 and @fig-friends2-2. 
 
+## Spectral Clustering Using the Eigenvectors of the *Degree-Normalized* Laplacian
+
+An alternative version of the normalized Laplacian is given by:
+
+$$
+\mathbf{\bar{L}} = \mathbf{D}^{-1}\mathbf{L}
+$$
+
+Which is just the original Laplacian as defined earlier with each entry divided by the degree of the corresponding node in that row. 
+
+A function that extracts the relevant eigenvectors of this version of the normalized Laplacian goes as follows:
+
+```{r}
+   d.norm.ratio.cut <- function(x, k = 6) {
+         A <- as.matrix(as_adjacency_matrix(x))
+         n <- vcount(x)
+         I <- diag(1, n, n)
+         D <- diag(degree(x))
+         L <- solve(D) %*% (D - A)
+         eig.L <- eigen(L)
+         b <- n - k
+         e <- n - 1
+         U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
+         if (k > 1) {
+            U <- U[, k:1] #re-ordering columns from smallest to biggest
+            }         
+         for (i in 1:nrow(U)) {
+            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+            }
+      return(U)
+   }
+```
+
+Where, once again, we only need to modify a couple of lines (5 and 6) from before to compute the new version of $\mathbf{L}$. 
+
+To see the quality of the partitions obtained via this method, we just type:
+
+```{r}
+   clus <- k.cuts(d.norm.ratio.cut(g))
+   mod.res <- mod.check(g, clus)
+   round(mod.res, 3)
+```
+
+The degree-normalized Laplacian once again prefers the three-community partition, but also shows that the *six* community partition produces a high-quality clustering. Here's how those look like:
+
+```{r}  
+#| label: fig-friends3
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Degree-Normalized Ratio Cut"
+#| fig-subcap:
+#|   - "Three Community Solution"
+#|   - "Six Community Solution"
+#| layout-ncol: 2
+#| echo: false
+
+V(g)$color <- clus[[2]]
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+V(g)$color <- clus[[5]] 
+set.seed(456)
+plot(g, 
+     vertex.size=6, vertex.frame.color="lightgray", 
+     vertex.label = NA, edge.arrow.size = 0.25,
+     vertex.label.dist=1, edge.curved=0.2)
+```
+
 ## Clustering Using the Eigenvectors of the Modularity Matrix
 
 As noted by @fender_etal17 [p. 1796], we can extend the spectral clustering approach based on the Laplacian and the normalized Laplacian to the modularity matrix $\mathbf{B}$. That is, we cluster the graph by embedding the nodes in a set of dimensions defined by the eigendecomposition of $\mathbf{B}$.
@@ -313,7 +383,7 @@ We can see that the three-cluster solution does really well modularity-wise ($Q 
 
 
 ```{r}  
-#| label: fig-friends3
+#| label: fig-friends4
 #| fig-height: 12
 #| fig-width: 12
 #| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Spectral Decomposition of the Modularity Matrix."
@@ -398,11 +468,11 @@ Nice! Now we can just feed `U` to our `k.cuts` function to place persons and gro
    clus <- k.cuts(U)
 ```
 
-Of course, we can't use the `mod.check` function because that uses the standard method for checking the modularity in one-mode networks. 
+Of course, we can't use the `mod.check` function we used earlier because that uses the standard method for checking the modularity in one-mode networks and doesn't take into account the structural zeros in the bipartite graph. 
 
-So we need to come up with a custom method for the bipartite case. 
+So we need to come up with a custom method to check the modularity for the bipartite case. 
 
-First, we need a function that takes a cluster assignment vector containing numbers for each cluster $k = \{1, 2, 3, C\}$ and turns it into a dummy coded cluster assignment matrix:
+First, we need a function that takes a cluster assignment vector containing numbers for each cluster $k = \{1, 2, 3, \ldots C\}$ and turns it into a dummy coded cluster assignment matrix:
 
 ```{r}
    make.dummies <- function(x) {
