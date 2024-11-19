@@ -407,7 +407,7 @@ plot(g,
      vertex.label.dist=1, edge.curved=0.2)
 ```
 
-## Clustering Two-Mode Networks Using CA
+## Spectral Clustering of Two-Mode Networks 
 
 We can use a variant of the spectral clustering approach to find multiple communities in two-mode networks [@wu_etal22]. This approach combines Correspondence Analysis (CA)---which we covered in the previous handout---and k-means clustering on multiple  dimensions. 
 
@@ -416,14 +416,23 @@ So let's bring back our old friend, the Southern Women data:
 ```{r}
    g <- southern_women #southern women data
    A <- as.matrix(as_biadjacency_matrix(g)) #bi-adjacency matrix
+   A2 <- as.matrix(as_adjacency_matrix(g)) #bipartite adjacency matrix
 ```
 
-Let's also compute the bipartite modularity matrix:
+Let's also compute the bi-adjacency modularity matrix:
 
 ```{r}
-   B <- A - matrix(rowSums(A) * colSums(A), 
-                   nrow = nrow(A), ncol = ncol(A), byrow = TRUE)/sum(A)
-   n <- vcount(g)
+   dp <- as.matrix(rowSums(A))
+   dg <- as.matrix(colSums(A))
+   dpdg <- dp %*% t(dg) #person x group degree product matrix
+   B <- A - dpdg/sum(A)
+   round(B, 2)
+```
+
+Great! Now, from this information we can compute a version of the bipartite modularity matrix:
+
+```{r}
+   n <- nrow(A) + ncol(A)
    Np <- nrow(A)
    names <- c(rownames(A), colnames(A))
    B2 <- matrix(0, n, n) #all zeros matrix of dimensions (p + g) X (p + g)
@@ -513,12 +522,22 @@ The function `mod.check2` needs three inputs: The bipartite modularity matrix, a
 And, now, for the big reveal:
 
 ```{r}
-   round(mod.check2(B2, clus, as.matrix(as_adjacency_matrix(g))), 3)
+   round(mod.check2(B2, clus, A2), 3)
 ```
 
 Looks like the spectral clustering results favor a four-community partition although the more parsimonious three and binary community partitions also look pretty good. 
 
-Here's a plot of the three and four community solutions (since we already saw the binary partition in the CA handout:
+@fig-women-1 and @fig-women-2 show a plot of the three and four community solutions according to the CA dimensions (since we already saw the binary partition in the CA handout).
+
+Of course, just like we did with one-mode networks, we can also obtain a spectral clustering directly from the eigenvectors of the bipartite modularity matrix in just a couple of lines:
+
+```{r}
+   clusB <- k.cuts(eigen(B2)$vectors[, 1:2])
+   round(mod.check2(B2, clusB, A2), 3)
+```
+
+Here we create the `U` matrix from the first two dimensions of the eigendecomposition of the bipartite modularity matrix. The results suggest that the three community partition is optimal, although the two-community one also does well. The corresponding splits are shown in @fig-women-3 and @fig-women-4. 
+
 
 ```{r}  
 #| label: fig-women
@@ -526,8 +545,10 @@ Here's a plot of the three and four community solutions (since we already saw th
 #| fig-width: 12
 #| fig-cap: "Spectral Clustering of Nodes in the Southern Women Data."
 #| fig-subcap:
-#|   - "Three Community Solution"
-#|   - "Four Community Solution"
+#|   - "Three Community Solution (CA)"
+#|   - "Four Community Solution (CA)"
+#|   - "Two Community Solution (Bipartite Modularity)"
+#|   - "Three Community Solution (Bipartite Modularity)"
 #| layout-ncol: 2
 #| echo: false
 
@@ -545,6 +566,20 @@ Here's a plot of the three and four community solutions (since we already saw th
      vertex.size=7, vertex.frame.color="lightgray", 
      vertex.label.dist = 1.5, edge.curved=0.2, 
      vertex.label.cex = 1.35)
+   V(g)$type <- bipartite_mapping(g)$type
+   V(g)$shape <- ifelse(V(g)$type, "square", "circle")
+   V(g)$color <- clusB[[1]]
+   set.seed(123)
+   plot(g, 
+     vertex.size=7, vertex.frame.color="lightgray", 
+     vertex.label.dist = 1.5, edge.curved=0.2, 
+     vertex.label.cex = 1.35)
+   V(g)$color <- clusB[[2]]
+   set.seed(123)
+   plot(g, 
+     vertex.size=7, vertex.frame.color="lightgray", 
+     vertex.label.dist = 1.5, edge.curved=0.2, 
+     vertex.label.cex = 1.35)
 ```
 
-As we have seen, spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix (and CA in the bipartite case) produces a high-quality partition, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal. 
+In this handout we have seen that spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix (and CA or the modularity in the bipartite case) produces high-quality partitions, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal. 
