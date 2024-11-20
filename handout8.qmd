@@ -192,10 +192,10 @@ Therefore, if $\mathbf{A}$ is the adjacency matrix recording the links between t
 In math:
 
 $$
-C_B(Ego) = \frac{1}{2}\sum_{i \neq j}\left[\mathbf{A}^2 \otimes (\mathbf{J} - \mathbf{A})\right]_{ij}^{-1}
+C_B(Ego) = \sum_{i < j}\left[\mathbf{A}^2 \bullet (\mathbf{J} - \mathbf{A})\right]_{ij}^{-1}
 $$
 
-Where $\mathbf{J}$ is a matrix full of ones of the same dimensions as $\mathbf{A}$ and $\otimes$ indicates element-wise matrix multiplication.
+Where $\mathbf{J}$ is a matrix full of ones of the same dimensions as $\mathbf{A}$ and $\bullet$ indicates element-wise matrix multiplication.
 
 A simple function that does this looks like:
 
@@ -217,7 +217,7 @@ A simple function that does this looks like:
 Let's see how it works for Luke:
 
 ```{r}
-   ego.bet(g, "LUKE")
+   round(ego.bet(g, "LUKE"), 2)
 ```
 
 Which says that Luke has pretty high ego-network betweenness.
@@ -438,4 +438,98 @@ Let's see a side-by-side comparison:
      layout = layout_as_star(p, center = "PADME"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
+
+As we can see, Mace Windu is surrounded by other men (like him) but Padme's network includes only one other woman, and the rest are composed of people with a different gender presentation than her.
+
+Like the clustering coefficient, we can compute a graph level index of homophily on a given attribute. This is given by the average EI index of nodes in the graph for that attribute.
+
+In the case of gender in *Attack of the Clones*:
+
+```{r}
+   EI.gender = mean(EI)
+   round(EI.gender, 2)
+```
+
+Which shows a slight homophily preference. 
+
+
+### Normalized EI
+
+Sometimes we may want to take into account that the group sizes of different categories of people is unequal in the network. For instance, Star Wars is full characters gendered as men, which means that any homophily index will penalize men as being more homophilous simply because there are more men around to form ties with.
+
+The normalized EI, or WEI [@oswal21, p.4] aims to fix this by instead calculating:
+
+$$
+E^*=E\left(\frac{N_s}{N - N_s}\right)
+$$
+
+$$
+WEI = \frac{E^*-I}{E^*+I}
+$$
+
+
+With $N_s$ being the number of "similar" nodes to ego in the whole graph (or external population) and $N$ being the total number of nodes (or persons in the population).
+
+A function that calculates the WEI looks like:
+
+```{r}
+   WEI <- function(n, w, a) {
+      x <- subgraph(w, neighbors(w, n))
+      Ns <- sum(as.numeric(vertex_attr(w, a) == vertex_attr(w, a, n)))
+      r <- Ns/(vcount(w) - Ns)
+      E <- vertex_attr(w, a, n) != vertex_attr(x, a)
+      E <- sum(as.numeric(E))* r
+      I <- vertex_attr(w, a, n) == vertex_attr(x, a)
+      I <- sum(as.numeric(I))
+      ei.index = (E - I)/(E + I)
+      return(ei.index)
+   }
+```
+
+Let's re-check Mace Windu's and Padme's EI index using the weighted scale:
+
+```{r}
+   round(WEI("MACE WINDU", g, "sex"), 2)
+   round(WEI("PADME", g, "sex"), 2)
+```
+
+As we can see the weighted EI scores are less extreme than the unweighted ones, once we take into account that the majority of characters in the film are men.
+
+Here are the weighted EI scores with respect to gender for everyone:
+
+```{r}
+   WEI <- sapply(V(g)$name, WEI, w = g, a = "sex")
+   round(WEI, 2)
+```
+
+Interestingly, while most people's scores are attenuated towards zero in the weighted scale, R2-D2's becomes more extreme going from weakly positive (demonstrating "gender" heterophily) to extreme negative (showing same "gender" preference). 
+
+Let's see what's going on:
+
+```{r}
+#| fig-height: 5
+#| fig-width: 5
+#| fig-cap: "R2-D2's Ego Network with Nodes Colored by Gender"
+#| echo: false
+   N <- neighbors(g, "R2-D2")
+   r2 <- subgraph(g, c("R2-D2", names(N)))
+   V(r2)$color <- as.numeric(as.factor(V(r2)$sex))
+   plot(r2, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(r2, center = "R2-D2"),
+     vertex.label.cex = 1, edge.color = "lightgray")
+```
+
+Here we can see that the reason why R2-D2 ends up being high in homophily in the weighted scale despite containing a network with just three nodes, is that he is connected to C3PO who is the only other character whose gender is assigned to "none."
+
+And here's the graph's WEI:
+
+```{r}
+   WEI.gender = mean(WEI)
+   round(WEI.gender, 2)
+```
+
+Which shows that our previous unweighted average under-estimated homophily in this network.
+
 
