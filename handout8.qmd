@@ -21,7 +21,9 @@ Once you have ego network data you can analyze each ego graph using the standard
 
 If you have attributes on each alter, you can alternatively compute measures of **diversity** to or **homophily** to get a sense of how likely ego is to connect to similar or diverse others.
 
-## The Clustering Coefficient
+## Structural Measures
+
+### The Clustering Coefficient
 
 Perhaps the most basic structural characteristic of an ego network is the density of the subgraph formed by all of the connections between the alters. This is called ego's **clustering coefficient**.  
 
@@ -179,7 +181,78 @@ And the graph's global clustering coefficient is:
    round(transitivity(g, type = "average"), 2)
 ```
 
-## Ego Network Diversity
+### Ego-Network Betweenness
+
+An alternative structural measure of ego's position in the ego network, closely related to the clustering coefficient, is **ego network betweenness**. 
+
+As @everett_borgatti05 note, in an ego network betweenness is determined by the number of paths of length two that involve ego, that is, by the number of disconnected alters. 
+
+Therefore, if $\mathbf{A}$ is the adjacency matrix recording the links between the alters, then $\mathbf{A}^2$ will contain the number of paths of length two between each pair of alters. Because we are only interested in the number of paths of length two between each pair of *disconnected* alters, we multiply (element-wise) this matrix by the adjacency matrix corresponding to the **graph complement** (a matrix with a one for every zero in the original adjacency matrix and a zero for each one). We then take the sum of the reciprocals of one of the triangles (excluding the main diagonal) of the resulting matrix to find the betweenness of ego. 
+
+In math:
+
+$$
+C_B(Ego) = \frac{1}{2}\sum_{i \neq j}\left[\mathbf{A}^2 \otimes (\mathbf{J} - \mathbf{A})\right]_{ij}^{-1}
+$$
+
+Where $\mathbf{J}$ is a matrix full of ones of the same dimensions as $\mathbf{A}$ and $\otimes$ indicates element-wise matrix multiplication.
+
+A simple function that does this looks like:
+
+```{r}
+   ego.bet <- function(x, n) {
+      N <- neighbors(x, n)
+      alter.net <- subgraph(x, c(n, names(N)))
+      A <- as.matrix(as_adjacency_matrix(alter.net))
+      A2 <- A %*% A
+      J <- matrix(1, nrow(A), ncol(A))
+      cb <- A2 * (J - A)
+      cb <- 1/cb
+      cb[is.infinite(cb)] <- 0
+      cb <- sum(cb[upper.tri(cb)])
+      return(cb)
+   }
+```
+
+Let's see how it works for Luke:
+
+```{r}
+   ego.bet(g, "LUKE")
+```
+
+Which says that Luke has pretty high ego-network betweenness.
+
+We can, of course, compute it for everyone in the network like before:
+
+```{r}
+   round(sapply(V(g)$name, ego.bet, x = g), 2)
+```
+
+Which confirms our original impression of Luke as the highest ego-network betweenness character with Leia in second place.
+
+What does it mean to have an ego-network betweenness of zero? Well, this is only possible if your clustering coefficient is 1.0, that is, when all of your alters are directly connected to one another. This is evident in Chewbacca's ego network:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "Chewbacca's Ego Network."
+   N <- neighbors(g, "CHEWBACCA")
+   chew <- subgraph(g, c("CHEWBACCA", names(N)))
+   cols <- rep("#56B4E9", vcount(chew))
+   names(cols) <- V(chew)$name
+   cols[which(names(cols) == "CHEWBACCA")] <- categorical_pal(1)
+   V(chew)$color <- cols
+   plot(chew, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(chew, center = "CHEWBACCA"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
+Which is a complete clique of size seven.
+
+## Compositional Measures
+### Ego Network Diversity
 
 If we have information on the categorical vertex attributes of ego's alters we may be interested in how diverse are ego's choices across those attributes. 
 
@@ -285,7 +358,7 @@ Let's see a side-by-side comparison:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-## Ego Network Homophily
+### Ego Network Homophily
 
 Diversity measures the extent to which ego's connect to diverse alters. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
 
@@ -365,5 +438,4 @@ Let's see a side-by-side comparison:
      layout = layout_as_star(p, center = "PADME"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
-
 
