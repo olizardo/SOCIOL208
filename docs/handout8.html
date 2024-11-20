@@ -83,6 +83,25 @@ code span.st { color: #4070a0; } /* String */
 code span.va { color: #19177c; } /* Variable */
 code span.vs { color: #4070a0; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
 </style>
 
 
@@ -300,6 +319,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <ul>
   <li><a href="#ego-networks-and-ego-network-data" id="toc-ego-networks-and-ego-network-data" class="nav-link active" data-scroll-target="#ego-networks-and-ego-network-data">Ego Networks and Ego Network Data</a></li>
   <li><a href="#the-clustering-coefficient" id="toc-the-clustering-coefficient" class="nav-link" data-scroll-target="#the-clustering-coefficient">The Clustering Coefficient</a></li>
+  <li><a href="#ego-network-diversity" id="toc-ego-network-diversity" class="nav-link" data-scroll-target="#ego-network-diversity">Ego Network Diversity</a></li>
+  <li><a href="#ego-network-homophily" id="toc-ego-network-homophily" class="nav-link" data-scroll-target="#ego-network-homophily">Ego Network Homophily</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout8.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -332,7 +353,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </section>
 <section id="the-clustering-coefficient" class="level2">
 <h2 class="anchored" data-anchor-id="the-clustering-coefficient">The Clustering Coefficient</h2>
-<p>Perhaps the most basic structural characteristic of an ego network is the density of the subgraph formed by all of the connections between the alters. This is called ego’s <strong>clustering coefficient</strong>. Let’s see how it works:</p>
+<p>Perhaps the most basic structural characteristic of an ego network is the density of the subgraph formed by all of the connections between the alters. This is called ego’s <strong>clustering coefficient</strong>.</p>
+<p>Let’s see how it works. First we load up the <em>New Hope</em> Star Wars social network included in the `networkdata`` package <span class="citation" data-cites="gabasova16">(<a href="#ref-gabasova16" role="doc-biblioref">Gabasova 2016</a>)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
 <span id="cb1-2"><a href="#cb1-2"></a>   g <span class="ot">&lt;-</span> starwars[[<span class="dv">4</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -341,14 +363,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(igraph)</span>
 <span id="cb2-2"><a href="#cb2-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"R2-D2"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3"></a>   r2d2 <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"R2-D2"</span>), <span class="fu">as.vector</span>(N)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-3"><a href="#cb2-3"></a>   r2d2 <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"R2-D2"</span>, <span class="fu">names</span>(N)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And we can just plot it like we would any <code>igraph</code> object:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   <span class="fu">V</span>(r2d2)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="dv">2</span>, <span class="fu">length</span>(N)))</span>
 <span id="cb3-2"><a href="#cb3-2"></a>   <span class="fu">plot</span>(r2d2, </span>
 <span id="cb3-3"><a href="#cb3-3"></a>     <span class="at">vertex.size=</span><span class="dv">10</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb3-4"><a href="#cb3-4"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, </span>
+<span id="cb3-4"><a href="#cb3-4"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, </span>
 <span id="cb3-5"><a href="#cb3-5"></a>     <span class="at">layout =</span> <span class="fu">layout_</span>(r2d2, <span class="fu">as_star</span>()),</span>
 <span id="cb3-6"><a href="#cb3-6"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -381,11 +403,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb6-6"><a href="#cb6-6"></a>   <span class="fu">head</span>(ego.graphs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
-IGRAPH 81e8e17 UNW- 9 24 -- Episode IV – A New Hope
+IGRAPH cb8c86f UNW- 9 24 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 81e8e17 (vertex names):
++ edges from cb8c86f (vertex names):
  [1] CHEWBACCA--C-3PO   CHEWBACCA--LUKE    C-3PO    --LUKE    C-3PO    --BIGGS  
  [5] LUKE     --BIGGS   CHEWBACCA--LEIA    C-3PO    --LEIA    LUKE     --LEIA   
  [9] BIGGS    --LEIA    C-3PO    --BERU    LUKE     --BERU    LEIA     --BERU   
@@ -394,22 +416,22 @@ IGRAPH 81e8e17 UNW- 9 24 -- Episode IV – A New Hope
 [21] C-3PO    --HAN     LUKE     --HAN     LEIA     --HAN     OBI-WAN  --HAN    
 
 [[2]]
-IGRAPH 81e94cb UNW- 6 15 -- Episode IV – A New Hope
+IGRAPH cb8cd45 UNW- 6 15 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 81e94cb (vertex names):
++ edges from cb8cd45 (vertex names):
  [1] R2-D2  --C-3PO   R2-D2  --LUKE    C-3PO  --LUKE    R2-D2  --LEIA   
  [5] C-3PO  --LEIA    LUKE   --LEIA    R2-D2  --OBI-WAN C-3PO  --OBI-WAN
  [9] LUKE   --OBI-WAN LEIA   --OBI-WAN R2-D2  --HAN     C-3PO  --HAN    
 [13] LUKE   --HAN     LEIA   --HAN     OBI-WAN--HAN    
 
 [[3]]
-IGRAPH 81e9603 UNW- 10 27 -- Episode IV – A New Hope
+IGRAPH cb8ce47 UNW- 10 27 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 81e9603 (vertex names):
++ edges from cb8ce47 (vertex names):
  [1] R2-D2    --CHEWBACCA R2-D2    --LUKE      CHEWBACCA--LUKE     
  [4] R2-D2    --BIGGS     LUKE     --BIGGS     R2-D2    --LEIA     
  [7] CHEWBACCA--LEIA      LUKE     --LEIA      BIGGS    --LEIA     
@@ -419,11 +441,11 @@ IGRAPH 81e9603 UNW- 10 27 -- Episode IV – A New Hope
 + ... omitted several edges
 
 [[4]]
-IGRAPH 81e971e UNW- 15 36 -- Episode IV – A New Hope
+IGRAPH cb8cf43 UNW- 15 36 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 81e971e (vertex names):
++ edges from cb8cf43 (vertex names):
  [1] R2-D2    --CHEWBACCA R2-D2    --C-3PO     R2-D2    --BERU     
  [4] R2-D2    --OWEN      R2-D2    --OBI-WAN   R2-D2    --LEIA     
  [7] R2-D2    --BIGGS     R2-D2    --HAN       CHEWBACCA--OBI-WAN  
@@ -433,19 +455,19 @@ IGRAPH 81e971e UNW- 15 36 -- Episode IV – A New Hope
 + ... omitted several edges
 
 [[5]]
-IGRAPH 81e9826 UNW- 4 4 -- Episode IV – A New Hope
+IGRAPH cb8d07c UNW- 4 4 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 81e9826 (vertex names):
++ edges from cb8d07c (vertex names):
 [1] LEIA --OBI-WAN LEIA --MOTTI   LEIA --TARKIN  MOTTI--TARKIN 
 
 [[6]]
-IGRAPH 81e9930 UNW- 2 1 -- Episode IV – A New Hope
+IGRAPH cb8d18d UNW- 2 1 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edge from 81e9930 (vertex names):
++ edge from cb8d18d (vertex names):
 [1] LUKE--BIGGS</code></pre>
 </div>
 </div>
@@ -505,21 +527,26 @@ IGRAPH 81e9930 UNW- 2 1 -- Episode IV – A New Hope
 <p>Let’s see what that looks like:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
-<span id="cb14-2"><a href="#cb14-2"></a>   luke.alters <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">neighbors</span>(g, <span class="st">"LUKE"</span>))  </span>
-<span id="cb14-3"><a href="#cb14-3"></a>   <span class="fu">V</span>(luke.alters)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">cluster_leading_eigen</span>(luke.alters)<span class="sc">$</span>membership</span>
-<span id="cb14-4"><a href="#cb14-4"></a>   <span class="fu">plot</span>(luke.alters, </span>
-<span id="cb14-5"><a href="#cb14-5"></a>     <span class="at">vertex.size=</span><span class="dv">5</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb14-6"><a href="#cb14-6"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, </span>
-<span id="cb14-7"><a href="#cb14-7"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">0.75</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-2"><a href="#cb14-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"LUKE"</span>)</span>
+<span id="cb14-3"><a href="#cb14-3"></a>   luke.alters <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, N)  </span>
+<span id="cb14-4"><a href="#cb14-4"></a>   <span class="fu">V</span>(luke.alters)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">cluster_leading_eigen</span>(luke.alters)<span class="sc">$</span>membership</span>
+<span id="cb14-5"><a href="#cb14-5"></a>   luke <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"LUKE"</span>, <span class="fu">names</span>(N)))</span>
+<span id="cb14-6"><a href="#cb14-6"></a>   luke <span class="ot">&lt;-</span> <span class="fu">simplify</span>(<span class="fu">union</span>(luke, luke.alters))</span>
+<span id="cb14-7"><a href="#cb14-7"></a>   <span class="fu">V</span>(luke)<span class="sc">$</span>color[<span class="fu">which</span>(<span class="fu">is.na</span>(<span class="fu">V</span>(luke)<span class="sc">$</span>color))] <span class="ot">&lt;-</span> <span class="st">"red"</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a>   <span class="fu">plot</span>(luke, </span>
+<span id="cb14-9"><a href="#cb14-9"></a>     <span class="at">vertex.size=</span><span class="dv">6</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
+<span id="cb14-10"><a href="#cb14-10"></a>     <span class="at">vertex.label.dist=</span><span class="fl">1.25</span>,  </span>
+<span id="cb14-11"><a href="#cb14-11"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">0.75</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="handout8_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="768"></p>
-<p></p><figcaption class="figure-caption">Luke’s Alters Network.</figcaption><p></p>
+<p></p><figcaption class="figure-caption">Luke’s Ego Network.</figcaption><p></p>
 </figure>
 </div>
 </div>
 </div>
+<p>Here we can see that Luke mediates between the Rebel Pilot community on the left and the Obi-Wan, Leia, Chewbacca, Han Solo and Droid communities on the right.</p>
 <p>Note that in the ego graph that includes ego, each connected alter is a <strong>triangle</strong> in the ego graph. So the clustering coefficient is simply a count of the <em>number of undirected triangles that are centered on ego</em>, or the number of <em>cycles of length three centered on ego</em>.</p>
 <p>So that means that the diagonals of the cube of the adjacency matrix also contain the information needed to compute the clustering coefficient:</p>
 <div class="cell">
@@ -581,18 +608,235 @@ C(G) = \frac{1}{N}\sum_iC_i
        1.00 </code></pre>
 </div>
 </div>
-<p>And the graph’s global clustering is:</p>
+<p>And the graph’s global clustering coefficient is:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   <span class="fu">round</span>(<span class="fu">transitivity</span>(g, <span class="at">type =</span> <span class="st">"average"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.79</code></pre>
 </div>
 </div>
+</section>
+<section id="ego-network-diversity" class="level2">
+<h2 class="anchored" data-anchor-id="ego-network-diversity">Ego Network Diversity</h2>
+<p>If we have information on the categorical vertex attributes of ego’s alters we may be interested in how diverse are ego’s choices across those attributes.</p>
+<p>The most common measure is <strong>Blau’s Diversity Index</strong> (<span class="math inline">\(H\)</span>). For a categorical attribute with <span class="math inline">\(m\)</span> levels, this is given by:</p>
+<p><span class="math display">\[
+H = 1 - \sum_{k=1}^m p_k^2
+\]</span></p>
+<p>Where <span class="math inline">\(p_k\)</span> is the proportion of ego’s alters that fall under category level <span class="math inline">\(k\)</span>.</p>
+<p>The <span class="math inline">\(H\)</span> measure ranges from a minimum of <span class="math inline">\(H = 0\)</span> (all of ego’s alters belong to a single category) to a maximum of <span class="math inline">\(H = 1- \frac{1}{m}\)</span> (all of ego’s alters belong to a different category).</p>
+<p>Let’s see how this would work.</p>
+<p>First, let’s switch to the <em>Attack of the Clones</em> Star Wars graph:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   g <span class="ot">&lt;-</span> starwars[[<span class="dv">2</span>]]</span>
+<span id="cb25-2"><a href="#cb25-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g)<span class="sc">&gt;</span> <span class="dv">1</span>) <span class="co">#removing singletons</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now, we will pick the vertex attribute <code>homeworld</code> and try to measure how diverse is each character’s ego network on this score.</p>
+<p>To do that, we need to get the proportion of characters from each homeworld in the network.</p>
+<p>Let’s check out this vertex attribute:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>homeworld</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "Naboo"          "Naboo"          "Naboo"          NA              
+ [5] NA               "Haruun Kal"     NA               "Cerea"         
+ [9] "Alderaan"       "Naboo"          "Stewjon"        "Tatooine"      
+[13] "Naboo"          NA               NA               NA              
+[17] "Kamino"         "Kamino"         "Kamino"         "Concord Dawn"  
+[21] "Tatooine"       "Tatooine"       "Tatooine"       "Tatooine"      
+[25] "Serenno"        NA               "Geonosis"       "Cato Neimoidia"</code></pre>
+</div>
+</div>
+<p>There are some <code>NA</code> values here, so let’s create a residual category called “other”:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>homeworld[<span class="fu">is.na</span>(<span class="fu">V</span>(g)<span class="sc">$</span>homeworld)] <span class="ot">&lt;-</span> <span class="st">"Other"</span></span>
+<span id="cb28-2"><a href="#cb28-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>homeworld</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "Naboo"          "Naboo"          "Naboo"          "Other"         
+ [5] "Other"          "Haruun Kal"     "Other"          "Cerea"         
+ [9] "Alderaan"       "Naboo"          "Stewjon"        "Tatooine"      
+[13] "Naboo"          "Other"          "Other"          "Other"         
+[17] "Kamino"         "Kamino"         "Kamino"         "Concord Dawn"  
+[21] "Tatooine"       "Tatooine"       "Tatooine"       "Tatooine"      
+[25] "Serenno"        "Other"          "Geonosis"       "Cato Neimoidia"</code></pre>
+</div>
+</div>
+<p>Great! Now we can use the native <code>R</code> function <code>table</code> to get the relevant proportions.</p>
+<p>The function <code>table</code> gives us the count of characters in each category, and then we divide by the total number of actors in the network, given by <code>vcount</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   p.hw <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">table</span>(<span class="fu">V</span>(g)<span class="sc">$</span>homeworld)<span class="sc">/</span><span class="fu">vcount</span>(g), <span class="dv">3</span>)</span>
+<span id="cb30-2"><a href="#cb30-2"></a>   p.hw</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+      Alderaan Cato Neimoidia          Cerea   Concord Dawn       Geonosis 
+         0.036          0.036          0.036          0.036          0.036 
+    Haruun Kal         Kamino          Naboo          Other        Serenno 
+         0.036          0.107          0.179          0.250          0.036 
+       Stewjon       Tatooine 
+         0.036          0.179 </code></pre>
+</div>
+</div>
+<p>Now that we know how to get the proportions we need, we can write a custom function that will compute <span class="math inline">\(H\)</span> for a given ego network for any given attribute:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   blau <span class="ot">&lt;-</span> <span class="cf">function</span>(n, w, a) {</span>
+<span id="cb32-2"><a href="#cb32-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(w, <span class="fu">neighbors</span>(w, n))</span>
+<span id="cb32-3"><a href="#cb32-3"></a>      p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">sum</span>((<span class="fu">table</span>(<span class="fu">vertex_attr</span>(x, a))<span class="sc">/</span><span class="fu">vcount</span>(x))<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb32-4"><a href="#cb32-4"></a>      <span class="fu">return</span>(p)</span>
+<span id="cb32-5"><a href="#cb32-5"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s see Padme’s homeworld ego network diversity score:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   <span class="fu">round</span>(<span class="fu">blau</span>(<span class="st">"PADME"</span>, g, <span class="st">"homeworld"</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.796</code></pre>
+</div>
+</div>
+<p>Which says that Padme has a fairly diverse ego network when it comes to homeworld.</p>
+<p>We can, of course, just use <code>sapply</code> to compute everyone’s homeworld ego network diversity score:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   H <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, blau, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"homeworld"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2"></a>   <span class="fu">round</span>(H, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+          0.444           0.667           0.815           0.776           0.444 
+     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+          0.820           0.840           0.750           0.776           0.780 
+        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+          0.858           0.809           0.796           0.625           0.625 
+          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          0.625           0.625           0.500           0.667           0.625 
+          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          0.444           0.320           0.320           0.320           0.860 
+        SUN RIT          POGGLE     NUTE GUNRAY 
+          0.833           0.833           0.833 </code></pre>
+</div>
+</div>
+<p>In this network Count Dooku stands out as having a very diverse ego network by homeworld, while Owen sports a very homogeneous ego network on the same attribute.</p>
+<p>Let’s see a side-by-side comparison:</p>
+<div class="cell quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Count Dooku</figcaption><p></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-22-2.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Owen</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p>Two Ego Networks with Nodes Colored by Homeworld</p>
+</div>
+</div>
+</div>
+</section>
+<section id="ego-network-homophily" class="level2">
+<h2 class="anchored" data-anchor-id="ego-network-homophily">Ego Network Homophily</h2>
+<p>Diversity measures the extent to which ego’s connect to diverse alters. We may also want to get a sense of how <em>homophilous</em> an ego network is, namely, the extent to which ego connects to alters that are the same or different from <em>them</em>.</p>
+<p>Note that these are two different things. A person can have an ego network composed of 100% alters who are different from them on a given attribute (maximum “heterophily”) but those alters could be 100% homogeneous—e.g., all come from the same planet—and thus ego will have the minimum Blau diversity score (<span class="math inline">\(H = 0\)</span>).</p>
+<p>To measure homophily in the ego network we use the <strong>EI homophily index</strong>. This is given by:</p>
+<p><span class="math display">\[
+EI = \frac{E-I}{E+I}
+\]</span></p>
+<p>Where <span class="math inline">\(E\)</span> is the number of “external” ties (alter different from ego on attribute), and <span class="math inline">\(I\)</span> is the number of “internal” ties (alter same as ego on attribute).</p>
+<p>The <span class="math inline">\(EI\)</span> index ranges from a minimum of <span class="math inline">\(EI = -1\)</span>, indicating maximum homophily, to a maximum of <span class="math inline">\(EI = 1\)</span>, indicating maximum heterophily. An EI index value of zero indicates no preference for internal over external ties.</p>
+<p>So let’s write a function that does what we want to calculate EI:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   EI <span class="ot">&lt;-</span> <span class="cf">function</span>(n, w, a) {</span>
+<span id="cb37-2"><a href="#cb37-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(w, <span class="fu">neighbors</span>(w, n))</span>
+<span id="cb37-3"><a href="#cb37-3"></a>      E <span class="ot">&lt;-</span> <span class="fu">vertex_attr</span>(w, a, n) <span class="sc">!=</span> <span class="fu">vertex_attr</span>(x, a)</span>
+<span id="cb37-4"><a href="#cb37-4"></a>      E <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.numeric</span>(E))</span>
+<span id="cb37-5"><a href="#cb37-5"></a>      I <span class="ot">&lt;-</span> <span class="fu">vertex_attr</span>(w, a, n) <span class="sc">==</span> <span class="fu">vertex_attr</span>(x, a)</span>
+<span id="cb37-6"><a href="#cb37-6"></a>      I <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.numeric</span>(I))</span>
+<span id="cb37-7"><a href="#cb37-7"></a>      ei.index <span class="ot">=</span> (E <span class="sc">-</span> I)<span class="sc">/</span>(E <span class="sc">+</span> I)</span>
+<span id="cb37-8"><a href="#cb37-8"></a>      <span class="fu">return</span>(ei.index)</span>
+<span id="cb37-9"><a href="#cb37-9"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s look at the attribute <code>sex</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>sex</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "none"   "male"   "male"   NA       NA       "male"   "male"   "male"  
+ [9] "male"   "male"   "male"   "male"   "female" NA       NA       NA      
+[17] "female" "male"   "male"   "male"   "none"   "male"   "female" "male"  
+[25] "male"   NA       "male"   "male"  </code></pre>
+</div>
+</div>
+<p>Getting rid of the <code>NA</code> values:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>sex[<span class="fu">is.na</span>(<span class="fu">V</span>(g)<span class="sc">$</span>sex)] <span class="ot">&lt;-</span> <span class="st">"Other"</span></span>
+<span id="cb40-2"><a href="#cb40-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>sex</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "none"   "male"   "male"   "Other"  "Other"  "male"   "male"   "male"  
+ [9] "male"   "male"   "male"   "male"   "female" "Other"  "Other"  "Other" 
+[17] "female" "male"   "male"   "male"   "none"   "male"   "female" "male"  
+[25] "male"   "Other"  "male"   "male"  </code></pre>
+</div>
+</div>
+<p>And calculating the homophily index on gender for everyone:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   EI <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, EI, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"sex"</span>)</span>
+<span id="cb42-2"><a href="#cb42-2"></a>   <span class="fu">round</span>(EI, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+           0.33           -1.00           -0.56            0.71            0.33 
+     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+          -0.60           -0.60           -1.00           -0.71           -0.40 
+        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+          -0.53           -0.11            0.88            0.00            0.00 
+          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+           0.00            1.00            0.00           -0.33           -0.50 
+          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+           0.67            0.20            0.60            0.20           -0.60 
+        SUN RIT          POGGLE     NUTE GUNRAY 
+           1.00           -0.33           -0.33 </code></pre>
+</div>
+</div>
+<p>As we can see, the Emperor, Mace Windu, Obi-Wan and other such characters have a homophilous “bro” network. Padme on the other hand has a heterophilous network.</p>
+<p>Let’s see a side-by-side comparison:</p>
+<div class="cell quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Mace Windu</figcaption><p></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-27-2.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Padme</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p>Two Ego Networks with Nodes Colored by Gender</p>
+</div>
+</div>
+</div>
+
 
 
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-gabasova16" class="csl-entry" role="doc-biblioentry">
+Gabasova, Evelina. 2016. <span>“<span class="nocase">Star Wars social network</span>.”</span> <a href="https://doi.org/10.5281/zenodo.1411479">https://doi.org/10.5281/zenodo.1411479</a>.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
