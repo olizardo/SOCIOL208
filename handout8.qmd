@@ -429,8 +429,8 @@ So let's write a function that does what we want to calculate EI:
       E <- sum(as.numeric(E))
       I <- vertex_attr(w, a, n) == vertex_attr(x, a)
       I <- sum(as.numeric(I))
-      ei.index = (E - I)/(E + I)
-      return(ei.index)
+      ei = (E - I)/(E + I)
+      return(ei)
       }
 ```
 
@@ -503,52 +503,54 @@ Which shows a slight preference for same-gender ties in the network.
 
 Sometimes we may want to take into account that the group sizes of different categories of people is unequal in the network. For instance, Star Wars is full characters gendered as men, which means that any homophily index will penalize men as being more homophilous simply because there are more men around to form ties with.
 
-The normalized EI, or WEI [@oswal21, p.4] aims to fix this by instead calculating:
+@everett_borgatti12 [p.564-565] propose approach to normalizing the EI index to account for unequal group sizes, yielding the $NEI$. So instead of computing EI they suggest calculating:
 
 $$
-E^*=E\left(\frac{N_s}{N - N_s}\right)
+E^* = \frac{E}{N-Ns}
 $$
 
 $$
-WEI = \frac{E^*-I}{E^*+I}
+I^* = \frac{I}{Ns}
 $$
 
+$$
+NEI = \frac{E^*-I^*}{E^*+I^*}
+$$
 
-With $N_s$ being the number of "similar" nodes to ego in the whole graph (or external population) and $N$ being the total number of nodes (or persons in the population).
+With $N_s$ being the number of "similar" nodes to ego in the whole graph (or external population) and $N$ being the total number of nodes (or persons in the population). As you can see, the $NEI$ weights both the number of external and $E$ the number of internal ties $I$ by their maximum possible values in the network. 
 
-A function that calculates the WEI looks like:
+Here's a function that does that:
 
 ```{r}
-   WEI <- function(n, w, a) {
+   NEI <- function(n, w, a) {
       x <- subgraph(w, neighbors(w, n))
       Ns <- sum(as.numeric(vertex_attr(w, a) == vertex_attr(w, a, n)))
-      r <- Ns/(vcount(w) - Ns)
       E <- vertex_attr(w, a, n) != vertex_attr(x, a)
-      E <- sum(as.numeric(E))* r
+      E <- sum(as.numeric(E))/(vcount(w) - Ns) 
       I <- vertex_attr(w, a, n) == vertex_attr(x, a)
-      I <- sum(as.numeric(I))
-      ei.index = (E - I)/(E + I)
-      return(ei.index)
+      I <- sum(as.numeric(I))/Ns
+      nei = (E - I)/(E + I)
+      return(nei)
    }
 ```
 
-Let's re-check Mace Windu's and Padme's EI index using the weighted scale:
+Let's re-check Mace Windu's and Padme's EI index using the normalized scale:
 
 ```{r}
-   round(WEI("MACE WINDU", g, "sex"), 2)
-   round(WEI("PADME", g, "sex"), 2)
+   round(NEI("MACE WINDU", g, "sex"), 2)
+   round(NEI("PADME", g, "sex"), 2)
 ```
 
-As we can see the weighted EI scores are less extreme than the unweighted ones, once we take into account that the majority of characters in the film are men.
+As we can see the NEI scores are less extreme than the unnormalized ones, once we take into account that the majority of characters in the film are men.
 
-Here are the weighted EI scores with respect to gender for everyone:
+Here are the NEI scores with respect to gender for everyone:
 
 ```{r}
-   WEI <- sapply(V(g)$name, WEI, w = g, a = "sex")
-   round(WEI, 2)
+   NEI <- sapply(V(g)$name, NEI, w = g, a = "sex")
+   round(NEI, 2)
 ```
 
-Interestingly, while most people's scores are attenuated towards zero in the weighted scale, R2-D2's becomes more extreme going from weakly positive (demonstrating "gender" heterophily) to extreme negative (showing same "gender" preference). 
+Interestingly, while most people's scores are attenuated towards zero in the normalized scale, R2-D2's becomes more extreme going from weakly positive (demonstrating "gender" heterophily) to extreme negative (showing same "gender" preference). 
 
 Let's see what's going on:
 
@@ -567,15 +569,124 @@ Let's see what's going on:
      vertex.label.cex = 1, edge.color = "lightgray")
 ```
 
-Here we can see that the reason why R2-D2 ends up being high in homophily in the weighted scale despite containing a network with just three nodes and only a single "same-gender" (i.e., none) tie, is that he is connected to C3PO who is the only other character (a droid) whose gender is also assigned to "none."
+Here we can see that the reason why R2-D2 ends up being high in homophily in the NEI despite containing a network with just three nodes and only a single "same-gender" (i.e., none) tie, is that he is connected to C3PO who is the only other character (a droid) whose gender is also assigned to "none."
 
-And here's the graph's overall WEI:
+And here's the graph's overall NEI:
 
 ```{r}
-   WEI.gender = mean(WEI)
-   round(WEI.gender, 2)
+   NEI.gender = mean(NEI)
+   round(NEI.gender, 2)
 ```
 
-Which shows that our previous unweighted average under-estimated homophily in this network. Instead, there is a moderately strong tendency for characters to co-appear with others of the same gender classification once the imbalance favoring men is accounted for. 
+Which shows that our previous unnormalized average under-estimated homophily in this network. Instead, there is a moderately strong tendency for characters to co-appear with others of the same gender classification once the imbalance favoring men is accounted for. 
+
+### Other Ways of Accounting for Imbalanced Group Sizes in Homophily Metrics
+
+As may already be evident when constructing a homophily measure that takes into account the population (or local network) proportions of various types of alters, there are four pieces of information that we have to take into account:
+
+a) Number of alters linked to ego of the same category as ego.
+b) Number of alters linked to ego of a different category from ego.
+c) Number of alters not linked to ego of the same category as ego.
+d) Number of alters non-linked to ego of a different category from ego.
+
+Which yields a classic 2 by 2 table. 
+
+Here's a function that produces such a table for each ego for a given attribute:
+
+```{r}
+   abcd <- function(n, w, a) {
+      x <- subgraph(w, neighbors(w, n))
+      same <- as.numeric(vertex_attr(w, a, n) == vertex_attr(w, a))
+      tied <- as.numeric(V(x) == V(w))
+      tab <- table(tied, same)
+      tab <- tab[2:1, 2:1]
+      rownames(tab) <- c("yes", "no")
+      colnames(tab) <- c("yes", "no")
+      return(tab)
+   }
+```
+
+So for Count Dooku with respect to gender, this 2 X 2 table looks like:
+
+```{r}
+   abcd("COUNT DOOKU", g, "sex")
+```
+
+So here we can see that Dooku is linked to seven others of the same gender, but there are ten other men he's not linked to. In the same way, he has three different-gender ties, but there are eight others of a different gender he's not tied to. 
+
+As @everett_borgatti12 note, we can label the cells of the above table with the letters from the above list: 
+
+```{r}
+#| echo: false
+   t <- abcd("COUNT DOOKU", g, "sex")
+   t[1,1] <- "a"
+   t[1,2] <- "b"
+   t[2,1] <- "c"
+   t[2,2] <- "d"
+   t
+```
+
+The the EI index only uses information only from the first row (alters tied to ego), and is thus a rescaling of $a/(a + b)$; it is sensitive to group size imbalances because it ignores the other pieces of information. 
+
+The NEI, on the other hand, uses information from all four cells and is therefore a rescaling of $(a/(a + c)) - (b/(b + d))$; therefore, it is insensitive to group size imbalances.
+
+Other measures of homophily could thus be constructed from this information, that, like the NEI are not sensitive to group sizes. One measure @everett_borgatti12 [p. 565] recommend is the **point biserial correlation coefficient** ($r^{pb}$), which is given, using the cell labels in the table above, by:
+
+$$
+r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b(c+d))}}
+$$
+
+A function that computes this from the output of `abcd` above is:
+
+```{r}
+   pb.corr <- function(x) {
+      a <- x[1,1]
+      b <- x[1,2]
+      c <- x[2,1]
+      d <- x[2,2]
+   num <- (a*d - b*c)
+   den <- sqrt((a+c)*(b+d)*(a+b)*(c+d))
+   return(num/den)
+   }
+```
+
+For Dooku, $r^{pb}$ is:
+
+```{r}
+   round(pb.corr(abcd("COUNT DOOKU", g, "sex")), 2)
+```
+
+Which shows a positive tendency for same gender ties. 
+
+To calculate $r$ for the whole network, first we need to create a list containing the corresponding 2 X 2 EI tables for each node for the gender attribute:
+
+```{r}
+   abcd.list <- lapply(V(g), abcd, w = g, a = "sex")
+   head(abcd.list)
+```
+
+And then `sapply` the function `pb.corr` to each element of this list:
+
+```{r}
+   PBC <- sapply(abcd.list, pb.corr)
+   round(PBC, 2)
+```
+
+Which shows that, after accounting for group sizes, Obi-Wan, and Anakin show a slight preference for different-gender ties, while Mace Windu and Dooku show a slight preference for same-gender ties. 
+
+And at the network level:
+
+```{r}
+   round(mean(PBC), 4)
+```
+
+Which shows no preference for same or different gender ties in this network.
+
+
+
+
+
+
+
 
 
