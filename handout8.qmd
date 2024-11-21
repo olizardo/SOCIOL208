@@ -13,9 +13,11 @@ format:
 
 ## Ego Networks and Ego Network Data
 
-An ego-network, is just a **subgraph** of a larger network that includes a node of interest ("ego"), all of the connections between ego and their neighbors (called "alters") and usually all of the connections between each of the alters. 
+An ego-network, is just a **subgraph** of a larger network--referred to as an **ego graph**--that includes a node of interest ("ego"), all of the connections between ego and their neighbors (called "alters") and usually all of the connections between each of the alters, *excluding* the connections alters may have with other nodes who are not directly tied to ego. 
 
 **Ego network data** is social network data collected in such way (e.g., using standard social survey techniques) that you capture the ego networks of some set of people, usually a convenience sample or, more rarely, a probability sample of some population. 
+
+Note that if you collect traditional ("whole") network data (e.g., all the people in a classroom) you have ego network data for that settings (the ego subgraphs of each node as just defined), but not the reverse; ego-network data cannot be converted into "whole" network data, although it can approximate it. 
 
 Once you have ego network data you can analyze each ego graph using the standard techniques we learned so far (if you are only interested in the structural characteristics of the ego graph).
 
@@ -39,7 +41,7 @@ As we said an ego graph is just a subgraph centered on a particular actor. So R2
 ```{r}
    library(igraph)
    N <- neighbors(g, "R2-D2")
-   x <- subgraph(g, c("R2-D2", names(N)))
+   a <- subgraph(g, c("R2-D2", names(N))) #ego graph
 ```
 
 And we can just plot it like we would any `igraph` object:
@@ -48,21 +50,21 @@ And we can just plot it like we would any `igraph` object:
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "R2-D2's Ego Network."
-   V(x)$color <- c(1, rep(2, length(N)))
-   plot(x, 
+   V(a)$color <- c(1, rep(2, length(N)))
+   plot(a, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=2, 
-     layout = layout_(x, as_star()),
+     layout = layout_as_star(a, center = "R2-D2"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-Note that we use the `as_star()` option for the layout, so that the ego is put in the center of the star graph surrounded by their alters.
+Note that we use the `layout_as_star()` for the layout, so that the ego is put in the center of the star graph surrounded by their alters, we can specify who the star node is using the option `center`.
 
 R2-D2's clustering coefficient is just the density of the graph that includes only the alters:
 
 ```{r}
-   x.alters <- x - vertex("R2-D2")
-   C <- round(edge_density(x.alters), 2)
+   alters <- a - vertex("R2-D2")
+   C <- round(edge_density(alters), 2)
    C
 ```
 
@@ -132,7 +134,7 @@ Let's see what that looks like:
      vertex.label.cex = 0.75, edge.color = "lightgray")
 ```
 
-Here we can see that Luke mediates between the Rebel Pilot community on the left and the Obi-Wan, Leia, Chewbacca, Han Solo and Droid communities on the right. 
+Here we can see that Luke mediates between the Rebel Pilot community on the left and the Obi-Wan, Leia, Chewbacca, Han Solo and Droid communities on the right. Note that we didn't have to use that `layout_as_star` option because when ego's network has community structure, the traditional spring embedding layout will put ego at the center.
 
 Note that in the ego graph that includes ego, each connected alter is a **triangle** in the ego graph. So the clustering coefficient is simply a count of the *number of undirected triangles that are centered on ego*, or the number of *cycles of length three centered on ego*. 
 
@@ -313,10 +315,11 @@ Now that we know how to get the proportions we need, we can write a custom funct
 ```{r}
    blau <- function(n, w, a, norm = FALSE) {
       x <- subgraph(w, neighbors(w, n)) #ego subgraph
-      att.vec <- vertex_attr(x, a) #number of alters in each category of a
-      H <- 1 - sum((table(att.vec)/vcount(x))^2)
-      if (norm == TRUE) {H <- H /(1 - (1/length(att.vec)))} #IQV
-      return(H)
+      p <- table(vertex_attr(x, a))/vcount(x) #proportion of alters in each category of the attribute a
+      m <- length(p)
+      res <- 1 - sum(p^2) #blau diversity
+      if (norm == TRUE) {res <- res /(1 - 1/m)} #IQV
+      return(res)
       }
 ```
 
@@ -367,7 +370,7 @@ Let's see a side-by-side comparison:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-And here are the $IQV$ scores for everyone in the network:
+And here are the corresponding $IQV$ scores for everyone in the network:
 
 ```{r}
    round(sapply(V(g)$name, blau, w = g, 
@@ -393,19 +396,19 @@ As we noted an ego network with maximum diversity $IQV = 1.0$ is one where every
      vertex.label.dist=2, 
      layout = layout_as_star(a, center = "BOBA FETT"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
-   N <- neighbors(g, "CAPTAIN TYPHO")
-   b <- subgraph(g, c("CAPTAIN TYPHO", names(N)))
+   N <- neighbors(g, "POGGLE")
+   b <- subgraph(g, c("POGGLE", names(N)))
    V(b)$color <- as.numeric(as.factor(V(b)$homeworld))
    plot(b, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=2,  
-     layout = layout_as_star(b, center = "CAPTAIN TYPHO"),
+     layout = layout_as_star(b, center = "POGGLE"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
 ### Ego Network Homophily
 
-Diversity measures the extent to which ego's connect to alters who are different from one another. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
+Diversity measures the extent to which ego's connect to alters who are the same or different from *one another*. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
 
 For instance, a person can have an ego network composed of 100% alters who are different from them on a given attribute (maximum "heterophily") but those alters could be 100% homogeneous---e.g., all come from the same planet---and thus ego will have the *minimum* Blau diversity score ($H = 0$).  
 
@@ -424,12 +427,10 @@ So let's write a function that does what we want to calculate EI:
 ```{r}
    EI <- function(n, w, a) {
       x <- subgraph(w, neighbors(w, n))
-      E <- vertex_attr(w, a, n) != vertex_attr(x, a)
-      E <- sum(as.numeric(E))
-      I <- vertex_attr(w, a, n) == vertex_attr(x, a)
-      I <- sum(as.numeric(I))
-      ei = (E - I)/(E + I)
-      return(ei)
+      E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a)) #n. external ties
+      I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a))  #n. internal ties
+      res = (E - I)/(E + I) #EI Index
+      return(res)
       }
 ```
 
@@ -522,18 +523,19 @@ Here's a function that does that:
 
 ```{r}
    NEI <- function(n, w, a) {
+      N <- vcount(w) 
+      Ns <- sum(vertex_attr(w, a) == vertex_attr(w, a, n))
       x <- subgraph(w, neighbors(w, n))
-      Ns <- sum(as.numeric(vertex_attr(w, a) == vertex_attr(w, a, n)))
-      E <- vertex_attr(w, a, n) != vertex_attr(x, a)
-      E <- sum(as.numeric(E))/(vcount(w) - Ns) 
-      I <- vertex_attr(w, a, n) == vertex_attr(x, a)
-      I <- sum(as.numeric(I))/Ns
-      nei = (E - I)/(E + I)
-      return(nei)
+      E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a)) 
+      I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a)) 
+      E <- E/(N - Ns) #normalized E
+      I <- I/Ns #normalized I
+      res = (E - I)/(E + I)
+      return(res)
    }
 ```
 
-Let's re-check Mace Windu's and Padme's EI index using the normalized scale:
+Let's re-check Mace Windu's and Padme's EI index using the normalized version:
 
 ```{r}
    round(NEI("MACE WINDU", g, "sex"), 2)
@@ -581,7 +583,7 @@ Which shows that our previous unnormalized average under-estimated homophily in 
 
 ### Other Ways of Accounting for Imbalanced Group Sizes in Homophily Metrics
 
-As may already be evident when constructing a homophily measure that takes into account the population (or local network) proportions of various types of alters, there are four pieces of information that we have to take into account:
+As may already be evident, when constructing a homophily measure that takes into account the population (or local network) proportions of various types of alters, there are four pieces of information that we have to take into account:
 
 a) Number of alters linked to ego of the same category as ego.
 b) Number of alters linked to ego of a different category from ego.
@@ -595,12 +597,12 @@ Here's a function that produces such a table for each ego for a given attribute:
 ```{r}
    abcd <- function(n, w, a) {
       x <- subgraph(w, neighbors(w, n))
-      same <- vertex_attr(g, a, n) == vertex_attr(g, a)
+      same <- vertex_attr(w, a, n) == vertex_attr(w, a)
       same <- same[!(same %in% n)] #deleting ego node from vector
       tied <- as.vector(V(w)$name) %in% names(neighbors(w, n))
       tied <- tied[!(tied %in% n)] #deleting ego node from vector
       tab <- table(tied, same)
-      tab <- tab[2:1, 2:1]
+      tab <- tab[2:1, 2:1] #reversing row and column order of table
       return(tab)
    }
 ```
@@ -655,36 +657,45 @@ For Dooku, $r^{pb}$ is:
    round(pb.corr(abcd("COUNT DOOKU", g, "sex")), 2)
 ```
 
-Which shows a positive tendency for same gender ties. 
+Which shows a positive tendency for same gender ties, net of the imbalance between men and other-gendered characters in the film. 
 
-To calculate $r$ for the whole network, first we need to create a list containing the corresponding 2 X 2 EI tables for each node for the gender attribute:
+To calculate $r^{pb}$ for the whole network, first we need to create a list containing the corresponding 2 X 2 EI tables for each node for the gender attribute:
 
 ```{r}
-   abcd.list <- lapply(V(g)$name, abcd, w = g, a = "sex")
-   names(abcd.list) <- V(g)$name
-   head(abcd.list)
+   abcd.gender <- lapply(V(g)$name, abcd, w = g, a = "sex")
+   names(abcd.gender) <- V(g)$name
+   head(abcd.gender)
 ```
 
 And then `sapply` the function `pb.corr` to each element of this list:
 
 ```{r}
-   PBC <- sapply(abcd.list, pb.corr)
+   PBC <- sapply(abcd.gender, pb.corr)
    round(PBC, 2)
 ```
 
-Which shows that, after accounting for group sizes, most characters display slight to moderate preferences for same-gender ties, with the exception of Anakin and Padme. 
+Which shows that, after accounting for group sizes, most characters display slight to moderate preferences for same-gender ties, with the exception of Anakin, Padme, Taun We, Owen, Clegg, and Sun Rit. 
 
-And at the network level:
+If we wanted to see what proportion of nodes have a same-gender preference we just type:
+
+```{r}
+   round(sum(PBC > 0)/length(PBC), 2)
+```
+
+Which suggest that about 70% of the characters display a tendency to appear with same gender others (accounting for differences in the sizes of different gender groups).
+
+
+And at the network level, the point-biserial correlation homophily measure for gender is:
 
 ```{r}
    round(mean(PBC), 4)
 ```
 
-Which reveals a slight preference for same gender ties in this network.
+Which also suggests a slight preference for same gender ties in this network.
 
 ### Combining Diversity and Homophily
 
-Sometimes, you may not care about the difference between diversity and homophily. Instead you want to see whether nodes connect to nodes that are the same as them *or* nodes of a single type, or whether nodes connect to all nodes that are different from them, or nodes of a different type.
+Sometimes, you may not care about the difference between diversity and homophily. Instead you just want to see whether nodes connect to nodes that are the same as them *or* nodes of a single type, or whether nodes connect to all nodes that are different from them, or nodes of a different type.
 
 In this case, Yule's $Q$ is a good option [@borgatti_etal24, p. 159]. It is given by:
 
@@ -711,7 +722,7 @@ A function to calculate $Q$ from the `abcd` function output is as follows:
 And here are the values for the *Attack of the Clones* network:
 
 ```{r}
-   Q <- sapply(abcd.list, y.Q)
+   Q <- sapply(abcd.gender, y.Q)
    round(Q, 2)
 ```
 
@@ -745,7 +756,7 @@ Let's compare two egos with extreme oppossite values on $Q$:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-As we can see, Ki-Adi-Mundi has an ego network that combines maximum homophily and homogeneity with respect to gender and Taun We has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute. 
+As we can see, Ki-Adi-Mundi has an ego network that combines maximum homophily and homogeneity with respect to gender (his ego network is composed of all men)--and therefore receives the minimum Q score--and Taun We has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute (she has an all-men ego network), thus receiving the maximum Q score. 
 
 
 
