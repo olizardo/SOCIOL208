@@ -329,6 +329,7 @@ div.csl-indent {
   <li><a href="#ego-network-homophily" id="toc-ego-network-homophily" class="nav-link" data-scroll-target="#ego-network-homophily">Ego Network Homophily</a></li>
   <li><a href="#normalized-ei" id="toc-normalized-ei" class="nav-link" data-scroll-target="#normalized-ei">Normalized EI</a></li>
   <li><a href="#other-ways-of-accounting-for-imbalanced-group-sizes-in-homophily-metrics" id="toc-other-ways-of-accounting-for-imbalanced-group-sizes-in-homophily-metrics" class="nav-link" data-scroll-target="#other-ways-of-accounting-for-imbalanced-group-sizes-in-homophily-metrics">Other Ways of Accounting for Imbalanced Group Sizes in Homophily Metrics</a></li>
+  <li><a href="#combining-diversity-and-homophily" id="toc-combining-diversity-and-homophily" class="nav-link" data-scroll-target="#combining-diversity-and-homophily">Combining Diversity and Homophily</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout8.qmd" class="toc-action">View source</a></p></div></div></nav>
@@ -374,15 +375,15 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(igraph)</span>
 <span id="cb2-2"><a href="#cb2-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"R2-D2"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3"></a>   r2d2 <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"R2-D2"</span>, <span class="fu">names</span>(N)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-3"><a href="#cb2-3"></a>   x <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"R2-D2"</span>, <span class="fu">names</span>(N)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And we can just plot it like we would any <code>igraph</code> object:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   <span class="fu">V</span>(r2d2)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="dv">2</span>, <span class="fu">length</span>(N)))</span>
-<span id="cb3-2"><a href="#cb3-2"></a>   <span class="fu">plot</span>(r2d2, </span>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   <span class="fu">V</span>(x)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">rep</span>(<span class="dv">2</span>, <span class="fu">length</span>(N)))</span>
+<span id="cb3-2"><a href="#cb3-2"></a>   <span class="fu">plot</span>(x, </span>
 <span id="cb3-3"><a href="#cb3-3"></a>     <span class="at">vertex.size=</span><span class="dv">10</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
 <span id="cb3-4"><a href="#cb3-4"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, </span>
-<span id="cb3-5"><a href="#cb3-5"></a>     <span class="at">layout =</span> <span class="fu">layout_</span>(r2d2, <span class="fu">as_star</span>()),</span>
+<span id="cb3-5"><a href="#cb3-5"></a>     <span class="at">layout =</span> <span class="fu">layout_</span>(x, <span class="fu">as_star</span>()),</span>
 <span id="cb3-6"><a href="#cb3-6"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -396,8 +397,8 @@ div.csl-indent {
 <p>Note that we use the <code>as_star()</code> option for the layout, so that the ego is put in the center of the star graph surrounded by their alters.</p>
 <p>R2-D2’s clustering coefficient is just the density of the graph that includes only the alters:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   r2d2.alters <span class="ot">&lt;-</span> r2d2 <span class="sc">-</span> <span class="fu">vertex</span>(<span class="st">"R2-D2"</span>)</span>
-<span id="cb4-2"><a href="#cb4-2"></a>   C <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">edge_density</span>(r2d2.alters), <span class="dv">2</span>)</span>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   x.alters <span class="ot">&lt;-</span> x <span class="sc">-</span> <span class="fu">vertex</span>(<span class="st">"R2-D2"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2"></a>   C <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">edge_density</span>(x.alters), <span class="dv">2</span>)</span>
 <span id="cb4-3"><a href="#cb4-3"></a>   C</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.67</code></pre>
@@ -414,11 +415,11 @@ div.csl-indent {
 <span id="cb6-6"><a href="#cb6-6"></a>   <span class="fu">head</span>(ego.graphs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
-IGRAPH 2c4171b UNW- 9 24 -- Episode IV – A New Hope
+IGRAPH 5a58740 UNW- 9 24 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 2c4171b (vertex names):
++ edges from 5a58740 (vertex names):
  [1] CHEWBACCA--C-3PO   CHEWBACCA--LUKE    C-3PO    --LUKE    C-3PO    --BIGGS  
  [5] LUKE     --BIGGS   CHEWBACCA--LEIA    C-3PO    --LEIA    LUKE     --LEIA   
  [9] BIGGS    --LEIA    C-3PO    --BERU    LUKE     --BERU    LEIA     --BERU   
@@ -427,22 +428,22 @@ IGRAPH 2c4171b UNW- 9 24 -- Episode IV – A New Hope
 [21] C-3PO    --HAN     LUKE     --HAN     LEIA     --HAN     OBI-WAN  --HAN    
 
 [[2]]
-IGRAPH 2c41ceb UNW- 6 15 -- Episode IV – A New Hope
+IGRAPH 5a58f82 UNW- 6 15 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 2c41ceb (vertex names):
++ edges from 5a58f82 (vertex names):
  [1] R2-D2  --C-3PO   R2-D2  --LUKE    C-3PO  --LUKE    R2-D2  --LEIA   
  [5] C-3PO  --LEIA    LUKE   --LEIA    R2-D2  --OBI-WAN C-3PO  --OBI-WAN
  [9] LUKE   --OBI-WAN LEIA   --OBI-WAN R2-D2  --HAN     C-3PO  --HAN    
 [13] LUKE   --HAN     LEIA   --HAN     OBI-WAN--HAN    
 
 [[3]]
-IGRAPH 2c41e05 UNW- 10 27 -- Episode IV – A New Hope
+IGRAPH 5a591bc UNW- 10 27 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 2c41e05 (vertex names):
++ edges from 5a591bc (vertex names):
  [1] R2-D2    --CHEWBACCA R2-D2    --LUKE      CHEWBACCA--LUKE     
  [4] R2-D2    --BIGGS     LUKE     --BIGGS     R2-D2    --LEIA     
  [7] CHEWBACCA--LEIA      LUKE     --LEIA      BIGGS    --LEIA     
@@ -452,11 +453,11 @@ IGRAPH 2c41e05 UNW- 10 27 -- Episode IV – A New Hope
 + ... omitted several edges
 
 [[4]]
-IGRAPH 2c41f96 UNW- 15 36 -- Episode IV – A New Hope
+IGRAPH 5a593a1 UNW- 15 36 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 2c41f96 (vertex names):
++ edges from 5a593a1 (vertex names):
  [1] R2-D2    --CHEWBACCA R2-D2    --C-3PO     R2-D2    --BERU     
  [4] R2-D2    --OWEN      R2-D2    --OBI-WAN   R2-D2    --LEIA     
  [7] R2-D2    --BIGGS     R2-D2    --HAN       CHEWBACCA--OBI-WAN  
@@ -466,19 +467,19 @@ IGRAPH 2c41f96 UNW- 15 36 -- Episode IV – A New Hope
 + ... omitted several edges
 
 [[5]]
-IGRAPH 2c420e1 UNW- 4 4 -- Episode IV – A New Hope
+IGRAPH 5a59559 UNW- 4 4 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from 2c420e1 (vertex names):
++ edges from 5a59559 (vertex names):
 [1] LEIA --OBI-WAN LEIA --MOTTI   LEIA --TARKIN  MOTTI--TARKIN 
 
 [[6]]
-IGRAPH 2c421eb UNW- 2 1 -- Episode IV – A New Hope
+IGRAPH 5a59663 UNW- 2 1 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edge from 2c421eb (vertex names):
++ edge from 5a59663 (vertex names):
 [1] LUKE--BIGGS</code></pre>
 </div>
 </div>
@@ -629,8 +630,7 @@ C(G) = \frac{1}{N}\sum_iC_i
 </section>
 <section id="ego-network-betweenness" class="level3">
 <h3 class="anchored" data-anchor-id="ego-network-betweenness">Ego-Network Betweenness</h3>
-<p>An alternative structural measure of ego’s position in the ego network, closely related to the clustering coefficient, is <strong>ego network betweenness</strong>.</p>
-<p>As <span class="citation" data-cites="everett_borgatti05">Everett and Borgatti (<a href="#ref-everett_borgatti05" role="doc-biblioref">2005</a>)</span> note, in an ego network betweenness is determined by the number of paths of length two that involve ego, that is, by the number of disconnected alters.</p>
+<p>An alternative structural measure of ego’s position in the ego network, closely related to the clustering coefficient, is <strong>ego network betweenness</strong>. As <span class="citation" data-cites="everett_borgatti05">Everett and Borgatti (<a href="#ref-everett_borgatti05" role="doc-biblioref">2005</a>)</span> note, in an ego network betweenness is determined by the number of paths of length two that involve ego, that is, by the number of disconnected alters.</p>
 <p>Therefore, if <span class="math inline">\(\mathbf{A}\)</span> is the adjacency matrix recording the links between the alters, then <span class="math inline">\(\mathbf{A}^2\)</span> will contain the number of paths of length two between each pair of alters. Because we are only interested in the number of paths of length two between each pair of <em>disconnected</em> alters, we multiply (element-wise) this matrix by the adjacency matrix corresponding to the <strong>graph complement</strong> (a matrix with a one for every zero in the original adjacency matrix and a zero for each one). We then take the sum of the reciprocals of one of the triangles (excluding the main diagonal) of the resulting matrix to find the betweenness of ego.</p>
 <p>In math:</p>
 <p><span class="math display">\[
@@ -1042,12 +1042,12 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   abcd <span class="ot">&lt;-</span> <span class="cf">function</span>(n, w, a) {</span>
 <span id="cb63-2"><a href="#cb63-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(w, <span class="fu">neighbors</span>(w, n))</span>
-<span id="cb63-3"><a href="#cb63-3"></a>      same <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">vertex_attr</span>(w, a, n) <span class="sc">==</span> <span class="fu">vertex_attr</span>(w, a))</span>
-<span id="cb63-4"><a href="#cb63-4"></a>      tied <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">V</span>(x) <span class="sc">==</span> <span class="fu">V</span>(w))</span>
-<span id="cb63-5"><a href="#cb63-5"></a>      tab <span class="ot">&lt;-</span> <span class="fu">table</span>(tied, same)</span>
-<span id="cb63-6"><a href="#cb63-6"></a>      tab <span class="ot">&lt;-</span> tab[<span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>]</span>
-<span id="cb63-7"><a href="#cb63-7"></a>      <span class="fu">rownames</span>(tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)</span>
-<span id="cb63-8"><a href="#cb63-8"></a>      <span class="fu">colnames</span>(tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>)</span>
+<span id="cb63-3"><a href="#cb63-3"></a>      same <span class="ot">&lt;-</span> <span class="fu">vertex_attr</span>(g, a, n) <span class="sc">==</span> <span class="fu">vertex_attr</span>(g, a)</span>
+<span id="cb63-4"><a href="#cb63-4"></a>      same <span class="ot">&lt;-</span> same[<span class="sc">!</span>(same <span class="sc">%in%</span> n)] <span class="co">#deleting ego node from vector</span></span>
+<span id="cb63-5"><a href="#cb63-5"></a>      tied <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(<span class="fu">V</span>(w)<span class="sc">$</span>name) <span class="sc">%in%</span> <span class="fu">names</span>(<span class="fu">neighbors</span>(w, n))</span>
+<span id="cb63-6"><a href="#cb63-6"></a>      tied <span class="ot">&lt;-</span> tied[<span class="sc">!</span>(tied <span class="sc">%in%</span> n)] <span class="co">#deleting ego node from vector</span></span>
+<span id="cb63-7"><a href="#cb63-7"></a>      tab <span class="ot">&lt;-</span> <span class="fu">table</span>(tied, same)</span>
+<span id="cb63-8"><a href="#cb63-8"></a>      tab <span class="ot">&lt;-</span> tab[<span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>, <span class="dv">2</span><span class="sc">:</span><span class="dv">1</span>]</span>
 <span id="cb63-9"><a href="#cb63-9"></a>      <span class="fu">return</span>(tab)</span>
 <span id="cb63-10"><a href="#cb63-10"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -1055,25 +1055,25 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   <span class="fu">abcd</span>(<span class="st">"COUNT DOOKU"</span>, g, <span class="st">"sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>     same
-tied  yes no
-  yes   7  3
-  no   10  8</code></pre>
+<pre><code>       same
+tied    TRUE FALSE
+  TRUE     8     2
+  FALSE    9     9</code></pre>
 </div>
 </div>
-<p>So here we can see that Dooku is linked to seven others of the same gender, but there are ten other men he’s not linked to. In the same way, he has three different-gender ties, but there are eight others of a different gender he’s not tied to.</p>
-<p>As <span class="citation" data-cites="everett_borgatti12">Everett and Borgatti (<a href="#ref-everett_borgatti12" role="doc-biblioref">2012</a>)</span> note, we can label the cells of the above table with the letters from the above list:</p>
+<p>So here we can see that Dooku is linked to eight others of the same gender, but there are nine other men he’s not linked to. In the same way, he has two different-gender ties, but there are nine others of a different gender he’s not tied to.</p>
+<p>As <span class="citation" data-cites="everett_borgatti12">Everett and Borgatti (<a href="#ref-everett_borgatti12" role="doc-biblioref">2012</a>)</span> note, we can label the cells of the 2 X 2 EI table with the letters from the above list to highlight each piece of information in each cell:</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>     same
-tied  yes no
-  yes a   b 
-  no  c   d </code></pre>
+<pre><code>       same
+tied    TRUE FALSE
+  TRUE  a    b    
+  FALSE c    d    </code></pre>
 </div>
 </div>
-<p>The the EI index only uses information only from the first row (alters tied to ego), and is thus a rescaling of <span class="math inline">\(a/(a + b)\)</span>; it is sensitive to group size imbalances because it ignores the other pieces of information.</p>
+<p>The EI index only uses information only from the first row (alters tied to ego), and is thus a rescaling of <span class="math inline">\(a/(a + b)\)</span>; it is sensitive to group size imbalances because it ignores the other pieces of information.</p>
 <p>The NEI, on the other hand, uses information from all four cells and is therefore a rescaling of <span class="math inline">\((a/(a + c)) - (b/(b + d))\)</span>; therefore, it is insensitive to group size imbalances.</p>
-<p>Other measures of homophily could thus be constructed from this information, that, like the NEI are not sensitive to group sizes. One measure <span class="citation" data-cites="everett_borgatti12">Everett and Borgatti (<a href="#ref-everett_borgatti12" role="doc-biblioref">2012, 565</a>)</span> recommend is the <strong>point biserial correlation coefficient</strong> (<span class="math inline">\(r^{pb}\)</span>), which is given, using the cell labels in the table above, by:</p>
+<p>Other measures of homophily could thus be constructed from the information in the 2 X 2 table, that, like the NEI, are not sensitive to group sizes. One measure <span class="citation" data-cites="everett_borgatti12">Everett and Borgatti (<a href="#ref-everett_borgatti12" role="doc-biblioref">2012, 565</a>)</span> recommend is the <strong>point biserial correlation coefficient</strong> (<span class="math inline">\(r^{pb}\)</span>), which is given, using the cell labels in the table above, by:</p>
 <p><span class="math display">\[
 r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b(c+d))}}
 \]</span></p>
@@ -1093,50 +1093,51 @@ r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b(c+d))}}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   <span class="fu">round</span>(<span class="fu">pb.corr</span>(<span class="fu">abcd</span>(<span class="st">"COUNT DOOKU"</span>, g, <span class="st">"sex"</span>)), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.14</code></pre>
+<pre><code>[1] 0.29</code></pre>
 </div>
 </div>
 <p>Which shows a positive tendency for same gender ties.</p>
 <p>To calculate <span class="math inline">\(r\)</span> for the whole network, first we need to create a list containing the corresponding 2 X 2 EI tables for each node for the gender attribute:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   abcd.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g), abcd, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"sex"</span>)</span>
-<span id="cb70-2"><a href="#cb70-2"></a>   <span class="fu">head</span>(abcd.list)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   abcd.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, abcd, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"sex"</span>)</span>
+<span id="cb70-2"><a href="#cb70-2"></a>   <span class="fu">names</span>(abcd.list) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
+<span id="cb70-3"><a href="#cb70-3"></a>   <span class="fu">head</span>(abcd.list)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$`R2-D2`
-     same
-tied  yes no
-  yes   1  2
-  no    1 24
+       same
+tied    TRUE FALSE
+  TRUE     1     2
+  FALSE    1    24
 
 $`CAPTAIN TYPHO`
-     same
-tied  yes no
-  yes   2  1
-  no   15 10
+       same
+tied    TRUE FALSE
+  TRUE     3     0
+  FALSE   14    11
 
 $EMPEROR
-     same
-tied  yes no
-  yes   6  3
-  no   11  8
+       same
+tied    TRUE FALSE
+  TRUE     7     2
+  FALSE   10     9
 
 $`SENATOR ASK AAK`
-     same
-tied  yes no
-  yes   2  5
-  no    4 17
+       same
+tied    TRUE FALSE
+  TRUE     1     6
+  FALSE    5    16
 
 $`ORN FREE TAA`
-     same
-tied  yes no
-  yes   0  3
-  no    6 19
+       same
+tied    TRUE FALSE
+  TRUE     1     2
+  FALSE    5    20
 
 $`MACE WINDU`
-     same
-tied  yes no
-  yes   7  3
-  no   10  8</code></pre>
+       same
+tied    TRUE FALSE
+  TRUE     8     2
+  FALSE    9     9</code></pre>
 </div>
 </div>
 <p>And then <code>sapply</code> the function <code>pb.corr</code> to each element of this list:</p>
@@ -1145,28 +1146,95 @@ tied  yes no
 <span id="cb72-2"><a href="#cb72-2"></a>   <span class="fu">round</span>(PBC, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
-           0.35            0.04            0.08            0.10           -0.18 
+           0.35            0.28            0.24           -0.10            0.10 
      MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
-           0.14            0.14           -0.09           -0.04            0.14 
+           0.29            0.29            0.33            0.30            0.14 
         OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
-          -0.20           -0.14            0.04            0.04            0.04 
+           0.40           -0.14           -0.19            0.28            0.28 
           RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
-           0.04           -0.14           -0.06            0.04           -0.09 
+           0.28           -0.14           -0.06            0.04            0.12 
           C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
-           0.19           -0.20           -0.16           -0.20            0.14 
+           0.19           -0.20            0.14           -0.20            0.29 
         SUN RIT          POGGLE     NUTE GUNRAY 
-           0.15           -0.11           -0.11 </code></pre>
+          -0.27            0.06            0.06 </code></pre>
 </div>
 </div>
-<p>Which shows that, after accounting for group sizes, Obi-Wan, and Anakin show a slight preference for different-gender ties, while Mace Windu and Dooku show a slight preference for same-gender ties.</p>
+<p>Which shows that, after accounting for group sizes, most characters display slight to moderate preferences for same-gender ties, with the exception of Anakin and Padme.</p>
 <p>And at the network level:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1"></a>   <span class="fu">round</span>(<span class="fu">mean</span>(PBC), <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] -0.0017</code></pre>
+<pre><code>[1] 0.1139</code></pre>
 </div>
 </div>
-<p>Which shows no preference for same or different gender ties in this network.</p>
+<p>Which reveals a slight preference for same gender ties in this network.</p>
+</section>
+<section id="combining-diversity-and-homophily" class="level3">
+<h3 class="anchored" data-anchor-id="combining-diversity-and-homophily">Combining Diversity and Homophily</h3>
+<p>Sometimes, you may not care about the difference between diversity and homophily. Instead you want to see whether nodes connect to nodes that are the same as them <em>or</em> nodes of a single type, or whether nodes connect to all nodes that are different from them, or nodes of a different type.</p>
+<p>In this case, Yule’s <span class="math inline">\(Q\)</span> is a good option <span class="citation" data-cites="borgatti_etal24">(<a href="#ref-borgatti_etal24" role="doc-biblioref">Borgatti et al. 2024, 159</a>)</span>. It is given by:</p>
+<p><span class="math display">\[
+Q = \frac{ad-bc}{ad+bc}
+\]</span></p>
+<p><span class="math inline">\(Q\)</span> works like a correlation coefficient, and it is 1.0 when ego’s network is either completely homophilous or completely homogeneous, and it is -1.0 when ego’s network is either completely heterophilous or completely heterogeneous.</p>
+<p>A function to calculate <span class="math inline">\(Q\)</span> from the <code>abcd</code> function output is as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1"></a>   y.Q <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb76-2"><a href="#cb76-2"></a>      a <span class="ot">&lt;-</span> x[<span class="dv">1</span>,<span class="dv">1</span>]</span>
+<span id="cb76-3"><a href="#cb76-3"></a>      b <span class="ot">&lt;-</span> x[<span class="dv">1</span>,<span class="dv">2</span>]</span>
+<span id="cb76-4"><a href="#cb76-4"></a>      c <span class="ot">&lt;-</span> x[<span class="dv">2</span>,<span class="dv">1</span>]</span>
+<span id="cb76-5"><a href="#cb76-5"></a>      d <span class="ot">&lt;-</span> x[<span class="dv">2</span>,<span class="dv">2</span>]</span>
+<span id="cb76-6"><a href="#cb76-6"></a>   num <span class="ot">&lt;-</span> a<span class="sc">*</span>d <span class="sc">-</span> b<span class="sc">*</span>c</span>
+<span id="cb76-7"><a href="#cb76-7"></a>   den <span class="ot">&lt;-</span> a<span class="sc">*</span>d <span class="sc">+</span> b<span class="sc">*</span>c</span>
+<span id="cb76-8"><a href="#cb76-8"></a>   <span class="fu">return</span>(num<span class="sc">/</span>den)    </span>
+<span id="cb76-9"><a href="#cb76-9"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And here are the values for the <em>Attack of the Clones</em> network:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1"></a>   Q <span class="ot">&lt;-</span> <span class="fu">sapply</span>(abcd.list, y.Q)</span>
+<span id="cb77-2"><a href="#cb77-2"></a>   <span class="fu">round</span>(Q, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+           0.85            1.00            0.52           -0.30            0.33 
+     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+           0.60            0.60            1.00            0.69            0.30 
+        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+           0.70           -0.30           -0.56            0.67            0.67 
+          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+           0.67           -1.00           -0.23            0.14            0.36 
+          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+           0.62           -0.48            0.45           -0.48            0.60 
+        SUN RIT          POGGLE     NUTE GUNRAY 
+          -1.00            0.16            0.16 </code></pre>
+</div>
+</div>
+<p>Let’s compare two egos with extreme oppossite values on <span class="math inline">\(Q\)</span>:</p>
+<div class="cell quarto-layout-panel">
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-50-1.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Q = 1</figcaption><p></p>
+</figure>
+</div>
+</div>
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout8_files/figure-html/unnamed-chunk-50-2.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Q = -1</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
+<p>Two Ego Networks with Maximum and Minimum Q Values</p>
+</div>
+</div>
+</div>
+<p>As we can see, Ki-Adi-Mundi has an ego network that combines maximum homophily and homogeneity with respect to gender and Taun We has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute.</p>
 
 
 
@@ -1174,6 +1242,9 @@ tied  yes no
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-borgatti_etal24" class="csl-entry" role="doc-biblioentry">
+Borgatti, Stephen P, Filip Agneessens, Jeffrey C Johnson, and Martin G Everett. 2024. <span>“Analyzing Social Networks.”</span>
+</div>
 <div id="ref-everett_borgatti05" class="csl-entry" role="doc-biblioentry">
 Everett, Martin, and Stephen P Borgatti. 2005. <span>“Ego Network Betweenness.”</span> <em>Social Networks</em> 27 (1): 31–38.
 </div>
