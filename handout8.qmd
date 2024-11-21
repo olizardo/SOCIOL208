@@ -266,6 +266,14 @@ Where $p_k$ is the proportion of ego's alters that fall under category level $k$
 
 The $H$ measure ranges from a minimum of $H = 0$ (all of ego's alters belong to a single category) to a maximum of $H = 1- \frac{1}{m}$ (all of ego's alters belong to a different category).
 
+When the Blau diversity index is normalized by its theoretical maximum, it is sometimes referred to as the **Index of Qualitative Variation** or $IQV$:
+
+$$
+IQV = \frac{1 - \sum_{k=1}^m p_k^2}{1-\frac{1}{m}}
+$$
+
+The main difference between $H$ and $IQV$ is that the latter has a maximum of $IQV = 1.0$ indicating the top diversity that can be observed for a categorical attribute with $m$ categories. 
+
 Let's see how this would work. 
 
 First, let's switch to the *Attack of the Clones* Star Wars graph:
@@ -301,17 +309,19 @@ The function `table` gives us the count of characters in each category, and then
    p.hw
 ```
 
-Now that we know how to get the proportions we need, we can write a custom function that will compute $H$ for a given ego network for any given attribute:
+Now that we know how to get the proportions we need, we can write a custom function that will compute $H$ (or its normalized counterpart the $IQV$) for a given ego network for any given attribute:
 
 ```{r}
-   blau <- function(n, w, a) {
-      x <- subgraph(w, neighbors(w, n))
-      H <- 1 - sum((table(vertex_attr(x, a))/vcount(x))^2)
+   blau <- function(n, w, a, norm = FALSE) {
+      x <- subgraph(w, neighbors(w, n)) #ego subgraph
+      att.vec <- vertex_attr(x, a) #number of alters in each category of a
+      H <- 1 - sum((table(att.vec)/vcount(x))^2)
+      if (norm == TRUE) {H <- H /(1 - (1/length(att.vec)))} #IQV
       return(H)
       }
 ```
 
-This function takes three inputs: The name of the ego `n`, the graph object `w`, and the name of the attribute `a`. It returns the Blau diversity index score for that ego on that attribute. 
+This function takes three inputs: The name of the ego `n`, the graph object `w`, and the name of the attribute `a`. It returns the Blau diversity index score for that ego on that attribute by default; when `norm` is set to `TRUE` it returns the normalized Blau score (a.k.a. the $IQV$). 
 
 Let's see Padme's Home World ego network diversity score:
 
@@ -358,11 +368,47 @@ Let's see a side-by-side comparison:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
+And here are the $IQV$ scores for everyone in the network:
+
+```{r}
+   round(sapply(V(g)$name, blau, w = g, 
+                a = "homeworld", norm = TRUE), 3)
+```
+
+As we noted an ego network with maximum diversity $IQV = 1.0$ is one where every alter is in a different category. Here are two examples:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "Two Ego Networks with Maximum Homeworld Diversity."
+#| fig-subcap:
+#|   - ""
+#|   - ""
+#| layout-ncol: 2   
+#| echo: false
+   N <- neighbors(g, "BOBA FETT")
+   cd <- subgraph(g, c("BOBA FETT", names(N)))
+   V(cd)$color <- as.numeric(as.factor(V(cd)$homeworld))
+   plot(cd, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(cd, center = "BOBA FETT"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+   N <- neighbors(g, "CAPTAIN TYPHO")
+   ow <- subgraph(g, c("CAPTAIN TYPHO", names(N)))
+   V(ow)$color <- as.numeric(as.factor(V(ow)$homeworld))
+   plot(ow, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2,  
+     layout = layout_as_star(ow, center = "CAPTAIN TYPHO"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
 ### Ego Network Homophily
 
-Diversity measures the extent to which ego's connect to diverse alters. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
+Diversity measures the extent to which ego's connect to alters who are different from one another. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
 
-Note that these are two different things. A person can have an ego network composed of 100% alters who are different from them on a given attribute (maximum "heterophily") but those alters could be 100% homogeneous---e.g., all come from the same planet---and thus ego will have the minimum Blau diversity score ($H = 0$).  
+For instance, a person can have an ego network composed of 100% alters who are different from them on a given attribute (maximum "heterophily") but those alters could be 100% homogeneous---e.g., all come from the same planet---and thus ego will have the *minimum* Blau diversity score ($H = 0$).  
 
 To measure homophily in the ego network we use the **EI homophily index**. This is given by:
 
@@ -408,7 +454,7 @@ And calculating the homophily index on gender for everyone:
    round(EI, 2)
 ```
 
-As we can see, the Emperor, Mace Windu, Obi-Wan and other such characters have a homophilous "bro" network. Padme on the other hand has a heterophilous network. 
+As we can see, the Emperor, Mace Windu, Obi-Wan and other such characters have a homophilous "bro" network. Padme, on the other hand, has a heterophilous network with respect to gender. 
 
 Let's see a side-by-side comparison:
 
@@ -439,7 +485,7 @@ Let's see a side-by-side comparison:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-As we can see, Mace Windu is surrounded by other men (like him) but Padme's network includes only one other woman, and the rest are composed of people with a different gender presentation than her.
+As we can see, Mace Windu is mostly surrounded by other men (like him) but Padme's network includes only one other woman, and the rest are composed of people with a different gender presentation than her (or have no discernible gender like the droids).
 
 Like the clustering coefficient, we can compute a graph level index of homophily on a given attribute. This is given by the average EI index of nodes in the graph for that attribute.
 
@@ -450,7 +496,7 @@ In the case of gender in *Attack of the Clones*:
    round(EI.gender, 2)
 ```
 
-Which shows a slight homophily preference. 
+Which shows a slight preference for same-gender ties in the network. 
 
 
 ### Normalized EI
@@ -521,15 +567,15 @@ Let's see what's going on:
      vertex.label.cex = 1, edge.color = "lightgray")
 ```
 
-Here we can see that the reason why R2-D2 ends up being high in homophily in the weighted scale despite containing a network with just three nodes, is that he is connected to C3PO who is the only other character whose gender is assigned to "none."
+Here we can see that the reason why R2-D2 ends up being high in homophily in the weighted scale despite containing a network with just three nodes and only a single "same-gender" (i.e., none) tie, is that he is connected to C3PO who is the only other character (a droid) whose gender is also assigned to "none."
 
-And here's the graph's WEI:
+And here's the graph's overall WEI:
 
 ```{r}
    WEI.gender = mean(WEI)
    round(WEI.gender, 2)
 ```
 
-Which shows that our previous unweighted average under-estimated homophily in this network.
+Which shows that our previous unweighted average under-estimated homophily in this network. Instead, there is a moderately strong tendency for characters to co-appear with others of the same gender classification once the imbalance favoring men is accounted for. 
 
 
