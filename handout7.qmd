@@ -433,6 +433,25 @@ In `igraph` the  relevant function is called `bipartite_projection`. It takes a 
    G.g <- Proj[[2]]
 ```
 
+In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code above to set the `edge.width`:
+
+```{r}
+   edge_attr(G.p)
+   edge_attr(G.g)
+```
+
+So to get the weighted projection matrix, we need to type:
+
+```{r}
+   as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
+```
+
+```{r}
+   as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
+```
+
+We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.with` argument to the value of edge weight atribute in the corresponding graph:
+
 ```{r}
 #| fig-height: 12
 #| fig-width: 12
@@ -457,35 +476,16 @@ In `igraph` the  relevant function is called `bipartite_projection`. It takes a 
      edge.width = E(G.g)$weight)
 ```
 
-Which produces a binarized undirected graph of each projection.
-
-The actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code above to set the `edge.width`:
-
-```{r}
-   edge_attr(G.p)
-   edge_attr(G.g)
-```
-
-So to get the weighted projection matrix, we need to type:
-
-```{r}
-   as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
-```
-
-```{r}
-   as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
-```
-
 Note that because both `G.p` and `G.g` are **weighted graphs** we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).
 
-In `igraph` we can do this as follows:
+In `igraph` we can do this using the `strength` function, which takes a weighted graph object as input:
 
 ```{r}
    strength(G.p)
    strength(G.g)
 ```
 
-Interestingly, as noted by @faust97 [p. 167], there is a mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:
+Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:
 
 1. For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.
 
@@ -644,13 +644,13 @@ Which reveals a number of almost complete (one-blocks) and almost null (zero-blo
 
 ## Generalized Vertex Similarity
 
-Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the same objects (groups), and two objects (groups) are similar if they are chosen by the same people. 
+Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the *same* objects (groups), and two objects (groups) are similar if they are chosen by the *same* people. 
 
-We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* objects, and two objects are similar if they are chosen by *similar* people.
+We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* (not necessarily the same) objects, and two objects are similar if they are chosen by *similar* (not necessarily the same) people.
 
 This leads to the same problem setup that inspired the **SimRank** approach [@jeh_widom02]. 
 
-A function to compute the SimRank similarity between nodes in a two mode network goes as follows:
+A (longish) function to compute the SimRank similarity between nodes in a two mode network goes as follows:
 
 ```{r}
    TM.SimRank <- function(A, C = 0.8, iter = 10) {
@@ -706,7 +706,7 @@ A function to compute the SimRank similarity between nodes in a two mode network
    }
 ```
 
-This function takes the bi-adjacency matrix $\mathbf{A}$ as input and returns two similarity matrices: One for the people (row objects) and the other one for the groups (column objects).
+This function takes the bi-adjacency matrix $\mathbf{A}$ as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).
 
 Here's how that would work in the Southern Women data. First we compute the SimRank scores:
 
@@ -769,11 +769,12 @@ And block the bi-adjacency matrix:
    p <- p + geom_hline(yintercept = 7.5, linewidth = 2, color = "blue")
    p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
    p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
-   p <- p + geom_vline(xintercept = 8.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 10.5, linewidth = 2, color = "blue")
    p
 ```
 
-Which produces a familiar block partition of persons and events. 
+Note that this block solution is similar (pun intended) but not the *exactly* the same as the one based on structural equivalence we obtained earlier, although it would lead to the same image matrix.
 
 ## Eigenvector Status
 
