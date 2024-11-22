@@ -68,7 +68,7 @@ R2-D2's clustering coefficient is just the density of the graph that includes on
    C
 ```
 
-The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$ means that *none* of ego's alters are connected to one another and $C = 1$ means that *all* of ego's alters are connected to one another. In this case, $C = `r C`$ means that `r C*100`% of R2-D2's alters are connected (co-appear in scenes) with one another. 
+The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$ means that *none* of ego's alters are connected to one another and $C = 1$ means that *all* of ego's alters are connected to one another. In this case, $C = `r C`$ means that `r C*100`% of R2-D2's alters are connected (e.g., co-appear in scenes) to one another. 
 
 Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty `lapply` and `sapply` meta-functions:
 
@@ -183,9 +183,79 @@ And the graph's global clustering coefficient is:
    round(transitivity(g, type = "average"), 2)
 ```
 
+## Effective Size
+Another structural measure at the ego-network level, closely related to the clustering coefficient, is the **effective size** [@burt92]. 
+
+The basic idea here is that if you have two alters in your network who are themselves connected to one another then they are *redundant*, that is the information you get from one can be substituted for the information you can get from the other (because you can always find the information of one via the other). 
+
+This means that instead of counting them as two alters, we should (dis)count them as one (or if you were engineering your ego network to optimize effective size, you would drop one and keep the other). 
+
+For an ego, the effective size $ES$ is then given by:
+
+$$
+ES_i = k_i - \bar{k}_{j \in N(i)}
+$$
+
+Where $k_i$ is the ego network size (ego's degree) and $\bar{k}_{j \in N(i)}$ is the **mean degree** of the subgraph formed by ego's alters (excluding ego). 
+
+So to calculate $ES$ in our network all we have to do is calculate the mean degree of each ego graph and the subtract that from ego's degree. We can obtain the mean degree of each ego using the first two `lapply` and `sapply` lines in the following:
+
+```{r}
+   mk <- lapply(ego.graphs, degree) #degree sequence of each ego
+   mk <- sapply(mk, mean) 
+   names(mk) <- V(g)$name
+   round(mk, 2)
+```
+
+We can then compute ES as follows:
+
+```{r}
+   ES <- degree(g) - mk
+   round(ES, 1)
+```
+
+Note that for nodes with the maximum clustering coefficient ($C_i = 1$) (like Han) the $ES$ measure reaches its minimum value of 1.0. The reason for this is that if the alter-to-alter network for an ego is a **complete graph**, then the average degree of that graph will necessarily be equal to the number of nodes in the alter-to-alter graph (ego's degree) minus one. 
+
+Generally, $ES$ will be smaller than ego's degree, except in the case where ego is at the center of a star graph with $C_i = 0$ (none of their contacts are connected to one another), in which case $ES$ will be equal to ego's degree (the effective size will be equal to the actual size).
+
+Note that if two nodes have the same degree, but different clustering coefficients, then the effective size of their networks will be different, with the node with the *larger* clustering coefficient having a *smaller* effective size.
+
+Here's an example from *A New Hope*:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "Two Ego Networks of the Same Size but Different Effective Size"
+#| fig-subcap:
+#|   - "k = 7, C = 0.76, ES = 2.4"
+#|   - "k = 7, C = 0.57, ES = 3.6"
+#| layout-ncol: 2   
+#| echo: false
+   N <- neighbors(g, "OBI-WAN")
+   a <- subgraph(g, c("OBI-WAN", names(N)))
+   V(a)$color <- rep(2, vcount(a))
+   V(a)$color[which(V(a)$name == "OBI-WAN")] <- 1
+   plot(a,
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(a, center = "OBI-WAN"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+   N <- neighbors(g, "RED LEADER")
+   b <- subgraph(g, c("RED LEADER", names(N)))
+   V(b)$color <- rep(2, vcount(a))
+   V(b)$color[which(V(b)$name == "RED LEADER")] <- 1   
+   plot(b, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2,  
+     layout = layout_as_star(b, center = "RED LEADER"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
+Here we can see that even though both Obi-Wan and Red Leader have an ego network of the same size ($k = 7$), a larger proportion of Obi-Wan's contacts ($C = 0.76$) are connected to one another that Red Leader's ($C = 0.57$), which means that Obi-Wan's effective size ($ES = 2.4$) ends up being smaller than Red Leader's ($ES = 3.6$). 
+
 ### Ego-Network Betweenness
 
-An alternative structural measure of ego's position in the ego network, closely related to the clustering coefficient, is **ego network betweenness**. 
+An alternative structural measure of ego's position in the ego network, also closely related to the clustering coefficient, is **ego network betweenness**. 
 As @everett_borgatti05 note, in an ego network betweenness is determined by the number of paths of length two that involve ego, that is, by the number of disconnected alters. 
 
 Therefore, if $\mathbf{A}$ is the adjacency matrix recording the links between the alters, then $\mathbf{A}^2$ will contain the number of paths of length two between each pair of alters. Because we are only interested in the number of paths of length two between each pair of *disconnected* alters, we multiply (element-wise) this matrix by the adjacency matrix corresponding to the **graph complement** (a matrix with a one for every zero in the original adjacency matrix and a zero for each one). We then take the sum of the reciprocals of one of the triangles (excluding the main diagonal) of the resulting matrix to find the betweenness of ego. 
