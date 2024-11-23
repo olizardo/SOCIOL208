@@ -41,7 +41,7 @@ As we said an ego graph is just a subgraph centered on a particular actor. So R2
 ```{r}
    library(igraph)
    N <- neighbors(g, "R2-D2")
-   a <- subgraph(g, c("R2-D2", names(N))) #ego graph
+   r2 <- subgraph(g, c("R2-D2", names(N))) #ego graph
 ```
 
 And we can just plot it like we would any `igraph` object:
@@ -50,11 +50,12 @@ And we can just plot it like we would any `igraph` object:
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "R2-D2's Ego Network."
-   V(a)$color <- c(1, rep(2, length(N)))
-   plot(a, 
+   V(r2)$color <- rep(2, vcount(r2)) #alters appear in blue
+   V(r2)$color[which(V(r2)$name == "R2-D2")] <- 1 #ego appears in tan  
+   plot(r2, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=2, 
-     layout = layout_as_star(a, center = "R2-D2"),
+     layout = layout_as_star(r2, center = "R2-D2"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
@@ -63,32 +64,42 @@ Note that we use the `layout_as_star()` for the layout, so that the ego is put i
 R2-D2's clustering coefficient is just the density of the graph that includes only the alters:
 
 ```{r}
-   alters <- a - vertex("R2-D2")
+   alters <- r2 - vertex("R2-D2")
    C <- round(edge_density(alters), 2)
    C
 ```
 
 The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$ means that *none* of ego's alters are connected to one another and $C = 1$ means that *all* of ego's alters are connected to one another. In this case, $C = `r C`$ means that `r C*100`% of R2-D2's alters are connected (e.g., co-appear in scenes) to one another. 
 
-Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty `lapply` and `sapply` meta-functions:
+Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty `lapply` and `sapply` meta-functions. 
+
+We proceed in three steps:
+
+First, we turn the code we used to find R2-D2's ego graph into a function:
 
 ```{r}
    create.ego <- function(x, w) {
       alter.net <- subgraph(w, neighbors(w, x))
       return(alter.net)
       }
+
+```
+
+Then we `lapply` the function to each node in the network:
+
+```{r}
    ego.graphs <- lapply(V(g)$name, create.ego, w = g)
    head(ego.graphs)
 ```
 
-First, we turn the code we used to find R2-D2's ego graph into a function, then we apply the function to each node in the network. The result is a `list` object with $|V| = `r vcount(g)`$ ego subgraphs composed of each node's alters and their connections. 
+The result is a `list` object with $|V| = `r vcount(g)`$ ego subgraphs composed of each node's alters and their connections. 
 
-Now, to find out the clustering coefficient of each node, we just type:
+Finally, to find out the clustering coefficient of each node, we just `sapply` the `igraph` function `edge_density` to each member of the `ego.graphs` list:
 
 ```{r}
-   C <- round(sapply(ego.graphs, edge_density), 2)
+   C <- sapply(ego.graphs, edge_density)
    names(C) <- V(g)$name
-   C
+   round(C, 2)
 ```
 
 Note we have a couple of `NaN` values in the slots corresponding to Greedo and Jabba in the clustering coefficient vector. 
@@ -106,9 +117,9 @@ We can just drop them and re-analyze:
 ```{r}
    g <- subgraph(g, degree(g)> 1)
    ego.graphs <- lapply(V(g)$name, create.ego, w = g)
-   C <- round(sapply(ego.graphs, edge_density), 2)
+   C <- sapply(ego.graphs, edge_density)
    names(C) <- V(g)$name
-   C
+   round(C, 2)
 ```
 
 Much better!
@@ -309,10 +320,8 @@ What does it mean to have an ego-network betweenness of zero? Well, this is only
 #| fig-cap: "Chewbacca's Ego Network."
    N <- neighbors(g, "CHEWBACCA")
    chew <- subgraph(g, c("CHEWBACCA", names(N)))
-   cols <- rep("#56B4E9", vcount(chew))
-   names(cols) <- V(chew)$name
-   cols[which(names(cols) == "CHEWBACCA")] <- categorical_pal(1)
-   V(chew)$color <- cols
+   V(chew)$color <- rep(2, vcount(chew))
+   V(chew)$color[which(V(chew)$name == "CHEWBACCA")] <- 1 
    plot(chew, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=2, 
@@ -703,7 +712,7 @@ The NEI, on the other hand, uses information from all four cells and is therefor
 Other measures of homophily could thus be constructed from the information in the 2 X 2 table, that, like the NEI, are not sensitive to group sizes. One measure @everett_borgatti12 [p. 565] recommend is the **point biserial correlation coefficient** ($r^{pb}$), which is given, using the cell labels in the table above, by:
 
 $$
-r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b(c+d))}}
+r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b)(c+d))}}
 $$
 
 The $r^{pb}$ works just like a correlation coefficient. A value 1.0 indicates maximum preference for same category alters, and a value of -1.0 indicates preference to connect with people different from ego. 
@@ -768,13 +777,15 @@ Which also suggests a slight preference for same gender ties in this network.
 
 Sometimes, you may not care about the difference between diversity and homophily. Instead you just want to see whether nodes connect to nodes that are the same as them *or* nodes of a single type, or whether nodes connect to all nodes that are different from them, or nodes of a different type.
 
-In this case, Yule's $Q$ is a good option [@borgatti_etal24, p. 159]. It is given by:
+In this case, Yule's $Q$ is a good option [@borgatti_etal24, p. 159]. 
+
+It is given by:
 
 $$
 Q = \frac{ad-bc}{ad+bc}
 $$
 
-$Q$ works like a correlation coefficient, and it is 1.0 when ego's network is either completely homophilous or completely homogeneous, and it is -1.0 when ego's network is either completely heterophilous or completely heterogeneous. 
+$Q$ works like a correlation coefficient, and it is 1.0 when ego's network is either completely homophilous ($b=0$) or there are no other people in the network of the same category as ego ($c = 0$) and it is -1.0 when ego's network is either completely heterophilous ($a = 0$) or there are no people in the network of a different category from ego ($d = 0$). 
 
 A function to calculate $Q$ from the `abcd` function output is as follows:
 
@@ -797,7 +808,7 @@ And here are the values for the *Attack of the Clones* network:
    round(Q, 2)
 ```
 
-Let's compare two egos with extreme oppossite values on $Q$:
+Let's compare four egos with extreme values on $Q$:
 
 ```{r}
 #| fig-height: 8
@@ -806,6 +817,8 @@ Let's compare two egos with extreme oppossite values on $Q$:
 #| fig-subcap:
 #|   - "Q = 1"
 #|   - "Q = -1"
+#|   - "Q = -1"
+#|   - "Q = 1"
 #| layout-ncol: 2   
 #| echo: false
    N <- neighbors(g, "KI-ADI-MUNDI")
@@ -825,9 +838,29 @@ Let's compare two egos with extreme oppossite values on $Q$:
      vertex.label.dist=2, 
      layout = layout_as_star(b, center = "TAUN WE"),
      vertex.label.cex = 1.25, edge.color = "lightgray")
+   
+   N <- neighbors(g, "SUN RIT")
+   c <- subgraph(g, c("SUN RIT", names(N)))
+   V(c)$color <- as.factor(vertex_attr(c, "sex"))
+   plot(c, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(c, center = "SUN RIT"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+   
+   N <- neighbors(g, "CAPTAIN TYPHO")
+   d <- subgraph(g, c("CAPTAIN TYPHO", names(N)))
+   V(d)$color <- as.factor(vertex_attr(d, "sex"))
+   plot(d, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, 
+     layout = layout_as_star(d, center = "CAPTAIN TYPHO"),
+     vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-As we can see, Ki-Adi-Mundi has an ego network that combines maximum homophily and homogeneity with respect to gender (his ego network is composed of all men)--and therefore receives the minimum Q score--and Taun We has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute (she has an all-men ego network), thus receiving the maximum Q score. 
+As we can see, Ki-Adi-Mundi and Captain Typhoo have an ego network that combine maximum homophily and homogeneity with respect to gender (both ego networks are composed of all men)--and therefore both receive the minimum score of $Q=-1$.
+
+Taun We, on the other hand, has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute (she has an all-men ego network), thus receiving the maximum $Q=-1$. Sun Rit has some heterogeneity in their ego network, but because all alters are of a different gender category from them, they also receive a minimum score of $Q=-1$. 
 
 
 
