@@ -485,7 +485,7 @@ As we noted an ego network with maximum diversity $IQV = 1.0$ is one where every
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-### Ego Network Homophily
+#### Ego Network Homophily
 
 Diversity measures the extent to which ego's connect to alters who are the same or different from *one another*. We may also want to get a sense of how *homophilous* an ego network is, namely, the extent to which ego connects to alters that are the same or different from *them*.
 
@@ -578,7 +578,7 @@ In the case of gender in *Attack of the Clones*:
 Which shows a slight preference for same-gender ties in the network. 
 
 
-### Normalized EI
+#### Normalized EI
 
 Sometimes we may want to take into account that the group sizes of different categories of people is unequal in the network. For instance, Star Wars is full characters gendered as men, which means that any homophily index will penalize men as being more homophilous simply because there are more men around to form ties with.
 
@@ -705,17 +705,33 @@ As @everett_borgatti12 note, we can label the cells of the 2 X 2 EI table with t
    t
 ```
 
-The EI index only uses information only from the first row (alters tied to ego), and is thus a rescaling of $a/(a + b)$; it is sensitive to group size imbalances because it ignores the other pieces of information. 
+Using this nomenclature, the EI index is given by:
 
-The NEI, on the other hand, uses information from all four cells and is therefore a rescaling of $(a/(a + c)) - (b/(b + d))$; therefore, it is insensitive to group size imbalances.
+$$
+EI = \frac{a-b}{a+b}
+$$
 
-Other measures of homophily could thus be constructed from the information in the 2 X 2 table, that, like the NEI, are not sensitive to group sizes. One measure @everett_borgatti12 [p. 565] recommend is the **point biserial correlation coefficient** ($r^{pb}$), which is given, using the cell labels in the table above, by:
+It is clear that the EI only uses information only from the first row (alters tied to ego) and is thus sensitive to group size imbalances because it ignores the other pieces of information ($c$ and $d$). 
+
+The NEI, on the other hand, using the same 2 X 2 table cell coding, is given by:
+
+$$
+NEI =  \frac{\left(\frac{a}{a+c}\right)-\left(\frac{b}{b+d}\right)}{\left(\frac{a}{a+c}\right)+\left(\frac{b}{b+d}\right)}
+$$
+
+Which makes clear that NEI uses information from all four cells therefore, it is insensitive to group size imbalances.
+
+Other measures of homophily could thus be constructed from the entries in the 2 X 2 table, that, like the NEI, are not sensitive to group sizes because they use all four pieces of information. 
+
+#### The Point Biserial Correlation
+
+One such measure @everett_borgatti12 [p. 565] recommend is the **point biserial correlation coefficient** ($r^{pb}$), which is given, using the cell labels in the table above, by:
 
 $$
 r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b)(c+d))}}
 $$
 
-The $r^{pb}$ works just like a correlation coefficient. A value 1.0 indicates maximum preference for same category alters, and a value of -1.0 indicates preference to connect with people different from ego. 
+From the formula it is clear that $r^{pb}$ is positive whenever ego is connected to similar alters and disconnected from non-similar ones (the numbers in the main diagonals of the 2 X 2 table, $a$ and $d$, are big). In this way, the $r^{pb}$ works just like a correlation coefficient. A value 1.0 indicates maximum preference for same category alters, and a value closer to -1.0 indicates preference to connect with people different from ego. 
 
 A function that computes $r^{pb}$ from the output of `abcd` above is:
 
@@ -773,19 +789,15 @@ And at the network level, the point-biserial correlation homophily measure for g
 
 Which also suggests a slight preference for same gender ties in this network.
 
-### Combining Diversity and Homophily
+#### Yule's Q
 
-Sometimes, you may not care about the difference between diversity and homophily. Instead you just want to see whether nodes connect to nodes that are the same as them *or* nodes of a single type, or whether nodes connect to all nodes that are different from them, or nodes of a different type.
-
-In this case, Yule's $Q$ is a good option [@borgatti_etal24, p. 159]. 
-
-It is given by:
+The point biserial correlation is a good measure of homiphily but comes at the expense of the simplicity of the EI index. If you favor a simpler approach that also makes us of all of the information in the 2 X 2 table, Yule's $Q$ is a good option [@borgatti_etal24, p. 159]:
 
 $$
 Q = \frac{ad-bc}{ad+bc}
 $$
 
-$Q$ works like a correlation coefficient, and it is 1.0 when ego's network is either completely homophilous ($b=0$) or there are no other people in the network of the same category as ego ($c = 0$) and it is -1.0 when ego's network is either completely heterophilous ($a = 0$) or there are no people in the network of a different category from ego ($d = 0$). 
+Like $r^{pb}$, $Q$ works like a correlation coefficient. It is at is maximum value of $Q = 1$ when ego has no connections to different-category others ($b=0$)---maximum homophily---and it is at a minimum of $Q = -1$ when ego has no connections to same-category others ($a=0$)---maximum heterophily. 
 
 A function to calculate $Q$ from the `abcd` function output is as follows:
 
@@ -861,6 +873,15 @@ Let's compare four egos with extreme values on $Q$:
 As we can see, Ki-Adi-Mundi and Captain Typhoo have an ego network that combine maximum homophily and homogeneity with respect to gender (both ego networks are composed of all men)--and therefore both receive the minimum score of $Q=-1$.
 
 Taun We, on the other hand, has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute (she has an all-men ego network), thus receiving the maximum $Q=-1$. Sun Rit has some heterogeneity in their ego network, but because all alters are of a different gender category from them, they also receive a minimum score of $Q=-1$. 
+
+The average value of $Q$ for the whole network is:
+
+```{r}
+   round(mean(Q), 2)
+```
+
+Which also suggests a slight same-gender preference in the network after accounting for imbalanced group sizes. 
+
 
 
 
