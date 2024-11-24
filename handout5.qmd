@@ -11,9 +11,9 @@ format:
       code-line-numbers: true
 ---
 
-As we noted in the role equivalence handout, for odd reasons, classical approaches to structural similarity in networks used *distance* based approaches but did not measure similarity directly. More recent approaches from network and information science prefer to define vertex similarity using direct similarity measures based on local structural characteristics, like node neighborhoods.
+As we noted in the role equivalence handout, for odd reasons, classical approaches to structural similarity in networks used *distance* metrics but did not measure similarity directly. More recent approaches from network and information science prefer to define vertex similarity using direct similarity measures based on local structural characteristics, like node neighborhoods.
 
-Mathematically, similarity is a less stringent (but also less well-defined) relation between pairs of nodes in a graph than distance, so it can be easier to work with in most applications. 
+Mathematically, similarity is a less stringent (but also less well-defined compared to distances) relation between pairs of nodes in a graph than distance, so it can be easier to work with in most applications. 
 
 For instance, similarity is required to be symmetric ($s_{ij} = s_{ji}$ for all $i$ and $j$) and most metrics have reasonable bounds (e.g., 0 for least similar and 1.0 for maximally similar). Given such a bounded similarity we can get to *dissimilarity* by subtracting one: $d_{ij} = 1 - s_{ij}$
 
@@ -292,10 +292,10 @@ More specifically, they propose to measure the similarity between two nodes $i$ 
 
 
 \begin{equation}
-   s_{ij} = \frac{\alpha}{d_i d_j} \sum_{k \in N(i)} \sum_{l \in N(j)} s_{kl}
+   s_{ij}(t) = \frac{\alpha}{d_i d_j} \sum_{k \in N(i)} \sum_{l \in N(j)} s_{kl}(t-1)
 \end{equation}
 
-So the similarity between two nodes is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees (to take a weighted average). 
+So the similarity between two nodes at step $t$ is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step, $t-1$), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees (to take a weighted average). 
 
 This measure nicely captures the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in $p$ + $q$ versus $p$ + $r$ as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem. 
 
@@ -364,6 +364,8 @@ $$
 
 Another way of seeing this is that a common neighbor defines a *path of length two* between a pair of nodes. So the number of common neighbors between two nodes is equivalent to the number of paths of length two between them. We are thus saying that the *similarity between two nodes increases as the number of paths of length two between them increases*, and that info is also recorded in the $\mathbf{A}^2$ matrix. 
 
+### The Local Path Similarity Index
+
 But if the similarity between node pairs increases in the number of paths of length two between them, wouldn't nodes be even more similar if they also have a bunch of paths of length *three* between them? 
 
 @lu_etal09 asked themselves the same question and proposed the following as a similarity metric based on paths:
@@ -407,7 +409,11 @@ $$
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4 ... + \alpha^{k-2} \mathbf{A}^k
 $$
 
-Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter. Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo @katz53 in the 1950s (!). 
+Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter, so maybe we don't have to worry about them.
+
+### The Katz Similarity
+
+Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo @katz53 in the 1950s (!). 
 
 The basic idea was to use linear algebra tricks to solve:
 
@@ -445,6 +451,8 @@ In the *Flintstones* network the Katz similarity looks like:
    S <- katz.sim(A)
    round(S[1:10, 1:10], 2)
 ```
+
+### Degree-Weighted Katz Similarity (AKA Leich-Holme-Newman)
 
 @leicht_etal06 argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being "similar" to a buch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.
 
