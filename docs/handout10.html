@@ -333,6 +333,7 @@ div.csl-indent {
   <li><a href="#homophily-on-a-continuous-attribute" id="toc-homophily-on-a-continuous-attribute" class="nav-link" data-scroll-target="#homophily-on-a-continuous-attribute">Homophily on a Continuous Attribute</a></li>
   <li><a href="#activity-differences-based-on-a-continuous-factor" id="toc-activity-differences-based-on-a-continuous-factor" class="nav-link" data-scroll-target="#activity-differences-based-on-a-continuous-factor">Activity Differences Based on a Continuous Factor</a></li>
   <li><a href="#heterogeneous-homophily-effects" id="toc-heterogeneous-homophily-effects" class="nav-link" data-scroll-target="#heterogeneous-homophily-effects">Heterogeneous Homophily Effects</a></li>
+  <li><a href="#looking-at-combinations-of-ties-featuring-an-attribute" id="toc-looking-at-combinations-of-ties-featuring-an-attribute" class="nav-link" data-scroll-target="#looking-at-combinations-of-ties-featuring-an-attribute">Looking at combinations of ties featuring an attribute</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout10.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -506,7 +507,7 @@ AIC: 280.1  BIC: 283.5  (Smaller is better. MC Std. Err. = 0)</code></pre>
 </section>
 <section id="fitting-a-real-ergm" class="level2">
 <h2 class="anchored" data-anchor-id="fitting-a-real-ergm">Fitting a Real ERGM</h2>
-<p>Of course, nobody uses the ergm package to fit single parameter Erdo-Renyi random graph models. The point is to test multivariate hypotheses of the type: Is the value of homophily I observe larger than we would expect in a network with these <em>other</em> characteristics?</p>
+<p>Of course, nobody uses the ergm package to fit single parameter Erdo-Renyi random graph models. The point is to test multivariate hypotheses of the type: Is the value of a given network effect (e.g., homophily) I observe larger or smaller than we would expect in a network with these <em>other</em> characteristics?</p>
 <p>So let’s recreate our original analysis of homophily (assortativity) by managerial level from our previous analysis:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   m2 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> edges <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"level"</span>))</span>
@@ -735,6 +736,141 @@ AIC: 260.7  BIC: 290.8  (Smaller is better. MC Std. Err. = 0)</code></pre>
 </div>
 <p>Here we are using connected dyads that match at department = 1 in the data (there’s one node that is coded at zero on this variable, so there cannot be dyads that match at this value) as the reference by specifying the <code>levels</code> argument. We specify we want heterogeneous homophily effects by department by setting the <code>diff</code> argument inside the <code>nodematch</code> term to <code>TRUE</code> (it is <code>FALSE</code> by default).</p>
 <p>As we can see, we can observe heterogeneous homophily effects on the department attribute in these data. Connected dyads matching on department at levels 2 and 3 are responsible for most of the positive homophily effects. For dyads that match at level 4 of department, there is no homophily (<span class="math inline">\(\theta_{dept4-4} = - 0.35, p = 0.80\)</span>).</p>
+</section>
+<section id="looking-at-combinations-of-ties-featuring-an-attribute" class="level2">
+<h2 class="anchored" data-anchor-id="looking-at-combinations-of-ties-featuring-an-attribute">Looking at combinations of ties featuring an attribute</h2>
+<p>In the preceding we looked at terms that condition on <em>homophily</em> or the probability that a given edge in a network drawn at random would feature nodes that <em>match</em> on a given attribute. Sometimes, we may be interested in looking at terms that condition on both matching and not-matching. For this task, we use the <code>ergm</code> term <code>nodemix</code>.</p>
+<p>Let’s look at an example. But first let’s switch to a different data set, this time the friendship nomination network from Lazega’s Law Firm data:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   g <span class="ot">&lt;-</span> law_friends</span>
+<span id="cb30-2"><a href="#cb30-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
+<span id="cb30-3"><a href="#cb30-3"></a>   n <span class="ot">&lt;-</span> <span class="fu">asNetwork</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now let’s fit an ergm that conditions on homophily and activity effects for four individual level covariates: gender, partner status, age, seniority.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   m9 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> <span class="fu">nodecov</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">nodecov</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb31-2"><a href="#cb31-2"></a>                  <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"gender"</span>)</span>
+<span id="cb31-3"><a href="#cb31-3"></a>                  <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"gender"</span>)</span>
+<span id="cb31-4"><a href="#cb31-4"></a>                  <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb31-5"><a href="#cb31-5"></a>              )</span>
+<span id="cb31-6"><a href="#cb31-6"></a>   <span class="fu">summary</span>(m9)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call:
+ergm(formula = n ~ nodecov("age") + nodecov("seniority") + nodefactor("status") + 
+    nodefactor("gender") + nodematch("status") + nodematch("gender") + 
+    absdiff("age") + absdiff("seniority"))
+
+Maximum Likelihood Results:
+
+                     Estimate Std. Error MCMC % z value Pr(&gt;|z|)    
+nodecov.age         -0.018655   0.003920      0  -4.758  &lt; 1e-04 ***
+nodecov.seniority    0.021657   0.008656      0   2.502  0.01235 *  
+nodefactor.status.2 -0.490025   0.107380      0  -4.563  &lt; 1e-04 ***
+nodefactor.gender.2  0.186124   0.116896      0   1.592  0.11134    
+nodematch.status     0.767534   0.145385      0   5.279  &lt; 1e-04 ***
+nodematch.gender     0.343757   0.146911      0   2.340  0.01929 *  
+absdiff.age         -0.028111   0.010091      0  -2.786  0.00534 ** 
+absdiff.seniority   -0.070572   0.012336      0  -5.721  &lt; 1e-04 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+     Null Deviance: 3445  on 2485  degrees of freedom
+ Residual Deviance: 1931  on 2477  degrees of freedom
+ 
+AIC: 1947  BIC: 1993  (Smaller is better. MC Std. Err. = 0)</code></pre>
+</div>
+</div>
+<p>We can see that all effects, other than the one conditioning on activity (degree) differences between men and women are statistically significant. Younger and more senior people are more active (form more ties) and more junior associates are less popular than partners. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful basline model.</p>
+<p>Let’s now add additional activity and homophily effects <code>law_school</code>. This variable is coded into three categories: (1) Harvard/Yale, (2) Uconn, (3) “Other”:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   m10 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> <span class="fu">nodecov</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">nodecov</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb33-2"><a href="#cb33-2"></a>                  <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"gender"</span>)</span>
+<span id="cb33-3"><a href="#cb33-3"></a>                  <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"law_school"</span>, <span class="at">base =</span> <span class="dv">3</span>)</span>
+<span id="cb33-4"><a href="#cb33-4"></a>                  <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"gender"</span>)</span>
+<span id="cb33-5"><a href="#cb33-5"></a>                  <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb33-6"><a href="#cb33-6"></a>                  <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"law_school"</span>)</span>
+<span id="cb33-7"><a href="#cb33-7"></a>              )</span>
+<span id="cb33-8"><a href="#cb33-8"></a>   <span class="fu">summary</span>(m10)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call:
+ergm(formula = n ~ nodecov("age") + nodecov("seniority") + nodefactor("status") + 
+    nodefactor("gender") + nodefactor("law_school", base = 3) + 
+    nodematch("status") + nodematch("gender") + absdiff("age") + 
+    absdiff("seniority") + nodematch("law_school"))
+
+Maximum Likelihood Results:
+
+                         Estimate Std. Error MCMC % z value Pr(&gt;|z|)    
+nodecov.age             -0.021315   0.004101      0  -5.198  &lt; 1e-04 ***
+nodecov.seniority        0.021322   0.008897      0   2.396  0.01655 *  
+nodefactor.status.2     -0.542787   0.109904      0  -4.939  &lt; 1e-04 ***
+nodefactor.gender.2      0.128969   0.119520      0   1.079  0.28056    
+nodefactor.law_school.1  0.135843   0.127551      0   1.065  0.28687    
+nodefactor.law_school.2  0.288529   0.093273      0   3.093  0.00198 ** 
+nodematch.status         0.757688   0.146243      0   5.181  &lt; 1e-04 ***
+nodematch.gender         0.322543   0.147966      0   2.180  0.02927 *  
+absdiff.age             -0.027135   0.010205      0  -2.659  0.00784 ** 
+absdiff.seniority       -0.071453   0.012544      0  -5.696  &lt; 1e-04 ***
+nodematch.law_school     0.087061   0.121791      0   0.715  0.47471    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+     Null Deviance: 3445  on 2485  degrees of freedom
+ Residual Deviance: 1920  on 2474  degrees of freedom
+ 
+AIC: 1942  BIC: 2006  (Smaller is better. MC Std. Err. = 0)</code></pre>
+</div>
+</div>
+<p>This model shows that Uconn graduates are more popular in the friendship network (they form more ties) but that there doesn’t seem to be homophily based on this factor. Still we may suspect that even though there is no homophily, there could be selective mixing (or non-mixing) based on this factor.</p>
+<p>For instance, it could be that some categories of actors <em>avoid</em> others, which will show up as a negative estimate for that combination, or it could be that homophily only applies to certain specific matches, like we found with the <code>nodematch</code> command with the argument <code>diff</code> set to <code>TRUE</code>.</p>
+<p>We can investigate this possibility as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   m11 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> <span class="fu">nodecov</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">nodecov</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2"></a>                  <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"gender"</span>)</span>
+<span id="cb35-3"><a href="#cb35-3"></a>                  <span class="sc">+</span> <span class="fu">nodefactor</span>(<span class="st">"law_school"</span>, <span class="at">base =</span> <span class="dv">3</span>)</span>
+<span id="cb35-4"><a href="#cb35-4"></a>                  <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"status"</span>) <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"gender"</span>)</span>
+<span id="cb35-5"><a href="#cb35-5"></a>                  <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"seniority"</span>)</span>
+<span id="cb35-6"><a href="#cb35-6"></a>                  <span class="sc">+</span> <span class="fu">nodemix</span>(<span class="st">"law_school"</span>, <span class="at">levels =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb35-7"><a href="#cb35-7"></a>                            <span class="at">levels2 =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">6</span>))</span>
+<span id="cb35-8"><a href="#cb35-8"></a>              )</span>
+<span id="cb35-9"><a href="#cb35-9"></a>   <span class="fu">summary</span>(m11)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call:
+ergm(formula = n ~ nodecov("age") + nodecov("seniority") + nodefactor("status") + 
+    nodefactor("gender") + nodefactor("law_school", base = 3) + 
+    nodematch("status") + nodematch("gender") + absdiff("age") + 
+    absdiff("seniority") + nodemix("law_school", levels = TRUE, 
+    levels2 = c(1, 3, 5, 6)))
+
+Maximum Likelihood Results:
+
+                         Estimate Std. Error MCMC % z value Pr(&gt;|z|)    
+nodecov.age             -0.007003   0.007384      0  -0.948 0.342920    
+nodecov.seniority        0.015081   0.009087      0   1.660 0.096987 .  
+nodefactor.status.2     -0.435095   0.120559      0  -3.609 0.000307 ***
+nodefactor.gender.2      0.140184   0.118207      0   1.186 0.235655    
+nodefactor.law_school.1 -1.272930   0.600115      0  -2.121 0.033910 *  
+nodefactor.law_school.2  0.302743   0.219195      0   1.381 0.167230    
+nodematch.status         0.800776   0.148988      0   5.375  &lt; 1e-04 ***
+nodematch.gender         0.389218   0.149655      0   2.601 0.009301 ** 
+absdiff.age             -0.029457   0.010188      0  -2.891 0.003838 ** 
+absdiff.seniority       -0.066359   0.012451      0  -5.330  &lt; 1e-04 ***
+mix.law_school.1.1       1.800624   0.673956      0   2.672 0.007546 ** 
+mix.law_school.2.2      -1.163968   0.710224      0  -1.639 0.101239    
+mix.law_school.2.3      -1.180723   0.589943      0  -2.001 0.045347 *  
+mix.law_school.3.3      -1.225416   0.558703      0  -2.193 0.028284 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+     Null Deviance: 3445  on 2485  degrees of freedom
+ Residual Deviance: 1912  on 2471  degrees of freedom
+ 
+AIC: 1940  BIC: 2022  (Smaller is better. MC Std. Err. = 0)</code></pre>
+</div>
+</div>
+<p>Note that if a variable has <span class="math inline">\(k\)</span> categories, then the maximum number of non-redundant <code>nodemix</code> terms we can specify is <span class="math inline">\(k + (\frac{1}{2}(k(k-1)))\)</span>, which in our case with <span class="math inline">\(k = 3\)</span> is equal to six.</p>
+<p>e typically won’t want to include all the combinations. We can control what gets included in the <code>nodemix</code> analysis using the <code>levels2</code> argument after specifying <code>levels</code> to be equal to <code>TRUE</code>. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) fitting the number of ties featuring Uconn graduates and “other” graduates.</p>
+<p>As we can see, the reason we don’t observe straight up homophily effects using <code>nodematch</code> is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to avoid friendship ties with graduates from “other” institutions and “other” institutions graduates tend to avoid one another (suggesting of a core-periphery dynamic).</p>
 
 
 

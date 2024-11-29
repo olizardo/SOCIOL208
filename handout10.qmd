@@ -170,7 +170,7 @@ So a useful way to think about ergms is as models that fix *expected* graph stat
 
 ## Fitting a Real ERGM
 
-Of course, nobody uses the ergm package to fit single parameter Erdo-Renyi random graph models. The point is to test multivariate hypotheses of the type: Is the value of homophily I observe larger than we would expect in a network with these *other* characteristics?
+Of course, nobody uses the ergm package to fit single parameter Erdo-Renyi random graph models. The point is to test multivariate hypotheses of the type: Is the value of a given network effect (e.g., homophily) I observe larger or smaller than we would expect in a network with these *other* characteristics?
 
 So let's recreate our original analysis of homophily (assortativity) by managerial level from our previous analysis:
 
@@ -279,5 +279,67 @@ We can of course relax this homogeneity restriction and specify *separate* `node
 Here we are using connected dyads that match at department = 1 in the data (there's one node that is coded at zero on this variable, so there cannot be dyads that match at this value) as the reference by specifying the `levels` argument. We specify we want heterogeneous homophily effects by department by setting the `diff` argument inside the `nodematch` term to `TRUE` (it is `FALSE` by default).
 
 As we can see, we can observe heterogeneous homophily effects on the department attribute in these data. Connected dyads matching on department at levels 2 and 3 are responsible for most of the positive homophily effects. For dyads that match at level 4 of department, there is no homophily ($\theta_{dept4-4} = - 0.35, p = 0.80$). 
+
+## Looking at combinations of ties featuring an attribute
+
+In the preceding we looked at terms that condition on *homophily* or the probability that a given edge in a network drawn at random would feature nodes that *match* on a given attribute. Sometimes, we may be interested in looking at terms that condition on both matching and not-matching. For this task, we use the `ergm` term `nodemix`.
+
+Let's look at an example. But first let's switch to a different data set, this time the friendship nomination network from Lazega's Law Firm data:
+
+```{r}
+   g <- law_friends
+   g <- as_undirected(g, mode = "collapse")
+   n <- asNetwork(g)
+```
+
+And now let's fit an ergm that conditions on homophily and activity effects for four individual level covariates:  gender, partner status, age, seniority.
+
+```{r}
+   m9 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+                  + nodefactor("status") + nodefactor("gender")
+                  + nodematch("status") + nodematch("gender")
+                  + absdiff("age") + absdiff("seniority")
+              )
+   summary(m9)
+```
+
+We can see that all effects, other than the one conditioning on activity (degree) differences between men and women are statistically significant. Younger and more senior people are more active (form more ties) and more junior associates are less popular than partners. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful basline model.
+
+Let's now add additional activity and homophily effects `law_school`. This variable is coded into three categories: (1) Harvard/Yale, (2) Uconn, (3) "Other":
+
+```{r}
+   m10 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+                  + nodefactor("status") + nodefactor("gender")
+                  + nodefactor("law_school", base = 3)
+                  + nodematch("status") + nodematch("gender")
+                  + absdiff("age") + absdiff("seniority")
+                  + nodematch("law_school")
+              )
+   summary(m10)
+```
+
+This model shows that Uconn graduates are more popular in the friendship network (they form  more ties) but that there  doesn't seem to be homophily based on this factor. Still we may suspect that even though there is no homophily, there could be selective mixing (or non-mixing) based on this factor. 
+
+For instance, it could be that some categories of actors *avoid* others, which will show up as a negative estimate for that combination, or it could be that homophily only applies to certain specific matches, like we found with the `nodematch` command with the argument `diff` set to `TRUE`.
+
+We can investigate this possibility as follows:
+
+```{r}
+   m11 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+                  + nodefactor("status") + nodefactor("gender")
+                  + nodefactor("law_school", base = 3)
+                  + nodematch("status") + nodematch("gender")
+                  + absdiff("age") + absdiff("seniority")
+                  + nodemix("law_school", levels = TRUE, 
+                            levels2 = c(1, 3, 5, 6))
+              )
+   summary(m11)
+```
+
+Note that if a variable has $k$ categories, then the maximum number of non-redundant `nodemix` terms we can specify is $k + (\frac{1}{2}(k(k-1)))$, which in  our case with $k = 3$ is equal to six. 
+
+e typically won't want to include all the combinations. We can control what gets included in the `nodemix` analysis using the `levels2` argument after specifying `levels` to be equal to `TRUE`. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) fitting the number of ties featuring Uconn graduates and "other" graduates. 
+
+As we can see, the reason we don't observe straight up homophily effects using `nodematch` is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to avoid friendship ties with graduates from "other" institutions and  "other" institutions graduates tend to avoid one another (suggesting of a core-periphery dynamic).
 
 
