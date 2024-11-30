@@ -334,6 +334,7 @@ div.csl-indent {
   <li><a href="#activity-differences-based-on-a-continuous-factor" id="toc-activity-differences-based-on-a-continuous-factor" class="nav-link" data-scroll-target="#activity-differences-based-on-a-continuous-factor">Activity Differences Based on a Continuous Factor</a></li>
   <li><a href="#heterogeneous-homophily-effects" id="toc-heterogeneous-homophily-effects" class="nav-link" data-scroll-target="#heterogeneous-homophily-effects">Heterogeneous Homophily Effects</a></li>
   <li><a href="#looking-at-combinations-of-ties-featuring-an-attribute" id="toc-looking-at-combinations-of-ties-featuring-an-attribute" class="nav-link" data-scroll-target="#looking-at-combinations-of-ties-featuring-an-attribute">Looking at combinations of ties featuring an attribute</a></li>
+  <li><a href="#checking-for-model-fit" id="toc-checking-for-model-fit" class="nav-link" data-scroll-target="#checking-for-model-fit">Checking for Model Fit</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout10.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -702,16 +703,16 @@ AIC: 250.4  BIC: 273.9  (Smaller is better. MC Std. Err. = 0)</code></pre>
 <p>We can of course relax this homogeneity restriction and specify <em>separate</em> <code>nodematch</code> effects by levels of the categorical attribute:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   m8 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> edges <span class="sc">+</span>  <span class="fu">nodecov</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">nodecov</span>(<span class="st">"tenure"</span>)</span>
-<span id="cb28-2"><a href="#cb28-2"></a>              <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"level"</span>) </span>
+<span id="cb28-2"><a href="#cb28-2"></a>              <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"level"</span>, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>)) </span>
 <span id="cb28-3"><a href="#cb28-3"></a>              <span class="sc">+</span> <span class="fu">nodematch</span>(<span class="st">"dept"</span>, <span class="at">diff =</span> <span class="cn">TRUE</span>, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>))  </span>
-<span id="cb28-4"><a href="#cb28-4"></a>              <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"tenure"</span>)</span>
+<span id="cb28-4"><a href="#cb28-4"></a>              <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"age"</span>) <span class="sc">+</span> <span class="fu">absdiff</span>(<span class="st">"tenure"</span>) </span>
 <span id="cb28-5"><a href="#cb28-5"></a>              )</span>
 <span id="cb28-6"><a href="#cb28-6"></a>   <span class="fu">summary</span>(m8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Call:
 ergm(formula = n ~ edges + nodecov("age") + nodecov("tenure") + 
-    nodematch("level") + nodematch("dept", diff = TRUE, levels = c(2, 
-    3, 4)) + absdiff("age") + absdiff("tenure"))
+    nodematch("level", levels = c(2, 3)) + nodematch("dept", 
+    diff = TRUE, levels = c(2, 3, 4)) + absdiff("age") + absdiff("tenure"))
 
 Maximum Likelihood Results:
 
@@ -869,8 +870,62 @@ AIC: 1940  BIC: 2022  (Smaller is better. MC Std. Err. = 0)</code></pre>
 </div>
 </div>
 <p>Note that if a variable has <span class="math inline">\(k\)</span> categories, then the maximum number of non-redundant <code>nodemix</code> terms we can specify is <span class="math inline">\(k + (\frac{1}{2}(k(k-1)))\)</span>, which in our case with <span class="math inline">\(k = 3\)</span> is equal to six.</p>
-<p>e typically won’t want to include all the combinations. We can control what gets included in the <code>nodemix</code> analysis using the <code>levels2</code> argument after specifying <code>levels</code> to be equal to <code>TRUE</code>. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) fitting the number of ties featuring Uconn graduates and “other” graduates.</p>
-<p>As we can see, the reason we don’t observe straight up homophily effects using <code>nodematch</code> is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to avoid friendship ties with graduates from “other” institutions and “other” institutions graduates tend to avoid one another (suggesting of a core-periphery dynamic).</p>
+<p>e typically won’t want to include all the combinations. We can control what gets included in the <code>nodemix</code> analysis using the <code>levels2</code> argument after specifying <code>levels</code> to be equal to <code>TRUE</code>. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) fitting the number of ties featuring Uconn graduates and “other” graduates. As we can see, the reason we don’t observe straight up homophily effects using <code>nodematch</code> is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to avoid friendship ties with graduates from “other” institutions and “other” institutions graduates tend to avoid one another (suggesting of a core-periphery dynamic).</p>
+</section>
+<section id="checking-for-model-fit" class="level2">
+<h2 class="anchored" data-anchor-id="checking-for-model-fit">Checking for Model Fit</h2>
+<p>In ergms we can always check for model fit using standard statistics they share with general linear models, like the model deviance, BIC, AIC and so forth. These are particularly useful when trying to decide between nested models.</p>
+<p>However, we can also use the fact that each ergm specifies a probability distribution across a graph ensemble to see whether the specification we decided on actually produces graphs with global (network level) characteristics that fall within a plausible range. That is, even though this things are not directly in model a good model should be able to produce them via the local tie generating processes we specified.</p>
+<p>When a model does not do this, and instead produces graphs within a narrow or weird range of values for basic network statistics like the degree distribution, the geodesic distance distribution, or basic counts of key motifs like triangles and number of shared partners (a technical issue known as “degeneracy” in the ergm framework) then we know that we need to change something in our specification.</p>
+<p>In the <code>ergm</code> package we can check this using the <code>gof</code> function. The function takes a <code>ergm</code> model object and an optional argument called <code>GOF</code> specifying what simulated global network property across the implied graph ensemble we want to compare to our observed values.</p>
+<p>Let’s use <code>m8</code> above which was the attribute-driven model with heterogeneous homophily effects for department we fit to the Krackhardt High Tech Managers data. Let’s say, we wanted to see whether our model was successful in reproducing the distribution of activity (degree) across nodes. In that case, we would type:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb37-2"><a href="#cb37-2"></a>   gof.m8 <span class="ot">&lt;-</span> <span class="fu">gof</span>(m8, <span class="at">GOF =</span> <span class="sc">~</span> degree)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Here we asked <code>gof</code> to create a graph ensemble of one hundred graphs (the default) and look at the degree distribution in each.</p>
+<p>To see the result we can check out the following object:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a>   gof.m8<span class="sc">$</span>pval.deg</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>         obs min mean max MC p-value
+degree0    0   0 0.08   1       1.00
+degree1    0   0 0.36   3       1.00
+degree2    1   0 0.45   2       0.78
+degree3    1   0 1.03   4       1.00
+degree4    1   0 1.32   5       1.00
+degree5    3   0 1.93   5       0.68
+degree6    4   0 2.37   8       0.44
+degree7    2   0 2.68   7       1.00
+degree8    2   0 2.71   8       1.00
+degree9    2   0 2.66   8       1.00
+degree10   3   0 1.97   6       0.56
+degree11   0   0 1.60   5       0.46
+degree12   0   0 1.05   4       0.64
+degree13   0   0 0.48   3       1.00
+degree14   1   0 0.18   1       0.36
+degree15   0   0 0.09   2       1.00
+degree16   0   0 0.03   1       1.00
+degree17   0   0 0.01   1       1.00
+degree18   1   0 0.00   0       0.00
+degree19   0   0 0.00   0       1.00
+degree20   0   0 0.00   0       1.00</code></pre>
+</div>
+</div>
+<p>The way to read the table is as follows: Under the column “obs” is the values of degree in the data (observed), then the other columns contain the range (min and max) and the mean of the each value of degree in the graph ensemble implied by the model.</p>
+<p>The p-value is a test that the observed value is significantly different from the <em>mean</em> of the graph ensemble. Note that in a good fitting model, <em>the mean of the ensemble implied by the model</em> so we want <span class="math inline">\(p &gt; 0.05\)</span> for each row in the table as this indicates a <em>good fitting model</em>. We can see that this is indeed the case for every value except the last outlier one (<span class="math inline">\(k = 18\)</span>), the simulations show this never happening (max = 0), so it is outside of the range of the observed value of one (<span class="math inline">\(p = 0.00\)</span>).</p>
+<p>Overall, however, the model does a good job of reproducing a distribution of degrees in the ensemble consistent with the observed data. If we wanted to see it in a plot, we would just type:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">plot</span>(gof.m8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout10_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output-display">
+<p><img src="handout10_files/figure-html/unnamed-chunk-24-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>In this box plot, the ensemble mean is the blue diamond, the gray box is the interquartile (25th to 75th percentile) range, the black horizontal line in the gray box is the ensemble median, and the black connected line plot is the observed values.</p>
+<p>What we would like to see in a well-fitting model is a black line that goes through the gray box and is not outside them, which is generally the case here for most of the observed range except for the very large values.</p>
 
 
 

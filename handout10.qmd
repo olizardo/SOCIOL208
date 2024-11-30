@@ -13,7 +13,7 @@ format:
 
 In this previous handout we saw how to do some basic, single-hypothesis testing against plausible null models. This approach can be thought of as *conditioning* on some set of graph level properties and seeing if something we compute in the graph obtains "net" of these conditioning (e.g., the observed degree distribution). 
 
-Conditining, of course, can be thought of as the analogue of "controlling for" something in a standard linear regression model. This means that it is possible to extend the framework we explored to a setting in which we conditiong on multiple graph properties to see if what we measure obtains "net" of all these properties at th same time.
+Conditioning, of course, can be thought of as the analogue of "controlling for" something in a standard linear regression model. This means that it is possible to extend the framework we explored to a setting in which we conditioning on multiple graph properties to see if what we measure obtains "net" of all these properties at th same time.
 
 The framework of **Exponential Random Graph Models** (ERGMs) is useful for this purposes. There are many ways to think of ERGMs, one of them is as a network regression in which we are modeling the probability of observing each tie as a function of a bunch of tie level variables. Another way of thinking about it is as specifying a **dependence structure** that tell us how probability of observing a given tie depends on other things going on in the "neighborhood" of that tie, like whether one of the nodes incident to that edge is also incident to other edges [@pattison_robins12]. 
 
@@ -147,26 +147,37 @@ Note that the simulated networks are a **graph ensemble** of networks drawn from
 We can check by looking at the densities of the separate networks:
 
 ```{r}
-   round(sapply(sim, edge_density), 2)
+   dens <- sapply(sim, edge_density)
+   round(dens, 2)
 ```
 
 Some of the values are larger and some of them are lower, but they all revolve around the estimate:
 
 ```{r}
 #| echo: false
-   dens <- sapply(sim, edge_density)
+   m <- mean(dens)
+   min <- min(round(dens, 2))
+   max <- max(round(dens, 2))
    library(ggplot2)
+   m <- mean(sapply(sim, edge_density))
    p <- ggplot(data = data.frame(round(dens, 2)), aes(x = dens))
    p <- p + geom_histogram(binwidth = 0.005, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = edge_density(g), 
+   p <- p + geom_vline(xintercept = m, 
                        color = "red", linetype = 1, linewidth = 1.5)
+   p <- p + geom_vline(xintercept = edge_density(g), 
+                       color = "purple", linetype = 1, linewidth = 1.5)
    p <- p + theme_minimal() + labs(x = "Density", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x= 0.36, y=11, label= "Obs. Density", color = "red")
+   p <- p + scale_x_continuous(breaks = seq(min, max, 0.01))
+   p <- p + annotate("text", x= 0.39, y=11, label= "Obs. Density", color = "red")
+   p <- p + annotate("text", x= 0.365, y=11, label= "Ensemble Avg.", color = "purple")
+
    p
 ```
 
-So a useful way to think about ergms is as models that fix *expected* graph statistics in a given ensemble. The values of the expectations are provided by the coefficients obtained in the model for that statistic. 
+If we take larger and larger graph ensembles the distribution of densities would become bell-shaped and the average of the ensemble would converge around the density of the observed network. 
+
+So a useful way to think about ergms is as models that fix *expected* graph statistics in a given ensemble. The values of the expectations are provided by the coefficients obtained in the model for that statistic, and the range of possible variation around those expectations are given by the standard error of the estimate. 
 
 ## Fitting a Real ERGM
 
@@ -269,9 +280,9 @@ We can of course relax this homogeneity restriction and specify *separate* `node
 
 ```{r}
    m8 <- ergm(n ~ edges +  nodecov("age") + nodecov("tenure")
-              + nodematch("level") 
+              + nodematch("level", levels = c(2, 3)) 
               + nodematch("dept", diff = TRUE, levels = c(2, 3, 4))  
-              + absdiff("age") + absdiff("tenure")
+              + absdiff("age") + absdiff("tenure") 
               )
    summary(m8)
 ```
@@ -303,7 +314,7 @@ And now let's fit an ergm that conditions on homophily and activity effects for 
    summary(m9)
 ```
 
-We can see that all effects, other than the one conditioning on activity (degree) differences between men and women are statistically significant. Younger and more senior people are more active (form more ties) and more junior associates are less popular than partners. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful basline model.
+We can see that all effects, other than the one conditioning on activity (degree) differences between men and women are statistically significant. Younger and more senior people are more active (form more ties) and more junior associates are less popular than partners. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful baseline model.
 
 Let's now add additional activity and homophily effects `law_school`. This variable is coded into three categories: (1) Harvard/Yale, (2) Uconn, (3) "Other":
 
@@ -318,7 +329,7 @@ Let's now add additional activity and homophily effects `law_school`. This varia
    summary(m10)
 ```
 
-This model shows that Uconn graduates are more popular in the friendship network (they form  more ties) but that there  doesn't seem to be homophily based on this factor. Still we may suspect that even though there is no homophily, there could be selective mixing (or non-mixing) based on this factor. 
+This model shows that Uconn graduates are more popular in the friendship network (they form  more ties), compared to graduates from "other" schools, but that there  doesn't seem to be homophily based on this factor. Still we may suspect that even though there is no homophily, there could be selective mixing (or non-mixing) based on where you got your law degree. 
 
 For instance, it could be that some categories of actors *avoid* others, which will show up as a negative estimate for that combination, or it could be that homophily only applies to certain specific matches, like we found with the `nodematch` command with the argument `diff` set to `TRUE`.
 
@@ -338,8 +349,48 @@ We can investigate this possibility as follows:
 
 Note that if a variable has $k$ categories, then the maximum number of non-redundant `nodemix` terms we can specify is $k + (\frac{1}{2}(k(k-1)))$, which in  our case with $k = 3$ is equal to six. 
 
-e typically won't want to include all the combinations. We can control what gets included in the `nodemix` analysis using the `levels2` argument after specifying `levels` to be equal to `TRUE`. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) fitting the number of ties featuring Uconn graduates and "other" graduates. 
+We typically won't want to include all the combinations; instead, we can control what gets included in the `nodemix` analysis using the `levels2` argument after specifying `levels` to be equal to `TRUE`. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) counting the number of edges featuring Uconn graduate nodes and "other" graduates. 
 
-As we can see, the reason we don't observe straight up homophily effects using `nodematch` is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to avoid friendship ties with graduates from "other" institutions and  "other" institutions graduates tend to avoid one another (suggesting of a core-periphery dynamic).
+As we can see, the reason we don't observe straight up homophily effects using `nodematch` is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to *avoid* friendship ties with graduates from "other" institutions (statistically significant negative mixing effect) and  "other" institutions graduates tend to avoid nominating people from "other" schools as friends (suggesting of a core-periphery dynamic in which elites selectively associate with elites, and everyone avoids non-elites, including themselves!).
 
+## Checking for Model Fit
 
+In  ergms we can always check for model fit using standard statistics they share with general linear models, like the model deviance, BIC, AIC and so forth. These are particularly useful when trying to decide between nested models.
+
+However, we can also use the fact that each ergm specifies a *probability distribution* across a graph ensemble consistent with the estimated parameters to see whether the specification we decided on actually produces graphs with global (network level) characteristics that fall within a plausible range. 
+
+That is, even though network level factors are not directly specified in the model, a good model should be able to reproduce them via the local tie generating processes we specified. 
+
+When an ergm specification does not do this, and instead produces graphs within a narrow or weird range of values---e.g., for basic network statistics like the degree distribution, the geodesic distance distribution, or basic counts of key motifs like triangles and number of shared partners (a technical issue known as "degeneracy" in the ergm framework)---then that is a signal we need to change something in our specification. 
+
+In the `ergm` package we can check for goodness of fit based on the ability to match global network characteristics using the `gof` function. The function takes a `ergm` model object as input along with an optional argument called `GOF` specifying what simulated global network property across the implied graph ensemble we want to compare to our observed values. The main ones include the degree distribution, the distribution of edge-wise shared partners (common neighbors of connected dyads), and the geodesic distance distribution (number of dyads separated by shortest parths of a given length).
+
+Let's use `m8` above which was the attribute-driven model with heterogeneous homophily effects for department we fit to the Krackhardt High Tech Managers data. Let's say, we wanted to see whether our model was successful in reproducing the distribution of activity (degree) across nodes. In that case, we would type:
+
+```{r}
+   set.seed(123)
+   gof.m8 <- gof(m8, GOF = ~ degree)
+```
+
+Here we asked `gof` to create a graph ensemble of one hundred graphs (the default) and look at the degree distribution in each, recording how many times a node with a given degree is observed in each graph. 
+
+To see the result we can check out the following object:
+
+```{r}
+   gof.m8$pval.deg
+```
+
+The way to read the table is as follows: Under the column "obs" is the values of degree in the data (observed), then the other columns contain the range (min and max) and the mean of the each value of degree in the graph ensemble implied by the model. 
+
+The p-value is a test that the observed value is significantly different from the *mean* of the graph ensemble. Note that in a good fitting model, *the mean of the ensemble implied by the model* so we want $p > 0.05$ for each row in the table as this indicates a *good fitting model*. 
+We can see that this is indeed the case for every value except the last outlier one ($k = 18$), the simulations show this never happening (max = 0), so it is outside of the range of the observed value of one ($p = 0.00$).
+
+Overall, however, the model does a good job of reproducing a distribution of degrees in the ensemble consistent with the observed data. If we wanted to see it in a plot, we would just type:
+
+```{r}
+   plot(gof.m8)
+```
+
+In this box plot, the ensemble mean is the blue diamond, the gray box is the interquartile (25th to 75th percentile) range, the black horizontal line in the gray box is the ensemble median, and the black connected line plot is the observed values. 
+
+What we would like to see in a well-fitting model is a black line that goes through the gray box and is not outside them, which is generally the case here for most of the observed range except for the very large values. 
