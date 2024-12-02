@@ -371,3 +371,92 @@ Indeed, the p-value of the estimate is:
 ```
 
 Which is pretty good. Maybe our paper will be published after all!
+
+## Correlating Ties Across Two Networks
+
+Consider the case where we measure two or more ties on the same set of actors. In that case, we could entertain hypotheses of the form: Is having a tie of type $A$ positively or negatively correlated with a tie of type $B$? 
+
+We can use the same approach as before to answer this question, since a bivariate correlation between ties between two networks is just like the univariate statistics we computed earlier (in that case the modularity, but it could been any network level statistic like the diameter or centralization).
+
+Let's see an example. Suppose we have a hypothesis that the relation of "friendship" should be correlated to that of "adivice"; that is, *people are more likely to seek advice from friends*. 
+
+The Krackhardt High-Tech Managers data contains information on both the advice and friendship relations between the actors. Let's load up the advice network:
+
+```{r}
+   g2 <- as_undirected(ht_advice, mode = "collapse")
+```
+
+And extract the corresponding adjacency matrices:
+
+```{r}
+   A.f <- as.matrix(as_adjacency_matrix(g))
+   A.d <- as.matrix(as_adjacency_matrix(g2))
+```
+
+The correlation between these two ties is then:
+
+```{r}
+   r <- cor(as.vector(A.f), as.vector(A.d))
+   round(r, 2)
+```
+
+Which is positive, suggesting that people do tend to seek advice from friends. However, is this correlation larger than we would expect by chance?
+
+```{r}
+   perm <- function(x) {
+      A <- as.matrix(as_adjacency_matrix(x))
+      s <- sample(1:nrow(A))
+      A <- A[s, s] #permuting matrix
+      g <- graph_from_adjacency_matrix(A)
+      return(g)
+   }
+```
+
+
+```{r}
+   G3 <- list() 
+   set.seed(12345)
+   for (i in 1:5000) {
+      G3[[i]] <- perm(g)
+   }
+```
+
+Here's a function for the correlation:
+
+```{r}
+   cor.net <- function(x1, x2) {
+   a <- as.matrix(as_adjacency_matrix(x1))
+   b <- as.matrix(as_adjacency_matrix(x2))      
+   r <- cor(as.vector(a), as.vector(b))
+   return(r)
+   }
+   corrs <- round(sapply(G3, cor.net, x2 = g2), 2)
+   corrs
+```
+
+```{r}
+   quantile(corrs, probs = 0.99)
+   r > quantile(corrs, probs = 0.99)
+   1 - ecdf(corrs)(r)
+```
+
+
+```{r}
+   library(ggplot2)
+   p <- ggplot(data = data.frame(corrs), aes(x = corrs))
+   p <- p + geom_histogram(binwidth = 0.02, stat = "bin", fill = "darkblue")
+   p <- p + geom_vline(xintercept = r, 
+                       color = "red", linetype = 1, linewidth = 1.5)
+   p <- p + geom_vline(xintercept = 0, linetype = 1, 
+                       color = "purple", linewidth = 1.5)
+   p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
+   p <- p + theme(axis.text = element_text(size = 12))
+   p <- p + annotate("text", x=-0.04, y=100, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=0.22, y=100, label= "Obs. Value", color = "red")
+   p
+```
+
+
+
+
+
