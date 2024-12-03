@@ -143,6 +143,9 @@ div.csl-indent {
   }
 }</script>
 
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
@@ -332,7 +335,8 @@ div.csl-indent {
   <li><a href="#the-erdos-renyi-model" id="toc-the-erdos-renyi-model" class="nav-link" data-scroll-target="#the-erdos-renyi-model">The Erdos-Renyi Model</a></li>
   <li><a href="#null-hypothesis-testing" id="toc-null-hypothesis-testing" class="nav-link" data-scroll-target="#null-hypothesis-testing">Null Hypothesis Testing</a></li>
   <li><a href="#preserving-degrees" id="toc-preserving-degrees" class="nav-link" data-scroll-target="#preserving-degrees">Preserving Degrees</a></li>
-  <li><a href="#correlating-ties-across-two-networks" id="toc-correlating-ties-across-two-networks" class="nav-link" data-scroll-target="#correlating-ties-across-two-networks">Correlating Ties Across Two Networks</a></li>
+  <li><a href="#cross-network-correlation-using-permutation" id="toc-cross-network-correlation-using-permutation" class="nav-link" data-scroll-target="#cross-network-correlation-using-permutation">Cross-Network Correlation Using Permutation</a></li>
+  <li><a href="#cross-network-regression-using-permutation" id="toc-cross-network-regression-using-permutation" class="nav-link" data-scroll-target="#cross-network-regression-using-permutation">Cross-Network Regression Using Permutation</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout9.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -549,15 +553,15 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   <span class="fu">library</span>(ggplot2)</span>
 <span id="cb34-2"><a href="#cb34-2"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">data.frame</span>(<span class="fu">round</span>(assort, <span class="dv">2</span>)), <span class="fu">aes</span>(<span class="at">x =</span> assort))</span>
-<span id="cb34-3"><a href="#cb34-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.005</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
+<span id="cb34-3"><a href="#cb34-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.015</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
 <span id="cb34-4"><a href="#cb34-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level), </span>
 <span id="cb34-5"><a href="#cb34-5"></a>                       <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
 <span id="cb34-6"><a href="#cb34-6"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="dv">1</span>, </span>
 <span id="cb34-7"><a href="#cb34-7"></a>                       <span class="at">color =</span> <span class="st">"purple"</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
 <span id="cb34-8"><a href="#cb34-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Q by Level"</span>, <span class="at">y =</span> <span class="st">"Freq."</span>)</span>
 <span id="cb34-9"><a href="#cb34-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
-<span id="cb34-10"><a href="#cb34-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.05</span>, <span class="at">y=</span><span class="dv">22</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
-<span id="cb34-11"><a href="#cb34-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.06</span>, <span class="at">y=</span><span class="dv">22</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
+<span id="cb34-10"><a href="#cb34-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.05</span>, <span class="at">y=</span><span class="dv">47</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
+<span id="cb34-11"><a href="#cb34-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.06</span>, <span class="at">y=</span><span class="dv">47</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
 <span id="cb34-12"><a href="#cb34-12"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="handout9_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
@@ -600,30 +604,39 @@ TRUE </code></pre>
 </div>
 </div>
 <p>Which yields <span class="math inline">\(p = 0.014\)</span> for our observed value of assortativity by department, which is good enough to get published.</p>
+<p>Note, however, that this is a <em>one-tailed test</em> of significance <span class="citation" data-cites="borgatti_etal24">(<a href="#ref-borgatti_etal24" role="doc-biblioref">Borgatti et al. 2024, 285</a>)</span>, this is fine since we usually expect the modularity to be positive which implies a directional hypothesis.</p>
+<p>If we wanted a more stringent two-tailed we would need to create a vector with the <em>absolute value</em> of the modularity and use that to construct our test:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(assort))(<span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.27</code></pre>
+</div>
+</div>
+<p>Which would fail the statistical significance test by the usual standards (<span class="math inline">\(p = 0.27\)</span>).</p>
 </section>
 <section id="preserving-degrees" class="level2">
 <h2 class="anchored" data-anchor-id="preserving-degrees">Preserving Degrees</h2>
 <p>Recall that our swapping function above preserves the <em>expected</em> (average) degree but not the degree of any particular node. This means that the neither the <strong>degree sequence</strong> nor the <strong>degree distribution</strong> of the original network is preserved.</p>
 <p>This is clear in the following plots:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="fu">library</span>(dplyr)</span>
-<span id="cb45-2"><a href="#cb45-2"></a>   <span class="fu">library</span>(tidyr)</span>
-<span id="cb45-3"><a href="#cb45-3"></a>   deg.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Original =</span> <span class="fu">degree</span>(g), <span class="at">Swap1 =</span> <span class="fu">degree</span>(g.swap1), <span class="at">Swap2 =</span> <span class="fu">degree</span>(g.swap2), <span class="at">Swap3 =</span> <span class="fu">degree</span>(g.swap3)) <span class="sc">%&gt;%</span> </span>
-<span id="cb45-4"><a href="#cb45-4"></a>   <span class="fu">pivot_longer</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="at">names_to =</span> <span class="st">"graph"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb45-5"><a href="#cb45-5"></a>      <span class="fu">mutate</span>(<span class="at">v =</span> <span class="fu">sort</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), <span class="dv">4</span>)))</span>
-<span id="cb45-6"><a href="#cb45-6"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> deg.dat, <span class="fu">aes</span>(<span class="at">x =</span> value, <span class="at">group =</span> graph, <span class="at">fill =</span> graph))</span>
-<span id="cb45-7"><a href="#cb45-7"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.35</span>)</span>
-<span id="cb45-8"><a href="#cb45-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">facet_wrap</span>(<span class="sc">~</span> graph, <span class="at">nrow =</span> <span class="dv">4</span>)</span>
-<span id="cb45-9"><a href="#cb45-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
-<span id="cb45-10"><a href="#cb45-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
-<span id="cb45-11"><a href="#cb45-11"></a>                  <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
-<span id="cb45-12"><a href="#cb45-12"></a>                  <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>),</span>
-<span id="cb45-13"><a href="#cb45-13"></a>                  <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>)) </span>
-<span id="cb45-14"><a href="#cb45-14"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">18</span>))</span>
-<span id="cb45-15"><a href="#cb45-15"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">""</span>, <span class="at">y =</span><span class="st">""</span>)</span>
-<span id="cb45-16"><a href="#cb45-16"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">library</span>(dplyr)</span>
+<span id="cb47-2"><a href="#cb47-2"></a>   <span class="fu">library</span>(tidyr)</span>
+<span id="cb47-3"><a href="#cb47-3"></a>   deg.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Original =</span> <span class="fu">degree</span>(g), <span class="at">Swap1 =</span> <span class="fu">degree</span>(g.swap1), <span class="at">Swap2 =</span> <span class="fu">degree</span>(g.swap2), <span class="at">Swap3 =</span> <span class="fu">degree</span>(g.swap3)) <span class="sc">%&gt;%</span> </span>
+<span id="cb47-4"><a href="#cb47-4"></a>   <span class="fu">pivot_longer</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>, <span class="at">names_to =</span> <span class="st">"graph"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb47-5"><a href="#cb47-5"></a>      <span class="fu">mutate</span>(<span class="at">v =</span> <span class="fu">sort</span>(<span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g), <span class="dv">4</span>)))</span>
+<span id="cb47-6"><a href="#cb47-6"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> deg.dat, <span class="fu">aes</span>(<span class="at">x =</span> value, <span class="at">group =</span> graph, <span class="at">fill =</span> graph))</span>
+<span id="cb47-7"><a href="#cb47-7"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.35</span>)</span>
+<span id="cb47-8"><a href="#cb47-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">facet_wrap</span>(<span class="sc">~</span> graph, <span class="at">nrow =</span> <span class="dv">4</span>)</span>
+<span id="cb47-9"><a href="#cb47-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>()</span>
+<span id="cb47-10"><a href="#cb47-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb47-11"><a href="#cb47-11"></a>                  <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>),</span>
+<span id="cb47-12"><a href="#cb47-12"></a>                  <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>),</span>
+<span id="cb47-13"><a href="#cb47-13"></a>                  <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">14</span>)) </span>
+<span id="cb47-14"><a href="#cb47-14"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">18</span>))</span>
+<span id="cb47-15"><a href="#cb47-15"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">""</span>, <span class="at">y =</span><span class="st">""</span>)</span>
+<span id="cb47-16"><a href="#cb47-16"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout9_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
+<p><img src="handout9_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>The top shows the original degree distribution, which is different from the ones in the swapped graphs. In fact, it is clear that the swapped degree distribution get rid of extreme high degree nodes and pull everyone to the middle (Erdos-Renyi graphs degrees tend toward a Poisson distribution).</p>
@@ -632,12 +645,12 @@ TRUE </code></pre>
 <p>The basic idea is to sample a pair of edges connecting vertices <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span> and <span class="math inline">\(c\)</span> and <span class="math inline">\(d\)</span> respectively, delete them, and create two new edges (if they don’t currently exist) between vertices <span class="math inline">\(a\)</span> and <span class="math inline">\(c\)</span> and between <span class="math inline">\(b\)</span> and <span class="math inline">\(d\)</span>, repeating this process <code>m</code> number of times. As it is clear, this randomizes connections but keeps the number of edges incident to each node the same <span class="citation" data-cites="maslov_sneppen02">(<a href="#ref-maslov_sneppen02" role="doc-biblioref">Maslov and Sneppen 2002</a>)</span>.</p>
 <p>Let’s see how it works:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   g.swap <span class="ot">&lt;-</span> <span class="fu">rewire</span>(g, <span class="fu">keeping_degseq</span>(<span class="at">niter =</span> <span class="dv">50</span>))</span>
-<span id="cb46-2"><a href="#cb46-2"></a>   <span class="fu">degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   g.swap <span class="ot">&lt;-</span> <span class="fu">rewire</span>(g, <span class="fu">keeping_degseq</span>(<span class="at">niter =</span> <span class="dv">50</span>))</span>
+<span id="cb48-2"><a href="#cb48-2"></a>   <span class="fu">degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1]  9 10  6  7 10  7  3  5  6  8 14  8  2  6  9  5 18  4 10  5  6</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">degree</span>(g.swap)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   <span class="fu">degree</span>(g.swap)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1]  9 10  6  7 10  7  3  5  6  8 14  8  2  6  9  5 18  4 10  5  6</code></pre>
 </div>
@@ -648,7 +661,7 @@ TRUE </code></pre>
 <div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout9_files/figure-html/unnamed-chunk-19-1.png" class="img-fluid figure-img" width="1152"></p>
+<p><img src="handout9_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid figure-img" width="1152"></p>
 <p></p><figcaption class="figure-caption">Original Friendship Network.</figcaption><p></p>
 </figure>
 </div>
@@ -656,7 +669,7 @@ TRUE </code></pre>
 <div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="handout9_files/figure-html/unnamed-chunk-19-2.png" class="img-fluid figure-img" width="1152"></p>
+<p><img src="handout9_files/figure-html/unnamed-chunk-20-2.png" class="img-fluid figure-img" width="1152"></p>
 <p></p><figcaption class="figure-caption">One Degree Preserving Swap.</figcaption><p></p>
 </figure>
 </div>
@@ -668,49 +681,49 @@ TRUE </code></pre>
 <p>Let’s find out.</p>
 <p>First, let’s wrap the degree-preserving swap into a function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb50-1"><a href="#cb50-1"></a>   swap2 <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">e =</span> <span class="dv">10</span><span class="sc">^-</span><span class="dv">7</span>) {</span>
-<span id="cb50-2"><a href="#cb50-2"></a>      m <span class="ot">&lt;-</span> <span class="fu">round</span>((<span class="fu">ecount</span>(x)<span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">log</span>(<span class="dv">1</span><span class="sc">/</span>e)) <span class="co">#recommended number </span></span>
-<span id="cb50-3"><a href="#cb50-3"></a>      <span class="co">#of swaps according to </span></span>
-<span id="cb50-4"><a href="#cb50-4"></a>      <span class="co">#https://en.wikipedia.org/wiki/Degree-preserving_randomization</span></span>
-<span id="cb50-5"><a href="#cb50-5"></a>      x <span class="ot">&lt;-</span> <span class="fu">rewire</span>(x, <span class="fu">keeping_degseq</span>(<span class="at">niter =</span> m))</span>
-<span id="cb50-6"><a href="#cb50-6"></a>      <span class="fu">return</span>(x)</span>
-<span id="cb50-7"><a href="#cb50-7"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   swap2 <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">e =</span> <span class="dv">10</span><span class="sc">^-</span><span class="dv">7</span>) {</span>
+<span id="cb52-2"><a href="#cb52-2"></a>      m <span class="ot">&lt;-</span> <span class="fu">round</span>((<span class="fu">ecount</span>(x)<span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">log</span>(<span class="dv">1</span><span class="sc">/</span>e)) <span class="co">#recommended number </span></span>
+<span id="cb52-3"><a href="#cb52-3"></a>      <span class="co">#of swaps according to </span></span>
+<span id="cb52-4"><a href="#cb52-4"></a>      <span class="co">#https://en.wikipedia.org/wiki/Degree-preserving_randomization</span></span>
+<span id="cb52-5"><a href="#cb52-5"></a>      x <span class="ot">&lt;-</span> <span class="fu">rewire</span>(x, <span class="fu">keeping_degseq</span>(<span class="at">niter =</span> m))</span>
+<span id="cb52-6"><a href="#cb52-6"></a>      <span class="fu">return</span>(x)</span>
+<span id="cb52-7"><a href="#cb52-7"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then let’s create our graph ensemble this time using 500 graphs:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1"></a>   G2 <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
-<span id="cb51-2"><a href="#cb51-2"></a>   <span class="fu">set.seed</span>(<span class="dv">12345</span>)</span>
-<span id="cb51-3"><a href="#cb51-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">500</span>) {</span>
-<span id="cb51-4"><a href="#cb51-4"></a>      G2[[i]] <span class="ot">&lt;-</span> <span class="fu">swap2</span>(g)</span>
-<span id="cb51-5"><a href="#cb51-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1"></a>   G2 <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
+<span id="cb53-2"><a href="#cb53-2"></a>   <span class="fu">set.seed</span>(<span class="dv">12345</span>)</span>
+<span id="cb53-3"><a href="#cb53-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">500</span>) {</span>
+<span id="cb53-4"><a href="#cb53-4"></a>      G2[[i]] <span class="ot">&lt;-</span> <span class="fu">swap2</span>(g)</span>
+<span id="cb53-5"><a href="#cb53-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And see where our observed value falls in the distribution:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   assort <span class="ot">&lt;-</span> <span class="fu">sapply</span>(G2, assortativity, <span class="at">values =</span> <span class="fu">V</span>(g)<span class="sc">$</span>level)</span>
-<span id="cb52-2"><a href="#cb52-2"></a>   <span class="fu">library</span>(ggplot2)</span>
-<span id="cb52-3"><a href="#cb52-3"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">data.frame</span>(<span class="fu">round</span>(assort, <span class="dv">2</span>)), <span class="fu">aes</span>(<span class="at">x =</span> assort))</span>
-<span id="cb52-4"><a href="#cb52-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.015</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
-<span id="cb52-5"><a href="#cb52-5"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level), </span>
-<span id="cb52-6"><a href="#cb52-6"></a>                       <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
-<span id="cb52-7"><a href="#cb52-7"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="dv">1</span>, </span>
-<span id="cb52-8"><a href="#cb52-8"></a>                       <span class="at">color =</span> <span class="st">"purple"</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
-<span id="cb52-9"><a href="#cb52-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Q by Level"</span>, <span class="at">y =</span> <span class="st">"Freq."</span>)</span>
-<span id="cb52-10"><a href="#cb52-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
-<span id="cb52-11"><a href="#cb52-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.04</span>, <span class="at">y=</span><span class="dv">170</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
-<span id="cb52-12"><a href="#cb52-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.07</span>, <span class="at">y=</span><span class="dv">170</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
-<span id="cb52-13"><a href="#cb52-13"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   assort <span class="ot">&lt;-</span> <span class="fu">sapply</span>(G2, assortativity, <span class="at">values =</span> <span class="fu">V</span>(g)<span class="sc">$</span>level)</span>
+<span id="cb54-2"><a href="#cb54-2"></a>   <span class="fu">library</span>(ggplot2)</span>
+<span id="cb54-3"><a href="#cb54-3"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">data.frame</span>(<span class="fu">round</span>(assort, <span class="dv">2</span>)), <span class="fu">aes</span>(<span class="at">x =</span> assort))</span>
+<span id="cb54-4"><a href="#cb54-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.08</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
+<span id="cb54-5"><a href="#cb54-5"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level), </span>
+<span id="cb54-6"><a href="#cb54-6"></a>                       <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
+<span id="cb54-7"><a href="#cb54-7"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="dv">1</span>, </span>
+<span id="cb54-8"><a href="#cb54-8"></a>                       <span class="at">color =</span> <span class="st">"purple"</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
+<span id="cb54-9"><a href="#cb54-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Q by Level"</span>, <span class="at">y =</span> <span class="st">"Freq."</span>)</span>
+<span id="cb54-10"><a href="#cb54-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
+<span id="cb54-11"><a href="#cb54-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.04</span>, <span class="at">y=</span><span class="dv">170</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
+<span id="cb54-12"><a href="#cb54-12"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.07</span>, <span class="at">y=</span><span class="dv">170</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
+<span id="cb54-13"><a href="#cb54-13"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout9_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+<p><img src="handout9_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Note that the values are much more constrained this time around, falling within specific ranges. We can test our hypothesis the same way as before:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1"></a>   <span class="fu">quantile</span>(assort, <span class="at">probs =</span> <span class="fl">0.95</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   <span class="fu">quantile</span>(assort, <span class="at">probs =</span> <span class="fl">0.95</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       95% 
 0.05136546 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   <span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level) <span class="sc">&gt;</span> <span class="fu">quantile</span>(assort, <span class="at">probs =</span> <span class="fl">0.95</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   <span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level) <span class="sc">&gt;</span> <span class="fu">quantile</span>(assort, <span class="at">probs =</span> <span class="fl">0.95</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 95% 
 TRUE </code></pre>
@@ -719,521 +732,1302 @@ TRUE </code></pre>
 <p>Which tells us that after account for node degree differences, the observed value we observed is still significantly larger than we would have observed by chance using conventional cutoffs.</p>
 <p>Indeed, the p-value of the estimate is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(assort)(<span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(assort)(<span class="fu">assortativity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>level))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.01</code></pre>
 </div>
 </div>
 <p>Which is pretty good. Maybe our paper will be published after all!</p>
 </section>
-<section id="correlating-ties-across-two-networks" class="level2">
-<h2 class="anchored" data-anchor-id="correlating-ties-across-two-networks">Correlating Ties Across Two Networks</h2>
+<section id="cross-network-correlation-using-permutation" class="level2">
+<h2 class="anchored" data-anchor-id="cross-network-correlation-using-permutation">Cross-Network Correlation Using Permutation</h2>
 <p>Consider the case where we measure two or more ties on the same set of actors. In that case, we could entertain hypotheses of the form: Is having a tie of type <span class="math inline">\(A\)</span> positively or negatively correlated with a tie of type <span class="math inline">\(B\)</span>?</p>
-<p>We can use the same approach as before to answer this question, since a bivariate correlation between ties between two networks is just like the univariate statistics we computed earlier (in that case the modularity, but it could been any network level statistic like the diameter or centralization).</p>
-<p>Let’s see an example. Suppose we have a hypothesis that the relation of “friendship” should be correlated to that of “adivice”; that is, <em>people are more likely to seek advice from friends</em>.</p>
-<p>The Krackhardt High-Tech Managers data contains information on both the advice and friendship relations between the actors. Let’s load up the advice network:</p>
+<p>We can use an approach similar to the edge-swapping strategy to answer this question, since a bivariate correlation between ties between two networks is just like the univariate statistics we computed earlier (in that case the modularity, but it could been any network level statistic like the diameter or centralization).</p>
+<p>Let’s see an example. Suppose we have a hypothesis that the relation of “friendship” should be correlated to that of “advice”; that is, <em>people are more likely to seek advice from friends</em>.</p>
+<p>The Krackhardt High-Tech Managers data contains network information on both the advice and friendship relations between the actors. Let’s load up the advice network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1"></a>   g2 <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(ht_advice, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1"></a>   g2 <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(ht_advice, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And extract the corresponding adjacency matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   A.f <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb60-2"><a href="#cb60-2"></a>   A.d <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   A.f <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb62-2"><a href="#cb62-2"></a>   A.d <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The correlation between these two ties is then:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.vector</span>(A.f), <span class="fu">as.vector</span>(A.d))</span>
-<span id="cb61-2"><a href="#cb61-2"></a>   <span class="fu">round</span>(r, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.vector</span>(A.f), <span class="fu">as.vector</span>(A.d))</span>
+<span id="cb63-2"><a href="#cb63-2"></a>   <span class="fu">round</span>(r, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.26</code></pre>
 </div>
 </div>
-<p>Which is positive, suggesting that people do tend to seek advice from friends. However, is this correlation larger than we would expect by chance?</p>
+<p>Which is obtained by “vectorizing” the matrices and computing the Pearson correlation between the vector corresponding to friendship ties and the vector corresponding to advice ties. Here, we see that there is a positive correlation between the two (<span class="math inline">\(r = 0.26\)</span>) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don’t imply directionality).</p>
+<p>However, is this correlation larger than we would expect by chance? For that, we need to know the range of correlations that would be obtained between on of the networks (e.g., advice) and a suitably randomized version of the other (e.g., friendship).</p>
+<p>The “permutation” approach <span class="citation" data-cites="borgatti_etal24">(<a href="#ref-borgatti_etal24" role="doc-biblioref">Borgatti et al. 2024, chap. 14</a>)</span>—sometimes referred to by the less-than-wieldy name of the <strong>Quadratic Assignment Procedure</strong> (QAP) <span class="citation" data-cites="krackhardt88">(<a href="#ref-krackhardt88" role="doc-biblioref">Krackhardt 1988</a>)</span>—allows us to do that.</p>
+<p>Recall from our discussion of blockmodeling that a permutation of an adjacency matrix is just a reshuffling of its rows and columns.</p>
+<p>For instance the original adjacency matrix of the Krackhardt Managers friendship nomination network is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb63-1"><a href="#cb63-1"></a>   perm <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb63-2"><a href="#cb63-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
-<span id="cb63-3"><a href="#cb63-3"></a>      s <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A))</span>
-<span id="cb63-4"><a href="#cb63-4"></a>      A <span class="ot">&lt;-</span> A[s, s] <span class="co">#permuting matrix</span></span>
-<span id="cb63-5"><a href="#cb63-5"></a>      g <span class="ot">&lt;-</span> <span class="fu">graph_from_adjacency_matrix</span>(A)</span>
-<span id="cb63-6"><a href="#cb63-6"></a>      <span class="fu">return</span>(g)</span>
-<span id="cb63-7"><a href="#cb63-7"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb65-2"><a href="#cb65-2"></a>   <span class="fu">kbl</span>(A.f, <span class="at">format =</span> <span class="st">"html"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+</tbody>
+</table>
+
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   G3 <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
-<span id="cb64-2"><a href="#cb64-2"></a>   <span class="fu">set.seed</span>(<span class="dv">12345</span>)</span>
-<span id="cb64-3"><a href="#cb64-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5000</span>) {</span>
-<span id="cb64-4"><a href="#cb64-4"></a>      G3[[i]] <span class="ot">&lt;-</span> <span class="fu">perm</span>(g)</span>
-<span id="cb64-5"><a href="#cb64-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Here’s a function for the correlation:</p>
+<p>We can permute the rows and columns of the matrix by randomly sampling numbers between 1 and 21 (the number of nodes in the network) and re-ordering the rows and columns of the matrix according to this new vector:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   cor.net <span class="ot">&lt;-</span> <span class="cf">function</span>(x1, x2) {</span>
-<span id="cb65-2"><a href="#cb65-2"></a>   a <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x1))</span>
-<span id="cb65-3"><a href="#cb65-3"></a>   b <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x2))      </span>
-<span id="cb65-4"><a href="#cb65-4"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.vector</span>(a), <span class="fu">as.vector</span>(b))</span>
-<span id="cb65-5"><a href="#cb65-5"></a>   <span class="fu">return</span>(r)</span>
-<span id="cb65-6"><a href="#cb65-6"></a>   }</span>
-<span id="cb65-7"><a href="#cb65-7"></a>   corrs <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">sapply</span>(G3, cor.net, <span class="at">x2 =</span> g2), <span class="dv">2</span>)</span>
-<span id="cb65-8"><a href="#cb65-8"></a>   corrs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A.f))</span>
+<span id="cb66-2"><a href="#cb66-2"></a>   s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>   [1]  0.12 -0.12  0.10 -0.06  0.14  0.02 -0.02 -0.04  0.06  0.12  0.08  0.08
-  [13]  0.08 -0.02  0.22  0.04 -0.12  0.06 -0.02  0.02  0.12  0.00  0.16  0.06
-  [25]  0.28  0.16  0.10  0.08  0.00  0.04  0.02  0.16  0.16  0.10  0.08  0.10
-  [37]  0.02  0.12  0.02  0.16  0.02  0.02 -0.02  0.12  0.10  0.10  0.08  0.08
-  [49]  0.14 -0.06  0.04 -0.02 -0.06  0.12 -0.02  0.20 -0.02  0.08 -0.10  0.06
-  [61]  0.00  0.04  0.14  0.06 -0.04  0.04 -0.02  0.10 -0.02  0.06  0.12 -0.08
-  [73]  0.04  0.06  0.14  0.12  0.08  0.08  0.16 -0.06  0.02  0.06  0.22  0.14
-  [85] -0.04  0.06  0.00 -0.10  0.16 -0.08  0.08  0.16  0.04  0.02  0.08 -0.02
-  [97]  0.16  0.16 -0.08  0.12  0.16  0.12 -0.04  0.08  0.04  0.04  0.10  0.08
- [109] -0.04 -0.04  0.00  0.12  0.20 -0.06 -0.06  0.00  0.14  0.02  0.14  0.06
- [121]  0.08  0.04  0.08  0.00  0.06  0.04 -0.16 -0.02  0.00  0.10 -0.06 -0.06
- [133]  0.14  0.00  0.24  0.08  0.10 -0.04  0.12  0.14 -0.06 -0.06  0.14  0.04
- [145] -0.10  0.24 -0.08  0.18  0.08  0.10  0.06  0.22  0.12 -0.06  0.08 -0.06
- [157]  0.04 -0.04  0.16  0.10  0.06  0.00  0.04  0.12  0.04  0.08  0.14  0.04
- [169]  0.12  0.12 -0.02  0.02  0.00  0.02 -0.02  0.02 -0.02 -0.10  0.04  0.02
- [181]  0.18  0.18  0.10  0.12  0.08  0.04  0.04  0.02 -0.08  0.02  0.16  0.22
- [193]  0.02 -0.04 -0.04 -0.08 -0.08  0.04  0.12  0.12  0.24  0.04  0.22  0.10
- [205]  0.20  0.12  0.08 -0.04  0.06 -0.02  0.16  0.06  0.06  0.14  0.06 -0.08
- [217]  0.14  0.08  0.02  0.14  0.10  0.08  0.06  0.08 -0.02  0.02 -0.02  0.00
- [229]  0.06  0.12  0.00 -0.04  0.00  0.00  0.06  0.06  0.18  0.00 -0.06  0.16
- [241]  0.02  0.02  0.12  0.10  0.08  0.02  0.00  0.08  0.12  0.08  0.04  0.06
- [253]  0.04  0.00  0.12 -0.02  0.04  0.12  0.04 -0.02 -0.06  0.10  0.10 -0.14
- [265] -0.08  0.12  0.10  0.14  0.02 -0.02  0.04  0.02  0.16  0.10  0.10  0.18
- [277]  0.02  0.24  0.08  0.00 -0.10  0.22  0.18  0.04 -0.06  0.18  0.06  0.08
- [289]  0.00  0.02  0.02  0.14  0.18  0.06  0.12 -0.02  0.12  0.04  0.14  0.04
- [301] -0.08  0.06  0.00 -0.04  0.12  0.20  0.04  0.02  0.06  0.10  0.10  0.02
- [313]  0.06 -0.06  0.12  0.02  0.00  0.06  0.10  0.24 -0.02  0.10  0.14  0.16
- [325]  0.22  0.00 -0.02  0.02 -0.04  0.04  0.04 -0.02  0.06  0.04  0.10  0.06
- [337] -0.04  0.10  0.00  0.02  0.06 -0.02  0.06  0.02  0.20 -0.02  0.16  0.06
- [349]  0.02 -0.04  0.08  0.00  0.08  0.04  0.04  0.04  0.06 -0.10  0.20  0.02
- [361]  0.02  0.10  0.04 -0.04  0.00 -0.04 -0.04 -0.20  0.10  0.08  0.06  0.00
- [373]  0.02  0.18  0.04 -0.20  0.04  0.18  0.00  0.14  0.00  0.00 -0.02  0.00
- [385] -0.08 -0.02 -0.02 -0.10  0.06  0.12  0.04  0.00 -0.06  0.02  0.10  0.12
- [397]  0.08  0.06  0.20  0.00 -0.04  0.12 -0.04  0.10  0.08 -0.08  0.10  0.16
- [409]  0.06 -0.06  0.02  0.12 -0.02 -0.08 -0.02  0.06  0.14 -0.10  0.02 -0.02
- [421]  0.16  0.10  0.14  0.04  0.12 -0.16  0.08  0.14  0.06  0.12  0.08  0.00
- [433]  0.12  0.04 -0.02  0.24  0.18  0.02  0.06  0.02  0.04 -0.04  0.14  0.08
- [445]  0.00  0.08 -0.04  0.12  0.08  0.14  0.12 -0.16  0.00  0.04  0.16  0.12
- [457]  0.12  0.04  0.08  0.04 -0.04  0.04 -0.02  0.06  0.04  0.12 -0.08  0.04
- [469]  0.12  0.04  0.10  0.06  0.02  0.20 -0.06  0.12  0.06 -0.06 -0.02  0.04
- [481]  0.10  0.14  0.18  0.06  0.08  0.20  0.06  0.12  0.02 -0.02  0.08  0.10
- [493]  0.12  0.06 -0.04  0.12  0.10  0.16 -0.02 -0.04 -0.02  0.06  0.08  0.08
- [505]  0.08  0.04  0.06 -0.08  0.06  0.02  0.12  0.04 -0.04  0.10  0.02 -0.02
- [517]  0.00  0.12  0.14 -0.16  0.10  0.00  0.02  0.00 -0.06  0.06 -0.02  0.02
- [529]  0.10  0.14 -0.02  0.06  0.02 -0.02  0.12  0.12  0.10 -0.02  0.20  0.04
- [541]  0.14 -0.04  0.02  0.02  0.08  0.06  0.16  0.20  0.18  0.04 -0.04 -0.04
- [553] -0.04 -0.02  0.04  0.18  0.04  0.10  0.14  0.06  0.14  0.04  0.06  0.10
- [565] -0.02  0.14 -0.06  0.00 -0.04  0.02 -0.02  0.12 -0.08 -0.04  0.08  0.00
- [577]  0.08  0.10  0.06  0.20  0.12  0.08  0.14  0.14  0.02  0.10 -0.02 -0.02
- [589] -0.06  0.06  0.12  0.12  0.08  0.14  0.10  0.10 -0.04  0.12  0.08  0.08
- [601]  0.02  0.08  0.00  0.06  0.18  0.08  0.08  0.14  0.04  0.02  0.04 -0.12
- [613]  0.00 -0.04  0.06 -0.02  0.22 -0.10 -0.08 -0.12 -0.04 -0.04  0.06  0.14
- [625] -0.08  0.04  0.12  0.10  0.00 -0.14 -0.10  0.20  0.02  0.04  0.00  0.20
- [637]  0.12  0.02  0.12  0.16  0.16  0.10  0.04 -0.02  0.14  0.20  0.12  0.12
- [649]  0.08  0.06 -0.02  0.08  0.04  0.14  0.08  0.06 -0.06  0.06 -0.02  0.06
- [661] -0.16  0.06  0.08 -0.04  0.04 -0.04  0.10  0.04  0.08  0.04 -0.08  0.18
- [673] -0.02 -0.04  0.08  0.04 -0.10 -0.02 -0.06  0.02 -0.02  0.06  0.04  0.14
- [685]  0.06 -0.02  0.10  0.08  0.20  0.06  0.02  0.12 -0.10  0.00  0.04  0.08
- [697]  0.18  0.06 -0.04  0.06  0.20  0.16 -0.02  0.18  0.02 -0.02  0.02  0.02
- [709] -0.04  0.04  0.04  0.06  0.10  0.18 -0.16  0.02  0.06  0.14  0.04  0.00
- [721]  0.06  0.10  0.12  0.02  0.06  0.00  0.12  0.10 -0.02  0.08  0.00  0.02
- [733] -0.18 -0.04 -0.02  0.14 -0.02  0.04  0.06  0.12  0.06  0.16 -0.04  0.00
- [745]  0.06  0.06  0.06  0.04  0.04  0.08 -0.02  0.16 -0.02 -0.08  0.08  0.04
- [757] -0.08  0.02  0.08  0.08  0.14  0.06  0.14  0.08 -0.02 -0.04  0.06  0.12
- [769]  0.00  0.12  0.08  0.12  0.12  0.04  0.06  0.12  0.04  0.20  0.10 -0.04
- [781] -0.06 -0.06  0.14  0.12  0.10  0.12 -0.06  0.00  0.00  0.04 -0.10 -0.04
- [793]  0.06  0.06 -0.02  0.12  0.12  0.06  0.06  0.12 -0.04  0.10  0.02  0.04
- [805]  0.14  0.10  0.02  0.16  0.00  0.12 -0.10  0.04  0.20  0.10  0.14  0.14
- [817]  0.04  0.12  0.04  0.06  0.02  0.14  0.02  0.04 -0.02  0.02 -0.04  0.04
- [829]  0.00  0.22  0.12  0.08 -0.08  0.16  0.02 -0.04 -0.06 -0.12  0.02  0.14
- [841]  0.10  0.02  0.04  0.16  0.00  0.06  0.04  0.10  0.12 -0.06 -0.06  0.18
- [853]  0.08  0.08  0.02  0.04 -0.02 -0.06 -0.10  0.16 -0.06  0.10  0.14  0.14
- [865]  0.16  0.14  0.14 -0.04  0.10  0.14  0.04  0.04  0.02  0.14  0.06  0.06
- [877]  0.00  0.10  0.04  0.10  0.08  0.16  0.04  0.04  0.08  0.06 -0.02  0.06
- [889]  0.00  0.14  0.08  0.10  0.02  0.20  0.04  0.18  0.12  0.08  0.18  0.10
- [901]  0.16 -0.04 -0.10  0.12  0.02  0.06  0.08 -0.08  0.10  0.06  0.02  0.02
- [913] -0.06 -0.02  0.02  0.12  0.00 -0.02  0.16  0.12  0.16  0.14  0.00  0.18
- [925]  0.10  0.00 -0.04  0.08  0.04  0.06  0.20 -0.06  0.04  0.00 -0.06 -0.08
- [937] -0.08 -0.04  0.18  0.20  0.08  0.12  0.18  0.04  0.12  0.18  0.20  0.04
- [949]  0.16  0.00 -0.06  0.18  0.00  0.08  0.16  0.02  0.00  0.08  0.04 -0.02
- [961]  0.04  0.12 -0.04  0.04 -0.04  0.06  0.10 -0.06  0.04  0.06  0.08  0.06
- [973]  0.14  0.06  0.14 -0.02  0.12 -0.06  0.06  0.02 -0.08  0.08  0.10  0.08
- [985]  0.10  0.10 -0.04  0.00  0.08  0.10 -0.06  0.16 -0.12  0.04  0.04  0.04
- [997]  0.02 -0.06  0.16  0.12  0.12 -0.04  0.02  0.14  0.10  0.02  0.10  0.06
-[1009]  0.12 -0.08  0.02 -0.10 -0.14  0.10 -0.10 -0.06 -0.02  0.04 -0.08  0.18
-[1021]  0.16  0.00  0.06  0.16  0.00  0.16  0.14 -0.02  0.10  0.08  0.12 -0.02
-[1033]  0.10  0.10  0.06  0.10  0.06  0.08  0.06  0.08  0.04  0.02  0.06  0.06
-[1045]  0.14 -0.06  0.12 -0.10 -0.06  0.10  0.10  0.08  0.16  0.02 -0.02  0.12
-[1057]  0.08  0.18  0.06  0.10 -0.04 -0.02  0.00  0.02  0.06  0.02  0.08  0.10
-[1069]  0.04  0.06  0.04  0.10  0.02 -0.08  0.18 -0.02  0.18  0.02  0.02  0.04
-[1081] -0.04  0.04  0.00  0.18  0.04  0.06  0.06 -0.08  0.06  0.08  0.10  0.08
-[1093] -0.12  0.10  0.04  0.02  0.14  0.02  0.06  0.00  0.00  0.02  0.14  0.14
-[1105] -0.06  0.08 -0.04  0.12  0.04  0.18  0.02  0.04  0.14 -0.08 -0.04 -0.04
-[1117] -0.10  0.00  0.00 -0.08  0.04  0.06  0.00  0.18  0.14 -0.04  0.10  0.24
-[1129]  0.04  0.04  0.08  0.00  0.02 -0.12 -0.02  0.02  0.02  0.18  0.08  0.04
-[1141] -0.02  0.02 -0.06  0.04  0.14  0.14  0.12  0.14 -0.06  0.02  0.08  0.04
-[1153] -0.02 -0.04  0.02  0.16  0.02  0.12  0.10  0.08  0.04  0.00 -0.06  0.04
-[1165]  0.04  0.08  0.06 -0.02  0.08  0.14  0.06 -0.04  0.10  0.12  0.06 -0.04
-[1177] -0.02  0.00 -0.02  0.08  0.04  0.04 -0.04 -0.02  0.04  0.02  0.10  0.08
-[1189]  0.02 -0.04  0.02  0.02  0.04 -0.02 -0.04  0.16 -0.02  0.08 -0.04  0.06
-[1201]  0.00 -0.02  0.04 -0.04  0.20  0.00 -0.02  0.06  0.14  0.12  0.04  0.08
-[1213]  0.08  0.12  0.08  0.00  0.14 -0.02  0.00  0.00  0.00  0.06  0.02  0.12
-[1225]  0.26  0.04  0.04  0.00  0.00  0.06  0.10  0.08  0.06 -0.14 -0.02  0.12
-[1237]  0.10 -0.04  0.04  0.10  0.06 -0.02  0.12  0.06  0.02  0.14  0.06  0.06
-[1249] -0.12  0.22 -0.04  0.12  0.04  0.04 -0.02 -0.04  0.06  0.08 -0.08  0.08
-[1261]  0.14 -0.04  0.10  0.14  0.08  0.02  0.16  0.02  0.12  0.14  0.10  0.12
-[1273]  0.00  0.06 -0.08  0.00 -0.06 -0.14  0.02  0.10  0.12 -0.06  0.02  0.18
-[1285]  0.02 -0.02  0.14  0.04  0.12 -0.04  0.10  0.14  0.00 -0.14  0.08  0.04
-[1297]  0.12  0.06  0.00  0.16  0.02 -0.08  0.06 -0.02  0.02  0.02 -0.04  0.12
-[1309]  0.04  0.10  0.08  0.06 -0.10 -0.04  0.06  0.10  0.02  0.04  0.02  0.20
-[1321]  0.02  0.14  0.28 -0.08  0.00  0.04 -0.02 -0.02  0.00  0.18  0.00  0.00
-[1333]  0.14 -0.04  0.02  0.12  0.04  0.16 -0.02  0.08  0.04 -0.04 -0.10  0.00
-[1345] -0.04  0.02  0.10  0.12  0.08  0.08  0.04  0.06  0.02  0.08  0.06  0.02
-[1357]  0.06  0.08 -0.06  0.08  0.04  0.02  0.14  0.00  0.02  0.10  0.14  0.00
-[1369] -0.10 -0.06  0.18 -0.06  0.04  0.00 -0.02 -0.04  0.00  0.16  0.00 -0.02
-[1381]  0.04  0.14  0.06 -0.04  0.12  0.04 -0.06  0.00  0.12  0.10  0.06  0.02
-[1393] -0.04  0.02 -0.02  0.04 -0.04  0.00  0.02  0.00  0.04  0.06  0.16  0.14
-[1405]  0.06  0.12 -0.08  0.06  0.06 -0.06 -0.08  0.02  0.08  0.18  0.08  0.10
-[1417]  0.08  0.14 -0.08  0.32 -0.08  0.06  0.08  0.02  0.10  0.18  0.14  0.00
-[1429] -0.04  0.02  0.16 -0.02  0.02  0.08 -0.02 -0.04  0.16  0.00  0.08 -0.10
-[1441]  0.08  0.08  0.06  0.14  0.04  0.08  0.12  0.00  0.10  0.06  0.06  0.02
-[1453] -0.04  0.04  0.10  0.16  0.12  0.10  0.08  0.04  0.02  0.14  0.08  0.04
-[1465]  0.04 -0.04  0.02 -0.02  0.12  0.18  0.02  0.04 -0.08  0.08  0.10  0.12
-[1477]  0.08  0.12  0.16 -0.04  0.10  0.00 -0.04  0.08  0.08  0.10  0.20 -0.08
-[1489] -0.10 -0.04  0.10  0.10 -0.06  0.06  0.04  0.14  0.00  0.12  0.02  0.02
-[1501]  0.14  0.04  0.00  0.08  0.06 -0.04  0.00 -0.04  0.18  0.00  0.08  0.06
-[1513]  0.06 -0.04  0.20  0.14  0.14  0.20 -0.04  0.04  0.18  0.16 -0.06  0.00
-[1525]  0.20  0.04  0.02 -0.04  0.06  0.04  0.02  0.06  0.06  0.06  0.04  0.04
-[1537]  0.24  0.10  0.08  0.04  0.08  0.08  0.02  0.08  0.02  0.04  0.00  0.14
-[1549]  0.12  0.04  0.00  0.12  0.00 -0.08  0.16  0.06  0.10  0.04 -0.04  0.02
-[1561]  0.16 -0.02  0.12  0.18  0.10 -0.08  0.10  0.06  0.14  0.08  0.12 -0.04
-[1573]  0.10  0.02  0.04  0.10  0.16  0.16  0.04 -0.04  0.02  0.06  0.00  0.08
-[1585]  0.04  0.00  0.16  0.00  0.18  0.08 -0.04 -0.04  0.06  0.14 -0.04  0.14
-[1597]  0.18  0.12  0.02  0.08  0.14  0.14  0.14  0.18 -0.04 -0.06  0.18  0.00
-[1609]  0.12  0.12  0.16  0.08  0.04  0.20  0.08  0.08 -0.04  0.14  0.16  0.06
-[1621]  0.16  0.00  0.00  0.14  0.00  0.08  0.02  0.00  0.08  0.04  0.14  0.02
-[1633]  0.06  0.06  0.00  0.04  0.04 -0.18 -0.02  0.06  0.06  0.08  0.12  0.12
-[1645]  0.22  0.00  0.10  0.06 -0.04  0.00  0.04  0.04 -0.04  0.08  0.06  0.14
-[1657]  0.12  0.12  0.06  0.12  0.08 -0.04  0.02  0.18  0.08  0.02 -0.06 -0.06
-[1669]  0.10  0.04 -0.04  0.14 -0.04  0.00  0.00  0.00  0.04  0.14  0.08  0.02
-[1681]  0.10  0.02  0.04  0.04  0.08  0.14  0.10  0.04  0.04  0.00  0.06 -0.02
-[1693] -0.04  0.08 -0.02  0.04 -0.08  0.18  0.06  0.06  0.08  0.10  0.18  0.00
-[1705]  0.00  0.06 -0.06  0.14  0.14  0.08  0.04 -0.02  0.20  0.04  0.10  0.00
-[1717]  0.10  0.02  0.02  0.00  0.08 -0.08 -0.02 -0.06  0.22  0.12  0.00  0.08
-[1729]  0.04  0.00 -0.02 -0.02 -0.10  0.00  0.04 -0.08 -0.06  0.04  0.00 -0.18
-[1741]  0.14  0.26  0.00  0.02  0.08 -0.10  0.08  0.16 -0.02  0.06 -0.02  0.04
-[1753] -0.08  0.04  0.10  0.00 -0.08  0.04  0.14  0.18 -0.02  0.16 -0.04  0.18
-[1765]  0.00  0.16  0.18  0.12 -0.06  0.00  0.10  0.10  0.00  0.12  0.02  0.02
-[1777]  0.12 -0.02 -0.04  0.10  0.12 -0.04  0.10 -0.06  0.00 -0.02  0.02  0.02
-[1789]  0.00  0.12  0.10  0.10  0.10  0.02  0.16  0.02  0.06  0.02 -0.04  0.12
-[1801]  0.12 -0.04  0.14  0.10  0.00  0.06  0.08  0.24 -0.12 -0.04  0.10  0.22
-[1813]  0.06  0.14  0.06 -0.08 -0.12  0.12 -0.02  0.04  0.16  0.10  0.00  0.20
-[1825] -0.08 -0.04 -0.02  0.10 -0.12  0.10  0.02  0.12  0.04  0.06  0.06  0.00
-[1837]  0.18  0.10 -0.04  0.06  0.06  0.16  0.10 -0.08  0.00  0.06  0.06  0.12
-[1849]  0.22  0.14  0.00  0.00  0.20 -0.04  0.12  0.04 -0.02  0.06  0.12 -0.02
-[1861]  0.16  0.14 -0.06  0.06 -0.02  0.00  0.18  0.10  0.12  0.10  0.04  0.10
-[1873]  0.10  0.06 -0.12 -0.02  0.10  0.06  0.00  0.10  0.00  0.02  0.02  0.02
-[1885]  0.16  0.00  0.06  0.06  0.06 -0.02  0.18  0.18  0.08  0.08  0.04  0.14
-[1897]  0.16  0.04  0.06  0.08  0.06 -0.04  0.16  0.04  0.16  0.02 -0.06  0.10
-[1909]  0.12  0.00 -0.08  0.12  0.10  0.12  0.00  0.06  0.04  0.04  0.20  0.08
-[1921]  0.02  0.12  0.06  0.14  0.04 -0.12 -0.02 -0.02  0.30 -0.10  0.08  0.00
-[1933]  0.04 -0.04  0.06  0.02  0.12  0.12  0.08  0.10  0.06 -0.08 -0.06  0.00
-[1945]  0.02 -0.10  0.00  0.10  0.04  0.04  0.02  0.08  0.08  0.12  0.10 -0.10
-[1957]  0.12  0.04  0.06 -0.04 -0.02 -0.06  0.16  0.02  0.16  0.00  0.02  0.02
-[1969]  0.10  0.20  0.04 -0.12  0.12 -0.10 -0.08 -0.02  0.12  0.02  0.10  0.10
-[1981] -0.10  0.06  0.08 -0.10  0.14  0.12 -0.06  0.04 -0.06  0.10  0.24  0.10
-[1993] -0.02  0.00  0.02  0.10  0.02  0.10  0.00  0.10  0.02  0.02  0.04  0.06
-[2005] -0.04  0.04 -0.12  0.00 -0.14 -0.02  0.10  0.02 -0.02  0.22  0.14  0.06
-[2017] -0.06  0.04 -0.04 -0.16  0.02 -0.04  0.04 -0.02  0.20 -0.08  0.16  0.00
-[2029]  0.00  0.16  0.14  0.16  0.14 -0.02 -0.02  0.06  0.18  0.10  0.04  0.00
-[2041]  0.24  0.04  0.06  0.02 -0.02  0.02  0.00  0.14  0.04  0.10  0.12  0.08
-[2053] -0.04  0.02  0.02  0.12  0.04  0.04  0.00  0.08  0.10  0.08 -0.14  0.00
-[2065]  0.06  0.04 -0.06  0.08 -0.06  0.06  0.12  0.14  0.12  0.00 -0.04  0.20
-[2077]  0.10  0.08  0.00  0.04  0.08  0.04  0.00  0.00  0.06  0.12  0.20  0.02
-[2089]  0.10  0.10  0.10  0.10 -0.06  0.06 -0.08  0.14  0.00 -0.14 -0.02  0.20
-[2101]  0.08  0.08  0.20  0.10  0.04 -0.02  0.08 -0.06  0.12  0.12  0.10 -0.06
-[2113]  0.02  0.08 -0.12 -0.04 -0.04  0.10  0.06  0.14  0.12  0.04 -0.06  0.12
-[2125]  0.06  0.02  0.00  0.14  0.04 -0.18  0.02 -0.12  0.08  0.08  0.08  0.00
-[2137]  0.24  0.10  0.04  0.06  0.12 -0.04  0.10 -0.04 -0.14  0.06 -0.06 -0.02
-[2149]  0.04  0.08  0.16 -0.12 -0.04  0.16  0.10  0.08  0.04  0.02  0.00  0.10
-[2161]  0.00  0.06 -0.06  0.08  0.18  0.00  0.08 -0.04  0.10  0.00  0.06 -0.10
-[2173]  0.06  0.04  0.06 -0.04 -0.02  0.00 -0.02  0.14  0.08  0.02  0.14 -0.04
-[2185]  0.08  0.10 -0.02 -0.02  0.18 -0.06  0.04 -0.04  0.06 -0.04 -0.06  0.10
-[2197]  0.06  0.02  0.00 -0.10 -0.04  0.10  0.10  0.10  0.04 -0.04  0.10  0.18
-[2209]  0.08 -0.08  0.00  0.16  0.02  0.14  0.06  0.12 -0.02 -0.04  0.04  0.04
-[2221]  0.00  0.12  0.22  0.04  0.10  0.06  0.10  0.08  0.02  0.10  0.16  0.16
-[2233]  0.08 -0.04 -0.06  0.00  0.04  0.08  0.08  0.08  0.06  0.06  0.04 -0.04
-[2245]  0.00  0.06 -0.14  0.12  0.02 -0.06  0.06 -0.02  0.02  0.06  0.00  0.08
-[2257]  0.06  0.00 -0.04  0.00  0.04  0.00  0.00  0.06  0.24 -0.02 -0.04  0.06
-[2269]  0.06  0.02  0.08  0.06  0.16  0.04  0.02  0.06  0.04  0.18  0.12  0.06
-[2281]  0.16  0.06  0.18 -0.04 -0.04  0.16  0.10  0.14  0.06 -0.02 -0.12  0.14
-[2293]  0.06  0.04  0.10  0.04  0.08  0.04  0.02 -0.02  0.00  0.18  0.10  0.02
-[2305] -0.02  0.12  0.02 -0.14  0.26 -0.08  0.04 -0.02  0.04  0.04  0.00  0.02
-[2317]  0.00  0.06 -0.02  0.02 -0.14 -0.08  0.12  0.06  0.12  0.12  0.04 -0.04
-[2329]  0.02 -0.04  0.12  0.06  0.00  0.02  0.10  0.16 -0.14  0.02  0.04 -0.04
-[2341]  0.06  0.22 -0.02  0.02  0.02  0.06  0.08  0.08 -0.04 -0.02 -0.06  0.22
-[2353]  0.12  0.04  0.14  0.20 -0.02 -0.02 -0.02  0.02  0.04  0.04  0.02  0.10
-[2365]  0.00 -0.10 -0.12  0.20  0.14  0.04  0.14  0.04  0.16  0.12  0.14  0.08
-[2377]  0.18  0.10  0.02  0.00  0.08 -0.02  0.00  0.00  0.12  0.02  0.12  0.12
-[2389]  0.12  0.14 -0.02  0.08  0.02  0.00  0.02  0.08  0.02  0.06  0.10  0.00
-[2401]  0.08 -0.02  0.08  0.02  0.04 -0.04 -0.02  0.12  0.00  0.06  0.14  0.02
-[2413]  0.00  0.02 -0.02  0.22  0.06  0.16  0.16  0.10  0.00  0.16  0.04  0.10
-[2425] -0.02  0.06  0.22 -0.04  0.18  0.08  0.04  0.10  0.20  0.02  0.12  0.04
-[2437] -0.04  0.06  0.04  0.06  0.08  0.02  0.12  0.02  0.08  0.14  0.14  0.10
-[2449]  0.08  0.06  0.10  0.08  0.10  0.04 -0.08 -0.04  0.16 -0.02  0.06 -0.04
-[2461] -0.02  0.06  0.04  0.24 -0.02  0.14  0.08  0.10 -0.08  0.14 -0.04  0.16
-[2473]  0.08  0.10  0.10  0.00  0.18  0.06  0.14 -0.04 -0.06  0.18  0.18  0.08
-[2485]  0.20  0.14  0.10  0.12 -0.02  0.10  0.02  0.18  0.04  0.10  0.00  0.08
-[2497] -0.02  0.06  0.02  0.02  0.18 -0.02  0.04  0.10  0.20  0.00 -0.02  0.06
-[2509]  0.04  0.00  0.00  0.04 -0.08  0.06  0.02  0.16 -0.04  0.24 -0.02  0.08
-[2521]  0.12  0.00  0.14  0.10 -0.02  0.10 -0.06  0.14  0.16 -0.02  0.14  0.14
-[2533]  0.06  0.02  0.10  0.12  0.14  0.22  0.06  0.00  0.10  0.04  0.04  0.00
-[2545] -0.08 -0.08  0.12  0.16  0.08  0.10  0.10  0.00 -0.10  0.12 -0.04  0.04
-[2557]  0.08 -0.04  0.02  0.02  0.02  0.10 -0.02  0.02  0.08 -0.06  0.02 -0.02
-[2569]  0.10  0.16  0.04  0.06  0.04  0.06  0.12  0.12 -0.02  0.00  0.16 -0.10
-[2581]  0.20  0.10  0.06  0.04 -0.06 -0.06  0.12  0.00  0.02  0.04  0.02  0.04
-[2593] -0.10  0.00  0.04  0.08  0.00  0.14  0.04  0.18  0.04 -0.02  0.02  0.14
-[2605] -0.06  0.12 -0.12  0.08 -0.06  0.04  0.06 -0.02  0.04 -0.02  0.10 -0.08
-[2617]  0.02  0.18  0.10  0.18  0.08 -0.02  0.04 -0.06  0.04  0.12  0.00  0.02
-[2629] -0.10 -0.04  0.04 -0.04 -0.12  0.08  0.10  0.04  0.10  0.12  0.04  0.10
-[2641]  0.10  0.10 -0.04 -0.06  0.02 -0.14  0.00 -0.08  0.06 -0.02  0.10  0.12
-[2653]  0.10  0.18  0.10  0.16  0.02  0.16  0.08  0.04  0.10 -0.04  0.04  0.16
-[2665]  0.14  0.16  0.08  0.02  0.04 -0.04 -0.16 -0.02  0.02 -0.06  0.04  0.02
-[2677]  0.14  0.00  0.08 -0.08 -0.02 -0.04  0.22  0.12  0.06 -0.08  0.06  0.02
-[2689]  0.08  0.14 -0.04 -0.02  0.04  0.12  0.14 -0.02 -0.02  0.06  0.02  0.12
-[2701] -0.06  0.00  0.12 -0.06  0.06  0.02 -0.04  0.06  0.10  0.04  0.08  0.00
-[2713]  0.00  0.08  0.12  0.10  0.10 -0.14 -0.04  0.10  0.06  0.10  0.02  0.10
-[2725]  0.02 -0.02  0.04  0.18  0.06  0.04 -0.02 -0.04  0.04 -0.04  0.08  0.10
-[2737] -0.06  0.06  0.08  0.06  0.18  0.04  0.02 -0.06  0.04  0.10  0.06  0.04
-[2749]  0.08  0.04  0.02  0.06  0.00 -0.02 -0.06  0.10  0.06 -0.04 -0.04  0.18
-[2761]  0.10  0.06 -0.02  0.00  0.02  0.06  0.08  0.10 -0.10  0.10  0.04  0.10
-[2773]  0.08  0.12  0.00  0.12  0.08  0.14  0.00 -0.14  0.04  0.02  0.08 -0.06
-[2785] -0.12  0.08  0.06  0.02  0.02 -0.04  0.10 -0.08  0.18  0.02 -0.10  0.14
-[2797] -0.04  0.14  0.02  0.12  0.04  0.02  0.06  0.02  0.00  0.14 -0.04 -0.14
-[2809]  0.28 -0.06  0.12  0.02 -0.02  0.00  0.20 -0.04 -0.10  0.14  0.18  0.06
-[2821]  0.10  0.00  0.04  0.06 -0.06  0.10  0.08  0.02  0.10  0.18  0.02  0.28
-[2833]  0.10  0.06  0.04  0.00  0.00  0.12  0.08  0.02  0.02  0.18 -0.02  0.06
-[2845] -0.10 -0.04 -0.08  0.02  0.12  0.02  0.04  0.00  0.12  0.10  0.18 -0.10
-[2857] -0.04  0.18  0.16  0.16  0.06  0.04 -0.02 -0.02  0.02  0.12 -0.06  0.06
-[2869]  0.08  0.08  0.08 -0.02  0.06 -0.04  0.04  0.00  0.14  0.18  0.14  0.12
-[2881]  0.16  0.18  0.18 -0.06  0.04  0.08  0.12  0.08  0.12  0.10  0.12  0.16
-[2893] -0.02 -0.04  0.02  0.10  0.02  0.06  0.04  0.12  0.12  0.08  0.22  0.14
-[2905]  0.06  0.02  0.14  0.04 -0.02  0.08 -0.08 -0.06  0.06 -0.04  0.02  0.04
-[2917]  0.02  0.08  0.20 -0.04  0.04  0.08  0.02 -0.10  0.04 -0.06 -0.10  0.16
-[2929]  0.00  0.02 -0.10  0.02 -0.04  0.00  0.10  0.04  0.04 -0.04  0.06  0.02
-[2941]  0.00  0.00  0.08  0.08 -0.10  0.02  0.06 -0.16  0.08  0.10  0.12  0.04
-[2953]  0.02  0.02  0.10  0.12 -0.02  0.08  0.22 -0.02 -0.08 -0.12  0.16  0.02
-[2965]  0.04 -0.16  0.12  0.04 -0.14  0.12 -0.08  0.00  0.10 -0.04  0.00  0.16
-[2977]  0.12  0.10  0.02  0.10  0.16  0.06  0.02  0.04  0.06  0.08  0.02 -0.14
-[2989]  0.10  0.20  0.16  0.16  0.06  0.18  0.10 -0.02  0.06 -0.12  0.10  0.06
-[3001]  0.04  0.10  0.20  0.06 -0.04  0.06  0.16  0.20  0.20  0.08  0.12  0.02
-[3013] -0.06  0.12  0.16 -0.02  0.02  0.14  0.04  0.02 -0.18  0.10  0.14  0.04
-[3025]  0.00  0.00  0.08  0.04 -0.06  0.02  0.10  0.16  0.08  0.00  0.02  0.04
-[3037] -0.10 -0.02  0.08  0.04 -0.04  0.06 -0.10  0.06  0.10  0.06  0.12  0.10
-[3049]  0.08 -0.10  0.08  0.14  0.00  0.02  0.00  0.12  0.04  0.02  0.08  0.02
-[3061]  0.16  0.10  0.02  0.02 -0.02  0.04  0.02  0.10 -0.04  0.10  0.00 -0.02
-[3073]  0.10  0.08  0.02  0.18  0.20  0.04  0.06  0.04  0.02  0.04  0.08  0.02
-[3085] -0.06  0.02 -0.10  0.16  0.12  0.14  0.04 -0.06  0.06  0.06  0.04  0.12
-[3097]  0.02 -0.06  0.02  0.00  0.10  0.20  0.02  0.08  0.06 -0.02 -0.02  0.08
-[3109]  0.10  0.14 -0.04  0.06  0.10  0.00  0.10 -0.06  0.06  0.10  0.04  0.12
-[3121]  0.00  0.00  0.00  0.14  0.04 -0.10 -0.10  0.14 -0.02  0.10 -0.12  0.00
-[3133]  0.00  0.06 -0.10  0.08  0.06 -0.02 -0.06  0.12  0.04  0.08 -0.02  0.04
-[3145]  0.14 -0.02  0.02 -0.02  0.12 -0.04  0.04 -0.02 -0.06 -0.06  0.22  0.14
-[3157]  0.04 -0.04 -0.02  0.04 -0.04 -0.12  0.02 -0.06  0.02 -0.04 -0.04  0.06
-[3169] -0.02 -0.06  0.02  0.06  0.04 -0.04 -0.04  0.12  0.16  0.10  0.14  0.00
-[3181] -0.04  0.02  0.02 -0.10  0.16 -0.12  0.12  0.00  0.08 -0.14  0.14  0.00
-[3193]  0.12  0.12  0.02  0.10  0.08  0.00  0.02 -0.02  0.20  0.08  0.04  0.00
-[3205]  0.08 -0.06  0.08 -0.02  0.02  0.02 -0.02  0.16  0.06  0.20  0.08  0.24
-[3217] -0.04  0.10  0.00  0.04 -0.02  0.16  0.02  0.20 -0.02  0.06  0.10  0.06
-[3229] -0.02  0.16 -0.08  0.02  0.20  0.04 -0.06  0.06  0.18  0.06  0.04  0.20
-[3241]  0.06 -0.10  0.14  0.10  0.14 -0.06 -0.04  0.06  0.12  0.18  0.18  0.10
-[3253]  0.18  0.10  0.04  0.12  0.16  0.04  0.06  0.08  0.00  0.04  0.04  0.00
-[3265]  0.04  0.02 -0.02  0.08  0.04  0.12 -0.14 -0.14  0.14  0.02  0.04  0.04
-[3277]  0.06  0.12 -0.02  0.18  0.08  0.18  0.00  0.14  0.02  0.00 -0.02  0.20
-[3289]  0.10  0.06  0.04  0.06  0.14  0.06  0.12 -0.04  0.10  0.12  0.02 -0.02
-[3301]  0.06  0.04  0.04  0.10  0.14  0.14  0.12  0.06  0.04 -0.04  0.06  0.18
-[3313]  0.14  0.12  0.02  0.10  0.08  0.04  0.04  0.14  0.02  0.06  0.12  0.12
-[3325]  0.10 -0.04  0.06  0.12 -0.02 -0.06  0.10  0.08  0.06 -0.04  0.22  0.02
-[3337]  0.04  0.04  0.06  0.02 -0.02 -0.04 -0.06  0.10  0.10  0.02 -0.12  0.12
-[3349]  0.08  0.02  0.18  0.04  0.06  0.10  0.12  0.10 -0.12 -0.02  0.14  0.10
-[3361]  0.16 -0.02  0.12  0.08  0.12 -0.08  0.08  0.02 -0.12  0.10  0.26  0.02
-[3373]  0.02  0.08  0.04  0.00  0.20  0.00  0.06 -0.06  0.02  0.10  0.10  0.06
-[3385]  0.02  0.10  0.18  0.14  0.04  0.06  0.02  0.08 -0.08  0.00  0.00  0.02
-[3397] -0.02  0.00 -0.04  0.04  0.12  0.08  0.04  0.22  0.02  0.22  0.08  0.04
-[3409] -0.14  0.18  0.02  0.16  0.12 -0.08  0.08  0.08  0.18  0.14  0.00  0.02
-[3421]  0.00  0.12  0.02  0.00  0.22  0.10 -0.04  0.12  0.08  0.06  0.08  0.06
-[3433]  0.06  0.10  0.00  0.08  0.04  0.02  0.00  0.14  0.10 -0.04  0.02 -0.02
-[3445]  0.02  0.02  0.02  0.04  0.04  0.04  0.22  0.04  0.00 -0.04  0.02  0.06
-[3457]  0.00  0.06  0.04  0.02  0.02  0.08  0.14  0.12 -0.06  0.08 -0.04  0.06
-[3469]  0.04  0.02 -0.08  0.02  0.12  0.04 -0.02  0.08  0.02 -0.02 -0.12  0.04
-[3481] -0.02 -0.08  0.12  0.04 -0.12  0.00  0.00  0.04  0.16  0.02 -0.08  0.00
-[3493] -0.08  0.04  0.02  0.16  0.02  0.08  0.12  0.06  0.16  0.04  0.06  0.06
-[3505] -0.02  0.10  0.24  0.02  0.22  0.10  0.06  0.02 -0.06  0.02 -0.04  0.14
-[3517]  0.04 -0.14 -0.04  0.00  0.08  0.08  0.14  0.12 -0.08  0.00 -0.12  0.14
-[3529]  0.06 -0.04  0.08 -0.02  0.20  0.00  0.00 -0.04  0.04 -0.02  0.02  0.04
-[3541]  0.04  0.00 -0.22  0.06  0.00 -0.04  0.06  0.14  0.06  0.10  0.08  0.02
-[3553]  0.14  0.04  0.16  0.14 -0.06  0.24  0.18  0.04  0.00  0.06  0.20 -0.04
-[3565]  0.12  0.04  0.04  0.06  0.06  0.06  0.06  0.08  0.12  0.08  0.10  0.08
-[3577]  0.02  0.06  0.08  0.18  0.08 -0.02  0.12  0.06  0.08  0.10  0.16  0.10
-[3589]  0.08  0.10  0.12  0.00  0.04 -0.06  0.10  0.22  0.02  0.22  0.10  0.08
-[3601]  0.02  0.02 -0.06  0.02  0.06 -0.04  0.08  0.06  0.10  0.02  0.18  0.06
-[3613]  0.00  0.08  0.14 -0.10  0.18  0.16 -0.04  0.10  0.08  0.18  0.02  0.10
-[3625]  0.10  0.04  0.06 -0.06 -0.06  0.14  0.10  0.10  0.10  0.10  0.04  0.10
-[3637]  0.08  0.16  0.14  0.00  0.12  0.14  0.18  0.06  0.00  0.02  0.10  0.16
-[3649]  0.06  0.08 -0.04 -0.04  0.10  0.00 -0.06  0.02  0.00 -0.08  0.08  0.06
-[3661] -0.06  0.04  0.02 -0.02  0.02  0.08 -0.08  0.02  0.12  0.12  0.04  0.14
-[3673]  0.12  0.08 -0.04  0.26  0.04 -0.06  0.12  0.14  0.12  0.04  0.08  0.00
-[3685]  0.02  0.06  0.06  0.22  0.12  0.08  0.06  0.00  0.04  0.08 -0.02  0.20
-[3697]  0.00  0.06  0.06  0.12  0.14  0.04 -0.06 -0.04  0.02  0.12  0.08 -0.10
-[3709]  0.12  0.10  0.10 -0.06  0.24  0.02  0.06  0.00  0.04  0.14  0.14 -0.02
-[3721]  0.08 -0.04  0.06 -0.08  0.06  0.00  0.08  0.10  0.02  0.22  0.10  0.12
-[3733]  0.14  0.08 -0.04  0.08  0.16  0.04  0.06  0.04  0.10  0.10  0.00  0.18
-[3745]  0.00  0.22  0.08  0.04  0.02  0.14  0.16  0.04  0.06  0.00  0.02 -0.08
-[3757]  0.10 -0.06 -0.04  0.06 -0.02 -0.02  0.16  0.02  0.12  0.04  0.02  0.04
-[3769]  0.12  0.14 -0.04  0.08  0.08  0.06  0.00  0.02  0.08  0.02  0.18  0.04
-[3781] -0.04  0.10  0.10  0.00  0.00  0.06  0.12 -0.02  0.08  0.14  0.08 -0.06
-[3793] -0.08  0.14  0.04  0.06  0.08 -0.02  0.12  0.02  0.04  0.10  0.04  0.08
-[3805]  0.00  0.06  0.08  0.04 -0.06  0.14  0.22  0.04  0.04  0.06  0.04  0.08
-[3817] -0.04  0.02  0.06  0.06 -0.06  0.06  0.06  0.00  0.10 -0.02  0.14 -0.06
-[3829]  0.10  0.22  0.00  0.06  0.02 -0.04 -0.06  0.04  0.00  0.16  0.12  0.08
-[3841]  0.10 -0.06 -0.08  0.10  0.10  0.00  0.02  0.08  0.10  0.10  0.04  0.06
-[3853]  0.14  0.06  0.12  0.04 -0.04  0.20  0.06  0.06  0.02  0.06  0.00  0.10
-[3865]  0.10  0.14  0.10 -0.04  0.08  0.14  0.00  0.00  0.08  0.10  0.18 -0.10
-[3877]  0.02  0.16  0.22  0.10  0.10  0.16 -0.06  0.02  0.00 -0.06  0.10  0.08
-[3889]  0.14  0.08  0.10  0.02  0.16  0.06 -0.02  0.18 -0.04  0.10  0.04  0.14
-[3901]  0.10  0.00 -0.04  0.16  0.14 -0.04  0.02  0.14 -0.14  0.04  0.10  0.10
-[3913] -0.04 -0.06  0.04  0.10  0.02 -0.04  0.08  0.20  0.04 -0.02  0.22  0.08
-[3925]  0.06 -0.02 -0.06  0.06 -0.10  0.02 -0.08  0.24  0.14  0.06  0.02  0.06
-[3937]  0.06  0.12  0.12 -0.10  0.10  0.16  0.12  0.04 -0.02 -0.06  0.08  0.02
-[3949]  0.00 -0.02  0.06 -0.04  0.06  0.08  0.14 -0.08  0.08  0.12  0.00  0.06
-[3961]  0.12  0.10  0.08  0.00  0.12  0.18  0.14  0.06  0.12  0.10  0.02 -0.02
-[3973] -0.06  0.08 -0.06  0.16  0.04  0.02 -0.04  0.04  0.00  0.08 -0.08  0.12
-[3985]  0.14 -0.04  0.00  0.04  0.02  0.14 -0.10  0.14  0.14  0.06  0.08 -0.02
-[3997]  0.06  0.08 -0.06  0.06  0.10 -0.06 -0.08  0.00 -0.12  0.06 -0.08  0.12
-[4009]  0.08  0.10  0.06 -0.14 -0.02  0.04  0.06 -0.06  0.12 -0.02 -0.08  0.02
-[4021]  0.14  0.12  0.18  0.04  0.16  0.06  0.06 -0.02  0.12  0.04 -0.06  0.04
-[4033] -0.10  0.02  0.10  0.10 -0.04  0.08 -0.04  0.14  0.10  0.12  0.16  0.18
-[4045] -0.02 -0.04  0.06  0.04  0.00  0.12  0.12  0.20  0.04  0.08  0.18  0.14
-[4057]  0.02 -0.12  0.02  0.06 -0.10  0.08 -0.14  0.10  0.02  0.08  0.12  0.16
-[4069]  0.08 -0.02  0.10  0.00  0.10  0.04 -0.06  0.10  0.04  0.06  0.06  0.08
-[4081] -0.02  0.08  0.08  0.04  0.02  0.02  0.14  0.06  0.10 -0.06  0.02  0.10
-[4093] -0.04  0.06  0.06  0.02 -0.06  0.04  0.08 -0.06  0.20  0.04 -0.04  0.08
-[4105]  0.14  0.06  0.00  0.10 -0.06  0.04  0.16  0.06  0.18  0.00  0.10  0.20
-[4117] -0.02  0.12  0.04 -0.10  0.14  0.10  0.20  0.02  0.00  0.10  0.02 -0.16
-[4129]  0.08  0.10  0.02  0.18 -0.10  0.16  0.04 -0.02 -0.04 -0.02  0.00 -0.04
-[4141] -0.16  0.10  0.10  0.08  0.10  0.14  0.02  0.12  0.12  0.04  0.02  0.10
-[4153]  0.00 -0.08 -0.08  0.08  0.00  0.08  0.10  0.12 -0.10  0.10 -0.02  0.04
-[4165]  0.04  0.02  0.06 -0.06  0.12  0.02  0.20  0.02  0.02  0.10  0.12  0.06
-[4177] -0.04  0.00  0.00  0.16  0.06  0.14  0.04 -0.06 -0.08  0.00  0.16  0.08
-[4189] -0.08 -0.16  0.00  0.08 -0.08  0.06 -0.04  0.12  0.18 -0.02  0.02  0.12
-[4201]  0.14  0.12  0.04  0.16 -0.08 -0.08  0.00 -0.12  0.18  0.06  0.12  0.18
-[4213]  0.04  0.14  0.04  0.06  0.04 -0.04  0.14  0.06  0.00  0.04 -0.06  0.06
-[4225]  0.04  0.10  0.08 -0.06  0.02  0.10 -0.02  0.12  0.00  0.04  0.06  0.16
-[4237] -0.02  0.02 -0.02  0.06  0.00  0.16  0.02  0.18  0.00  0.08  0.12  0.06
-[4249]  0.10  0.06  0.02  0.04  0.06 -0.02  0.20  0.18  0.12 -0.10  0.00  0.14
-[4261]  0.02  0.04  0.06  0.02  0.08  0.04  0.04 -0.06  0.12 -0.08  0.00  0.02
-[4273]  0.10  0.04  0.08  0.10  0.08 -0.14  0.06  0.16 -0.04 -0.02 -0.04 -0.10
-[4285] -0.06  0.08  0.12  0.18  0.14  0.02  0.04  0.02  0.06  0.04  0.02 -0.02
-[4297]  0.02  0.02  0.12  0.06 -0.08 -0.02  0.04  0.04  0.02 -0.06  0.06  0.02
-[4309]  0.06  0.12 -0.08  0.04  0.04  0.14  0.02  0.06  0.06  0.02  0.08  0.00
-[4321]  0.06  0.00  0.04  0.02  0.04 -0.08  0.06  0.12  0.06 -0.08 -0.02  0.14
-[4333]  0.00 -0.02  0.14  0.24  0.02 -0.22  0.10  0.02  0.12  0.20 -0.04  0.04
-[4345] -0.16  0.06  0.00  0.02  0.04  0.10  0.04  0.18  0.08  0.10  0.08  0.08
-[4357]  0.00  0.16  0.04  0.02 -0.02  0.14  0.08 -0.10  0.00  0.02 -0.02  0.10
-[4369]  0.06  0.04 -0.02  0.08 -0.04  0.00  0.06  0.08  0.00  0.04 -0.10  0.08
-[4381]  0.02  0.06  0.10  0.14 -0.04  0.06  0.08  0.10 -0.16  0.00  0.20  0.16
-[4393]  0.02  0.02  0.04  0.08 -0.04  0.04  0.08  0.12  0.04 -0.02  0.04  0.10
-[4405]  0.12 -0.08  0.04 -0.04  0.02  0.02 -0.08 -0.02  0.18  0.06  0.00  0.12
-[4417]  0.06  0.02 -0.02 -0.02  0.02  0.02  0.12  0.06  0.08 -0.06  0.06  0.12
-[4429]  0.12  0.10  0.06  0.14  0.00  0.06  0.06  0.12  0.14  0.08 -0.02  0.14
-[4441] -0.02  0.04  0.18  0.04  0.02  0.08  0.12 -0.14 -0.16  0.00  0.02 -0.12
-[4453]  0.00  0.08 -0.12  0.14  0.02  0.04  0.12  0.00  0.02  0.00  0.10 -0.04
-[4465] -0.04  0.16  0.14  0.12  0.20  0.08  0.12  0.04  0.08  0.10 -0.08  0.06
-[4477]  0.08  0.20  0.16  0.06  0.02  0.00  0.00  0.12  0.26  0.04  0.06  0.10
-[4489]  0.10  0.04  0.20  0.14  0.02  0.12  0.04  0.08  0.16  0.04  0.08  0.04
-[4501]  0.04  0.06  0.10  0.04 -0.10  0.04  0.04  0.14  0.08  0.06  0.06  0.08
-[4513]  0.12 -0.10  0.18  0.12 -0.04  0.10  0.08  0.08 -0.02  0.02 -0.02  0.10
-[4525]  0.16 -0.02  0.10  0.04  0.04  0.06 -0.06  0.16  0.06  0.14  0.04  0.16
-[4537]  0.12 -0.04  0.12  0.02  0.04  0.16 -0.04 -0.14  0.06  0.02  0.00 -0.04
-[4549]  0.00  0.06 -0.04  0.24  0.20  0.06  0.22  0.00  0.06 -0.04  0.10  0.00
-[4561] -0.06  0.12  0.02  0.00  0.12  0.18  0.08  0.14  0.20  0.18  0.00  0.06
-[4573] -0.04  0.06  0.12  0.06  0.14  0.00 -0.02 -0.08 -0.06  0.10  0.08 -0.08
-[4585]  0.20  0.08  0.00  0.00  0.06  0.10  0.02  0.02  0.06  0.04  0.08  0.00
-[4597]  0.14  0.06  0.02 -0.04  0.12  0.04  0.02  0.04 -0.08  0.12  0.04  0.12
-[4609]  0.02  0.14  0.08  0.02  0.04 -0.04 -0.04 -0.06  0.14 -0.02  0.12 -0.02
-[4621]  0.08  0.02  0.08  0.04 -0.04  0.14  0.04  0.14  0.04 -0.02  0.14  0.00
-[4633]  0.08 -0.06 -0.02  0.04  0.10  0.06  0.20 -0.12 -0.06  0.08  0.12  0.00
-[4645]  0.02  0.00  0.00  0.12  0.16  0.14  0.02  0.06  0.08  0.22  0.06  0.12
-[4657]  0.08  0.02  0.16  0.18 -0.02 -0.04  0.14  0.08  0.14  0.00  0.12 -0.08
-[4669]  0.08  0.08 -0.10  0.18  0.00  0.16  0.04  0.06  0.06  0.10  0.00  0.04
-[4681]  0.06  0.06  0.24 -0.10  0.18  0.00  0.00  0.14  0.14  0.00  0.00  0.02
-[4693]  0.12  0.04  0.18 -0.06  0.16  0.00  0.14  0.04  0.02  0.02  0.20  0.04
-[4705]  0.20  0.16  0.08  0.08  0.10  0.16 -0.14  0.04  0.18  0.12  0.20  0.06
-[4717]  0.10  0.16 -0.08  0.06  0.08  0.08  0.12  0.02 -0.10  0.04  0.10  0.00
-[4729] -0.08 -0.02  0.04 -0.06 -0.12 -0.08  0.04  0.10  0.04  0.08  0.06  0.08
-[4741]  0.14  0.16  0.02 -0.02 -0.02  0.04  0.00  0.14  0.00  0.00  0.08  0.10
-[4753]  0.00  0.22  0.08  0.10  0.00  0.02  0.08 -0.14  0.06  0.06  0.12  0.04
-[4765]  0.12  0.12 -0.08  0.06  0.16  0.08  0.06 -0.08  0.06  0.02  0.00  0.12
-[4777]  0.06  0.08  0.14  0.10  0.10  0.10  0.06 -0.02  0.08  0.22  0.08  0.06
-[4789]  0.26  0.06  0.14  0.04 -0.10  0.08 -0.10 -0.08 -0.06  0.24  0.08 -0.06
-[4801] -0.04  0.04  0.12 -0.02  0.00  0.12  0.04  0.10 -0.02  0.02 -0.06  0.02
-[4813]  0.00  0.16  0.08  0.12  0.12  0.16  0.08  0.14  0.08  0.12  0.16  0.00
-[4825]  0.12  0.06  0.06  0.00  0.12  0.06  0.08 -0.10  0.08  0.12  0.10  0.12
-[4837]  0.12  0.12  0.14 -0.12  0.06  0.06  0.18  0.06  0.00  0.12  0.06  0.20
-[4849] -0.02  0.02  0.10  0.00  0.20  0.06 -0.20 -0.08  0.06  0.10  0.20  0.04
-[4861]  0.04  0.04  0.10  0.02  0.08  0.12  0.00  0.18  0.02  0.12  0.08  0.02
-[4873] -0.04 -0.06  0.04  0.06  0.02 -0.02  0.00 -0.02 -0.08  0.00 -0.08 -0.08
-[4885]  0.04  0.00  0.06  0.06  0.14  0.12 -0.04  0.08  0.18 -0.02 -0.02  0.08
-[4897]  0.22  0.14 -0.10  0.06  0.04  0.02 -0.02  0.10  0.04  0.06  0.10  0.00
-[4909]  0.04 -0.08  0.04  0.10 -0.08 -0.06  0.16 -0.06  0.06 -0.02  0.10  0.08
-[4921]  0.08  0.02  0.12  0.12  0.08  0.00  0.14  0.06  0.04 -0.02 -0.08  0.14
-[4933] -0.02  0.06  0.08  0.02  0.18  0.10  0.02  0.18  0.12  0.10  0.04  0.16
-[4945]  0.08  0.02  0.14  0.02 -0.06  0.14  0.12 -0.02  0.04 -0.08  0.12 -0.10
-[4957]  0.10  0.12 -0.14  0.02  0.06  0.14 -0.08  0.12  0.02  0.00 -0.02  0.02
-[4969]  0.10 -0.06  0.12 -0.04  0.24  0.14 -0.02  0.12 -0.06  0.16 -0.04  0.14
-[4981]  0.00 -0.08  0.08  0.10  0.08  0.02 -0.04  0.00  0.06  0.08  0.06  0.00
-[4993]  0.10  0.22  0.02 -0.12  0.08  0.18  0.02  0.06</code></pre>
+<pre><code> [1] 21  9  8 14  2 20 16  7  5 18 17  1 12 10 19  4  6 11 15  3 13</code></pre>
 </div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   A.f.perm <span class="ot">&lt;-</span> A.f[s, s]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>The new permuted matrix looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">quantile</span>(corrs, <span class="at">probs =</span> <span class="fl">0.99</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   <span class="fu">kbl</span>(A.f.perm, <span class="at">format =</span> <span class="st">"html"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table>
+<tbody>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> 0 </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<p>Note that when we lose the labels on the nodes the permuted matrix contains that same information as the original, but scrambles the node labels.</p>
+<p>So, in contrast to the edge swapping approach, which preserves some graph characteristics but loses others, in the permutation approach, <em>every</em> graph-level characteristic stays the same:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   g.perm <span class="ot">&lt;-</span> <span class="fu">graph_from_adjacency_matrix</span>(A.f.perm, <span class="at">mode =</span> <span class="st">"undirected"</span>)</span>
+<span id="cb70-2"><a href="#cb70-2"></a>   <span class="fu">degree</span>(g.perm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1]  6  6  5  6 10  5  5  3 10  4 18  9  8  8 10  7  7 14  9  6  2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1"></a>   <span class="fu">degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1]  9 10  6  7 10  7  3  5  6  8 14  8  2  6  9  5 18  4 10  5  6</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb74-1"><a href="#cb74-1"></a>   <span class="co">#degree sequence</span></span>
+<span id="cb74-2"><a href="#cb74-2"></a>   <span class="fu">sort</span>(<span class="fu">degree</span>(g.perm), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 18 14 10 10 10  9  9  8  8  7  7  6  6  6  6  5  5  5  4  3  2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb76-1"><a href="#cb76-1"></a>   <span class="fu">sort</span>(<span class="fu">degree</span>(g), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 18 14 10 10 10  9  9  8  8  7  7  6  6  6  6  5  5  5  4  3  2</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb78-1"><a href="#cb78-1"></a>   <span class="co">#diameter</span></span>
+<span id="cb78-2"><a href="#cb78-2"></a>   <span class="fu">mean</span>(<span class="fu">distances</span>(g.perm))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1.569161</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb80-1"><a href="#cb80-1"></a>   <span class="fu">mean</span>(<span class="fu">distances</span>(g))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1.569161</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb82-1"><a href="#cb82-1"></a>   <span class="co">#betweenness centralization</span></span>
+<span id="cb82-2"><a href="#cb82-2"></a>   <span class="fu">round</span>(<span class="fu">centr_betw</span>(g.perm)<span class="sc">$</span>centralization, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.21</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1"></a>   <span class="fu">round</span>(<span class="fu">centr_betw</span>(g)<span class="sc">$</span>centralization, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.21</code></pre>
+</div>
+</div>
+<p>A function that takes an undirected graph as input, permutes the corresponding adjacency matrix and returns the new graph as output looks like:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb86-1"><a href="#cb86-1"></a>   perm <span class="ot">&lt;-</span> <span class="cf">function</span>(z) {</span>
+<span id="cb86-2"><a href="#cb86-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(z))</span>
+<span id="cb86-3"><a href="#cb86-3"></a>      s <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(x))</span>
+<span id="cb86-4"><a href="#cb86-4"></a>      x <span class="ot">&lt;-</span> x[s, s] <span class="co">#permuting matrix</span></span>
+<span id="cb86-5"><a href="#cb86-5"></a>      w <span class="ot">&lt;-</span> <span class="fu">graph_from_adjacency_matrix</span>(x, <span class="at">mode =</span> <span class="st">"undirected"</span>)</span>
+<span id="cb86-6"><a href="#cb86-6"></a>      <span class="fu">return</span>(w)</span>
+<span id="cb86-7"><a href="#cb86-7"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>So to get a p-value for our cross-tie correlation all we need to do is to compute the correlation between the original advice network and a set of permuted graphs of the friendship network.</p>
+<p>First, we create a 1000 graph ensemble of permuted friendship networks:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb87"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb87-1"><a href="#cb87-1"></a>   G3 <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
+<span id="cb87-2"><a href="#cb87-2"></a>   <span class="fu">set.seed</span>(<span class="dv">12345</span>)</span>
+<span id="cb87-3"><a href="#cb87-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">1000</span>) {</span>
+<span id="cb87-4"><a href="#cb87-4"></a>      G3[[i]] <span class="ot">&lt;-</span> <span class="fu">perm</span>(g)</span>
+<span id="cb87-5"><a href="#cb87-5"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Then we write a function for computing the correlation between two networks:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb88-1"><a href="#cb88-1"></a>   cor.net <span class="ot">&lt;-</span> <span class="cf">function</span>(x1, x2) {</span>
+<span id="cb88-2"><a href="#cb88-2"></a>   a <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x1))</span>
+<span id="cb88-3"><a href="#cb88-3"></a>   b <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x2))      </span>
+<span id="cb88-4"><a href="#cb88-4"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.vector</span>(a), <span class="fu">as.vector</span>(b))</span>
+<span id="cb88-5"><a href="#cb88-5"></a>   <span class="fu">return</span>(r)</span>
+<span id="cb88-6"><a href="#cb88-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now we compute our correlation vector showing the first 100 elements:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb89-1"><a href="#cb89-1"></a>   corrs <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">sapply</span>(G3, cor.net, <span class="at">x2 =</span> g2), <span class="dv">2</span>)</span>
+<span id="cb89-2"><a href="#cb89-2"></a>   corrs[<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  [1]  0.12 -0.12  0.10 -0.06  0.14  0.02 -0.02 -0.04  0.06  0.12  0.08  0.08
+ [13]  0.08 -0.02  0.22  0.04 -0.12  0.06 -0.02  0.02  0.12  0.00  0.16  0.06
+ [25]  0.28  0.16  0.10  0.08  0.00  0.04  0.02  0.16  0.16  0.10  0.08  0.10
+ [37]  0.02  0.12  0.02  0.16  0.02  0.02 -0.02  0.12  0.10  0.10  0.08  0.08
+ [49]  0.14 -0.06  0.04 -0.02 -0.06  0.12 -0.02  0.20 -0.02  0.08 -0.10  0.06
+ [61]  0.00  0.04  0.14  0.06 -0.04  0.04 -0.02  0.10 -0.02  0.06  0.12 -0.08
+ [73]  0.04  0.06  0.14  0.12  0.08  0.08  0.16 -0.06  0.02  0.06  0.22  0.14
+ [85] -0.04  0.06  0.00 -0.10  0.16 -0.08  0.08  0.16  0.04  0.02  0.08 -0.02
+ [97]  0.16  0.16 -0.08  0.12</code></pre>
+</div>
+</div>
+<p>And here’s a plot of where our estimated value sits on the grand scheme of things:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb91"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb91-1"><a href="#cb91-1"></a>   <span class="fu">library</span>(ggplot2)</span>
+<span id="cb91-2"><a href="#cb91-2"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">data.frame</span>(corrs), <span class="fu">aes</span>(<span class="at">x =</span> corrs))</span>
+<span id="cb91-3"><a href="#cb91-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.025</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
+<span id="cb91-4"><a href="#cb91-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> r, </span>
+<span id="cb91-5"><a href="#cb91-5"></a>                       <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
+<span id="cb91-6"><a href="#cb91-6"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="dv">1</span>, </span>
+<span id="cb91-7"><a href="#cb91-7"></a>                       <span class="at">color =</span> <span class="st">"purple"</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
+<span id="cb91-8"><a href="#cb91-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Friendship/Advice Correlation"</span>, <span class="at">y =</span> <span class="st">"Freq."</span>)</span>
+<span id="cb91-9"><a href="#cb91-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
+<span id="cb91-10"><a href="#cb91-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.04</span>, <span class="at">y=</span><span class="dv">150</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
+<span id="cb91-11"><a href="#cb91-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.22</span>, <span class="at">y=</span><span class="dv">150</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
+<span id="cb91-12"><a href="#cb91-12"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="handout9_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>This looks pretty good, with only a tiny proportion of the correlations exceeding the observed value.</p>
+<p>We can check our p-value like before:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb92-1"><a href="#cb92-1"></a>   <span class="fu">quantile</span>(corrs, <span class="at">probs =</span> <span class="fl">0.99</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 99% 
 0.22 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   r <span class="sc">&gt;</span> <span class="fu">quantile</span>(corrs, <span class="at">probs =</span> <span class="fl">0.99</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb94-1"><a href="#cb94-1"></a>   r <span class="sc">&gt;</span> <span class="fu">quantile</span>(corrs, <span class="at">probs =</span> <span class="fl">0.99</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 99% 
 TRUE </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(corrs)(r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb96"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb96-1"><a href="#cb96-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(corrs)(r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.0012</code></pre>
+<pre><code>[1] 0.001</code></pre>
 </div>
 </div>
+<p>Which shows that the correlation between advice and friendship is significant at the <span class="math inline">\(p = 0.001\)</span> level (<span class="math inline">\(p&lt;0.01\)</span>).</p>
+<p>Note that the result is also statistically significant using a two-tailed test:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1"></a>   <span class="fu">library</span>(ggplot2)</span>
-<span id="cb73-2"><a href="#cb73-2"></a>   p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> <span class="fu">data.frame</span>(corrs), <span class="fu">aes</span>(<span class="at">x =</span> corrs))</span>
-<span id="cb73-3"><a href="#cb73-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.02</span>, <span class="at">stat =</span> <span class="st">"bin"</span>, <span class="at">fill =</span> <span class="st">"darkblue"</span>)</span>
-<span id="cb73-4"><a href="#cb73-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> r, </span>
-<span id="cb73-5"><a href="#cb73-5"></a>                       <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linetype =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
-<span id="cb73-6"><a href="#cb73-6"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="dv">1</span>, </span>
-<span id="cb73-7"><a href="#cb73-7"></a>                       <span class="at">color =</span> <span class="st">"purple"</span>, <span class="at">linewidth =</span> <span class="fl">1.5</span>)</span>
-<span id="cb73-8"><a href="#cb73-8"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_minimal</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Q by Level"</span>, <span class="at">y =</span> <span class="st">"Freq."</span>)</span>
-<span id="cb73-9"><a href="#cb73-9"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
-<span id="cb73-10"><a href="#cb73-10"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="sc">-</span><span class="fl">0.04</span>, <span class="at">y=</span><span class="dv">100</span>, <span class="at">label=</span> <span class="st">"Zero Point"</span>, <span class="at">color =</span> <span class="st">"purple"</span>)</span>
-<span id="cb73-11"><a href="#cb73-11"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">annotate</span>(<span class="st">"text"</span>, <span class="at">x=</span><span class="fl">0.22</span>, <span class="at">y=</span><span class="dv">100</span>, <span class="at">label=</span> <span class="st">"Obs. Value"</span>, <span class="at">color =</span> <span class="st">"red"</span>)</span>
-<span id="cb73-12"><a href="#cb73-12"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb98"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb98-1"><a href="#cb98-1"></a>   <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(corrs))(r)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.001</code></pre>
+</div>
+</div>
+</section>
+<section id="cross-network-regression-using-permutation" class="level2">
+<h2 class="anchored" data-anchor-id="cross-network-regression-using-permutation">Cross-Network Regression Using Permutation</h2>
+<p>The permutation (QAP) approach can be extended to considering more than two network variables at the same time, which moves us into multivariable territory. The Krackhardt Managers data also contains information on <em>formal</em> links in the organization in the form of a graph of unidirectional “reports to whom” network, shown below:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb100"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb100-1"><a href="#cb100-1"></a>   <span class="fu">plot</span>(ht_reports)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="handout9_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid" width="672"></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="handout9_files/figure-html/unnamed-chunk-40-1.png" class="img-fluid figure-img" width="768"></p>
+<p></p><figcaption class="figure-caption">Who reports to whom in the Krackhardt Manager’s data.</figcaption><p></p>
+</figure>
 </div>
 </div>
+</div>
+<p>We can see that there are four middle managers (2, 14, 18, and 21) all of whom report to the top manager (7).</p>
+<p>So let’s say we wanted to predict advice ties from friendship ties while adjusting for the present of formal reporting ties. We could just a regression like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb101"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb101-1"><a href="#cb101-1"></a>   A.r <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(</span>
+<span id="cb101-2"><a href="#cb101-2"></a>      <span class="fu">as_undirected</span>(ht_reports, <span class="at">mode =</span> <span class="st">"collapse"</span>)))</span>
+<span id="cb101-3"><a href="#cb101-3"></a>   ht.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">frs =</span> <span class="fu">as.vector</span>(A.f), <span class="at">adv =</span> <span class="fu">as.vector</span>(A.d), <span class="at">rep =</span> <span class="fu">as.vector</span>(A.r))</span>
+<span id="cb101-4"><a href="#cb101-4"></a>   reg.res <span class="ot">&lt;-</span> <span class="fu">lm</span>(adv <span class="sc">~</span> frs <span class="sc">+</span> rep, <span class="at">data =</span> ht.dat)</span>
+<span id="cb101-5"><a href="#cb101-5"></a>   <span class="fu">summary</span>(reg.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = adv ~ frs + rep, data = ht.dat)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-0.7748 -0.5475  0.2252  0.4525  0.4525 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  0.54750    0.02714  20.172  &lt; 2e-16 ***
+frs          0.22727    0.04535   5.011 7.88e-07 ***
+rep          0.31614    0.07572   4.175 3.60e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.4509 on 438 degrees of freedom
+Multiple R-squared:  0.1033,    Adjusted R-squared:  0.09925 
+F-statistic: 25.24 on 2 and 438 DF,  p-value: 4.22e-11</code></pre>
+</div>
+</div>
+<p>Which shows that friendship has a statistically significant positive effect on being ties via an advice tie, net of the formal hierarchical link, which also has a positive effect.</p>
+<p>Of course, if you know anything about classical inference, you know the standard errors and associated t-statistics are useless, because the “cases” in the regression above are dyads, and they are <em>not</em> independent from one another because they form…a network!</p>
+<p>So we can use the permutation approach to get more credible p-values like we did with the correlation, turning the above into a “QAP Regression.”</p>
+<p>The basic idea is just to run the regression many times, while permuting the outcome variable; this would produce a distribution of coefficient estimates, and we can select the p-value non-parametrically like we did earlier.</p>
+<p>Here’s a function that will run a regression and collect the coefficients:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1"></a>   run.reg <span class="ot">&lt;-</span> <span class="cf">function</span>(g, xvars, dat) {</span>
+<span id="cb103-2"><a href="#cb103-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb103-3"><a href="#cb103-3"></a>      dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y.perm =</span> <span class="fu">as.vector</span>(A), dat)</span>
+<span id="cb103-4"><a href="#cb103-4"></a>      reg.res <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">reformulate</span>(xvars, <span class="st">"y.perm"</span>), <span class="at">data =</span> dat)</span>
+<span id="cb103-5"><a href="#cb103-5"></a>      <span class="fu">return</span>(<span class="fu">as.vector</span>(reg.res<span class="sc">$</span>coefficients))</span>
+<span id="cb103-6"><a href="#cb103-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now we run the regression on our 1000 strong ensemble of permuted friendship network graphs:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb104"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb104-1"><a href="#cb104-1"></a>   reg.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(G3, run.reg, <span class="at">xvars =</span> <span class="fu">c</span>(<span class="st">"adv"</span>, <span class="st">"rep"</span>), <span class="at">dat =</span> ht.dat)</span>
+<span id="cb104-2"><a href="#cb104-2"></a>   betas <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">do.call</span>(rbind, reg.list))</span>
+<span id="cb104-3"><a href="#cb104-3"></a>   <span class="fu">colnames</span>(betas) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Int.Est"</span>, <span class="st">"Fr.Est"</span>, <span class="st">"Rep.Est"</span>)</span>
+<span id="cb104-4"><a href="#cb104-4"></a>   <span class="fu">head</span>(betas) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       Int.Est      Fr.Est Rep.Est
+[1,] 0.2781457  0.11385430   0.058
+[2,] 0.4370861 -0.10908609  -0.078
+[3,] 0.2913907  0.11660927  -0.108
+[4,] 0.3973510 -0.02135099  -0.276
+[5,] 0.2649007  0.11909934   0.166
+[6,] 0.3443709  0.03962914  -0.134</code></pre>
+</div>
+</div>
+<p>And now we compute the p-values as before and gather them into a table:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb106"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb106-1"><a href="#cb106-1"></a>   p.vals <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(betas[, <span class="dv">1</span>]))(reg.res<span class="sc">$</span>coefficients[<span class="dv">1</span>]),</span>
+<span id="cb106-2"><a href="#cb106-2"></a>               <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(betas[, <span class="dv">2</span>]))(reg.res<span class="sc">$</span>coefficients[<span class="dv">2</span>]),</span>
+<span id="cb106-3"><a href="#cb106-3"></a>               <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(betas[, <span class="dv">3</span>]))(reg.res<span class="sc">$</span>coefficients[<span class="dv">3</span>])</span>
+<span id="cb106-4"><a href="#cb106-4"></a>               )</span>
+<span id="cb106-5"><a href="#cb106-5"></a>   reg.tab <span class="ot">&lt;-</span> <span class="fu">cbind</span>(reg.res<span class="sc">$</span>coefficients, p.vals)</span>
+<span id="cb106-6"><a href="#cb106-6"></a>   <span class="fu">rownames</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"Friend Tie"</span>, <span class="st">"Formal Tie"</span>)</span>
+<span id="cb106-7"><a href="#cb106-7"></a>   <span class="fu">colnames</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Estimate"</span>, <span class="st">"p-value"</span>)</span>
+<span id="cb106-8"><a href="#cb106-8"></a>   <span class="fu">kbl</span>(reg.tab, <span class="at">rownames =</span> <span class="cn">TRUE</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb106-9"><a href="#cb106-9"></a>       <span class="at">caption =</span> <span class="st">"Predictors of Advice Ties"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb106-10"><a href="#cb106-10"></a>             <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">italic =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb106-11"><a href="#cb106-11"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb106-12"><a href="#cb106-12"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, </span>
+<span id="cb106-13"><a href="#cb106-13"></a>                                           <span class="st">"condensed"</span>, </span>
+<span id="cb106-14"><a href="#cb106-14"></a>                                           <span class="st">"responsive"</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>Predictors of Advice Ties</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> Estimate </th>
+   <th style="text-align:right;"> p-value </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;font-style: italic;"> Intercept </td>
+   <td style="text-align:right;"> 0.547 </td>
+   <td style="text-align:right;"> 0.000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-style: italic;"> Friend Tie </td>
+   <td style="text-align:right;"> 0.227 </td>
+   <td style="text-align:right;"> 0.012 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-style: italic;"> Formal Tie </td>
+   <td style="text-align:right;"> 0.316 </td>
+   <td style="text-align:right;"> 0.014 </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<p>Which shows that indeed friendship and formal reporting ties are both statistically significant predictors of advice ties after accounting for network interdependencies.</p>
 
 
 
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-borgatti_etal24" class="csl-entry" role="doc-biblioentry">
+Borgatti, Stephen P, Filip Agneessens, Jeffrey C Johnson, and Martin G Everett. 2024. <span>“Analyzing Social Networks.”</span>
+</div>
+<div id="ref-krackhardt88" class="csl-entry" role="doc-biblioentry">
+Krackhardt, David. 1988. <span>“Predicting with Networks: Nonparametric Multiple Regression Analysis of Dyadic Data.”</span> <em>Social Networks</em> 10 (4): 359–81.
+</div>
 <div id="ref-maslov_sneppen02" class="csl-entry" role="doc-biblioentry">
 Maslov, Sergei, and Kim Sneppen. 2002. <span>“Specificity and Stability in Topology of Protein Networks.”</span> <em>Science</em> 296 (5569): 910–13.
 </div>
