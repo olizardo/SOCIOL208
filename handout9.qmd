@@ -410,7 +410,9 @@ The correlation between these two ties is then:
    round(r, 2)
 ```
 
-Which is obtained by "vectorizing" the matrices and computing the Pearson correlation between the vector corresponding to friendship ties and the vector corresponding to advice ties. Here, we see that there is a positive correlation between the two ($r = 0.26$) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don't imply directionality).
+Which is obtained by "vectorizing" the matrices and computing the Pearson correlation between the dyad vector (of length $21 \timesd 21 = 441$) corresponding to friendship ties and the dyad vector corresponding to advice ties. 
+
+Here, we see that there is a positive correlation between the two ($r = 0.26$) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don't imply directionality).
 
 However, is this correlation larger than we would expect by chance? For that, we need to know the range of correlations that would be obtained between on of the networks (e.g., advice) and a suitably randomized version of the other (e.g., friendship).
 
@@ -597,10 +599,12 @@ And now we compute the p-values as before and gather them into a table:
                1 - ecdf(abs(betas[, 2]))(reg.res$coefficients[2]),
                1 - ecdf(abs(betas[, 3]))(reg.res$coefficients[3])
                )
-   reg.tab <- cbind(reg.res$coefficients, p.vals)
+   z.scores <- round(abs(qnorm(p.vals)), 3)
+   z.scores[1] <- "--"
+   reg.tab <- data.frame(reg.res$coefficients, z.scores, p.vals)
    rownames(reg.tab) <- c("Intercept", "Friend Tie", "Formal Tie")
-   colnames(reg.tab) <- c("Estimate", "p-value")
-   kbl(reg.tab, rownames = TRUE, format = "html", digits = 3,
+   names(reg.tab) <- c("Estimate", "z-score", "p-value")
+   kbl(reg.tab[c(2:3), ], rownames = TRUE, format = "html", digits = 3,
        caption = "Predictors of Advice Ties") %>% 
              column_spec(1, italic = TRUE) %>% 
       kable_styling(full_width = TRUE,

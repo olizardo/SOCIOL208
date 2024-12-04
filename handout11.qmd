@@ -1,0 +1,168 @@
+---
+title: "Statistical Models of Networks III"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In the previous handout we saw how to fit exponential random graph models (ergms) for simple undirected networks. As noted, these models are useful for *multivariate null hypothesis testing* using network data, answering questions of the form: Is this network statistic larger or smaller than I would expect by chance, after conditioning (e.g., "controling for") these *other* network statistics? 
+
+The ergm modeling framework is pretty flexible, allowing you to test for the statistical significance of *any* network statistic you can imagine while holding constant a bunch of other ones.
+
+Here we will see how to extend the ergm framework to other types of directed, two-mode, and temporal networks.
+
+## Two-Mode ERGMs
+
+In the two-mode case, ERGMs allow us to test multivariate hypothesis regarding patterns of affiliations between persons and groups, net of other network characteristics. 
+
+Let's load some data, this time we will use Daniel McFarland's data of high school student affiliations with specific activity clubs collected in 1997:
+
+```{r}
+   url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/affiliations_1997.txt"
+
+   A <- read.delim(file = url1, check.names = FALSE)
+   dim(A)
+```
+
+The bi-adjacency matrix is of dimensions $1295 \times 91$. The clubs are:
+
+```{r}
+   colnames(A)
+```
+
+We also have attributes for students and clubs:
+
+```{r}
+   url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/attributes_students.txt"
+   
+   sa <- read.delim(file = url2, stringsAsFactors = FALSE)
+   
+   url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/attributes_clubs.txt"
+   
+   ca <- read.delim(file = url3, stringsAsFactors = FALSE)
+```
+
+We then use the approach outlined [here](https://inarwhal.github.io/NetworkAnalysisR-book/ch11-Two-mode-Networks.html#example-affiliation-data) to construct a vertex attribute data frame that `igraph` can use.
+
+```{r}
+#| echo: false
+
+   shared_var_names <- c("ids", "type", "missing96", "missing97")
+   shared <- rbind(sa[, shared_var_names], 
+                   ca[, shared_var_names])
+   num_clubs <- nrow(ca)
+   NA_dat_club <- rep(NA, num_clubs)
+   student_var_names <- c("race", "gender", "grade96", "grade97")
+   student_specific <- rbind(sa[, student_var_names], 
+                             data.frame(race = NA_dat_club, 
+                                        gender = NA_dat_club,
+                                        grade96 = NA_dat_club,
+                                        grade97 = NA_dat_club))
+   num_clubs <- nrow(ca)
+   NA_dat_club <- rep(NA, num_clubs)
+   
+   student_var_names <- c("race", "gender", "grade96", "grade97")
+   
+   student_specific <- rbind(sa[, student_var_names], 
+                             data.frame(race = NA_dat_club, 
+                                        gender = NA_dat_club,
+                                        grade96 = NA_dat_club,
+                                        grade97 = NA_dat_club))
+   num_students <- nrow(sa)
+   NA_dat_student <- rep(NA, num_students)
+   
+   club_var_names<- c("club_type_detailed", "club_profile", 
+                      "club_feeder", "club_type_gender", 
+                      "club_type_grade")
+   
+   club_specific <- rbind(data.frame(club_type_detailed = NA_dat_student, 
+                                     club_profile = NA_dat_student,
+                                     club_feeder = NA_dat_student,
+                                     club_type_gender = NA_dat_student,
+                                     club_type_grade = NA_dat_student), 
+                          ca[, club_var_names])
+   sca <- cbind(shared, student_specific, club_specific)
+   not_missing <- sca$missing97 == 0
+   is_student <- sca$type == "student"
+   not_missing_student <- not_missing[is_student]
+   is_club <- sca$type == "club"
+   not_missing_club <- not_missing[is_club]
+   A <- A[not_missing_student, not_missing_club]
+   sca <- sca[not_missing, ]
+   library(igraph)
+   g <- graph_from_biadjacency_matrix(incidence = A, mode = "all")
+   g <- set_vertex_attr(graph = g, name = "race", 
+                                  value = sca$race)
+   
+   g <- set_vertex_attr(graph = g, name = "gender", 
+                                  value = sca$gender)
+   
+   g <- set_vertex_attr(graph = g, name = "grade97", 
+                                  value = sca$grade97)
+   
+   g <- set_vertex_attr(graph = g, name = "club_type_detailed", 
+                                  value = sca$club_type_detailed)
+   
+   g <- set_vertex_attr(graph = g, name = "club_profile", 
+                                  value = sca$club_profile)
+```
+
+The resulting two mode network has the following characteristics:
+
+
+```{r}
+   library(network)
+   table(V(g)$type)
+   attribute_list <- do.call(list, sca)
+   n <- network(as.matrix(A), bipartite = TRUE, vertex.attr = attribute_list)
+   n
+```
+
+We have a network with 2423 edges, 922 people nodes and 91 club nodes. Both the people and the clubs have vertex attributes. 
+
+And now let's fit bipartite ergms!
+
+As always, we begin with the baseline Erdos-Renyi random graph model that fits just the density:
+
+```{r}
+   library(ergm)
+   m1 <- ergm(n ~ edges)
+   summary(m1)
+```
+
+Which we can check is indeed the density:
+
+```{r}
+   exp(m1$coefficients[1])/(1 + exp(m1$coefficients))
+   2423/(922 * 91)
+```
+
+Great. Now for more interesting stuff. Let's look at affiliation heterogeneity based on gender and race:
+
+```{r}
+   library(ergm)
+   m2 <- ergm(n ~ edges + b1factor("gender", base = 2) + b1factor("race", base = 5))
+   summary(m2)
+```
+
+We find that women are more active than men. In the same way, compared to white people, Hispanic people tend to have more memberships. 
+
+Of course, it could be that some *types* of clubs are more (or less) attractive foci for affiliation than others. In the two-mode ergm we can explore activity (popularity) differences across both modes, based on attributes:
+
+```{r}
+   library(ergm)
+   m3 <- ergm(n ~ edges + b1factor("gender", base = 2) 
+              + b1factor("race", base = 5)
+              + b2factor("club_type_detailed", base = 7)
+              )
+   summary(m3)
+```
+
+Here we can see that there is statistically significant heterogeneity in the attractiveness of clubs as sources of affiliation. In comparison to the base category of art kid clubs ("Performance Arts") we can see that all clubs are less popular except those based on service and academic pursuits. 
+

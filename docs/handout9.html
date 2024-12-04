@@ -761,7 +761,8 @@ TRUE </code></pre>
 <pre><code>[1] 0.26</code></pre>
 </div>
 </div>
-<p>Which is obtained by “vectorizing” the matrices and computing the Pearson correlation between the vector corresponding to friendship ties and the vector corresponding to advice ties. Here, we see that there is a positive correlation between the two (<span class="math inline">\(r = 0.26\)</span>) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don’t imply directionality).</p>
+<p>Which is obtained by “vectorizing” the matrices and computing the Pearson correlation between the dyad vector (of length <span class="math inline">\(21 \timesd 21 = 441\)</span>) corresponding to friendship ties and the dyad vector corresponding to advice ties.</p>
+<p>Here, we see that there is a positive correlation between the two (<span class="math inline">\(r = 0.26\)</span>) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don’t imply directionality).</p>
 <p>However, is this correlation larger than we would expect by chance? For that, we need to know the range of correlations that would be obtained between on of the networks (e.g., advice) and a suitably randomized version of the other (e.g., friendship).</p>
 <p>The “permutation” approach <span class="citation" data-cites="borgatti_etal24">(<a href="#ref-borgatti_etal24" role="doc-biblioref">Borgatti et al. 2024, chap. 14</a>)</span>—sometimes referred to by the less-than-wieldy name of the <strong>Quadratic Assignment Procedure</strong> (QAP) <span class="citation" data-cites="krackhardt88">(<a href="#ref-krackhardt88" role="doc-biblioref">Krackhardt 1988</a>)</span>—allows us to do that.</p>
 <p>Recall from our discussion of blockmodeling that a permutation of an adjacency matrix is just a reshuffling of its rows and columns.</p>
@@ -1973,16 +1974,18 @@ F-statistic: 25.24 on 2 and 438 DF,  p-value: 4.22e-11</code></pre>
 <span id="cb106-2"><a href="#cb106-2"></a>               <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(betas[, <span class="dv">2</span>]))(reg.res<span class="sc">$</span>coefficients[<span class="dv">2</span>]),</span>
 <span id="cb106-3"><a href="#cb106-3"></a>               <span class="dv">1</span> <span class="sc">-</span> <span class="fu">ecdf</span>(<span class="fu">abs</span>(betas[, <span class="dv">3</span>]))(reg.res<span class="sc">$</span>coefficients[<span class="dv">3</span>])</span>
 <span id="cb106-4"><a href="#cb106-4"></a>               )</span>
-<span id="cb106-5"><a href="#cb106-5"></a>   reg.tab <span class="ot">&lt;-</span> <span class="fu">cbind</span>(reg.res<span class="sc">$</span>coefficients, p.vals)</span>
-<span id="cb106-6"><a href="#cb106-6"></a>   <span class="fu">rownames</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"Friend Tie"</span>, <span class="st">"Formal Tie"</span>)</span>
-<span id="cb106-7"><a href="#cb106-7"></a>   <span class="fu">colnames</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Estimate"</span>, <span class="st">"p-value"</span>)</span>
-<span id="cb106-8"><a href="#cb106-8"></a>   <span class="fu">kbl</span>(reg.tab, <span class="at">rownames =</span> <span class="cn">TRUE</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
-<span id="cb106-9"><a href="#cb106-9"></a>       <span class="at">caption =</span> <span class="st">"Predictors of Advice Ties"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb106-10"><a href="#cb106-10"></a>             <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">italic =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb106-11"><a href="#cb106-11"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb106-12"><a href="#cb106-12"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, </span>
-<span id="cb106-13"><a href="#cb106-13"></a>                                           <span class="st">"condensed"</span>, </span>
-<span id="cb106-14"><a href="#cb106-14"></a>                                           <span class="st">"responsive"</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb106-5"><a href="#cb106-5"></a>   z.scores <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">abs</span>(<span class="fu">qnorm</span>(p.vals)), <span class="dv">3</span>)</span>
+<span id="cb106-6"><a href="#cb106-6"></a>   z.scores[<span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">"--"</span></span>
+<span id="cb106-7"><a href="#cb106-7"></a>   reg.tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(reg.res<span class="sc">$</span>coefficients, z.scores, p.vals)</span>
+<span id="cb106-8"><a href="#cb106-8"></a>   <span class="fu">rownames</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Intercept"</span>, <span class="st">"Friend Tie"</span>, <span class="st">"Formal Tie"</span>)</span>
+<span id="cb106-9"><a href="#cb106-9"></a>   <span class="fu">names</span>(reg.tab) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Estimate"</span>, <span class="st">"z-score"</span>, <span class="st">"p-value"</span>)</span>
+<span id="cb106-10"><a href="#cb106-10"></a>   <span class="fu">kbl</span>(reg.tab[<span class="fu">c</span>(<span class="dv">2</span><span class="sc">:</span><span class="dv">3</span>), ], <span class="at">rownames =</span> <span class="cn">TRUE</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">digits =</span> <span class="dv">3</span>,</span>
+<span id="cb106-11"><a href="#cb106-11"></a>       <span class="at">caption =</span> <span class="st">"Predictors of Advice Ties"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb106-12"><a href="#cb106-12"></a>             <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">italic =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb106-13"><a href="#cb106-13"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb106-14"><a href="#cb106-14"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, </span>
+<span id="cb106-15"><a href="#cb106-15"></a>                                           <span class="st">"condensed"</span>, </span>
+<span id="cb106-16"><a href="#cb106-16"></a>                                           <span class="st">"responsive"</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -1991,23 +1994,21 @@ F-statistic: 25.24 on 2 and 438 DF,  p-value: 4.22e-11</code></pre>
   <tr>
    <th style="text-align:left;">   </th>
    <th style="text-align:right;"> Estimate </th>
+   <th style="text-align:left;"> z-score </th>
    <th style="text-align:right;"> p-value </th>
   </tr>
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;font-style: italic;"> Intercept </td>
-   <td style="text-align:right;"> 0.547 </td>
-   <td style="text-align:right;"> 0.000 </td>
-  </tr>
-  <tr>
    <td style="text-align:left;font-style: italic;"> Friend Tie </td>
    <td style="text-align:right;"> 0.227 </td>
+   <td style="text-align:left;"> 2.257 </td>
    <td style="text-align:right;"> 0.012 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-style: italic;"> Formal Tie </td>
    <td style="text-align:right;"> 0.316 </td>
+   <td style="text-align:left;"> 2.197 </td>
    <td style="text-align:right;"> 0.014 </td>
   </tr>
 </tbody>

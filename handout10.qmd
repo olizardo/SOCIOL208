@@ -15,6 +15,8 @@ In this previous handout we saw how to do some basic, single-hypothesis testing 
 
 Conditioning, of course, can be thought of as the analogue of "controlling for" something in a standard linear regression model. This means that it is possible to extend the framework we explored to a setting in which we conditioning on multiple graph properties to see if what we measure obtains "net" of all these properties at th same time.
 
+## Exponential Random Graph Models
+
 The framework of **Exponential Random Graph Models** (ERGMs) is useful for this purposes. There are many ways to think of ERGMs, one of them is as a network regression in which we are modeling the probability of observing each tie as a function of a bunch of tie level variables. Another way of thinking about it is as specifying a **dependence structure** that tell us how probability of observing a given tie depends on other things going on in the "neighborhood" of that tie, like whether one of the nodes incident to that edge is also incident to other edges [@pattison_robins12]. 
 
 Formally, this means that an Exponential Random Graph Model is a probabilistic (auto)"regression" model in which the network itself, considered as a random variable ($\mathbf{Y}$) is the main outcome and the specified patterns of local dependence are the main predictors:
@@ -235,8 +237,9 @@ Some node attributes like "age" and "tenure" in the Krackhardt's High-Tech Manag
 In the ergm framework homophily on a continuous attribute is handled using the `absdiff` term, which computes the absolute difference in the value of the attribute between the two nodes incident to the edge:
 
 ```{r}
-   m5 <- ergm(n ~ edges +  nodematch("level") + nodematch("dept")
-                  + absdiff("age")
+   m5 <- ergm(n ~ edges 
+              +  nodematch("level") + nodematch("dept")
+              + absdiff("age")
               )
    summary(m5)
 ```
@@ -249,7 +252,8 @@ Of course, just like before, we may want to check that we are not mistaking homo
 To fit the analogue of `nodefactor` for continuous attributes we use `nodecov`, which conditions on the *sum* of the values a given attribute for the two nodes incident to the edge:
 
 ```{r}
-   m6 <- ergm(n ~ edges +  nodecov("age") + nodematch("level") 
+   m6 <- ergm(n ~ edges 
+              +  nodecov("age") + nodematch("level") 
               + nodematch("dept") + absdiff("age")
               )
    summary(m6)
@@ -260,7 +264,8 @@ Like before, after adjusting for the age/degree correlation, there does not seem
 Finally, here's a model including homophily effects for all four node attributes (two categorical and two continuous) in the Krackhardt High-Tech Managers data:
 
 ```{r}
-   m7 <- ergm(n ~ edges +  nodecov("age") + nodecov("tenure")
+   m7 <- ergm(n ~ edges 
+              +  nodecov("age") + nodecov("tenure")
               + nodematch("level") + nodematch("dept")  
               + absdiff("age") + absdiff("tenure")
               )
@@ -281,7 +286,8 @@ We can of course relax this homogeneity restriction and specify *separate* `node
 
 
 ```{r}
-   m8 <- ergm(n ~ edges +  nodecov("age") + nodecov("tenure")
+   m8 <- ergm(n ~ edges 
+              + nodecov("age") + nodecov("tenure")
               + nodematch("level", levels = c(2, 3)) 
               + nodematch("dept", diff = TRUE, levels = c(2, 3, 4))  
               + absdiff("age") + absdiff("tenure") 
@@ -308,7 +314,8 @@ Let's look at an example. But first let's switch to a different data set, this t
 And now let's fit an ergm that conditions on homophily and activity effects for four individual level covariates:  gender, partner status, age, seniority.
 
 ```{r}
-   m9 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+   m9 <- ergm(n ~ edges + 
+                  + nodecov("age") + nodecov("seniority")
                   + nodefactor("status") + nodefactor("gender")
                   + nodematch("status") + nodematch("gender")
                   + absdiff("age") + absdiff("seniority")
@@ -316,12 +323,13 @@ And now let's fit an ergm that conditions on homophily and activity effects for 
    summary(m9)
 ```
 
-We can see that all effects, other than the one conditioning on activity (degree) differences between men and women are statistically significant. Younger and more senior people are more active (form more ties) and more junior associates are less popular than partners. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful baseline model.
+We can see that there are not statistically significant activity effects based on attribute, except for the one premised on status in the firm (although both the positive seniority and gender effects are significant at the $p <0.10$ level. We can also observe predicted homophily effects based on all four characteristics. This looks like a well-fitting useful baseline model.
 
 Let's now add additional activity and homophily effects `law_school`. This variable is coded into three categories: (1) Harvard/Yale, (2) Uconn, (3) "Other":
 
 ```{r}
-   m10 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+   m10 <- ergm(n ~ edges +
+                  + nodecov("age") + nodecov("seniority")
                   + nodefactor("status") + nodefactor("gender")
                   + nodefactor("law_school", base = 3)
                   + nodematch("status") + nodematch("gender")
@@ -331,29 +339,26 @@ Let's now add additional activity and homophily effects `law_school`. This varia
    summary(m10)
 ```
 
-This model shows that Uconn graduates are more popular in the friendship network (they form  more ties), compared to graduates from "other" schools, but that there  doesn't seem to be homophily based on this factor. Still we may suspect that even though there is no homophily, there could be selective mixing (or non-mixing) based on where you got your law degree. 
+This model shows that Uconn graduates are more popular in the friendship network (they form  more ties), compared to graduates from "other" schools, but that there  doesn't seem to be homophily based on this factor. 
 
-For instance, it could be that some categories of actors *avoid* others, which will show up as a negative estimate for that combination, or it could be that homophily only applies to certain specific matches, like we found with the `nodematch` command with the argument `diff` set to `TRUE`.
 
-We can investigate this possibility as follows:
+## Homophily via Combination of Attributes
+
+Sometimes we may suspect that homophily happens via a *combination* of attributes (e.g., gender and status). We can specify such effects using the `nodemix` term as follows:
 
 ```{r}
-   m11 <- ergm(n ~ nodecov("age") + nodecov("seniority")
+   m11 <- ergm(n ~ edges +
+                  + nodecov("age") + nodecov("seniority")
                   + nodefactor("status") + nodefactor("gender")
                   + nodefactor("law_school", base = 3)
-                  + nodematch("status") + nodematch("gender")
                   + absdiff("age") + absdiff("seniority")
-                  + nodemix("law_school", levels = TRUE, 
-                            levels2 = c(1, 3, 5, 6))
+                  + nodematch("law_school")
+                  + nodemix(c("gender", "status"), levels = TRUE, levels2 = c(1:6))
               )
    summary(m11)
 ```
 
-Note that if a variable has $k$ categories, then the maximum number of non-redundant `nodemix` terms we can specify is $k^2 - k$, which in  our case with $k = 3$ is equal to six. 
-
-We typically won't want to include all the combinations; instead, we can control what gets included in the `nodemix` analysis using the `levels2` argument after specifying `levels` to be equal to `TRUE`. Here we fit the differential homophily effects (1, 3, and 6) and one of the non-homophily effects (5) counting the number of edges featuring Uconn graduate nodes and "other" graduates. 
-
-As we can see, the reason we don't observe straight up homophily effects using `nodematch` is because in these data only Harvard/Yale graduates selectively affiliate with one another. Uconn graduates tend to *avoid* friendship ties with graduates from "other" institutions (statistically significant negative mixing effect) and  "other" institutions graduates tend to avoid nominating people from "other" schools as friends (suggesting of a core-periphery dynamic in which elites selectively associate with elites, and everyone avoids non-elites, including themselves!).
+Here we use low status homogeneous dyads (regardless of gender mix) as the comparison category. The results show that compared to those dyads, high-status homogeneous, all men dyads are more prevalent, as gender-mixed dyads where the man is higher status. We also find a preponderance of all-men, status heterogeneous dyads. 
 
 ## Checking for Model Fit
 
@@ -396,3 +401,74 @@ Overall, however, the model does a good job of reproducing a distribution of deg
 In this box plot, the ensemble mean is the blue diamond, the gray box is the interquartile (25th to 75th percentile) range, the black horizontal line in the gray box is the ensemble median, and the black connected line plot is the observed values. 
 
 What we would like to see in a well-fitting model is a black line that goes through the gray box and is not outside them, which is generally the case here for most of the observed range except for the very large values. 
+
+## Conditioning on Degree and Shared Partners
+
+Note that all the models estimated earlier only adjust for the edges parameter as a structural effect. In this sense, they are using the Erdos-Renyi model as the structural baseline.
+
+As we saw with the edge swapping models, it is probably better to use more sophisticated null models than the Erdos-Renyi one. For instance, models that condition on degree heterogeneity in some way, or that also account for transitivity (e.g., triangle) effects (e.g., the tendency of dyads sharing common partners to be connected).
+
+In an ergm context, we could condition on the degree distribution by adding a separate parameter for each observed degree, or adding a `triangle` term. These models are computationally intensive, and often fail to converge (for obscure technical reasons).
+
+A better approach is to fit both degree heterogeneity and transitivity effect using a family of **geometrically weighted decay parameter** terms. The idea is to fit the distribution of a given quantity (e.g., degree, number of shared partners per dyad) by fitting a curve with a term that decays as either the degree or the number of shared partners increases, thus giving more weight to lower degrees and the first or second shared partner as compared to the third, fourth, fifth, and so forth.
+
+These `gw` terms are less computationally intensive and use a single parameter to fit both the degree distribution---using the `gwdegree` term---and the (dyad or edge)wise shared partner distribution---using the `gwdsp` and `gwesp` terms (respectively).
+
+Let's see how the `gw` ergm terms work, going back to Krackhardt's High Tech Managers data. Here's a model looking at activity and homophily effects conditioning on the degree distribution:
+
+```{r}
+   g <- ht_friends
+   g <- as_undirected(g, mode = "collapse")
+   n <- asNetwork(g)
+   m12 <- ergm(n ~ edges 
+              + nodecov("age") + nodecov("tenure")
+              + nodematch("level", levels = c(2, 3)) 
+              + nodematch("dept", diff = TRUE, levels = c(2, 3, 4))  
+              + absdiff("age") + absdiff("tenure") 
+              + gwdegree(decay = 0.25, fixed = TRUE)
+              )
+   summary(m12)
+```
+
+Note that our homophily estimates are still significant, even after accounting for heterogeneity in the degree distribution, the estimate of corresponding to the `gwdegree` term is not significant, suggesting that our activity and homophily attributes do a good job of fitting the empirical degree distribution (which we knew form  our goodness of fit tests). 
+
+Now, here's a model that conditions on the tendency for dyads who share common partners to themselves be connected:
+
+```{r}
+   g <- ht_friends
+   g <- as_undirected(g, mode = "collapse")
+   n <- asNetwork(g)
+   m12 <- ergm(n ~ edges 
+              + nodecov("age") + nodecov("tenure")
+              + nodematch("level", levels = c(2, 3)) 
+              + nodematch("dept", diff = TRUE, levels = c(2, 3, 4))  
+              + absdiff("age") + absdiff("tenure") 
+              + gwdsp(decay = 0.25, fixed = TRUE)
+              )
+   summary(m12)
+```
+
+In this model, we find a statistically significant $\theta$ estimate for the **geometrically weighted dyadwise shared partners** effect (with decay parameter $\gamma = 0.25$), suggesting that this network is likely drawn from a distribution of graphs where pairs of nodes mutually connected to a third are also more likely to be connected themselves ($p < 0.05$). 
+
+However, even after adjusting for this structural tendency our homophily effects are still statistically significant, suggesting that they are not the spurious byproduct of transitivity in friendship ties. 
+
+Finally, we can also adjust for the tendency of connected dyads to share multiple friends (e.g., connected dyads being embedded on one or more triangles), also known as the **Simmelian Tie** effect, also known as the **geometrically weighted edgewise shared partners** effect:
+
+```{r}
+   g <- ht_friends
+   g <- as_undirected(g, mode = "collapse")
+   n <- asNetwork(g)
+   m13 <- ergm(n ~ edges 
+              + nodecov("age") + nodecov("tenure")
+              + nodematch("level", levels = c(2, 3)) 
+              + nodematch("dept", diff = TRUE, levels = c(2, 3, 4))  
+              + absdiff("age") + absdiff("tenure") 
+              + gwdsp(decay = 0.25, fixed = TRUE)
+              + gwesp(decay = 0.25, fixed = TRUE)
+              )
+   summary(m13)
+```
+
+Which shows that our results are also robust to this structural tendency, although the transitivity effect is weakened a bit ($p < 0.10$) when adjusting for statistical prevalence of Simmelian ties.
+
+
