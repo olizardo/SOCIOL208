@@ -17,152 +17,127 @@ The ergm modeling framework is pretty flexible, allowing you to test for the sta
 
 Here we will see how to extend the ergm framework to other types of directed, two-mode, and temporal networks.
 
-## Two-Mode ERGMs
+## ERGMs in Directed Networks
 
-In the two-mode case, ERGMs allow us to test multivariate hypothesis regarding patterns of affiliations between persons and groups, net of other network characteristics. 
+The extension to the directed case is the most straightforward.
 
-Let's load some data, this time we will use Daniel McFarland's data of high school student affiliations with specific activity clubs collected in 1997:
+The key network statistic that we need to think about in the directed case is **reciprocity** or **mutuality**, namely, the fact that in the directed case, it is possible that I send a tie to you but you don't send it back. In this advice network case this would happen if I seek advice from you, but you don't seek advice from me.
 
+In an ergm, we use the `mutual` term to condition on the number of dyads featuring arcs going on both directions (e.g., from $i$ to $j$ *and* from $j$ to $i$).
+
+Let's see an example using Krackhardt's High-Tech Managers:
+   
 ```{r}
-   url1 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/affiliations_1997.txt"
-
-   A <- read.delim(file = url1, check.names = FALSE)
-   dim(A)
-```
-
-The bi-adjacency matrix is of dimensions $1295 \times 91$. The clubs are:
-
-```{r}
-   colnames(A)
-```
-
-We also have attributes for students and clubs:
-
-```{r}
-   url2 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/attributes_students.txt"
-   
-   sa <- read.delim(file = url2, stringsAsFactors = FALSE)
-   
-   url3 <- "https://github.com/JeffreyAlanSmith/Integrated_Network_Science/raw/master/data/attributes_clubs.txt"
-   
-   ca <- read.delim(file = url3, stringsAsFactors = FALSE)
-```
-
-We then use the approach outlined [here](https://inarwhal.github.io/NetworkAnalysisR-book/ch11-Two-mode-Networks.html#example-affiliation-data) to construct a vertex attribute data frame that `igraph` can use.
-
-```{r}
-#| echo: false
-
-   shared_var_names <- c("ids", "type", "missing96", "missing97")
-   shared <- rbind(sa[, shared_var_names], 
-                   ca[, shared_var_names])
-   num_clubs <- nrow(ca)
-   NA_dat_club <- rep(NA, num_clubs)
-   student_var_names <- c("race", "gender", "grade96", "grade97")
-   student_specific <- rbind(sa[, student_var_names], 
-                             data.frame(race = NA_dat_club, 
-                                        gender = NA_dat_club,
-                                        grade96 = NA_dat_club,
-                                        grade97 = NA_dat_club))
-   num_clubs <- nrow(ca)
-   NA_dat_club <- rep(NA, num_clubs)
-   
-   student_var_names <- c("race", "gender", "grade96", "grade97")
-   
-   student_specific <- rbind(sa[, student_var_names], 
-                             data.frame(race = NA_dat_club, 
-                                        gender = NA_dat_club,
-                                        grade96 = NA_dat_club,
-                                        grade97 = NA_dat_club))
-   num_students <- nrow(sa)
-   NA_dat_student <- rep(NA, num_students)
-   
-   club_var_names<- c("club_type_detailed", "club_profile", 
-                      "club_feeder", "club_type_gender", 
-                      "club_type_grade")
-   
-   club_specific <- rbind(data.frame(club_type_detailed = NA_dat_student, 
-                                     club_profile = NA_dat_student,
-                                     club_feeder = NA_dat_student,
-                                     club_type_gender = NA_dat_student,
-                                     club_type_grade = NA_dat_student), 
-                          ca[, club_var_names])
-   sca <- cbind(shared, student_specific, club_specific)
-   not_missing <- sca$missing97 == 0
-   is_student <- sca$type == "student"
-   not_missing_student <- not_missing[is_student]
-   is_club <- sca$type == "club"
-   not_missing_club <- not_missing[is_club]
-   A <- A[not_missing_student, not_missing_club]
-   sca <- sca[not_missing, ]
+   library(networkdata)
    library(igraph)
-   g <- graph_from_biadjacency_matrix(incidence = A, mode = "all")
-   g <- set_vertex_attr(graph = g, name = "race", 
-                                  value = sca$race)
-   
-   g <- set_vertex_attr(graph = g, name = "gender", 
-                                  value = sca$gender)
-   
-   g <- set_vertex_attr(graph = g, name = "grade97", 
-                                  value = sca$grade97)
-   
-   g <- set_vertex_attr(graph = g, name = "club_type_detailed", 
-                                  value = sca$club_type_detailed)
-   
-   g <- set_vertex_attr(graph = g, name = "club_profile", 
-                                  value = sca$club_profile)
-```
-
-The resulting two mode network has the following characteristics:
-
-
-```{r}
-   library(network)
-   table(V(g)$type)
-   attribute_list <- do.call(list, sca)
-   n <- network(as.matrix(A), bipartite = TRUE, vertex.attr = attribute_list)
-   n
-```
-
-We have a network with 2423 edges, 922 people nodes and 91 club nodes. Both the people and the clubs have vertex attributes. 
-
-And now let's fit bipartite ergms!
-
-As always, we begin with the baseline Erdos-Renyi random graph model that fits just the density:
-
-```{r}
    library(ergm)
-   m1 <- ergm(n ~ edges)
+   library(intergraph)
+   g1 <- ht_friends
+   n1 <- asNetwork(g1)
+   g2 <- ht_advice
+   n2 <- asNetwork(g2)
+   m1 <- ergm(n1 ~ edges + mutual)
    summary(m1)
-```
-
-Which we can check is indeed the density:
-
-```{r}
-   exp(m1$coefficients[1])/(1 + exp(m1$coefficients))
-   2423/(922 * 91)
-```
-
-Great. Now for more interesting stuff. Let's look at affiliation heterogeneity based on gender and race:
-
-```{r}
-   library(ergm)
-   m2 <- ergm(n ~ edges + b1factor("gender", base = 2) + b1factor("race", base = 5))
+   m2 <- ergm(n2 ~ edges + mutual)
    summary(m2)
 ```
 
-We find that women are more active than men. In the same way, compared to white people, Hispanic people tend to have more memberships. 
+Here we see strong evidence for mutuality effects in *friendship* nominations ($\theta_m = 1.33, p < 0.01$), consistent with the social meaning of the relation, but not in advice relations ($\theta_m = 0.13, p = 0.65$), suggesting that these are more hierarchical).
 
-Of course, it could be that some *types* of clubs are more (or less) attractive foci for affiliation than others. In the two-mode ergm we can explore activity (popularity) differences across both modes, based on attributes:
+We can also incorporate homophily based non attributes into our analysis of reciprocity. That is, we can test hypotheses of the form: Is mutuality weaker or stronger for dyads that match on a certain characteristic?
+
+For instance, we may suspect that friendship ties among high-tech managers are influenced by formal organizational position, so that there is more mutuality within levels (e.g., mid-manager to mid-manager) than across levels (mid to lower-level). 
+
+Recall than in this network there are three managerial level but only one top manager, so we should compare the middle level to the rest
+
+We can test this hypothesis as using the `same` argument in the `mutual` ergm term:
 
 ```{r}
-   library(ergm)
-   m3 <- ergm(n ~ edges + b1factor("gender", base = 2) 
-              + b1factor("race", base = 5)
-              + b2factor("club_type_detailed", base = 7)
-              )
+   set.seed(123456)
+   m3 <- ergm(n1 ~ edges 
+              + mutual(same = "level", diff = TRUE, levels = 2)
+            )
    summary(m3)
 ```
 
-Here we can see that there is statistically significant heterogeneity in the attractiveness of clubs as sources of affiliation. In comparison to the base category of art kid clubs ("Performance Arts") we can see that all clubs are less popular except those based on service and academic pursuits. 
+And indeed, we find that compared to lower level managers, tendencies toward mutuality in friendship choices are stronger among mid-level managers. 
+
+We can also test hypotheses of the form: Are nodes with certain characteristics more likely to be involved in mutual dyads *regardless of the characteristics of the node at the other end of the tie*? That is, this tests for differential tendencies toward mutuality based on attribute.
+
+We can do this using the `by` argument in the `mutual` term. This time using department as the relevant attribute:
+
+```{r}
+   set.seed(123456)
+   m4 <- ergm(n1 ~ edges 
+              + mutual(by = "dept", levels = 2:4)
+            )
+   summary(m4)
+```
+
+Which shows that nodes in department 2 tend to have more mutual ties compared to other managers.
+
+In `m3` we found that middle level managers are more likely to form mutual friendship ties to other middle-level managers. We may be interested to see if this effect is net of activity differences based on this factor:
+
+
+```{r}
+   set.seed(123456)
+   m5 <- ergm(n1 ~ edges 
+              + nodefactor("level", levels = 2)
+              + mutual(same = "level", diff = TRUE, levels = 2)
+            )
+   summary(m5)
+```
+
+And, indeed, we find that after adjusting for the fact that middle-managers make less overall friendship nominations, tendencies toward mutuality among same-level ties become stronger. 
+
+Also like before, we may be interested in whether our result remains after we condition on core graph level characteristics like the degree distribution using geometrically weighted (`gw`) terms. 
+
+In the directed case, however, we have to worry about both the *in* and *outdegree* distributions, which means two distinct `gw` terms, namely, `gwidegree` and `gwodegree`. It is usually good to introduce one at a time to see if we have to worry about it::
+
+```{r}
+   set.seed(123456)
+   m6 <- ergm(n1 ~ edges 
+              + gwidegree(decay = 0.25, fixed = TRUE)
+              + nodefactor("level", levels = 2)
+              + mutual(same = "level", diff = TRUE, levels = 2)
+            )
+   summary(m6)
+```
+
+Which shows that there does not seem to be any significant heterogeneity based on indegree in the friendship network. 
+
+Let's now look at outdegree:
+
+```{r}
+   set.seed(123456)
+   m7 <- ergm(n1 ~ edges 
+              + gwodegree(decay = 0.25, fixed = TRUE)
+              + nodefactor("level", levels = 2)
+              + mutual(same = "level", diff = TRUE, levels = 2)
+            )
+   summary(m7)
+```
+
+The outdegree distribution is indeed heterogeneous, although that does not change our conclusions regarding tendencies toward mutuality among mid-level managers. 
+
+We can then also check to see whether our results remain the same when we condition on graph-level tendencies towards transitivity. 
+
+Here we have different flavors to choose from because in a directed graph, a dyad can be involved in multiple types of relations with a third party (ingoing, outgoing, reciprocal). 
+
+In this specification, we condition on whether a dyad is connected to a third party via reciprocal ties ("Reciprocal Two-Path" or "RTP"):
+
+```{r}
+   set.seed(123456)
+   m8 <- ergm(n1 ~ edges 
+              + gwdsp(decay = 0.25, fixed = TRUE, type = "RTP")
+              + nodefactor("level", levels = 2)
+              + mutual(same = "level", diff = TRUE, levels = 2)
+            )
+   summary(m8)
+```
+
+And we see that while indeed, having reciprocated ties to a third party increases the chances of a dyad being connected, conditioning on this fact, does not change our conclusions about heightened tendencies toward mutuality among homophilous mid-manager dyads.
+
+
+
 
