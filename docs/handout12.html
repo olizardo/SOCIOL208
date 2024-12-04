@@ -189,12 +189,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </li>
           <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="false">Handouts</a>
-          <a class="sidebar-item-toggle text-start collapsed" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="false">
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">Handouts</a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
-      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 ">  
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth2 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./handout1.html" class="sidebar-item-text sidebar-link">Basic Network Statistics</a>
@@ -275,6 +275,16 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <a href="./handout10.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks II</a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout11.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks III</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout12.html" class="sidebar-item-text sidebar-link active">Statistical Models of Networks IV</a>
+  </div>
+</li>
       </ul>
   </li>
       </ul>
@@ -311,6 +321,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#two-mode-ergms" id="toc-two-mode-ergms" class="nav-link active" data-scroll-target="#two-mode-ergms">Two-Mode ERGMs</a></li>
   <li><a href="#affiliation-heterogeneity-based-on-node-attributes" id="toc-affiliation-heterogeneity-based-on-node-attributes" class="nav-link" data-scroll-target="#affiliation-heterogeneity-based-on-node-attributes">Affiliation Heterogeneity Based on Node Attributes</a></li>
   <li><a href="#homophily-in-the-two-mode-case" id="toc-homophily-in-the-two-mode-case" class="nav-link" data-scroll-target="#homophily-in-the-two-mode-case">Homophily in the Two Mode Case</a></li>
+  <li><a href="#conditining-on-degree" id="toc-conditining-on-degree" class="nav-link" data-scroll-target="#conditining-on-degree">Conditining on Degree</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/handout12.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -862,6 +873,87 @@ AIC: 20601  BIC: 20769  (Smaller is better. MC Std. Err. = 0)</code></pre>
 </div>
 </div>
 <p>Which shows that compared to white students, members of the same racialized minority category tend to be more likely to join the same group.</p>
+</section>
+<section id="conditining-on-degree" class="level2">
+<h2 class="anchored" data-anchor-id="conditining-on-degree">Conditining on Degree</h2>
+<p>Note that the models above only condition on the number of edges in the network (a two-mode version of the Erdos-Renyi model). So we may want to check whether any results regarding activity and homophily hold up against a more sophisticated null model, perhaps one that conditions on degree.</p>
+<p>Note that in the two mode case we have two sets of degrees to worry about, the people and the groups, corresponding to the <code>gwb1degree</code> and <code>gwb2degree</code> geometrically weighted decay terms:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">library</span>(ergm)</span>
+<span id="cb28-2"><a href="#cb28-2"></a>   m7 <span class="ot">&lt;-</span> <span class="fu">ergm</span>(n <span class="sc">~</span> edges </span>
+<span id="cb28-3"><a href="#cb28-3"></a>              <span class="sc">+</span> <span class="fu">gwb1degree</span>(<span class="at">decay =</span> <span class="fl">0.25</span>, <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb28-4"><a href="#cb28-4"></a>              <span class="sc">+</span> <span class="fu">gwb2degree</span>(<span class="at">decay =</span> <span class="fl">0.25</span>, <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb28-5"><a href="#cb28-5"></a>              <span class="sc">+</span> <span class="fu">b1factor</span>(<span class="st">"gender"</span>, <span class="at">base =</span> <span class="dv">2</span>) </span>
+<span id="cb28-6"><a href="#cb28-6"></a>              <span class="sc">+</span> <span class="fu">b1factor</span>(<span class="st">"race"</span>, <span class="at">base =</span> <span class="dv">5</span>)</span>
+<span id="cb28-7"><a href="#cb28-7"></a>              <span class="sc">+</span> <span class="fu">b2factor</span>(<span class="st">"club_type_detailed"</span>, <span class="at">base =</span> <span class="dv">7</span>)</span>
+<span id="cb28-8"><a href="#cb28-8"></a>              <span class="sc">+</span> <span class="fu">b1nodematch</span>(<span class="st">"race"</span>, <span class="at">diff =</span> <span class="cn">TRUE</span>, <span class="at">levels =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>),</span>
+<span id="cb28-9"><a href="#cb28-9"></a>              <span class="at">estimate =</span><span class="st">"MPLE"</span></span>
+<span id="cb28-10"><a href="#cb28-10"></a>              )</span>
+<span id="cb28-11"><a href="#cb28-11"></a>   <span class="fu">summary</span>(m7)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Call:
+ergm(formula = n ~ edges + gwb1degree(decay = 0.25, fixed = TRUE) + 
+    gwb2degree(decay = 0.25, fixed = TRUE) + b1factor("gender", 
+    base = 2) + b1factor("race", base = 5) + b2factor("club_type_detailed", 
+    base = 7) + b1nodematch("race", diff = TRUE, levels = 1:4), 
+    estimate = "MPLE")
+
+Maximum Pseudolikelihood Results:
+
+                                                   Estimate Std. Error MCMC %
+edges                                             -3.241289   0.058868      0
+gwb1deg.fixed.0.25                                -1.419093   0.087824      0
+gwb2deg.fixed.0.25                               -53.587909  55.867644      0
+b1factor.gender.female                             0.240393   0.044445      0
+b1factor.race.Asian                               -0.688534   0.124691      0
+b1factor.race.black                               -0.541557   0.056688      0
+b1factor.race.Hispanic                            -0.488329   0.176411      0
+b1factor.race.Native American                     -0.168338   0.272995      0
+b2factor.club_type_detailed.Academic Competition   0.108630   0.082188      0
+b2factor.club_type_detailed.Academic Interest      0.282413   0.064644      0
+b2factor.club_type_detailed.Ethnic Interest       -1.318605   0.227371      0
+b2factor.club_type_detailed.Individual Sports     -0.795388   0.086082      0
+b2factor.club_type_detailed.Leadership            -0.492344   0.175090      0
+b2factor.club_type_detailed.Media                 -0.413327   0.142185      0
+b2factor.club_type_detailed.Service                0.501474   0.071752      0
+b2factor.club_type_detailed.Team Sports           -0.738812   0.072287      0
+b1nodematch.race.Asian                             0.218717   0.015995      0
+b1nodematch.race.black                             0.034394   0.001829      0
+b1nodematch.race.Hispanic                          0.531126   0.061868      0
+b1nodematch.race.Native American                   0.801330   0.206123      0
+                                                 z value Pr(&gt;|z|)    
+edges                                            -55.060  &lt; 1e-04 ***
+gwb1deg.fixed.0.25                               -16.158  &lt; 1e-04 ***
+gwb2deg.fixed.0.25                                -0.959 0.337461    
+b1factor.gender.female                             5.409  &lt; 1e-04 ***
+b1factor.race.Asian                               -5.522  &lt; 1e-04 ***
+b1factor.race.black                               -9.553  &lt; 1e-04 ***
+b1factor.race.Hispanic                            -2.768 0.005638 ** 
+b1factor.race.Native American                     -0.617 0.537477    
+b2factor.club_type_detailed.Academic Competition   1.322 0.186264    
+b2factor.club_type_detailed.Academic Interest      4.369  &lt; 1e-04 ***
+b2factor.club_type_detailed.Ethnic Interest       -5.799  &lt; 1e-04 ***
+b2factor.club_type_detailed.Individual Sports     -9.240  &lt; 1e-04 ***
+b2factor.club_type_detailed.Leadership            -2.812 0.004924 ** 
+b2factor.club_type_detailed.Media                 -2.907 0.003650 ** 
+b2factor.club_type_detailed.Service                6.989  &lt; 1e-04 ***
+b2factor.club_type_detailed.Team Sports          -10.221  &lt; 1e-04 ***
+b1nodematch.race.Asian                            13.674  &lt; 1e-04 ***
+b1nodematch.race.black                            18.806  &lt; 1e-04 ***
+b1nodematch.race.Hispanic                          8.585  &lt; 1e-04 ***
+b1nodematch.race.Native American                   3.888 0.000101 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Warning:  The standard errors are based on naive pseudolikelihood and are suspect. Set control.ergm$MPLE.covariance.method='Godambe' for a simulation-based approximation of the standard errors.
+
+     Null Pseudo-deviance: 116313  on 83902  degrees of freedom
+ Residual Pseudo-deviance:  20198  on 83882  degrees of freedom
+ 
+AIC: 20238  BIC: 20425  (Smaller is better. MC Std. Err. = 0)</code></pre>
+</div>
+</div>
+<p>Which shows that our results hold up even after accounting for degree-heterogeneity at the graph level.</p>
 
 
 </section>
