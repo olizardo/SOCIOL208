@@ -1964,10 +1964,10 @@ F-statistic: 25.24 on 2 and 438 DF,  p-value: 4.22e-11</code></pre>
 <p>The basic idea is just to run the regression many times, while permuting the outcome variable; this would produce a distribution of coefficient estimates, and we can select the p-value non-parametrically like we did earlier.</p>
 <p>Here’s a function that will run a regression and collect the coefficients:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1"></a>   run.reg <span class="ot">&lt;-</span> <span class="cf">function</span>(g, xvars, dat) {</span>
-<span id="cb103-2"><a href="#cb103-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb103-3"><a href="#cb103-3"></a>      dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y.perm =</span> <span class="fu">as.vector</span>(A), dat)</span>
-<span id="cb103-4"><a href="#cb103-4"></a>      reg.res <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">reformulate</span>(xvars, <span class="st">"y.perm"</span>), <span class="at">data =</span> dat)</span>
+<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb103-1"><a href="#cb103-1"></a>   run.reg <span class="ot">&lt;-</span> <span class="cf">function</span>(x, indvars, dat) {</span>
+<span id="cb103-2"><a href="#cb103-2"></a>      w <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
+<span id="cb103-3"><a href="#cb103-3"></a>      dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y.perm =</span> <span class="fu">as.vector</span>(w), dat)</span>
+<span id="cb103-4"><a href="#cb103-4"></a>      reg.res <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">reformulate</span>(indvars, <span class="st">"y.perm"</span>), <span class="at">data =</span> dat)</span>
 <span id="cb103-5"><a href="#cb103-5"></a>      <span class="fu">return</span>(<span class="fu">as.vector</span>(reg.res<span class="sc">$</span>coefficients))</span>
 <span id="cb103-6"><a href="#cb103-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -1981,10 +1981,11 @@ F-statistic: 25.24 on 2 and 438 DF,  p-value: 4.22e-11</code></pre>
 </div>
 <p>And now we run the regression on our 1000 strong ensemble of permuted advice network graphs:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb105"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1"></a>   reg.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(G4, run.reg, <span class="at">xvars =</span> <span class="fu">c</span>(<span class="st">"frs"</span>, <span class="st">"rep"</span>), <span class="at">dat =</span> ht.dat)</span>
-<span id="cb105-2"><a href="#cb105-2"></a>   betas <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">do.call</span>(rbind, reg.list))</span>
-<span id="cb105-3"><a href="#cb105-3"></a>   <span class="fu">colnames</span>(betas) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Int.Est"</span>, <span class="st">"Fr.Est"</span>, <span class="st">"Rep.Est"</span>)</span>
-<span id="cb105-4"><a href="#cb105-4"></a>   <span class="fu">head</span>(betas) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb105"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1"></a>   reg.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(G4, run.reg, </span>
+<span id="cb105-2"><a href="#cb105-2"></a>                      <span class="at">indvars =</span> <span class="fu">c</span>(<span class="st">"frs"</span>, <span class="st">"rep"</span>), <span class="at">dat =</span> ht.dat)</span>
+<span id="cb105-3"><a href="#cb105-3"></a>   betas <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">do.call</span>(rbind, reg.list))</span>
+<span id="cb105-4"><a href="#cb105-4"></a>   <span class="fu">colnames</span>(betas) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Int.Est"</span>, <span class="st">"Fr.Est"</span>, <span class="st">"Rep.Est"</span>)</span>
+<span id="cb105-5"><a href="#cb105-5"></a>   <span class="fu">head</span>(betas) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       Int.Est     Fr.Est     Rep.Est
 [1,] 0.6346486 0.02616358  0.14965327

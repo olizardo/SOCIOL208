@@ -592,10 +592,10 @@ The basic idea is just to run the regression many times, while permuting the out
 Here's a function that will run a regression and collect the coefficients:
 
 ```{r}
-   run.reg <- function(g, xvars, dat) {
-      A <- as.matrix(as_adjacency_matrix(g))
-      dat <- data.frame(y.perm = as.vector(A), dat)
-      reg.res <- lm(reformulate(xvars, "y.perm"), data = dat)
+   run.reg <- function(x, indvars, dat) {
+      w <- as.matrix(as_adjacency_matrix(x))
+      dat <- data.frame(y.perm = as.vector(w), dat)
+      reg.res <- lm(reformulate(indvars, "y.perm"), data = dat)
       return(as.vector(reg.res$coefficients))
    }
 ```
@@ -614,7 +614,8 @@ We now create a graph ensemble of 1000 permuted advice networks:
 And now we run the regression on our 1000 strong ensemble of permuted advice network graphs:
 
 ```{r}
-   reg.list <- lapply(G4, run.reg, xvars = c("frs", "rep"), dat = ht.dat)
+   reg.list <- lapply(G4, run.reg, 
+                      indvars = c("frs", "rep"), dat = ht.dat)
    betas <- as.matrix(do.call(rbind, reg.list))
    colnames(betas) <- c("Int.Est", "Fr.Est", "Rep.Est")
    head(betas) 
