@@ -17,23 +17,21 @@ Another approach, and one that brings in concerns about inference, statistical s
 
 ## Random Networks
 
-There are many ways to go about this, but here we will cover two important ones. First we can treat the *whole network* as a realization of some random process. That leads to models of **random networks** and **graph ensembles** [@orsini_etal15]. This approach is useful for testing single hypotheses against a plausible null (e.g., are the levels of homophily that I am observing in this network more or less than we would expect by chance?). 
+There are many ways to go about this, but in the following handouts we will cover two important ones. First we can treat the *whole network* as a realization of some random process. That leads to models of **random networks** and **graph ensembles** [@orsini_etal15]. This approach is useful for testing single hypotheses against a plausible null (e.g., are the levels of homophily that I am observing in this network more or less than we would expect by chance?). A variation of this strategy uses permutations to do a version of multiple regression in network data [@krackhardt88].
 
-Second, there are models that treat each *link* in the network as a realization of some random process [@pattison_robins12]. Because a network is just a set of links, these models are also treating the network as random, but allow us to test more fine-grained *multivariate* hypotheses by conditioning on multiple characteristics of the ties and the nodes that are involved in each link at the same time. 
+Second, there are models that treat each *link* in the network as a realization of some random process [@pattison_robins12]. Because a network is just a set of links, these models are also treating the network as random, but allow us to test more fine-grained *multivariate* hypotheses by conditioning on multiple characteristics of the ties and the nodes that are involved in each link at the same time. A popular, and extremely flexible approach to this type of multivariate statistical analysis of networks is the family of **exponential random graph models** usually abbreviated as ERGMs and pronounced "ergums." 
 
-A popular approach to this type of multivariate statistical analysis of networks is the family of **exponential random graph models** usually abbreviated as ERGMs and pronounced "ergums." 
-
-In this handout we will discuss the first of these strategies. 
+In this handout we will discuss the first group of strategies focused on randomizing networks via either edge swapping or permutation. 
 
 ## Graph Ensembles
 
-A **graph ensemble** is just a set of graphs that share some graph level property (like the ones we studied in the very first handout). For instance, they might have the same number of nodes, or the same number of edges, or both, but are different in terms of which particular nodes connect to which. 
+A **graph ensemble** is just a set of graphs that share some graph level property (like the ones we studied in the very first [handout](https://olizardo.github.io/SOCIOL208/handout1.html)). For instance, they might have the same number of nodes, or the same number of edges, or both, but are different in terms of which particular nodes connect to which. 
 
 Note that if an ensemble of graphs has the same number of nodes and edges, they will also be identical with regard to any property that is a function of these two things, like the **density**. 
 
 Usually, what we would want is a graph ensemble that *matches* the properties that we observe in a graph that corresponds to the network of interest. The idea is to create an ensemble of graphs that are similar to our original data. We can then use the ensemble to test whether some quantity we observe in our data is larger or smaller than we would expect by chance. Here "chance" is simply the *probability* of observing that value in the ensemble of graphs we created. 
 
-As @orsini_etal15 note, a simple way to create an ensemble is just by using an **edge swapping algorithm** on the original graph. Each edge swapping algorithm works by *preserving* some property of the original graph across each realization, so that all the graphs in the ensemble share that property.
+As @orsini_etal15 note, a simple way to create an ensemble is just by using an **edge swapping algorithm** on the original graph. Each edge swapping algorithm works by *preserving* some property of the original graph across each realization, so that all the graphs in the ensemble share that property, while everything else is scrambled.
 
 ## The Erdos-Renyi Model
 
@@ -59,11 +57,13 @@ This is the undirected version of the friendship nominations network. Let's revi
 
 We can see that we have $|V| = 21$, $|E|=79$, $d=0.38$, and $\bar{k}=7.5$.
 
-A **rewiring** of this graph, which preserves these statistics, goes like this: Pick a random edge, detach it from the vertices that are incident to it, and attach it to a new pair of vertices that are current disconnected (no multiples), making sure they are distinct vertices (no loops). Do that for some proportion of the edges in the graph. 
+A **rewiring** of this graph, which preserves these statistics, goes like this: Pick a random edge, detach it from the vertices that are incident to it, and attach it to a new pair of vertices that are currently disconnected (to avoid multiples), making sure they are distinct vertices (to avoid loops). Do that for some proportion of the edges in the graph. 
 
 The result is a new "rewired" graph, that still has the same number of nodes and edges as the original (hence same density and average degree), but with whatever original tie-formation tendencies in the original graph scrambled up.
 
-In `igraph` we can use the `rewire` function, along with the `each_edge` rewiring algorithm to accomplish this. Let's say we wanted to rewire up to 50% of the edges of the original network. We would then type:
+In `igraph` we can use the `rewire` function, along with the `each_edge` rewiring algorithm to accomplish this. 
+
+Let's say we wanted to rewire up to 50% of the edges of the original network. We would then type:
 
 ```{r}
    set.seed (123)
@@ -72,7 +72,7 @@ In `igraph` we can use the `rewire` function, along with the `each_edge` rewirin
 
 Which creates a new graph called `g.swap1` with 50% of the edges scrambled (note that we set the seed if we want to get the same graph every time we run it). 
 
-As we can see the new graph preserves the density and average degree of the original:
+As we can see, the new graph preserves the density and average degree of the original:
 
 
 ```{r}
@@ -284,7 +284,7 @@ So it could be that the plain **average degree** (Erdos-Renyi) preserving model 
 
 In `igraph` there is a trusty function called `keeping_degseq`---which is used alongside the more general function `rewire` we used earlier---that allows us to scramble the edges in a graph while keeping the degrees of each node the same as the original. 
 
-The basic idea is to sample a pair of edges connecting vertices $a$ and $b$ and $c$ and $d$ respectively, delete them, and create two new edges (if they don't currently exist) between vertices $a$ and $c$ and between $b$ and $d$, repeating this process `m` number of times. As it is clear, this randomizes connections but keeps the number of edges incident to each node the same [@maslov_sneppen02].  
+The basic idea is to sample a pair of edges connecting vertices $a$ and $b$ and $c$ and $d$ respectively, delete them, and create two new edges (if they don't currently exist) between vertices $a$ and $c$ and between $b$ and $d$, repeating this process `niter` number of times. As it is clear, this randomizes connections but keeps the number of edges incident to each node the same [@maslov_sneppen02].  
 
 Let's see how it works:
 
@@ -294,7 +294,9 @@ Let's see how it works:
    degree(g.swap)
 ```
 
-Which we can see creates a new graph with exactly the same degree sequence as the original. Here they are side-by-side:
+We can see that the edge-swapping algorithm creates a new graph with exactly the same degree sequence as the original. 
+
+Here they are side-by-side:
 
 ```{r}
 #| fig-height: 12
@@ -382,6 +384,14 @@ Indeed, the p-value of the estimate is:
 
 Which is pretty good. Maybe our paper will be published after all!
 
+But oh no, some reviewer who doesn't know what they are talking about asked for a two-tailed test:
+
+```{r}
+   1 - ecdf(abs(assort))(assortativity(g, V(g)$level))
+```
+
+It's a rejection after all.
+
 ## Cross-Network Correlation Using Permutation
 
 Consider the case where we measure two or more ties on the same set of actors. In that case, we could entertain hypotheses of the form: Is having a tie of type $A$ positively or negatively correlated with a tie of type $B$? 
@@ -410,7 +420,7 @@ The correlation between these two ties is then:
    round(r, 2)
 ```
 
-Which is obtained by "vectorizing" the matrices and computing the Pearson correlation between the dyad vector (of length $21 \timesd 21 = 441$) corresponding to friendship ties and the dyad vector corresponding to advice ties. 
+Which is obtained by "vectorizing" the matrices and computing the Pearson correlation between the dyad vector (of length $21 \times 21 = 441$) corresponding to friendship ties and the dyad vector corresponding to advice ties. 
 
 Here, we see that there is a positive correlation between the two ($r = 0.26$) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don't imply directionality).
 
@@ -420,12 +430,7 @@ The "permutation" approach [@borgatti_etal24, Chap. 14]---sometimes referred to 
 
 Recall from our discussion of blockmodeling that a permutation of an adjacency matrix is just a reshuffling of its rows and columns. 
 
-For instance the original adjacency matrix of the Krackhardt Managers friendship nomination network is:
-
-```{r}
-   library(kableExtra)
-   kbl(A.f, format = "html")
-```
+For instance the original adjacency matrix of the Krackhardt Managers friendship nomination network is shown in @tbl-perm-1.
 
 We can permute the rows and columns of the matrix by randomly sampling numbers between 1 and 21 (the number of nodes in the network) and re-ordering the rows and columns of the matrix according to this new vector:
 
@@ -435,11 +440,23 @@ We can permute the rows and columns of the matrix by randomly sampling numbers b
    A.f.perm <- A.f[s, s]
 ```
 
-The new permuted matrix looks like:
+The new permuted matrix is shown in @tbl-perm-2.
+
 
 ```{r}
+#| label: tbl-perm
+#| layout-ncol: 2
+#| tbl-cap: "An adjacency matrix and a permuted version"
+#| tbl-subcap: 
+#|   - "Original."
+#|   - "Permuted."
+#| echo: false 
+
+   library(kableExtra)
+   kbl(A.f, format = "html")
    kbl(A.f.perm, format = "html")
 ```
+
 
 Note that when we lose the labels on the nodes the permuted matrix contains that same information as the original, but scrambles the node labels. 
 
@@ -554,7 +571,7 @@ The permutation (QAP) approach can be extended to considering more than two netw
 
 We can see that there are four middle managers (2, 14, 18, and 21) all of whom report to the top manager (7).
 
-So let's say we wanted to predict advice ties from friendship ties while adjusting for the present of formal reporting ties. We could just a regression like this:
+So let's say we wanted to predict advice ties from friendship ties while adjusting for the present of formal reporting ties. We could just run a regression like this:
 
 ```{r}
    A.r <- as.matrix(as_adjacency_matrix(
@@ -583,10 +600,21 @@ Here's a function that will run a regression and collect the coefficients:
    }
 ```
 
-And now we run the regression on our 1000 strong ensemble of permuted friendship network graphs:
+We now create a graph ensemble of 1000 permuted advice networks:
 
 ```{r}
-   reg.list <- lapply(G3, run.reg, xvars = c("adv", "rep"), dat = ht.dat)
+   G4 <- list() 
+   set.seed(12345)
+   for (i in 1:1000) {
+      G4[[i]] <- perm(g2)
+   }
+```
+
+
+And now we run the regression on our 1000 strong ensemble of permuted advice network graphs:
+
+```{r}
+   reg.list <- lapply(G4, run.reg, xvars = c("frs", "rep"), dat = ht.dat)
    betas <- as.matrix(do.call(rbind, reg.list))
    colnames(betas) <- c("Int.Est", "Fr.Est", "Rep.Est")
    head(betas) 
