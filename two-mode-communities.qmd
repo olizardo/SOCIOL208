@@ -35,7 +35,7 @@ We then perform the spectral decomposition of the bi-adjacency matrix, using Cor
 
 ```{r}
    library(FactoMineR)
-   ca.res <- CA(A, graph = FALSE)
+   ca.res <- CA(A, graph = FALSE, ncp = 10)
 ```
 
 We can now use our trusty `k.cuts` function from the spectral community detection handout to come up with a bunch of partitions of people and groups based on the first three eigenvectors of the spectral decomposition of the modularity matrix:
@@ -50,27 +50,29 @@ We can now use our trusty `k.cuts` function from the spectral community detectio
          }
       return(clus)
    }
-   k.cuts.p <- k.cuts(ca.res$row$coord[, 1:3])
-   k.cuts.g <- k.cuts(ca.res$col$coord[, 1:3])
+   k.cuts.p <- k.cuts(ca.res$row$coord[, 1:6])
+   k.cuts.g <- k.cuts(ca.res$col$coord[, 1:6])
 ```
 
 ## Finding the Bi-partition with the Best Modularity
 
-OK, now that we have some candidate communities for both the people and groups (stored in the `k.cuts.p` and `k.cuts.g` objects) we need to come up with a way of measuring the modularity for a candidate partition that puts the people into $m$ clusters and the groups into $n$ communities. 
+OK, now that we have some candidate communities for both the people and groups (stored in the `k.cuts.p` and `k.cuts.g` objects) we need to come up with a way of measuring the modularity for a candidate partition that puts the people into $m$ and the groups into $n$ communities. 
 
-As an example, let's pick the solution that partitions people into four clusters and events into three communities:
+As an example, let's pick the solution that partitions people into four and groups into three communities:
 
 ```{r}
-   C <- c(k.cuts.p[[3]], k.cuts.g[[2]])
+   C.p <- k.cuts.p[[3]]
+   C.g <- k.cuts.g[[2]]
 ```
 
 Given this information we can create a reduced version of the bipartite adjacency matrix counting the proportion of edges that go from person community $i$ to group community $j$:
 
 ```{r}
-   e <- matrix(0, 4, 4)
-   for (i in 1:4) {
-      for (j in 1:4) {
-         e[i, j] = sum(B[which(C == i), which(C == j)])
+   d <- max(C.p, C.g)
+   e <- matrix(0, d, d)
+   for (i in 1:d) {
+      for (j in 1:d) {
+         e[i, j] = sum(A[C.p == i, C.g == j])
       }
    }
    e
@@ -79,10 +81,10 @@ Given this information we can create a reduced version of the bipartite adjacenc
 @suzuki_wakita09 based on work by @murata09 suggest  using the `e` matrix above to compute the modularity of this person/group assignment according to the following formula:
 
 $$
-Q = \sum_{i, j} = \frac{e_{ij}}{e_{i+}}\left(\frac{e_{ij}}{vol(B)} - \frac{e_{i+}e_{j+}}{vol(B)^2}\right)
+Q = \sum_{i, j} = \frac{e_{ij}}{e_{i+}}\left(\frac{e_{ij}}{vol(A)} - \frac{e_{i+}e_{j+}}{vol(A)^2}\right)
 $$
 
-Where $e_{ij}$ is the fraction of edges connecting nodes (either people or groups) in the $i^{th}$ community to nodes in the $j^{th}$ community, $e_{i+}$ is the fraction of edges originating from nodes community $i$ (the corresponding row sum of `e`), $e_{j+}$ is the fraction of edges originating from nodes in community $j$ (the corresponding column sum of `e`), and $vol(B)$ is the sum of the entries in the bipartite adjacency matrix. 
+Where $e_{ij}$ is the fraction of edges connecting people in the $i^{th}$ person-community to groups in the $j^{th}$ group-community, $e_{i+}$ is the fraction of edges originating from person-community $i$ (the corresponding row sum of `e`), $e_{j+}$ is the fraction of edges originating from nodes in community $j$ (the corresponding column sum of `e`), and $vol(A)$ is the sum of the entries in the bi-adjacency matrix. 
 
 So the idea is that given a partition of the person nodes into `m` communities and a partition of the group nodes into `n` communities, we can generate an `e` matrix like the one above and compute the corresponding modularity of that person/group partition using the above equation.
 
@@ -91,58 +93,68 @@ Let's see how this would work.
 To do this, first let's package the steps we used to find calculate `e` from a partition and to find $Q$ from the Suzuki-Wakita modularity equation into a function:
 
 ```{r}
-   find.mod <- function(w, x) {
-      a <- max(w)
+   find.mod <- function(w, x, y) {
+      a <- max(c(x, y))
       b <- matrix(0, a, a)
       for (i in 1:a) {
          for (j in 1:a) {
-            b[i, j] = sum(x[which(w == i), which(w == j)])
+            b[i, j] = sum(w[x == i, y == j]) 
          }
       }
       Q <- 0
-      E = sum(x)
       c <- rowSums(b)
+      d <- colSums(b)
+      e <- sum(w)
       for (i in 1:a) {
          for (j in 1:a) {
-         Q <- Q + ((b[i, j]/c[i]) * (b[i, j]/E - (c[i]*c[j])/E^2))
+            if (c[i] > 0) {
+               Q <- Q + (b[i, j]/c[i] * (b[i, j]/e - (c[i]*d[j])/e^2))
+            }
          }
       }
-   return(Q/2)
+   return(Q)
    }
 ```
 
-Now, we can use the `find.mod` function to compute the modularity between *every pair* of partition combinations between people and groups that we calculated earlier; since we computed eight different partitions for people and groups this leads to $8 \times 8 = 64$ pairs.
+So for the `e` matrix from the above example, $Q$ would be:
+
+```{r}
+   find.mod(A,  k.cuts.p[[3]],  k.cuts.g[[2]])
+```
+
+Which looks like a positive number. But is it the biggest of all the possible community partition combinations between people and groups?
+
+To answer this question, we can use the `find.mod` function to compute the modularity between *every pair* of partition combinations between people and groups that we calculated earlier; since we computed eight different partitions for people and groups this leads to $8 \times 8 = 64$ pairs.
 
 Here's a wrapper function over `find.mod` that computes the corresponding modularity values for each pair:
 
 ```{r}
    mod.mat <- function(d) {
-     w <- matrix(0, d, d)
+     q <- matrix(0, d, d)
       for (i in 1:d) {
          for (j in 1:d) {
-            w[i, j] <- find.mod(c(k.cuts.p[[i]], k.cuts.g[[j]]), B)
+               q[i, j] <- find.mod(A,  k.cuts.p[[i]],  k.cuts.g[[j]])
          }
       }
-    return(w)
+    return(q)
    }
    Q <- round(mod.mat(8), 3)
    Q
 ```
 
-Interestingly, the analysis suggests that the maximum modularity $Q = `r Q[3, 2]`$ is obtained with a partition of people into four communities and groups into three communities corresponding to cells $(3, 2)$ of the above matrix.
+Interestingly, the analysis suggests that the maximum modularity $Q = `r Q[4, 1]`$ is obtained with a partition of people into five communities and groups into two communities corresponding to cells $(4, 1)$ of the above matrix.
 
 Here's what this community assignment looks like in the Southern Women data:
 
 ```{r}  
-#| label: fig-women
 #| fig-height: 12
 #| fig-width: 12
-#| fig-cap: "Spectral Clustering of Nodes in the Southern Women Data with Optimal Community Assignment Obtained via the Suzuki Modularity."
+#| fig-cap: "Spectral Clustering of Nodes in the Southern Women Data with Optimal Community Assignment Obtained via the Suzuki Modularity, with Five Communities for People, Two Communities for Groups."
 #| echo: false
 
    V(g)$type <- bipartite_mapping(g)$type
    V(g)$shape <- ifelse(V(g)$type, "square", "circle")
-   V(g)$color <- c(k.cuts.p[[3]], k.cuts.g[[2]] + 4)
+   V(g)$color <- c(k.cuts.p[[4]], k.cuts.g[[1]] + 5)
    set.seed(456)
    plot(g, 
      vertex.size=7, vertex.frame.color="lightgray", 
@@ -150,9 +162,9 @@ Here's what this community assignment looks like in the Southern Women data:
      vertex.label.cex = 1.15)
 ```
 
-The analysis separates two groups of densely connected actors of size six and five, respectively, namely, $\{Brenda, Theresa, Laura, Frances, Evelyn, Eleanor\}$ and $\{Katherine, Nora, Sylvia, Myrna, Helen\}$ along with their corresponding events from the one another. In the same way, $\{Pearl, Dorothy, Ruth, Verne\}$ form a community of more peripheral actors who selectively attend the more popular events; $\{Flora, Olivia\}$ are a two-actor community occupying the most peripheral position.
+The analysis separates two groups of densely connected actors of size six and five, respectively, namely, $\{Brenda, Theresa, Laura, Frances, Evelyn, Eleanor\}$ and $\{Katherine, Nora, Sylvia, Myrna, Helen\}$ along with their corresponding events from the one another. In the same way, $\{Pearl, Dorothy, Ruth, Verne\}$ form a community of more peripheral actors who selectively attend the more popular events; $\{Flora, Olivia\}$ are a two-actor community occupying the most peripheral position. Among the core set of actor $\{Charlotte\}$ occupies a singleton-community of her own. 
 
-Events are partitioned into two broad groups: One the one hand, we have those selectively selectively attended by the larger community of densely connected actors along with the most popular events; on the other hand, we have the events selectively attended by the smaller group of densely connected actors. Finally, we have a singleton peripheral event community composed of $\{2/23\}$ which is the event that $\{Flora, Olivia\}$ selectively attend. 
+Events are partitioned into two broad groups: One the one hand, we have those selectively selectively attended by the larger community of densely connected actors along with the most popular events; on the other hand, we have the events selectively attended by the smaller group of densely connected actors. 
 
 
 

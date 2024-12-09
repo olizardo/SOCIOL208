@@ -279,6 +279,31 @@ div.csl-indent {
   <a href="./spectral.html" class="sidebar-item-text sidebar-link active">Community Detection Using Spectral Clustering</a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout8.html" class="sidebar-item-text sidebar-link">Analyzing Ego Networks</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout9.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks I</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout10.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks II</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout11.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks III</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./handout12.html" class="sidebar-item-text sidebar-link">Statistical Models of Networks IV</a>
+  </div>
+</li>
       </ul>
   </li>
       </ul>
@@ -318,6 +343,7 @@ div.csl-indent {
   <li><a href="#spectral-clustering-using-the-eigenvectors-of-the-degree-normalized-laplacian" id="toc-spectral-clustering-using-the-eigenvectors-of-the-degree-normalized-laplacian" class="nav-link" data-scroll-target="#spectral-clustering-using-the-eigenvectors-of-the-degree-normalized-laplacian">Spectral Clustering Using the Eigenvectors of the <em>Degree-Normalized</em> Laplacian</a></li>
   <li><a href="#clustering-using-the-eigenvectors-of-the-modularity-matrix" id="toc-clustering-using-the-eigenvectors-of-the-modularity-matrix" class="nav-link" data-scroll-target="#clustering-using-the-eigenvectors-of-the-modularity-matrix">Clustering Using the Eigenvectors of the Modularity Matrix</a></li>
   <li><a href="#spectral-clustering-of-two-mode-networks" id="toc-spectral-clustering-of-two-mode-networks" class="nav-link" data-scroll-target="#spectral-clustering-of-two-mode-networks">Spectral Clustering of Two-Mode Networks</a></li>
+  <li><a href="#bipartite-modularity-allowing-people-and-groups-to-belong-to-different-number-of-communities" id="toc-bipartite-modularity-allowing-people-and-groups-to-belong-to-different-number-of-communities" class="nav-link" data-scroll-target="#bipartite-modularity-allowing-people-and-groups-to-belong-to-different-number-of-communities">Bipartite Modularity Allowing People and Groups to Belong to Different Number of Communities</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/spectral.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -815,7 +841,7 @@ FLORA     -0.13 -0.07 -0.07</code></pre>
 <span id="cb24-3"><a href="#cb24-3"></a>   CA.res <span class="ot">&lt;-</span> <span class="fu">CA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>, <span class="at">ncp =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Which computes CA directly on the bi-adjacency matrix (the argument <code>ncp</code> asks to keep the first ten dimensions).</p>
-<p>We can now extract the CA scores for persons and groups fromm the resulting object:</p>
+<p>We can now extract the CA scores for persons and groups from the resulting object:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   eig.vec.p <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>row<span class="sc">$</span>coord</span>
 <span id="cb25-2"><a href="#cb25-2"></a>   eig.vec.g <span class="ot">&lt;-</span> CA.res<span class="sc">$</span>col<span class="sc">$</span>coord</span>
@@ -1012,6 +1038,120 @@ FRANCES   -0.7973597  0.05794469 -0.20558235</code></pre>
 <p></p><figcaption class="figure-caption">Figure&nbsp;5: Spectral Clustering of Nodes in the Southern Women Data.</figcaption><p></p>
 </figure>
 </div>
+</section>
+<section id="bipartite-modularity-allowing-people-and-groups-to-belong-to-different-number-of-communities" class="level2">
+<h2 class="anchored" data-anchor-id="bipartite-modularity-allowing-people-and-groups-to-belong-to-different-number-of-communities">Bipartite Modularity Allowing People and Groups to Belong to Different Number of Communities</h2>
+<p>One limitation of Barber’s approach to computing the modularity is that it can only be used under the assumption that the number of communities is the <em>same</em> for both persons and groups.</p>
+<p>However, it could be that the optimal partition is actually one in which the people node set is split into a different number of clusters than the group node set.</p>
+<p>So we need a way to evaluate the modularity of a partition when we have different number of communities on the people and group side.</p>
+<p>Here’s how to do it.</p>
+<p>First, we generate two separate candidate community assignments for people and groups via spectral clustering from CA:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   k.cuts.p <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(CA.res<span class="sc">$</span>row<span class="sc">$</span>coord[, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>])</span>
+<span id="cb42-2"><a href="#cb42-2"></a>   k.cuts.g <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(CA.res<span class="sc">$</span>col<span class="sc">$</span>coord[, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Here, we use the first six eigenvectors.</p>
+<p>As an example, let’s pick the solution that partitions people into four and groups into three communities:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   C.p <span class="ot">&lt;-</span> k.cuts.p[[<span class="dv">3</span>]]</span>
+<span id="cb43-2"><a href="#cb43-2"></a>   C.g <span class="ot">&lt;-</span> k.cuts.g[[<span class="dv">2</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Given this information we can create a <span class="math inline">\(k \times k\)</span> matrix <code>e</code> (where <span class="math inline">\(k\)</span> is the maximum number of community clusters in either the person or group vectors) counting the proportion of edges that go from person community <span class="math inline">\(i\)</span> to group community <span class="math inline">\(j\)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   d <span class="ot">&lt;-</span> <span class="fu">max</span>(C.p, C.g)</span>
+<span id="cb44-2"><a href="#cb44-2"></a>   e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, d, d)</span>
+<span id="cb44-3"><a href="#cb44-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb44-4"><a href="#cb44-4"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb44-5"><a href="#cb44-5"></a>         e[i, j] <span class="ot">=</span> <span class="fu">sum</span>(A[C.p <span class="sc">==</span> i, C.g <span class="sc">==</span> j])</span>
+<span id="cb44-6"><a href="#cb44-6"></a>      }</span>
+<span id="cb44-7"><a href="#cb44-7"></a>   }</span>
+<span id="cb44-8"><a href="#cb44-8"></a>   e</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4]
+[1,]   17    2   15    0
+[2,]    0    0    4    0
+[3,]    0    2    2    0
+[4,]    0    0   47    0</code></pre>
+</div>
+</div>
+<p><span class="citation" data-cites="suzuki_wakita09">Suzuki and Wakita (<a href="#ref-suzuki_wakita09" role="doc-biblioref">2009</a>)</span> based on work by <span class="citation" data-cites="murata09">Murata (<a href="#ref-murata09" role="doc-biblioref">2009</a>)</span> suggest using the <code>e</code> matrix above to compute the modularity of this uneven person/group assignment according to the following formula:</p>
+<p><span class="math display">\[
+Q = \sum_{i, j} = \frac{e_{ij}}{e_{i+}}\left(\frac{e_{ij}}{vol(A)} - \frac{e_{i+}e_{+j}}{vol(A)^2}\right)
+\]</span></p>
+<p>Where <span class="math inline">\(e_{ij}\)</span> is the fraction of edges connecting people in the <span class="math inline">\(i^{th}\)</span> person-community to groups in the <span class="math inline">\(j^{th}\)</span> event-community, <span class="math inline">\(e_{i+}\)</span> is the fraction of edges originating from person-community <span class="math inline">\(i\)</span> (the corresponding row sum of <code>e</code>), <span class="math inline">\(e_{+j}\)</span> is the fraction of edges originating from nodes in group-community <span class="math inline">\(j\)</span> (the corresponding column sum of <code>e</code>), and <span class="math inline">\(vol(A)\)</span> is the sum of the entries in the bi-adjacency matrix.</p>
+<p>So the idea is that given a partition of the person nodes into <span class="math inline">\(m\)</span> communities and a partition of the group nodes into <span class="math inline">\(n\)</span> communities, we can generate an <code>e</code> matrix like the one above and compute the corresponding modularity of that person/group partition using the above equation.</p>
+<p>To do this, first let’s package the steps we used to find calculate <code>e</code> from a partition and find the corresponding <span class="math inline">\(Q\)</span> into a function:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   find.mod <span class="ot">&lt;-</span> <span class="cf">function</span>(w, x, y) {</span>
+<span id="cb46-2"><a href="#cb46-2"></a>      a <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">c</span>(x, y))</span>
+<span id="cb46-3"><a href="#cb46-3"></a>      b <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, a, a)</span>
+<span id="cb46-4"><a href="#cb46-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb46-5"><a href="#cb46-5"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb46-6"><a href="#cb46-6"></a>            b[i, j] <span class="ot">=</span> <span class="fu">sum</span>(w[x <span class="sc">==</span> i, y <span class="sc">==</span> j]) </span>
+<span id="cb46-7"><a href="#cb46-7"></a>         }</span>
+<span id="cb46-8"><a href="#cb46-8"></a>      }</span>
+<span id="cb46-9"><a href="#cb46-9"></a>      Q <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb46-10"><a href="#cb46-10"></a>      c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(b)</span>
+<span id="cb46-11"><a href="#cb46-11"></a>      d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(b)</span>
+<span id="cb46-12"><a href="#cb46-12"></a>      e <span class="ot">&lt;-</span> <span class="fu">sum</span>(w)</span>
+<span id="cb46-13"><a href="#cb46-13"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb46-14"><a href="#cb46-14"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb46-15"><a href="#cb46-15"></a>            <span class="cf">if</span> (c[i] <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb46-16"><a href="#cb46-16"></a>               Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> (b[i, j]<span class="sc">/</span>c[i] <span class="sc">*</span> (b[i, j]<span class="sc">/</span>e <span class="sc">-</span> (c[i]<span class="sc">*</span>d[j])<span class="sc">/</span>e<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb46-17"><a href="#cb46-17"></a>            }</span>
+<span id="cb46-18"><a href="#cb46-18"></a>         }</span>
+<span id="cb46-19"><a href="#cb46-19"></a>      }</span>
+<span id="cb46-20"><a href="#cb46-20"></a>   <span class="fu">return</span>(Q)</span>
+<span id="cb46-21"><a href="#cb46-21"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>So for the <code>e</code> matrix from the above example, <span class="math inline">\(Q\)</span> would be:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">find.mod</span>(A,  k.cuts.p[[<span class="dv">3</span>]],  k.cuts.g[[<span class="dv">2</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1444188</code></pre>
+</div>
+</div>
+<p>Which looks like a positive number. But is it the biggest of all the possible community partition combinations between people and groups?</p>
+<p>To answer this question, we can use the <code>find.mod</code> function to compute the modularity between <em>every pair</em> of partition combinations between people and groups that we calculated earlier; since we computed eight different partitions for people and groups this leads to <span class="math inline">\(8 \times 8 = 64\)</span> pairs.</p>
+<p>Here’s a wrapper function over <code>find.mod</code> that computes the corresponding modularity values for each pair:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   mod.mat <span class="ot">&lt;-</span> <span class="cf">function</span>(d) {</span>
+<span id="cb49-2"><a href="#cb49-2"></a>     q <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, d, d)</span>
+<span id="cb49-3"><a href="#cb49-3"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb49-4"><a href="#cb49-4"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb49-5"><a href="#cb49-5"></a>               q[i, j] <span class="ot">&lt;-</span> <span class="fu">find.mod</span>(A,  k.cuts.p[[i]],  k.cuts.g[[j]])</span>
+<span id="cb49-6"><a href="#cb49-6"></a>         }</span>
+<span id="cb49-7"><a href="#cb49-7"></a>      }</span>
+<span id="cb49-8"><a href="#cb49-8"></a>    <span class="fu">return</span>(q)</span>
+<span id="cb49-9"><a href="#cb49-9"></a>   }</span>
+<span id="cb49-10"><a href="#cb49-10"></a>   Q <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">mod.mat</span>(<span class="dv">8</span>), <span class="dv">2</span>)</span>
+<span id="cb49-11"><a href="#cb49-11"></a>   Q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,] 0.20 0.12 0.08 0.06 0.06 0.07 0.06 0.05
+[2,] 0.21 0.13 0.10 0.08 0.08 0.08 0.07 0.07
+[3,] 0.21 0.14 0.11 0.08 0.09 0.09 0.07 0.08
+[4,] 0.22 0.15 0.14 0.11 0.12 0.11 0.10 0.09
+[5,] 0.22 0.15 0.14 0.12 0.12 0.12 0.11 0.10
+[6,] 0.22 0.15 0.15 0.13 0.12 0.13 0.12 0.11
+[7,] 0.22 0.15 0.15 0.13 0.13 0.14 0.12 0.12
+[8,] 0.22 0.15 0.16 0.13 0.13 0.14 0.13 0.12</code></pre>
+</div>
+</div>
+<p>Interestingly, the analysis suggests that the maximum modularity <span class="math inline">\(Q = 0.22\)</span> is obtained with a partition of people into five communities and groups into two communities corresponding to cells <span class="math inline">\((4, 1)\)</span> of the above matrix.</p>
+<p>Here’s what this community assignment looks like in the Southern Women data:</p>
+<div class="cell">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="spectral_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid figure-img" width="1152"></p>
+<p></p><figcaption class="figure-caption">Spectral Clustering of Nodes in the Southern Women Data with Optimal Community Assignment Obtained via the Suzuki Modularity, with Five Communities for People, Two Communities for Groups.</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The analysis separates two groups of densely connected actors of size six and five, respectively, namely, <span class="math inline">\(\{Brenda, Theresa, Laura, Frances, Evelyn, Eleanor\}\)</span> and <span class="math inline">\(\{Katherine, Nora, Sylvia, Myrna, Helen\}\)</span> along with their corresponding events from the one another. In the same way, <span class="math inline">\(\{Pearl, Dorothy, Ruth, Verne\}\)</span> form a community of more peripheral actors who selectively attend the more popular events; <span class="math inline">\(\{Flora, Olivia\}\)</span> are a two-actor community occupying the most peripheral position. Among the core set of actors, <span class="math inline">\(\{Charlotte\}\)</span> occupies a singleton-community of her own.</p>
+<p>Events are partitioned into two broad groups: One the one hand, we have those selectively selectively attended by the larger community of densely connected actors along with the most popular events; on the other hand, we have the events selectively attended by the smaller group of densely connected actors.</p>
 <p>In this handout we have seen that spectral clustering via the Laplacian, normalized Laplacian or the modularity matrix (and CA or the modularity in the bipartite case) produces high-quality partitions, highlighting the core groups in the data. It is a simple and easy to implement option to add to your arsenal.</p>
 
 
@@ -1025,6 +1165,12 @@ Fender, Alexandre, Nahid Emad, Serge Petiton, and Maxim Naumov. 2017. <span>“P
 </div>
 <div id="ref-fouss_etal16" class="csl-entry" role="doc-biblioentry">
 Fouss, François, Marco Saerens, and Masashi Shimbo. 2016. <em>Algorithms and Models for Network Data and Link Analysis</em>. Cambridge University Press.
+</div>
+<div id="ref-murata09" class="csl-entry" role="doc-biblioentry">
+Murata, Tsuyoshi. 2009. <span>“Community Division of Heterogeneous Networks.”</span> In <em>Complex Sciences: First International Conference, Complex 2009, Shanghai, China, February 23-25, 2009. Revised Papers, Part 1 1</em>, 1011–22. Springer.
+</div>
+<div id="ref-suzuki_wakita09" class="csl-entry" role="doc-biblioentry">
+Suzuki, Kenta, and Ken Wakita. 2009. <span>“Extracting Multi-Facet Community Structure from Bipartite Networks.”</span> In <em>2009 International Conference on Computational Science and Engineering</em>, 4:312–19. IEEE.
 </div>
 <div id="ref-vonluxburg07" class="csl-entry" role="doc-biblioentry">
 Von Luxburg, Ulrike. 2007. <span>“A Tutorial on Spectral Clustering.”</span> <em>Statistics and Computing</em> 17: 395–416.
