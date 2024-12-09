@@ -370,38 +370,30 @@ div.csl-indent {
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(igraph)</span>
 <span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(networkdata)</span>
 <span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> southern_women <span class="co">#southern women data</span></span>
-<span id="cb1-4"><a href="#cb1-4"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(g)) <span class="co">#bi-adjacency matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-4"><a href="#cb1-4"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(g)) <span class="co">#bi-adjacency matrix</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g)) <span class="co">#bipartite adjacency matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="the-dual-projection-approach-to-bipartite-commmunity-detection" class="level2">
 <h2 class="anchored" data-anchor-id="the-dual-projection-approach-to-bipartite-commmunity-detection">The Dual Projection Approach to Bipartite Commmunity Detection</h2>
 <p>To estimate distinct number of communities across the separate modes we follow the dual projection approach of <span class="citation" data-cites="everett_borgatti13">Everett and Borgatti (<a href="#ref-everett_borgatti13" role="doc-biblioref">2013</a>)</span>.</p>
-<p>First, we need to create the matrices we will need, namely, the one-mode projections of people and groups and the modularity matrices based on those projections:</p>
+<p>We then perform the spectral decomposition of the bi-adjacency matrix, using Correspondence Analysis:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co">#person projection</span></span>
-<span id="cb2-2"><a href="#cb2-2"></a>   G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co">#group projection</span></span>
-<span id="cb2-3"><a href="#cb2-3"></a>   d.p <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(P) <span class="co">#people degree</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a>   d.g <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(G) <span class="co">#group degree</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a>   B.p <span class="ot">&lt;-</span> P <span class="sc">-</span> (d.p <span class="sc">%*%</span> <span class="fu">t</span>(d.p))<span class="sc">/</span><span class="fu">sum</span>(P) <span class="co">#person modularity matrix</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a>   B.g <span class="ot">&lt;-</span> G <span class="sc">-</span> (d.g <span class="sc">%*%</span> <span class="fu">t</span>(d.g))<span class="sc">/</span><span class="fu">sum</span>(G) <span class="co">#group modularity matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(FactoMineR)</span>
+<span id="cb2-2"><a href="#cb2-2"></a>   ca.res <span class="ot">&lt;-</span> <span class="fu">CA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We then perform the spectral decomposition of each single-mode modularity matrix, keeping the first three eigenvectors:</p>
+<p>We can now use our trusty <code>k.cuts</code> function from the spectral community detection handout to come up with a bunch of partitions of people and groups based on the first three eigenvectors of the spectral decomposition of the modularity matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   eig.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(B.p)<span class="sc">$</span>vectors[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span>
-<span id="cb3-2"><a href="#cb3-2"></a>   eig.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(B.g)<span class="sc">$</span>vectors[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>We can now use our trusty <code>k.cuts</code> function from the spectral community detection handout to come up with a bunch of partitions of people and groups based on the first <span class="math inline">\(k\)</span> eigenvectors of the spectral decomposition of the modularity matrix:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   k.cuts <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">max =</span> <span class="dv">9</span>) {</span>
-<span id="cb4-2"><a href="#cb4-2"></a>      clus <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb4-3"><a href="#cb4-3"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>max) {</span>
-<span id="cb4-4"><a href="#cb4-4"></a>         <span class="fu">set.seed</span>(<span class="dv">456</span>) <span class="co">#setting seed because kmeans uses random starting nodes for cluster centroids</span></span>
-<span id="cb4-5"><a href="#cb4-5"></a>         k <span class="ot">&lt;-</span> i <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb4-6"><a href="#cb4-6"></a>         clus[[i]] <span class="ot">&lt;-</span> <span class="fu">kmeans</span>(x, k)<span class="sc">$</span>cluster</span>
-<span id="cb4-7"><a href="#cb4-7"></a>         }</span>
-<span id="cb4-8"><a href="#cb4-8"></a>      <span class="fu">return</span>(clus)</span>
-<span id="cb4-9"><a href="#cb4-9"></a>   }</span>
-<span id="cb4-10"><a href="#cb4-10"></a>   k.cuts.p <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(eig.p, <span class="at">max =</span> <span class="dv">12</span>)</span>
-<span id="cb4-11"><a href="#cb4-11"></a>   k.cuts.g <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(eig.g, <span class="at">max =</span> <span class="dv">12</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   k.cuts <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">max =</span> <span class="dv">9</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2"></a>      clus <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb3-3"><a href="#cb3-3"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>max) {</span>
+<span id="cb3-4"><a href="#cb3-4"></a>         <span class="fu">set.seed</span>(<span class="dv">456</span>) <span class="co">#setting seed because kmeans uses random starting nodes for cluster centroids</span></span>
+<span id="cb3-5"><a href="#cb3-5"></a>         k <span class="ot">&lt;-</span> i <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb3-6"><a href="#cb3-6"></a>         clus[[i]] <span class="ot">&lt;-</span> <span class="fu">kmeans</span>(x, k)<span class="sc">$</span>cluster</span>
+<span id="cb3-7"><a href="#cb3-7"></a>         }</span>
+<span id="cb3-8"><a href="#cb3-8"></a>      <span class="fu">return</span>(clus)</span>
+<span id="cb3-9"><a href="#cb3-9"></a>   }</span>
+<span id="cb3-10"><a href="#cb3-10"></a>   k.cuts.p <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(ca.res<span class="sc">$</span>row<span class="sc">$</span>coord[, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>])</span>
+<span id="cb3-11"><a href="#cb3-11"></a>   k.cuts.g <span class="ot">&lt;-</span> <span class="fu">k.cuts</span>(ca.res<span class="sc">$</span>col<span class="sc">$</span>coord[, <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="finding-the-bi-partition-with-the-best-modularity" class="level2">
@@ -409,101 +401,80 @@ div.csl-indent {
 <p>OK, now that we have some candidate communities for both the people and groups (stored in the <code>k.cuts.p</code> and <code>k.cuts.g</code> objects) we need to come up with a way of measuring the modularity for a candidate partition that puts the people into <span class="math inline">\(m\)</span> clusters and the groups into <span class="math inline">\(n\)</span> communities.</p>
 <p>As an example, let’s pick the solution that partitions people into four clusters and events into three communities:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   p<span class="fl">.4</span> <span class="ot">&lt;-</span> k.cuts.p[[<span class="dv">3</span>]]</span>
-<span id="cb5-2"><a href="#cb5-2"></a>   g<span class="fl">.3</span> <span class="ot">&lt;-</span> k.cuts.g[[<span class="dv">2</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   C <span class="ot">&lt;-</span> <span class="fu">c</span>(k.cuts.p[[<span class="dv">3</span>]], k.cuts.g[[<span class="dv">2</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Given this information we can create a <span class="math inline">\(4 X 3\)</span> matrix counting the proportion of edges that go from person community <span class="math inline">\(i\)</span> to group community <span class="math inline">\(j\)</span>:</p>
+<p>Given this information we can create a reduced version of the bipartite adjacency matrix counting the proportion of edges that go from person community <span class="math inline">\(i\)</span> to group community <span class="math inline">\(j\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">3</span>)</span>
-<span id="cb6-2"><a href="#cb6-2"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>) {</span>
-<span id="cb6-3"><a href="#cb6-3"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>) {</span>
-<span id="cb6-4"><a href="#cb6-4"></a>         e[i, j] <span class="ot">=</span> <span class="fu">sum</span>(A[<span class="fu">which</span>(p<span class="fl">.4</span> <span class="sc">==</span> i), <span class="fu">which</span>(g<span class="fl">.3</span> <span class="sc">==</span> j)])</span>
-<span id="cb6-5"><a href="#cb6-5"></a>      }</span>
-<span id="cb6-6"><a href="#cb6-6"></a>   }</span>
-<span id="cb6-7"><a href="#cb6-7"></a>   e</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">4</span>)</span>
+<span id="cb5-2"><a href="#cb5-2"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>) {</span>
+<span id="cb5-3"><a href="#cb5-3"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>) {</span>
+<span id="cb5-4"><a href="#cb5-4"></a>         e[i, j] <span class="ot">=</span> <span class="fu">sum</span>(B[<span class="fu">which</span>(C <span class="sc">==</span> i), <span class="fu">which</span>(C <span class="sc">==</span> j)])</span>
+<span id="cb5-5"><a href="#cb5-5"></a>      }</span>
+<span id="cb5-6"><a href="#cb5-6"></a>   }</span>
+<span id="cb5-7"><a href="#cb5-7"></a>   e</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>     [,1] [,2] [,3]
-[1,]   13    4    0
-[2,]    6    9    6
-[3,]   10    1    1
-[4,]    4   10   25</code></pre>
+<pre><code>     [,1] [,2] [,3] [,4]
+[1,]   32    2   12    1
+[2,]    2    0   44    0
+[3,]   12   44    4   12
+[4,]    1    0   12    0</code></pre>
 </div>
 </div>
-<p><span class="citation" data-cites="suzuki_wakita09">Suzuki and Wakita (<a href="#ref-suzuki_wakita09" role="doc-biblioref">2009</a>)</span> based on work by <span class="citation" data-cites="murata09">Murata (<a href="#ref-murata09" role="doc-biblioref">2009</a>)</span> suggest using the <code>e</code> matrix above to compute the modularity according to the following formula:</p>
+<p><span class="citation" data-cites="suzuki_wakita09">Suzuki and Wakita (<a href="#ref-suzuki_wakita09" role="doc-biblioref">2009</a>)</span> based on work by <span class="citation" data-cites="murata09">Murata (<a href="#ref-murata09" role="doc-biblioref">2009</a>)</span> suggest using the <code>e</code> matrix above to compute the modularity of this person/group assignment according to the following formula:</p>
 <p><span class="math display">\[
-Q = \sum_{i, j} = \frac{e_{ij}}{p_i}\left[\frac{e_{ij}}{vol(A)} - \frac{p_ig_j}{(vol(A))^2}\right]
+Q = \sum_{i, j} = \frac{e_{ij}}{e_{i+}}\left(\frac{e_{ij}}{vol(B)} - \frac{e_{i+}e_{j+}}{vol(B)^2}\right)
 \]</span></p>
-<p>Where <span class="math inline">\(e_{ij}\)</span> is the fraction of edges connecting people in the <span class="math inline">\(i^{th}\)</span> person community to groups in the <span class="math inline">\(j^{th}\)</span> group community, <span class="math inline">\(p_i\)</span> is the fraction of edges originating in person community <span class="math inline">\(i\)</span>, <span class="math inline">\(g_j\)</span> is the fraction of edges originating in group community <span class="math inline">\(j\)</span>. For instance, <span class="math inline">\(e_{43} = 0.28\)</span> for person-community four and group-community three above. Similarly <span class="math inline">\(p_4\)</span> is 0.04 + 0.11 + 0.28 = 0.43 for person-community four and Similarly <span class="math inline">\(g_3\)</span> is 0 + 0.07 + 0 + 0.28 = 0.35 for group-community three; <span class="math inline">\(vol(A)\)</span> is the sum of the entries in the bi-adjacency matrix.</p>
-<p>Here’s a way of computing the Suzuki modularity using the information above:</p>
+<p>Where <span class="math inline">\(e_{ij}\)</span> is the fraction of edges connecting nodes (either people or groups) in the <span class="math inline">\(i^{th}\)</span> community to nodes in the <span class="math inline">\(j^{th}\)</span> community, <span class="math inline">\(e_{i+}\)</span> is the fraction of edges originating from nodes community <span class="math inline">\(i\)</span> (the corresponding row sum of <code>e</code>), <span class="math inline">\(e_{j+}\)</span> is the fraction of edges originating from nodes in community <span class="math inline">\(j\)</span> (the corresponding column sum of <code>e</code>), and <span class="math inline">\(vol(B)\)</span> is the sum of the entries in the bipartite adjacency matrix.</p>
+<p>So the idea is that given a partition of the person nodes into <code>m</code> communities and a partition of the group nodes into <code>n</code> communities, we can generate an <code>e</code> matrix like the one above and compute the corresponding modularity of that person/group partition using the above equation.</p>
+<p>Let’s see how this would work.</p>
+<p>To do this, first let’s package the steps we used to find calculate <code>e</code> from a partition and to find <span class="math inline">\(Q\)</span> from the Suzuki-Wakita modularity equation into a function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   Q <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb8-2"><a href="#cb8-2"></a>   a <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(e)</span>
-<span id="cb8-3"><a href="#cb8-3"></a>   b <span class="ot">&lt;-</span> <span class="fu">colSums</span>(e)</span>
-<span id="cb8-4"><a href="#cb8-4"></a>   E <span class="ot">=</span> <span class="fu">sum</span>(A)</span>
-<span id="cb8-5"><a href="#cb8-5"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>) {</span>
-<span id="cb8-6"><a href="#cb8-6"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>) {</span>
-<span id="cb8-7"><a href="#cb8-7"></a>         Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> ((e[i, j]<span class="sc">/</span>a[i]) <span class="sc">*</span> (e[i, j]<span class="sc">/</span>E <span class="sc">-</span> (a[i]<span class="sc">*</span>b[j])<span class="sc">/</span>E<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb8-8"><a href="#cb8-8"></a>         Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> ((<span class="fu">t</span>(e)[j, i]<span class="sc">/</span>b[j]) <span class="sc">*</span> (<span class="fu">t</span>(e)[j, i]<span class="sc">/</span>E <span class="sc">-</span> (a[i]<span class="sc">*</span>b[j])<span class="sc">/</span>E<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb8-9"><a href="#cb8-9"></a>      }</span>
-<span id="cb8-10"><a href="#cb8-10"></a>   }</span>
-<span id="cb8-11"><a href="#cb8-11"></a>   Q<span class="sc">/</span><span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   find.mod <span class="ot">&lt;-</span> <span class="cf">function</span>(w, x) {</span>
+<span id="cb7-2"><a href="#cb7-2"></a>      a <span class="ot">&lt;-</span> <span class="fu">max</span>(w)</span>
+<span id="cb7-3"><a href="#cb7-3"></a>      b <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, a, a)</span>
+<span id="cb7-4"><a href="#cb7-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb7-5"><a href="#cb7-5"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb7-6"><a href="#cb7-6"></a>            b[i, j] <span class="ot">=</span> <span class="fu">sum</span>(x[<span class="fu">which</span>(w <span class="sc">==</span> i), <span class="fu">which</span>(w <span class="sc">==</span> j)])</span>
+<span id="cb7-7"><a href="#cb7-7"></a>         }</span>
+<span id="cb7-8"><a href="#cb7-8"></a>      }</span>
+<span id="cb7-9"><a href="#cb7-9"></a>      Q <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb7-10"><a href="#cb7-10"></a>      E <span class="ot">=</span> <span class="fu">sum</span>(x)</span>
+<span id="cb7-11"><a href="#cb7-11"></a>      c <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(b)</span>
+<span id="cb7-12"><a href="#cb7-12"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb7-13"><a href="#cb7-13"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>a) {</span>
+<span id="cb7-14"><a href="#cb7-14"></a>         Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> ((b[i, j]<span class="sc">/</span>c[i]) <span class="sc">*</span> (b[i, j]<span class="sc">/</span>E <span class="sc">-</span> (c[i]<span class="sc">*</span>c[j])<span class="sc">/</span>E<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb7-15"><a href="#cb7-15"></a>         }</span>
+<span id="cb7-16"><a href="#cb7-16"></a>      }</span>
+<span id="cb7-17"><a href="#cb7-17"></a>   <span class="fu">return</span>(Q<span class="sc">/</span><span class="dv">2</span>)</span>
+<span id="cb7-18"><a href="#cb7-18"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now, we can use the <code>find.mod</code> function to compute the modularity between <em>every pair</em> of partition combinations between people and groups that we calculated earlier; since we computed eight different partitions for people and groups this leads to <span class="math inline">\(8 \times 8 = 64\)</span> pairs.</p>
+<p>Here’s a wrapper function over <code>find.mod</code> that computes the corresponding modularity values for each pair:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   mod.mat <span class="ot">&lt;-</span> <span class="cf">function</span>(d) {</span>
+<span id="cb8-2"><a href="#cb8-2"></a>     w <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, d, d)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb8-4"><a href="#cb8-4"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
+<span id="cb8-5"><a href="#cb8-5"></a>            w[i, j] <span class="ot">&lt;-</span> <span class="fu">find.mod</span>(<span class="fu">c</span>(k.cuts.p[[i]], k.cuts.g[[j]]), B)</span>
+<span id="cb8-6"><a href="#cb8-6"></a>         }</span>
+<span id="cb8-7"><a href="#cb8-7"></a>      }</span>
+<span id="cb8-8"><a href="#cb8-8"></a>    <span class="fu">return</span>(w)</span>
+<span id="cb8-9"><a href="#cb8-9"></a>   }</span>
+<span id="cb8-10"><a href="#cb8-10"></a>   Q <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">mod.mat</span>(<span class="dv">8</span>), <span class="dv">3</span>)</span>
+<span id="cb8-11"><a href="#cb8-11"></a>   Q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.1528609</code></pre>
+<pre><code>      [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]
+[1,] 0.103 0.149 0.073 0.126 0.134 0.126 0.134 0.129
+[2,] 0.081 0.126 0.058 0.119 0.121 0.113 0.123 0.112
+[3,] 0.094 0.155 0.077 0.130 0.087 0.085 0.088 0.094
+[4,] 0.108 0.056 0.085 0.072 0.055 0.054 0.057 0.067
+[5,] 0.102 0.052 0.078 0.064 0.051 0.051 0.050 0.053
+[6,] 0.101 0.049 0.076 0.067 0.055 0.039 0.040 0.046
+[7,] 0.128 0.052 0.089 0.074 0.063 0.047 0.045 0.049
+[8,] 0.123 0.053 0.085 0.067 0.059 0.045 0.043 0.045</code></pre>
 </div>
 </div>
-<p>Which seems like a positive number, indicating it is picking up modularity-based communities in these data. But is it the best partition?</p>
-<p>To answer this question, we need to search for all the candidate person and group partitions and select the pair of clusterings that maximizes the modularity as defined above.</p>
-<p>To do this, first let’s package the steps we used to find <span class="math inline">\(Q\)</span> from <code>e</code> into a function:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   find.mod <span class="ot">&lt;-</span> <span class="cf">function</span>(a, b, x) {</span>
-<span id="cb10-2"><a href="#cb10-2"></a>      c <span class="ot">&lt;-</span> <span class="fu">max</span>(a)</span>
-<span id="cb10-3"><a href="#cb10-3"></a>      d <span class="ot">&lt;-</span> <span class="fu">max</span>(b)</span>
-<span id="cb10-4"><a href="#cb10-4"></a>      e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, c, d)</span>
-<span id="cb10-5"><a href="#cb10-5"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>c) {</span>
-<span id="cb10-6"><a href="#cb10-6"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>d) {</span>
-<span id="cb10-7"><a href="#cb10-7"></a>            e[i, j] <span class="ot">=</span> <span class="fu">sum</span>(x[<span class="fu">which</span>(a <span class="sc">==</span> i), <span class="fu">which</span>(b <span class="sc">==</span> j)])</span>
-<span id="cb10-8"><a href="#cb10-8"></a>         }</span>
-<span id="cb10-9"><a href="#cb10-9"></a>      }</span>
-<span id="cb10-10"><a href="#cb10-10"></a>      Q <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb10-11"><a href="#cb10-11"></a>      f <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(e)</span>
-<span id="cb10-12"><a href="#cb10-12"></a>      g <span class="ot">&lt;-</span> <span class="fu">colSums</span>(e)</span>
-<span id="cb10-13"><a href="#cb10-13"></a>      E <span class="ot">=</span> <span class="fu">sum</span>(x)</span>
-<span id="cb10-14"><a href="#cb10-14"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(e)) {</span>
-<span id="cb10-15"><a href="#cb10-15"></a>         <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(e)) {</span>
-<span id="cb10-16"><a href="#cb10-16"></a>            Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> ((e[i, j]<span class="sc">/</span>f[i]) <span class="sc">*</span> (e[i, j]<span class="sc">/</span>E <span class="sc">-</span> (f[i]<span class="sc">*</span>g[j])<span class="sc">/</span>E<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb10-17"><a href="#cb10-17"></a>            Q <span class="ot">&lt;-</span> Q <span class="sc">+</span> ((<span class="fu">t</span>(e)[j, i]<span class="sc">/</span>g[j]) <span class="sc">*</span> (<span class="fu">t</span>(e)[j, i]<span class="sc">/</span>E <span class="sc">-</span> (f[i]<span class="sc">*</span>g[j])<span class="sc">/</span>E<span class="sc">^</span><span class="dv">2</span>))</span>
-<span id="cb10-18"><a href="#cb10-18"></a>         }</span>
-<span id="cb10-19"><a href="#cb10-19"></a>      }</span>
-<span id="cb10-20"><a href="#cb10-20"></a>   <span class="fu">return</span>(Q<span class="sc">/</span><span class="dv">2</span>)</span>
-<span id="cb10-21"><a href="#cb10-21"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Now, we can use the <code>find.mod</code> function to compute the modularity between <em>every pair</em> of partition values between people and groups:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   mod.mat <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">12</span>, <span class="dv">12</span>)</span>
-<span id="cb11-2"><a href="#cb11-2"></a>   <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>) {</span>
-<span id="cb11-3"><a href="#cb11-3"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>) {</span>
-<span id="cb11-4"><a href="#cb11-4"></a>         mod.mat[i, j] <span class="ot">&lt;-</span> <span class="fu">find.mod</span>(k.cuts.p[[i]], k.cuts.g[[j]], A)</span>
-<span id="cb11-5"><a href="#cb11-5"></a>      }</span>
-<span id="cb11-6"><a href="#cb11-6"></a>   }</span>
-<span id="cb11-7"><a href="#cb11-7"></a>   Q <span class="ot">&lt;-</span> <span class="fu">round</span>(mod.mat, <span class="dv">3</span>)</span>
-<span id="cb11-8"><a href="#cb11-8"></a>   Q</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>       [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]  [,9] [,10] [,11] [,12]
- [1,] 0.001 0.011 0.041 0.028 0.027 0.027 0.027 0.027 0.037 0.037 0.037 0.037
- [2,] 0.078 0.105 0.115 0.130 0.120 0.116 0.112 0.108 0.109 0.110 0.110 0.106
- [3,] 0.108 0.153 0.142 0.154 0.145 0.139 0.136 0.125 0.131 0.128 0.127 0.124
- [4,] 0.100 0.167 0.170 0.179 0.175 0.164 0.161 0.149 0.149 0.146 0.147 0.144
- [5,] 0.097 0.161 0.157 0.173 0.162 0.152 0.148 0.137 0.135 0.132 0.131 0.127
- [6,] 0.088 0.163 0.157 0.171 0.164 0.152 0.149 0.136 0.132 0.130 0.130 0.127
- [7,] 0.087 0.154 0.150 0.162 0.156 0.144 0.141 0.131 0.127 0.124 0.123 0.120
- [8,] 0.096 0.157 0.154 0.165 0.158 0.145 0.141 0.132 0.131 0.128 0.127 0.123
- [9,] 0.096 0.160 0.157 0.167 0.160 0.146 0.142 0.133 0.132 0.129 0.128 0.124
-[10,] 0.089 0.144 0.139 0.150 0.142 0.129 0.125 0.116 0.115 0.114 0.114 0.110
-[11,] 0.089 0.148 0.142 0.153 0.145 0.130 0.126 0.117 0.116 0.115 0.115 0.111
-[12,] 0.088 0.143 0.138 0.148 0.140 0.126 0.122 0.113 0.113 0.111 0.113 0.109</code></pre>
-</div>
-</div>
-<p>Interestingly, the analysis suggests that the maximum modularity <span class="math inline">\(Q = 0.13\)</span> is obtained with a equi-partition of people and groups into five communities each corresponding to cell <span class="math inline">\((4, 4)\)</span> of the matrix above.</p>
+<p>Interestingly, the analysis suggests that the maximum modularity <span class="math inline">\(Q = 0.155\)</span> is obtained with a partition of people into four communities and groups into three communities corresponding to cells <span class="math inline">\((3, 2)\)</span> of the above matrix.</p>
 <p>Here’s what this community assignment looks like in the Southern Women data:</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -515,8 +486,8 @@ Q = \sum_{i, j} = \frac{e_{ij}}{p_i}\left[\frac{e_{ij}}{vol(A)} - \frac{p_ig_j}{
 </div>
 </div>
 </div>
-<p>The analysis separates two groups of densely connected actors, namely, <span class="math inline">\(\{Brenda, Theresa, Laura, Frances, Evelyn\}\)</span> and <span class="math inline">\(\{Katherine, Nora, Sylvia\}\)</span> along with their corresponding events from the one another. Among the core group of densely connected actors <span class="math inline">\(\{Charlotte, Eleanor, Helen\}\)</span> form their own sub-community; while <span class="math inline">\(\{Pearl, Dorothy, Myrna, Verne\}\)</span> form a clique of more peripheral actors; <span class="math inline">\(\{Flora, Olivia\}\)</span> are a two-actor clique.</p>
-<p>Note that two very well-attended events <span class="math inline">\(\{9/16\}\)</span> and <span class="math inline">\(\{3/15\}\)</span> occupy unique structural positions as singleton clusters mainly because the mediate between the otherwise separate cliques of women across the bipartite graph. The events in the two-event community comprising <span class="math inline">\(\{4/8, 2/23\}\)</span> also play a mediating role, but mainly between they connect the more peripheral actor set and the rest.</p>
+<p>The analysis separates two groups of densely connected actors of size six and five, respectively, namely, <span class="math inline">\(\{Brenda, Theresa, Laura, Frances, Evelyn, Eleanor\}\)</span> and <span class="math inline">\(\{Katherine, Nora, Sylvia, Myrna, Helen\}\)</span> along with their corresponding events from the one another. In the same way, <span class="math inline">\(\{Pearl, Dorothy, Ruth, Verne\}\)</span> form a community of more peripheral actors who selectively attend the more popular events; <span class="math inline">\(\{Flora, Olivia\}\)</span> are a two-actor community occupying the most peripheral position.</p>
+<p>Events are partitioned into two broad groups: One the one hand, we have those selectively selectively attended by the larger community of densely connected actors along with the most popular events; on the other hand, we have the events selectively attended by the smaller group of densely connected actors. Finally, we have a singleton peripheral event community composed of <span class="math inline">\(\{2/23\}\)</span> which is the event that <span class="math inline">\(\{Flora, Olivia\}\)</span> selectively attend.</p>
 
 
 
