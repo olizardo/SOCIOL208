@@ -55,11 +55,11 @@ Eigenvalues and eigenvectors, like Don Quixote and Sancho Panza, come in pairs, 
 
 Note that all of this obscure talk about eigenvalues and eigenvectors is just matrix math stuff. It has nothing to do with networks and social structure.
 
-In contrast, because the big three centrality measures have a direct foundation in graph theory, and graph theory is an isomorphic **model** of social structures (points map to actor and lines map to relations) the "math" we do with graph theory is **directly** meaningful as a model of networks (the counts of the number of edges incident to a node is the count of other actors they someone is directly connected to). 
+In contrast, because the big three centrality measures have a direct foundation in graph theory, and graph theory is an isomorphic **model** of social structures (points map to actors/people and lines map to relations) the "math" we do with graph theory is **directly** meaningful as a model of networks (the counts of the number of edges incident to a node is the count of other actors they someone is directly connected to). 
 
 Eigenvalues and eigenvectors are not a model of social structure in the way graph theory is (their first scientific application was in Chemistry and Physics). They are just a mechanical math fix to a circular equation problem. 
 
-This is why it's a mistake to introduce network measures of status and prestige by jumping directly to the machinery of linear algebra (or worse talk about the idea of **eigenvector centrality** which means nothing to most people). 
+This is why it's a mistake to introduce network measures of status and prestige by jumping directly to the machinery of linear algebra (or worse talk about the idea of **eigenvector centrality** which means nothing to most people, and combines two obscure terms into one even more obscure compound term). 
 
 A better approach is to see if we can *motivate* the use of measures like the ones above using the simple model of the distribution of status and prestige we started with earlier. We will see that we can, and that doing that leads us back to solutions that are the mathematical equivalent of all the eigenvector stuff. 
 
@@ -104,31 +104,30 @@ We extract the adjacency matrix corresponding to this network:
 And here's a simple custom function using a `while` loop that exemplifies the process of status distribution through the network we talked about earlier:
 
 ```{r}
-   status1 <- function(A) {
-      n <- nrow(A) #number of actors
-      x <- rep(1, n) #initial status vector set to all ones
-      w <- 1 
+   status1 <- function(w) {
+      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+      d <- 1 #initial delta
       k <- 0 #initializing counter
-      while (w > 0.0001) {
+      while (d > 1e-10) {
           o.x <- x #old status scores
           x <- A %*% o.x #new scores a function of old scores and adjacency matrix
           x <- x/norm(x, type = "E") #normalizing new status scores
-          w <- abs(sum(abs(x) - abs(o.x))) #diff. between new and old scores
+          d <- abs(sum(abs(x) - abs(o.x))) #diff. between new and old scores
           k <- k + 1 #incrementing while counter
       }
    return(as.vector(x))
    }
 ```
 
-Lines 1-5 initialize various quantities, most importantly the initial status vector for each node to just a series of ones:
+Lines 2-4 initialize various quantities, most importantly the initial status vector for each node to just a series of ones:
 
 ```{r}
    rep(1, nrow(A))
 ```
 
-Then lines 6-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 0.0001$) as checked in line 10. 
+Then lines 5-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 8 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 10^{10}$) as checked in line 9. 
 
-Note the normalization step on line 9, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
+Note the normalization step on line 8, which is necessary to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
 
 And here's the resulting (row) vector of status scores for each node:
 
@@ -218,15 +217,15 @@ Here are the top ten nodes:
 
 While the top in-degree centrality node (2) also gets the top Eigenvector Centrality scores, we see many cases of nodes with equal in-degree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* incoming connections you have. 
 
-## A Degree-Dependent Model of Status (AKA PageRank)
+## A Degree-Normalized Model of Status (AKA PageRank)
 
-Note that the model of status distribution implied by the Bonacich's **Eigenvector Centrality** just reviewed implies that each node distributes the same amount of status *independently* of the number of connection it has; status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
+Note that the model of status distribution implied by the Bonacich's **Eigenvector Centrality** just reviewed implies that each actor distributes the same amount of status *independently* of the number of connections they have. Status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
 
 This is why the eigenvector idea rewards nodes who are connected to popular others more. Even though everyone begins with a single unit of status, well-connected nodes by degree end up having more of it to distribute. 
 
-But what if status dissipated proportionately to the number of connections one had? For instance, if someone has 100 friends and they only had so much time or energy, they would only have a fraction of status to distribute to others than a person with 10 friends. 
+But what if status propagated in the network proportionately to the number of connections one had? For instance, if someone has 100 friends and they only had so much time or energy, they would only have a fraction of status to distribute to others than a person with 10 friends. 
 
-In that case, the node with a hundred friends would only have 1/100 of status unites to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to *discerning* others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately. 
+In that case, the node with a hundred friends would only have 1/100 of status units to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to *discerning* others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately. 
 
 How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix:
 
@@ -266,7 +265,7 @@ Which means that inequalities in the system will be tied to the indegree of each
 
 This will come in handy in a second.
 
-The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a large indegree in $\mathbf{P}$. 
+The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a larger indegree in $\mathbf{P}$. 
 
 Now we can just adapt the the model of status distribution we used for eigenvector centrality but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$. 
 
@@ -309,6 +308,8 @@ We then compute the $\mathbf{P}$ matrix:
    round(P[1:10, 1:10], 2)
 ```
 
+### PageRank with Damping and Teleportation
+
 Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
 
 One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor, in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
@@ -323,7 +324,7 @@ $$
 
 Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being "teleported" to.
 
-So fixing $\alpha = 0.85$ our $\mathbf{G}$ matrix would be:
+So, fixing $\alpha = 0.85$ (the standard value chosen by @brin_page98 in their original paper) our $\mathbf{G}$ matrix would be:
 
 ```{r}
    n <- vcount(g)
@@ -368,23 +369,22 @@ Which says that the hub score $x^h$ of a node is the sum of the authority scores
 So we need to make our status game a bit more complicated (but not too much) to account for this duality:
 
 ```{r}
-   status2 <- function(A) {
-     n <- nrow(A)
-     a <- rep(1, n)  #initializing authority scores
-     diff.a <- 1 #initializing diff.
-     while (diff.a >= 0.0001) {
+   status2 <- function(w) {
+     a <- rep(1, nrow(w))  #initializing authority scores
+     d <- 1 #initializing diff.
+     while (d >= 1e-10) {
          o.a <- a #old authority scores
          h <- A %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
          h <- h/norm(h, type = "E")
          a <- t(A) %*% h #new authority scores a function of current hub scores of their in-neighbors
          a <- a/norm(a, type = "E")
-         diff.a <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
+         d <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
          }
    return(list(h = as.vector(h), a = as.vector(a)))
    }
 ```
 
-Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. As you may have guessed this is just an implementation of the "HITS" algorithm developed by @kleinberg99.^[HITS is an acronym for the unfortunate and impossible to remember name "Hypertext Induced Topic Selection" reflecting the origins the approach is web-based information science.]
+Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. As you may have guessed this is just an implementation of the "HITS" algorithm developed by @kleinberg99.^[HITS is an acronym for the unfortunate and impossible to remember name "Hypertext Induced Topic Selection" reflecting the origins the approach in web-based information science.]
 
 The results for the Krackhardt advice network are:
 
@@ -393,12 +393,17 @@ The results for the Krackhardt advice network are:
    round(status2(A)$h/max(status2(A)$h), 3)
 ```
 
-Which are equivalent to using the `igraph` functions `authority_score` and `hub_score`:
+Which are equivalent to using the `igraph` function `hits_scores`:
 
 ```{r}
-   round(authority_score(g, scale = TRUE)$vector, 3)
-   round(hub_score(g, scale = TRUE)$vector, 3)
+   ha <- hits_scores(g, scale = TRUE)
+   round(ha$authority, 3)
+   round(ha$hub, 3)
 ```
+
+Note that the `igraph` function `hits_scores` returns the two sets of scores as elements of a `list`, so we need to access them using the `$` operator on the object that we store the results in (in this case `ha`).
+
+### Hubs, Authorities and Eigenvectors
 
 Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the eigenvectors of a network proximity matrix (the adjacency matrix $\mathbf{A}$ and the probability matrix $\mathbf{P}$ respectively). It would be surprising if the same wasn't true of the hub and authority status scores.
 
