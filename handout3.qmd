@@ -110,9 +110,9 @@ And here's a simple custom function using a `while` loop that exemplifies the pr
       k <- 0 #initializing counter
       while (d > 1e-10) {
           o.x <- x #old status scores
-          x <- A %*% o.x #new scores a function of old scores and adjacency matrix
+          x <- w %*% o.x #new scores a function of old scores and adjacency matrix
           x <- x/norm(x, type = "E") #normalizing new status scores
-          d <- abs(sum(abs(x) - abs(o.x))) #diff. between new and old scores
+          d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
           k <- k + 1 #incrementing while counter
       }
    return(as.vector(x))
@@ -227,15 +227,36 @@ But what if status propagated in the network proportionately to the number of co
 
 In that case, the node with a hundred friends would only have 1/100 of status units to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to *discerning* others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately. 
 
-How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix:
+How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix. It is defined like this:
+
+$$
+\mathbf{P} = \mathbf{A}\mathbf{D}_{out}^{-1}
+$$
+
+Where $\mathbf{A}$ is our old friend the adjacency matrix, and $\mathbf{D}_{out}^{-1}$ is a matrix containing the *inverse* of each node outdegree along the diagonals and zeroes in every other cell. In `R` we can create the $\mathbf{D}_{out}^{-1}$ matrix using the native `diag` function like this:
 
 ```{r}
    g <- as.undirected(ht_friends, mode = "collapse")
    A <- as.matrix(as_adjacency_matrix(g))
-   P <- A/rowSums(A)
+   D.o <- diag(1/rowSums(A))
 ```
 
-So this is the original adjacency matrix, with each entry $a_{ij}$ divided by the sum of the corresponding row, which, as you may recall, is equivalent to the **degree** of node $i$. 
+Recalling that the function `rowSums` gives us the row sums of the adjacency matrix, which is the same as each node's outdegree.
+
+We can check out that the  $\mathbf{D}_{out}^{-1}$ indeed contains the quantities we seek by looking at its first few rows and columns:
+
+```{r}
+   D.o[1:10, 1:10]
+```
+
+We can then create the $\mathbf{P}$ matrix corresponding to the undirected version of the Krackhardt friendship network using matrix multiplication like this:
+
+
+```{r}
+   P <- A %*% D.o
+```
+
+So this is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. 
 
 Here are the first 10 rows and columns of the new matrix:
 
@@ -251,13 +272,17 @@ Moreover the rows of $\mathbf{P}$ sum to one:
    rowSums(P)
 ```
 
-Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "outdegree" of each node in the matrix is forced to sum to a fixed number (which means that it is a useless quantity). However, the indegree is not:
+Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "outdegree" of each node in the matrix is forced to sum to a fixed number. Substantively this means that we are equalizing the total amount of prestige or status that each node can distribute in the system to a fixed quantity. 
+
+This means that nodes with a lot of out-neighbors will dissipate this quantity by distributing it across a larger number of recipients (hence their corresponding non-zero entries in the rows of $\mathbf{P}$) will be a small number) and nodes with a few out-neighbors will have more to distribute. 
+
+Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columnns* of the same matrix do not:
 
 ```{r}
    round(colSums(P), 2)
 ```
 
-Which means that inequalities in the system will be tied to the indegree of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix:
+This means that inequalities in the system will be tied to the *indegree* of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix $\mathbf{P}^T$:
 
 ```{r}
    round(rowSums(t(P)), 2)
@@ -285,7 +310,7 @@ What if I told you that these numbers are the same as the leading eigenvector of
    round(s2, 3) 
 ```
 
-And, of course, the (normalized) scores produced by this approach are identical to those computed by the `page_rank` function in `igraph`:
+And, of course, the (normalized) scores produced by this approach are identical to those computed by the `page_rank` function in `igraph` with "damping factor" (to be explained in a second) set to 1.0:
 
 ```{r}
    pr <- page_rank(g, damping = 1, algo = "arpack")$vector
@@ -294,25 +319,25 @@ And, of course, the (normalized) scores produced by this approach are identical 
 
 So the distributional model of status is the same one implemented in the PageRank algorithm!
 
+### PageRank with Damping and Teleportation in Directed Graphs
+
 PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
 
 ```{r}
    g <- ht_advice
+   A <- as.matrix(as_adjacency_matrix(g))
 ```
 
 We then compute the $\mathbf{P}$ matrix:
 
 ```{r}
-   A <- as.matrix(as_adjacency_matrix(g))
-   P <- A/rowSums(A)
-   round(P[1:10, 1:10], 2)
+   D.o <- diag(1/rowSums(A))
+   P <- A %*% D.o
 ```
-
-### PageRank with Damping and Teleportation
 
 Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
 
-One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor, in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
+One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
 
 To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.
 
@@ -346,6 +371,8 @@ Which is the same answer you would get from the `igraph` function `page_rank` by
    round(pr/max(pr), 3)
 ```
 
+We can see therefore that the damping parameter simply controls the extent to which the PageRank ranking is driven by the directed connectivity of the $\mathbf{P}$ matrix, versus a stochastic or random component. 
+
 ## Hubs and Authorities
 
 Recall from previous discussions that everything doubles (sometimes quadruples like degree correlations) in directed graphs. The same goes for status as reflected in a distributive model through the network. 
@@ -371,16 +398,18 @@ So we need to make our status game a bit more complicated (but not too much) to 
 ```{r}
    status2 <- function(w) {
      a <- rep(1, nrow(w))  #initializing authority scores
-     d <- 1 #initializing diff.
+     d <- 1 #initializing delta
+     k <- 0 #initializing counter
      while (d >= 1e-10) {
          o.a <- a #old authority scores
-         h <- A %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
+         h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
          h <- h/norm(h, type = "E")
-         a <- t(A) %*% h #new authority scores a function of current hub scores of their in-neighbors
+         a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
          a <- a/norm(a, type = "E")
-         d <- abs(sum(abs(o.a) - abs(a))) #diff. between old and new authority scores
+         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+         k <- k + 1
          }
-   return(list(h = as.vector(h), a = as.vector(a)))
+   return(list(h = as.vector(h), a = as.vector(a), k = k))
    }
 ```
 
@@ -440,9 +469,34 @@ You may have guessed that the diagonals of matrix $\mathbf{N}$ contain the **ind
    degree(g, mode = "in")[1:10]
 ```
 
-Which means that the *off-diagonals* cells of each matrix $m_{ij}$ and $n_{ij}$, contain the common out-neighbors and common in-neighbors shared by nodes $i$ and $j$ in the graph, respectively.
+Which means that the *off-diagonals* cells of each matrix $m_{ij}$ and $n_{ij}$, contain the **common out-neighbors** and **common in-neighbors** shared by nodes $i$ and $j$ in the graph, respectively.
 
-As you may already be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}$ and $\mathbf{N}$ matrices [@kleinberg99]:
+In information science, $\mathbf{M}$ and $\mathbf{N}$ matrices have special interpretations. Consider the subgraph below, which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
+
+```{r}
+#| echo: false
+#| fig-cap: "Subgraph of Krackhardt's Manager Advice Network Containing Nodes 2 and 11 and their neighbors"
+#| fig-height: 7
+   library(ggraph)
+   set.seed(456)
+   nodes <- unique(c(2, 11, neighbors(g, 2), neighbors(g, 11)))
+   g.sub <- subgraph(g, nodes)
+   p <- ggraph(g.sub, layout = 'auto')
+   p <- p + geom_edge_parallel(color = "steelblue", edge_width = 1,
+                             arrow = arrow(length = unit(4, 'mm')),
+                             end_cap = circle(6, 'mm'), 
+                             sep = unit(5, 'mm'))
+   p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
+   p <- p + geom_node_text(aes(label = nodes), size = 6, color = "white")
+   p <- p + theme_graph() 
+   p
+```
+
+If these nodes where papers, then we would say that both 2 and 11 point to a common third node 1. In an information network, the papers that other papers point to are their common references. Therefore the number of *common out-neighbors* of two nodes is is called the **bibliographic coupling** score between the two papers. In the same way, we can see that 2 and 11 are pointed to by a common third neighbor 21. The number of *common in-neighbors* between two-papers is called their **co-citation** score.
+
+Both the bibliographic coupling and the co-citation scores get at two ways that nodes can be similar in a directed graph. In the social context of advice seeking, for instance, two people can be similar if they seek advice from the same others, or two people can be similar if they are sought after for advice by the same others. 
+
+The $\mathbf{M}$ and $\mathbf{N}$ matrices, therefore are two (unweighted) similarity matrices between the nodes in a directed graph. As you may also be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}$ and $\mathbf{N}$ matrices [@kleinberg99]:
 
 ```{r}
    h <- eigen(M)$vector[,1] * -1
@@ -453,34 +507,53 @@ As you may already be suspecting, the hub and authorities scores are the leading
 
 Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!
 
-## A Final Ranking of Prestige Scores
+## Combining PageRank and HITS
 
-Like before, we can treat the Eigenvector, PageRank, Hub, and Authority Scores as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes in Krackhardt's High Tech Managers network stack up according to the different status criteria:
+Note that it is possible to combine the PageRank and HITS ranking schemes. One thing to note that just like the standard Eigenvector scoring, the dual HITS scoring does not account for the degrees of each node in calculating the Hub and Authority scores. 
+
+That is, in HITS authorities receive the same number of authority points from the hubs that point to them regardless of that hub's out-degree and hubs receive the same number of hub points from the authorities they point to regardless of that authority's in-degree. 
+
+But in some settings, it might make more sense to assign more authority to nodes that are pointed to by *picky hubs* (e.g., people who seek advice from a few select others), and discount the authority scores of nodes that are pointed to by *indiscriminate* hubs (people who seek advice from everyone).
+
+In the same way, depending on the application, it might make more sense to assign a larger hub score to hubs that point to *exclusive authorities* (authorities that are sought after by a few select others) and discount the hubness of hubs that point to *popular authorities* (those who are sought after by everyone). 
+
+To fix this problem with the HITS ranking scheme, it is possible to adopt the same degree-normalization scheme we used in PageRank but to calculate dual hub and authority scores. We can do that by playing our `status2` game not on the original directed adjacency matrix $\mathbf{A}$, but on a *degree-normalized* version of the same matrix, like the $\mathbf{P}$ above. 
+
+Recall that $\mathbf{P}$ is an out-degree normalized version of the original adjacency matrix. Thus, nodes that point to many others have less influence in the status propagation process, thus implementing the "picky hub" scheme described earlier, where authorities get more authority points from selective hubs. 
+
+To see an example of how this would work, first let's calculate hub and authority scores for the subgraph we considered above, containing nodes 1, 2, 6, 7, 11, and 21 from the Krackhardt advice network:
 
 ```{r}
-#| echo: false
-   nodes <- 1:vcount(g)
-   eig.cent <- round(status1(t(A))/max(status1(t(A))), 3)
-   pgr.cent <- round(status1(t(G))/max(status1(t(G))), 3)
-   hus.cent <- round(status2(A)$h/max(status2(A)$h), 3)
-   aus.cent <- round(status2(A)$a/max(status2(A)$a), 3)
-   cent.dat1 <- data.frame(Node.ID = nodes, Eig.Cent = eig.cent,
-                           PageRank = pgr.cent, Hub.Score = hus.cent, 
-                           Auth.Score = aus.cent, Indegree = degree(g, mode = "in"))
-   cent.dat1 <- cent.dat1[order(cent.dat1$Indegree, decreasing = TRUE), ]
-   kbl(cent.dat1, 
-       format = "html", align = "c", row.names = FALSE,
-       caption = "Top Prestige Scores Ordered by Indegree.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
-
-   cent.dat2 <- data.frame(Node.ID = nodes, Eig.Cent = eig.cent,
-                           PageRank = pgr.cent, Hub.Score = hus.cent, 
-                           Auth.Score = aus.cent, Outdegree = degree(g, mode = "out"))
-   cent.dat2 <- cent.dat2[order(cent.dat2$Outdegree, decreasing = TRUE), ]
-   kbl(cent.dat2, 
-       format = "html", align = "c", row.names = FALSE,
-       caption = "Top Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
+   A <- as.matrix(as_adjacency_matrix(g.sub))
+   hits.res <- status2(A)
+   names(hits.res$h) <- nodes
+   names(hits.res$a) <- nodes
+   hits.res$h/max(hits.res$h)
+   hits.res$a/max(hits.res$a)
 ```
+
+We can see that in this small network node 7 is the top hub and node 11 is the top authority. 
+
+Now let's see what happens to the authority ranking, when we penalize hubs for seeking too many authorities:
+
+
+```{r}
+   P.o <- A %*% diag(1/rowSums(A))
+   hits.res <- status2(P.o)
+   names(hits.res$h) <- nodes
+   names(hits.res$a) <- nodes
+   hits.res$h/max(hits.res$h)
+   hits.res$a/max(hits.res$a)
+```
+
+```{r}
+   P.i <- A %*% diag(1/colSums(A))
+   a1 <- status2(A)$a
+   a2 <- status2(P.i)$a
+   round(a1/max(a1), 3)
+   round(a2/max(a2), 3)
+```
+
+
 
 
