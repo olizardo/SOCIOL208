@@ -108,7 +108,7 @@ And here's a simple custom function using a `while` loop that exemplifies the pr
       x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
       d <- 1 #initial delta
       k <- 0 #initializing counter
-      while (d > 1e-10) {
+      while (d > 1e-15) {
           o.x <- x #old status scores
           x <- w %*% o.x #new scores a function of old scores and adjacency matrix
           x <- x/norm(x, type = "E") #normalizing new status scores
@@ -140,8 +140,8 @@ And here's the resulting (row) vector of status scores for each node:
 What if I told you that this vector is the same as that given by the leading (first) eigenvector of the adjacency matrix?
 
 ```{r}
-   s.eig <- abs(eigen(A)$vector[, 1])#computing the first eigenvector
-   s.eig <- s/max(s.eig) #normalizing by maximum
+   s.eig <- eigen(A)$vector[, 1] *-1#computing the first eigenvector
+   s.eig <- s.eig/max(s.eig) #normalizing by maximum
    round(s.eig, 3)
 ```
 
@@ -180,7 +180,7 @@ In a classic paper, Philip @bonacich72 noted the above connection between differ
 
 Here, people get status from *receiving* nominations from high status others (i.e., those who receive a lot of nominations), whose partners also get status from receiving a lot of nominations from high status others, and so forth.
 
-This means that in a directed system of relations, status distribution operates primarily via the **in-degree** of each node, so that if $\mathbf{A}$ is the asymmetric adjacency matrix corresponding to the directed graph, then if we play our status game on the *transpose* of this matrix $\mathbf{A}^T$ we will get the scores we seek [@fouss_etal16, p. 204]. 
+This means that in a directed system of relations, status distribution operates primarily via the **indegree** of each node, so that if $\mathbf{A}$ is the asymmetric adjacency matrix corresponding to the directed graph, then if we play our status game on the *transpose* of this matrix $\mathbf{A}^T$ we will get the scores we seek [@fouss_etal16, p. 204]. 
 
 Recall that in transposing the matrix of a directed graph, we change it from being a *from/to* matrix (nodes in the rows send ties to nodes in the columns) to a *to/from* matrix: Nodes in the rows *receive* ties from nodes in the columns. So we want to play our status game in this matrix, because we want to rank nodes according to their receipt of ties from high-status others. 
 
@@ -215,7 +215,7 @@ Here are the top ten nodes:
        caption = "Top Ten Eigenvector Scores for a Directed Graph.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-While the top in-degree centrality node (2) also gets the top Eigenvector Centrality scores, we see many cases of nodes with equal in-degree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* incoming connections you have. 
+While the top indegree centrality node (2) also gets the top Eigenvector Centrality scores, we see many cases of nodes with equal indegree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* incoming connections you have. 
 
 ## A Degree-Normalized Model of Status (AKA PageRank)
 
@@ -230,7 +230,7 @@ In that case, the node with a hundred friends would only have 1/100 of status un
 How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix. It is defined like this:
 
 $$
-\mathbf{P} = \mathbf{A}\mathbf{D}_{out}^{-1}
+\mathbf{P} = \mathbf{D}_{out}^{-1}\mathbf{A}
 $$
 
 Where $\mathbf{A}$ is our old friend the adjacency matrix, and $\mathbf{D}_{out}^{-1}$ is a matrix containing the *inverse* of each node outdegree along the diagonals and zeroes in every other cell. In `R` we can create the $\mathbf{D}_{out}^{-1}$ matrix using the native `diag` function like this:
@@ -246,14 +246,14 @@ Recalling that the function `rowSums` gives us the row sums of the adjacency mat
 We can check out that the  $\mathbf{D}_{out}^{-1}$ indeed contains the quantities we seek by looking at its first few rows and columns:
 
 ```{r}
-   D.o[1:10, 1:10]
+   round(D.o[1:10, 1:10], 2)
 ```
 
 We can then create the $\mathbf{P}$ matrix corresponding to the undirected version of the Krackhardt friendship network using matrix multiplication like this:
 
 
 ```{r}
-   P <- A %*% D.o
+   P <- D.o %*% A
 ```
 
 So this is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. 
@@ -276,7 +276,7 @@ Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "out
 
 This means that nodes with a lot of out-neighbors will dissipate this quantity by distributing it across a larger number of recipients (hence their corresponding non-zero entries in the rows of $\mathbf{P}$) will be a small number) and nodes with a few out-neighbors will have more to distribute. 
 
-Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columnns* of the same matrix do not:
+Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columns* of the same matrix do not:
 
 ```{r}
    round(colSums(P), 2)
@@ -297,7 +297,7 @@ Now we can just adapt the the model of status distribution we used for eigenvect
 So at each step the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
 
 ```{r}
-   s2 <- round(status1(t(P)), 3)
+   s2 <- status1(t(P))
    s2 <- s2/max(s2)
    round(s2, 3)
 ```
@@ -319,7 +319,7 @@ And, of course, the (normalized) scores produced by this approach are identical 
 
 So the distributional model of status is the same one implemented in the PageRank algorithm!
 
-### PageRank with Damping and Teleportation in Directed Graphs
+## PageRank with Damping and Teleportation in Directed Graphs
 
 PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
 
@@ -332,7 +332,7 @@ We then compute the $\mathbf{P}$ matrix:
 
 ```{r}
    D.o <- diag(1/rowSums(A))
-   P <- A %*% D.o
+   P <- D.o %*% A 
 ```
 
 Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
@@ -413,13 +413,28 @@ So we need to make our status game a bit more complicated (but not too much) to 
    }
 ```
 
-Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. As you may have guessed this is just an implementation of the "HITS" algorithm developed by @kleinberg99.^[HITS is an acronym for the unfortunate and impossible to remember name "Hypertext Induced Topic Selection" reflecting the origins the approach in web-based information science.]
+Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then update the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7 normalize them in line 8 and update the new authority scores to be the sum (across each in-neighbor) of these new hub scores. 
+
+So at each step $t$, the authority and hub scores are calculated like this:
+
+$$  
+   x^h_i(t) = \sum_j a_{ij} x^a_j(t-1)
+$$
+
+$$
+   x^a_i(t) = \sum_j a^T_{ij} x^h_j(t)
+$$
+
+Where $a^T_{ij}$ is the corresponding entry in the *transpose* of the adjacency matrix (`t(w)` in line 9 of the above function).
+
+As you may have guessed this is just an implementation of the "HITS" algorithm developed by @kleinberg99.^[HITS is an acronym for the unfortunate and impossible to remember name "Hypertext Induced Topic Selection" reflecting the origins the approach in web-based information science.]
 
 The results for the Krackhardt advice network are:
 
 ```{r}
-   round(status2(A)$a/max(status2(A)$a), 3)
-   round(status2(A)$h/max(status2(A)$h), 3)
+   hits.res1 <- status2(A)
+   round(hits.res1$a/max(hits.res1$a), 3)
+   round(hits.res1$h/max(hits.res1$h), 3)
 ```
 
 Which are equivalent to using the `igraph` function `hits_scores`:
@@ -430,9 +445,9 @@ Which are equivalent to using the `igraph` function `hits_scores`:
    round(ha$hub, 3)
 ```
 
-Note that the `igraph` function `hits_scores` returns the two sets of scores as elements of a `list`, so we need to access them using the `$` operator on the object that we store the results in (in this case `ha`).
+Note that the just like the `status2` function, the `igraph` function `hits_scores` returns the two sets of scores as elements of a `list`, so we need to access them using the `$` operator on the object that we store the results in (in this case `ha`). We also set the `scale` argument to `TRUE` so that the scores are normalized by the maximum. 
 
-### Hubs, Authorities and Eigenvectors
+## Hubs, Authorities and Eigenvectors
 
 Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the eigenvectors of a network proximity matrix (the adjacency matrix $\mathbf{A}$ and the probability matrix $\mathbf{P}$ respectively). It would be surprising if the same wasn't true of the hub and authority status scores.
 
@@ -441,29 +456,29 @@ Let's find out which ones!
 Consider the matrices:
 
 $$
-\mathbf{M} = \mathbf{A}\mathbf{A}^T
+\mathbf{M}_h = \mathbf{A}\mathbf{A}^T
 $$
 
 $$
-\mathbf{N} = \mathbf{A}^T\mathbf{A}
+\mathbf{M}_a = \mathbf{A}^T\mathbf{A}
 $$
 
 Let's see what they look like in the Krackhardt manager's network:
 
 ```{r}
-   M = A %*% t(A)
-   N = t(A) %*% A
-   M[1:10, 1:10]
-   N[1:10, 1:10]
+   M.h = A %*% t(A)
+   M.a = t(A) %*% A
+   M.h[1:10, 1:10]
+   M.a[1:10, 1:10]
 ```
 
-What's in these matrices? Well let's look at $\mathbf{M}$. The diagonals will look familiar because they happen to be the **outdegree** of each node:
+What's in these matrices? Well let's look at $\mathbf{M}_h$. The diagonals will look familiar because they happen to be the **outdegree** of each node:
 
 ```{r}
    degree(g, mode = "out")[1:10]
 ```
 
-You may have guessed that the diagonals of matrix $\mathbf{N}$ contain the **indegrees**:
+You may have guessed that the diagonals of matrix $\mathbf{M}_a$ contain the **indegrees**:
 
 ```{r}
    degree(g, mode = "in")[1:10]
@@ -471,23 +486,24 @@ You may have guessed that the diagonals of matrix $\mathbf{N}$ contain the **ind
 
 Which means that the *off-diagonals* cells of each matrix $m_{ij}$ and $n_{ij}$, contain the **common out-neighbors** and **common in-neighbors** shared by nodes $i$ and $j$ in the graph, respectively.
 
-In information science, $\mathbf{M}$ and $\mathbf{N}$ matrices have special interpretations. Consider the subgraph below, which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
+In information science, $\mathbf{M}_h$ and $\mathbf{M}_a$ matrices have special interpretations. Consider the subgraph shown in @fig-sub, which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
 
 ```{r}
 #| echo: false
-#| fig-cap: "Subgraph of Krackhardt's Manager Advice Network Containing Nodes 2 and 11 and their neighbors"
-#| fig-height: 7
-   library(ggraph)
-   set.seed(456)
+#| label: fig-sub
+#| fig-cap: "Subgraph from Krackhardt's Managers Network."
+#| fig-height: 6
+#| fig-width: 6
    nodes <- unique(c(2, 11, neighbors(g, 2), neighbors(g, 11)))
    g.sub <- subgraph(g, nodes)
-   p <- ggraph(g.sub, layout = 'auto')
+   set.seed(456)
+   p <- ggraph(g.sub, layout = 'fr')
    p <- p + geom_edge_parallel(color = "steelblue", edge_width = 1,
                              arrow = arrow(length = unit(4, 'mm')),
                              end_cap = circle(6, 'mm'), 
                              sep = unit(5, 'mm'))
    p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
-   p <- p + geom_node_text(aes(label = nodes), size = 6, color = "white")
+   p <- p + geom_node_text(aes(label = nodes), size = 5.5, color = "white")
    p <- p + theme_graph() 
    p
 ```
@@ -496,64 +512,487 @@ If these nodes where papers, then we would say that both 2 and 11 point to a com
 
 Both the bibliographic coupling and the co-citation scores get at two ways that nodes can be similar in a directed graph. In the social context of advice seeking, for instance, two people can be similar if they seek advice from the same others, or two people can be similar if they are sought after for advice by the same others. 
 
-The $\mathbf{M}$ and $\mathbf{N}$ matrices, therefore are two (unweighted) similarity matrices between the nodes in a directed graph. As you may also be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}$ and $\mathbf{N}$ matrices [@kleinberg99]:
+The $\mathbf{M}_h$ and $\mathbf{M}_a$ matrices, therefore are two (unweighted) similarity matrices between the nodes in a directed graph. As you may also be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}_h$ and $\mathbf{M}_a$ matrices [@kleinberg99]:
 
 ```{r}
-   h <- eigen(M)$vector[,1] * -1
-   a <- eigen(N)$vector[,1] * -1
+   h <- eigen(M.a)$vector[,1] * -1
+   a <- eigen(M.h)$vector[,1] * -1
    round(h/max(h), 3)
    round(a/max(a), 3)
 ```
 
-Once again demonstrating the equivalence between eigenvectors of proximity matrices in networks and our prismatic status distribution game!
+Given the connection to the HITS dual status ranking, sometimes the $\mathbf{M}_h$ is called the **hub matrix** and the $\mathbf{M}_a$ is called the **authority matrix** [@ding_etal02].  
 
-## Combining PageRank and HITS
+Note that this also means we could have obtained the hub and authority scores using our old `status1` function, but we would have had to play the game twice, once for the matrix $\mathbf{M}$ and the other one for the matrix $\mathbf{N}$, like this:
 
-Note that it is possible to combine the PageRank and HITS ranking schemes. One thing to note that just like the standard Eigenvector scoring, the dual HITS scoring does not account for the degrees of each node in calculating the Hub and Authority scores. 
+```{r}
+   h <- status1(M.h)
+   round(h/max(h), 3)
+   a <- status1(M.a)
+   round(a/max(a), 3)
+```
 
-That is, in HITS authorities receive the same number of authority points from the hubs that point to them regardless of that hub's out-degree and hubs receive the same number of hub points from the authorities they point to regardless of that authority's in-degree. 
+This link once again demonstrates the equivalence between the eigenvectors of the hub and authority matrices, as similarity matrices between nodes in the network, and our prismatic status distribution game!
 
-But in some settings, it might make more sense to assign more authority to nodes that are pointed to by *picky hubs* (e.g., people who seek advice from a few select others), and discount the authority scores of nodes that are pointed to by *indiscriminate* hubs (people who seek advice from everyone).
+## Combining PageRank and HITS: SALSA
+
+@lempel_moran01 show that we can combine the logic of PageRank and HITS. Their basic idea is to use the same mutually reinforcing approach as in HITS but with degree-normalized (stochastic) versions of the adjacency matrix (like in PageRank).^[@lempel_moran01 call this method the "Stochastic Approach for Link Structure Analysis" or SALSA (an actually clever and memorable acronym!).]
+
+Let's see how it works.
+
+Recall that PageRank works on the $\mathbf{P}$ matrix, which is defined like this:
+
+$$
+\mathbf{P}_{h} = \mathbf{D}_{out}^{-1}\mathbf{A}
+$$
+
+In `R` we compute it like this:
+
+```{r}
+   P.h <- D.o %*% A
+```
+
+
+This matrix is row-stochastic, because each row is divided by the row total (the outdegrees of each node), meaning its rows sum to one, like we saw before:
+
+```{r}
+   rowSums(P.h)
+```
+
+It is also possible to compute the **indegree normalized** version of the $\mathbf{P}$ matrix, defined like this:
+
+$$
+\mathbf{P}_{a} = \mathbf{D}_{in}^{-1} \mathbf{A}^T
+$$
+
+Where $\mathbf{D}_{in}^{-1}$ is a matrix containing the inverse of the indegrees along the diagonals (and zeroes elsewhere) and $\mathbf{A}^T$ is the transpose of the adjacency matrix. Each non-zero entry of is thus equal to one divided by that row node's indegree. 
+
+In `R` we compute it like this:
+
+```{r}
+   D.i <- diag(1/colSums(A))
+   P.a <- D.i %*% t(A)
+```
+
+
+Like $\mathbf{P}_{h}$ the $\mathbf{P}_{a}$ matrix is row-stochastic, meaning its rows sum to 1.0:
+
+```{r}
+   rowSums(P.a)
+```
+
+To get the SALSA version of the hub and authority scores, we can just play our status game over newly defined versions of the hub and authority matrices [@langville_meyer05, p. 156]. 
+
+The SALSA hub matrix is defined like this:
+
+$$
+\mathbf{Q}_h = \mathbf{P}_a\mathbf{P}_h
+$$
+
+And the SALSA authority matrix like this:
+
+$$
+\mathbf{Q}_a = \mathbf{P}_h\mathbf{P}_a
+$$
+
+Which in `R` looks like:
+
+```{r}
+   Q.h <- P.a %*% P.h
+   Q.a <- P.h %*% P.a
+```
+
+Each of these matrices are row stochastic:
+
+```{r}
+   rowSums(Q.h)
+   rowSums(Q.a)
+```
+
+Which means that inequalities will be defined according to differences in the in-degrees of each node just like PageRank.
+
+And now to obtain our SALSA hub and authority scores, we simply play our `status1` game on (the transpose of) these matrices, just like we did for HITS:
+
+```{r}
+   salsa.h <- status1(t(Q.a)) 
+   salsa.h/max(salsa.h)
+   salsa.a <- status1(t(Q.h)) 
+   round(salsa.a/max(salsa.a), 2)
+```
+
+What are these numbers? Well, it turns out that they are equivalent to the out and indegrees of each mode, divided by the total number of edges in the network [@fouss_etal04, p. 451].
+
+So the SALSA hub and authority scores can also be obtained like this:
+
+```{r}
+   out.ratio <- rowSums(A)/sum(A)
+   out.ratio/max(out.ratio)
+   in.ratio <- colSums(A)/sum(A)
+   round(in.ratio/max(in.ratio), 2)
+```
+
+We could, of course, create "Google" versions of these matrices and compute our SALSA version of the hub and authorities scores by incorporating a damping factor, teleportation, and all the rest [@rafiei_mendelzon00]. 
+
+## Correspondence Analysis
+
+@fouss_etal04 show that there is a link between a method to analyze two-way tables called **correspondence analysis**, and both Lempel and Moran's SALSA and Kleinberg's HITS algorithms. 
+
+They first ask: What if we play our status distribution game not on the *transpose* of the SALSA hub and authority matrices like we just did but just on the regular matrices without transposition?
+
+Here's what happens:
+
+```{r}
+   status1(Q.h) 
+   status1(Q.a) 
+```
+
+OK, so that's weird. All that we get is a vector with the same number repeated twenty one times (in this case, the number of nodes in the graph). What's going on?
+
+Recall from the previous that the status game computes the **leading eigenvector** of the matrix we play the game on, and spits that vector out as our status scores for that matrix. The leading eigenvector is that associated with the largest eigenvalue (if the matrix contains one).
+
+So all that this is telling us is that the first eigenvector of the un-transposed versions of the SALSA hub and authority matrices is pretty useless because it assigns everyone the same status score.
+
+But @fouss_etal04 note, like we did at the beginning, that a matrix has many eigenvector/eigenvalue pairs and that perhaps the *second* leading eigenvector is not that useless; this is the eigenvector associated with the *second* largest eigenvalue.
+
+How do we get that vector? Well, as always, there is a mathematical workaround. The trick is to create a new matrix that removes the influence of that first (useless) eigenvector and then play our status game on *that* matrix. 
+
+To do that, let's create a matrix that is equal to the original useless eigenvector times its own transpose. In `R` this goes like this:
+
+```{r}
+   v1 <- status1(Q.h)
+   D <- v1 %*% t(v1)
+```
+
+What's in this matrix? Let's see the first ten rows and columns:
+
+```{r}
+   round(D[1:10, 1:10], 3)
+```
+
+So it's just a matrix of the same dimension as the SALSA hub matrix with the same number over and over. In fact that number is equal to:
+
+```{r}
+   round(0.2182179^2, 3)
+```
+
+Which is just the useless constant status score squared. 
+
+Now, we create new SALSA hub and authority matrices, which are equal to the original minus the constant `D` matrix above:
+
+```{r}
+   Q.h2 <- Q.h - D
+   Q.a2 <- Q.a - D
+```
+
+And now we play our status game on these matrices:
+
+```{r}
+   h2 <- status1(Q.h2)
+   a2 <- status1(Q.a2)
+   names(h2) <- 1:21
+   names(a2) <- 1:21
+```
+
+We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:
+
+```{r}
+   norm.v <- function(x) {
+      x <- x - min(x)
+      x <- x/max(x)
+      x <- x - mean(x)
+      return(x)
+   }
+   round(norm.v(h2), 3)
+   round(norm.v(a2), 3)
+```
+
+Now, these scores don't seem useless. They are different across each node; some are positive and some are negative. 
+
+@fouss_etal04 show that these are the same scores you would obtain from a correspondence analysis of the original affilaition matrix. 
+
+Let's check that out in our case. First, we load the package `FactoMineR` which can be used to compute the correspondence analysis of any matrix in `R` using the function `CA`:
+
+
+```{r}
+   library(FactoMineR)
+```
+
+And the correspondence analysis scores---on the first dimension---fo the Krackhardt advice network can be obtained like this:
+
+```{r}
+   ca.res <- CA(A, graph = FALSE)
+   ca.h <- ca.res$col$coord[, 1]
+   ca.a <- ca.res$row$coord[, 1]
+```
+
+In line 1 we store the `CA` results in the object `ca.res`. We then grab the `CA` scores associated with the columns of the adjacency matrix and put them in the object `ca.h` in line 2 and the scores associated with the rows of the adjacency matrix and put them in the object `ca.a`.
+
+Now for the big reveal:
+
+```{r}
+   round(norm.v(ca.h), 3)
+   round(norm.v(ca.a), 3)
+```
+
+Which shows that indeed the CA scores are the same ones as we obtain from playing our status game on the corrected versions of the un-transposed SALSA hub and authorities matrices!
+
+
+## Hybrid PageRank/HITS Approaches
+@borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
+
+### Picky Hubs
+
+For instance, in some settings, it might make more sense to assign more authority to nodes that are pointed to by *picky hubs* (e.g., people who seek advice from a few select others), and discount the authority scores of nodes that are pointed to by *indiscriminate* hubs (people who seek advice from everyone).
+
+We can do this by taking the *average* of the authority scores of all nodes each hub points to rather than sum, and then feeding this number back to the authority score calculation. This entails slightly modifying the HITS status game as follows:
+
+```{r}
+   status3 <- function(w) {
+     a <- rep(1, nrow(w))  #initializing authority scores
+     d.o <- rowSums(w) #outdegree of each node
+     d <- 1 #initializing delta
+     k <- 0 #initializing counter
+     while (d >= 1e-10) {
+         o.a <- a #old authority scores
+         h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
+         h <- h/d.o #averaging hub scores by number of out-neighbors
+         h <- h/norm(h, type = "E")
+         a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
+         a <- a/norm(a, type = "E")
+         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+         k <- k + 1
+         }
+   return(list(h = as.vector(h), a = as.vector(a), k = k))
+   }
+```
+
+Note that the only modification is the addition of `h <- h/d.o` in line 9, which divides the hub score by the outdegree of each hub. 
+
+The resulting hubs and authorities scores are:
+
+```{r}
+   hits.res2 <- status3(A)
+   round(hits.res2$a/max(hits.res2$a), 3)
+   round(hits.res2$h/max(hits.res2$h), 3)
+```
+
+This is an implementation of the "HubAvg" algorithm described by @borodin_etal05 [p. 238-239].
+
+### Exclusive Authorities
 
 In the same way, depending on the application, it might make more sense to assign a larger hub score to hubs that point to *exclusive authorities* (authorities that are sought after by a few select others) and discount the hubness of hubs that point to *popular authorities* (those who are sought after by everyone). 
 
-To fix this problem with the HITS ranking scheme, it is possible to adopt the same degree-normalization scheme we used in PageRank but to calculate dual hub and authority scores. We can do that by playing our `status2` game not on the original directed adjacency matrix $\mathbf{A}$, but on a *degree-normalized* version of the same matrix, like the $\mathbf{P}$ above. 
-
-Recall that $\mathbf{P}$ is an out-degree normalized version of the original adjacency matrix. Thus, nodes that point to many others have less influence in the status propagation process, thus implementing the "picky hub" scheme described earlier, where authorities get more authority points from selective hubs. 
-
-To see an example of how this would work, first let's calculate hub and authority scores for the subgraph we considered above, containing nodes 1, 2, 6, 7, 11, and 21 from the Krackhardt advice network:
-
-```{r}
-   A <- as.matrix(as_adjacency_matrix(g.sub))
-   hits.res <- status2(A)
-   names(hits.res$h) <- nodes
-   names(hits.res$a) <- nodes
-   hits.res$h/max(hits.res$h)
-   hits.res$a/max(hits.res$a)
-```
-
-We can see that in this small network node 7 is the top hub and node 11 is the top authority. 
-
-Now let's see what happens to the authority ranking, when we penalize hubs for seeking too many authorities:
+We can implement this approach, let's call it the "AuthAvg" algorithm with a slight modification of the function above:
 
 
 ```{r}
-   P.o <- A %*% diag(1/rowSums(A))
-   hits.res <- status2(P.o)
-   names(hits.res$h) <- nodes
-   names(hits.res$a) <- nodes
-   hits.res$h/max(hits.res$h)
-   hits.res$a/max(hits.res$a)
+   status4 <- function(w) {
+     a <- rep(1, nrow(w))  #initializing authority scores
+     d.i <- colSums(w) #indegree of each node
+     d <- 1 #initializing delta
+     k <- 0 #initializing counter
+     while (d >= 1e-10) {
+         o.a <- a #old authority scores
+         h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
+         h <- h/norm(h, type = "E")
+         a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
+         a <- a/d.i #averaging authority score by number of in-neighbors
+         a <- a/norm(a, type = "E")
+         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+         k <- k + 1
+         }
+   return(list(h = as.vector(h), a = as.vector(a), k = k))
+   }
 ```
+
+And the resulting hubs and authorities scores are:
 
 ```{r}
-   P.i <- A %*% diag(1/colSums(A))
-   a1 <- status2(A)$a
-   a2 <- status2(P.i)$a
-   round(a1/max(a1), 3)
-   round(a2/max(a2), 3)
+   hits.res3 <- status4(A)
+   round(hits.res3$a/max(hits.res3$a), 3)
+   round(hits.res3$h/max(hits.res3$h), 3)
 ```
 
+## A Final Ranking of Prestige Scores
+
+Like before, we can treat the the Regular Hub, and Authority Scores, their SALSA versions, and their hub and authority averaged versions as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes in Krackhardt's High Tech Managers network stack up according to the different status criteria:
+
+```{r}
+#| echo: false
+   nodes <- 1:vcount(g)
+   cent.dat <- data.frame( 
+                           Hub = hits.res1$h,
+                           Aut = hits.res1$a,
+                           Hub.Salsa = h,
+                           Aut.Salsa= a,
+                           Hub.Avg1 = hits.res2$h, 
+                           Aut.Avg1 = hits.res2$a,  
+                           Hub.Avg2 = hits.res3$h, 
+                           Aut.Avg2 = hits.res3$a)
+   cent.dat <- apply(cent.dat, 2, function(x) {round(x/max(x), 3)})
+   cent.dat1 <- data.frame(Node.ID = nodes, cent.dat, Indegree = degree(g, mode = "in"))
+   cent.dat2 <- data.frame(Node.ID = nodes, cent.dat, Outdegree = degree(g, mode = "out"))
+   cent.dat1 <- cent.dat1[order(cent.dat1$Indegree, decreasing = TRUE), ]
+   kbl(cent.dat1, 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Prestige Scores Ordered by Indegree.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+      column_spec(1, bold = TRUE)
+   cent.dat2 <- cent.dat2[order(cent.dat2$Outdegree, decreasing = TRUE), ]
+   kbl(cent.dat2, 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+      column_spec(1, bold = TRUE)
+```
+
+<!--
+## Two-Mode Networks as Prisms
+
+We can use the same "prismatic" mode of status distribution to rank nodes in two-mode networks that we used in the standard one-mode case. The difference is that in the one-mode case you gain status by connecting to entities of the same "type" as you (e.g., other people). In the two-mode case, your status reflects the status of the "other type" entities that you connect to. And vice versa. 
+
+For instance, if the two entities are people and groups [@breiger74], then people gain status by connecting to high status groups and groups gain status by connecting to high-status people. In other words, people distribute status points to the groups they belong to and groups distribute status points to the people that belong to them. 
+
+When it comes to **eigenvector**-style measures, the neat idea is that *people are central if they belong to central groups and groups and central if their members are central people* (with people centrality defined by membership in central groups) can be effectively captured by these metrics [@bonacich91].
+
+For this reason, measures of status and prestige are particularly applicable to two-mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
+
+## Eigenvector Status in the Southern Women Data
+
+Let's see an example using the classic Southern Women dataset. We can load it from the trusty `networkdata` package, and extract the bi-adjacency matrix from the `igraph` object:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- southern_women
+   A <- as.matrix(as_biadjacency_matrix(g))
+```
+
+Below is a quick function that plays a two-mode version of the status distribution game that we described at the beginning, which is really just a modification of the one-mode HITS algorithm:
+
+```{r}
+   tm.status <- function(p, g, e = 1e-10, r = 4) {
+      y <- matrix(1/ncol(p), ncol(p), 1) #initial group status column vector set to a constant
+      d <- 1 
+      k <- 0
+      while (d > e) {
+         o.y <- y #old group status scores
+         x <- p %*% o.y #new people scores a function of people matrix and old group scores 
+         x <- x/norm(x, type = "E") #normalizing new status scores
+         y <- g %*% x #new group scores a function of group matrix and new people scores
+         y <- y/norm(y, type = "E") #normalizing new status scores
+         if (k > 1) {
+            d <- abs(sum(abs(y) - abs(o.y))) #diff. between new and old group status scores
+            }
+         k <- k + 1
+         }
+      x <- x/max(x) #norming person scores by maximum
+      y <- y/max(y) #norming group scores by maximum
+      p.s <- round(as.vector(x), r)
+      g.s <- round(as.vector(y), r)
+      names(p.s) <- rownames(p)
+      names(g.s) <- rownames(g)
+   return(list(p.s = p.s, g.s = g.s, k = k))
+   }
+```
+
+Line 2 initializes the original status scores for each group, which are just set to $|G|^{-1}$ where $|G|$ is the number of groups (the number of columns of the bi-adjacency matrix $\mathbf{A}$). Line 3 initializes the $\delta$ value, which determines when the `while` loop stops. Then, inside the `while` loop, we assign status scores to the people equal to the sum of the status scores of the groups they belong to (line 7) which is just $\mathbf{A}$ post-multiplied by the group status vector $\mathbf{y}$, then we normalize the people status score vector in line 8 using the Euclidean norm. In line 9 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new  group status scores in line 10 and compute the difference between these new group scores and the old one. When the difference is small ($\delta = 10^{-10}$) the `while` loop stops. 
+
+And now we can use the function to estimate the status scores for people and groups:
+
+```{r}
+   tm.hits <- tm.status(A, t(A))
+```
+
+Here are the scores for the people:
+
+```{r}
+   tm.hits$p.s
+```
+
+And for the groups:
+
+```{r}
+   tm.hits$g.s
+```
+
+Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).
+
+When we use the usual affiliation matrix `A` and its transpose `t(A)` as inputs, the `tm.status` function implements the biHITS algorithm described in @liao_etal14. One thing to note in this regard is that the biHITS algorithm is just a rediscovery of the dual status eigenvector centrality scoring described much earlier by @bonacich91. 
+
+Interestingly as @bonacich91 noted in that paper, the eigenvector status scores can *also* be obtained by playing the one-mode version of the status game over the Breiger-style one-mode projections of the two-mode network. 
+
+To see this, let's play the usual status game defined by the function `status1` over the one mode projections. For people this would be:
+
+```{r}
+   p.s <- status1(A %*% t(A))
+   names(p.s) <- rownames(A)
+   round(p.s, 3)
+```
+
+And for groups:
+
+```{r}
+   g.s <- status1(t(A) %*% A)
+   names(g.s) <- colnames(A)
+   round(g.s, 3)
+```
+
+Lo and behold, these are the same status scores we obtained via the biHITS approach. 
+
+Also like eigenvector style measures for two-mode networks, the iterative status game scores can be obtained as a solution to an linear algebra eigenvector problem involving the relevant matrices over which the game is played.
+
+In the case of the two-mode eigenvector scores, as @bonacich91 also noted, it turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices:
+
+$$
+\lambda x = (\mathbf{A}\mathbf{A}^T)x
+$$
+
+$$
+\lambda y = (\mathbf{A}^T\mathbf{A})y
+$$
+
+In `R` we can do this using the `eigen` function:
+
+```{r}
+   eig.p <- eigen(A %*% t(A))
+   eig.g <- eigen(t(A) %*% A)
+   p.s <- eig.p$vector[, 1] * -1
+   g.s <- eig.g$vector[, 1] * -1
+   names(p.s) <- rownames(A)
+   names(g.s) <- colnames(A)
+   round(p.s, 3)
+   round(g.s, 3)
+```
+
+Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using `tm.status` or in the one-mode projection (Bonacich) using the `status1` function. This becomes obvious once we normalized the eigenvecto scores by their maximum:
+
+```{r}
+   round(p.s/max(p.s), 4)
+   round(g.s/max(g.s), 4)
+```
+
+The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones that attract the most central (highest activity) members. 
+
+## Duality and Eigenvector Two-Mode Status
+
+Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum^[Where the weight (for obscure technical reasons) is the inverse of the square root of the first eigenvalue obtained from the `eigen` analysis.] of the eigenvector centralities on the nodes in the other mode they are connected to [@faust97, p. 170].
+
+So for any person, let's say {EVELYN}, their eigenvector centrality is equal to:
+
+```{r}
+   sum(A["EVELYN", ] * g.s) * 1/sqrt(eig.p$values[1])
+```
+
+Which is indeed Evelyn's Eigenvector score. 
+
+The same goes for the eigenvector score of groups, which are just a weighted sum of the Eigenvector centralities of the people who belong to them:
+
+```{r}
+   sum(A[, "6/27"] * p.s) *1/sqrt(eig.p$values[1])
+```
+
+Which is indeed the eigenvector score for the event held on 6/27. Duality at work!
+
+-->
 
 
 
