@@ -35,20 +35,16 @@ Let's see an example using the classic Southern Women dataset. We can load it fr
 Below is a quick function that plays a two-mode version of the status distribution game that we described at the beginning, and which is really just a modification of the one-mode HITS algorithm:
 
 ```{r}
-   tm.status <- function(A1, A2, norm = TRUE) {
+   tm.status <- function(A1, A2) {
       y <- matrix(1/ncol(A1), ncol(A1), 1) #initial group status column vector set to a constant
       delta <- 1 
       k <- 0
       while (delta > 1e-10) {
          o.y <- y #old group status scores
          x <- A1 %*% o.y #new people scores a function of people matrix and old group scores 
-         if (norm == TRUE) {
-            x <- x/norm(x, type = "E") #normalizing new people status scores if norm is TRUE
-            }
+         x <- x/norm(x, type = "E") #normalizing new people status scores 
          y <- A2 %*% x #new group scores a function of group matrix and new people scores
-         if (norm == TRUE) {
-         y <- y/norm(y, type = "E") #normalizing new group status scores if norm is TRUE
-            }
+         y <- y/norm(y, type = "E") #normalizing new group status scores 
          if (k > 1) {
             delta <- abs(sum(abs(y) - abs(o.y))) #diff. between new and old group status scores
             }
@@ -58,7 +54,7 @@ Below is a quick function that plays a two-mode version of the status distributi
    }
 ```
 
-Line 2 initializes the original status scores for each group stored in the `y` object, which are just set to $|G|^{-1}$ where $|G|$ is the number of groups (the number of columns of the bi-adjacency matrix $\mathbf{A}$). Line 3 initializes the $\delta$ value, which determines when the `while` loop stops. Then, inside the `while` loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 7, which is just $\mathbf{A}$ post-multiplied by the group status vector $\mathbf{y}$, then we normalize the people status score vector in line 8 using the Euclidean norm if the `norm` option is set to `TRUE`. In line 11 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new  group status scores in line 13 (if the `norm` argument is set to `TRUE`) and compute the difference between these new group scores and the old one to calculate $\delta$. When $\delta$ is small ($\delta \leq 10^{-10}$) the `while` loop stops as the old and new scores have achieved convergence. 
+Line 2 initializes the original status scores for each group stored in the `y` object, which are just set to $|G|^{-1}$ where $|G|$ is the number of groups (the number of columns of the bi-adjacency matrix $\mathbf{A}$). Line 3 initializes the $\delta$ value, which determines when the `while` loop stops. Then, inside the `while` loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 6, which is just $\mathbf{A}$ post-multiplied by the group status vector $\mathbf{y}$, then we normalize the people status score vector in line 8 using the Euclidean norm. In line 9 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new  group status scores in line 13 and compute the difference between these new group scores and the old one to calculate $\delta$. When $\delta$ is small ($\delta \leq 10^{-10}$) the `while` loop stops as the old and new scores have achieved convergence.
 
 We can now use the `tm.status` function to estimate the status scores for people and groups:
 
@@ -80,7 +76,7 @@ And for the groups:
 
 Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).
 
-When we use the usual affiliation matrix `A` and its transpose `t(A)` as inputs, the `tm.status` function implements the biHITS algorithm described in @liao_etal14. One thing to note in this regard is that the biHITS algorithm is just a rediscovery of the dual status eigenvector centrality scoring described much earlier by @bonacich91. 
+When we use the usual affiliation matrix `A` and its transpose `t(A)` as inputs, the `tm.status` function implements the biHITS algorithm described in @liao_etal14. One thing to note in this regard is that the biHITS algorithm is just a rediscovery of the two-mode prestige scoring described much earlier by @bonacich91. 
 
 Interestingly as @bonacich91 noted in that paper, the eigenvector status scores can *also* be obtained by playing the one-mode version of the status game over the Breiger-style one-mode projections of the two-mode network. 
 
@@ -240,7 +236,7 @@ Note that both matrices `P.n` and `G.n` are **column stochastic** which means th
 So now, to calculate the two-mode PageRank status score, we just play our two-mode status game on these matrices: 
 
 ```{r}
-   tm.pr <- tm.status(P.n, G.n, norm = FALSE)
+   tm.pr <- tm.status(P.n, G.n)
 ```
 
 Note that because the bi-adjacency matrices that go into the `tm.status` function are already normalized, we can set the `norm` argument of the function to `FALSE`.
@@ -257,7 +253,9 @@ And for the groups:
    round(tm.pr$g.s/max(tm.pr$g.s), 3)
 ```
 
-The resulting scores are the same ones returned by the "co-HITS" algorithm of @deng_etal09. On this ranking, Nora is the top person  and Dorothy is the least prestigious. The top ranked event is the one that took place on 9/16. 
+The resulting scores are the same ones returned by the "co-HITS" algorithm of @deng_etal09. 
+
+On this ranking, the top persons are Theresa and Nora (who wasn't as highly ranked according to the Bonacich prestige) and Dorothy, Olivia, and Flora are the least prestigious. The top ranked event is the one that took place on 9/16. 
 
 ## Double Normalized Two-Mode PageRank
 
@@ -294,7 +292,7 @@ Note that while in the original `P.n` matrix Evelyn has way more centrality poin
 Now to compute our double-normalized PageRank status scores, we just play the status game on this new matrix and its transpose:
 
 ```{r}
-   tm.bgrm <- tm.status(P.n2, t(P.n2), norm = FALSE)
+   tm.bgrm <- tm.status(P.n2, t(P.n2))
 ```
 Which implements the "BGRM" algorithm of @rui_etal07 [589, eq. 8].^[The acronym stands for "Bipartite Graph Reinforcement Model."] 
 
