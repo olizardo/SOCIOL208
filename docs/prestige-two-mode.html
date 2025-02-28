@@ -353,8 +353,10 @@ div.csl-indent {
    
   <ul>
   <li><a href="#two-mode-networks-as-prisms" id="toc-two-mode-networks-as-prisms" class="nav-link active" data-scroll-target="#two-mode-networks-as-prisms">Two-Mode Networks as Prisms</a></li>
-  <li><a href="#bonacich-prestige-in-the-southern-women-data" id="toc-bonacich-prestige-in-the-southern-women-data" class="nav-link" data-scroll-target="#bonacich-prestige-in-the-southern-women-data">Bonacich Prestige in the Southern Women Data</a></li>
-  <li><a href="#duality-and-eigenvector-two-mode-status" id="toc-duality-and-eigenvector-two-mode-status" class="nav-link" data-scroll-target="#duality-and-eigenvector-two-mode-status">Duality and Eigenvector Two-Mode Status</a></li>
+  <li><a href="#bonacich-prestige-in-the-southern-women-data" id="toc-bonacich-prestige-in-the-southern-women-data" class="nav-link" data-scroll-target="#bonacich-prestige-in-the-southern-women-data">Bonacich Prestige in the Southern Women Data</a>
+  <ul class="collapse">
+  <li><a href="#duality-and-two-mode-bonacich-prestige" id="toc-duality-and-two-mode-bonacich-prestige" class="nav-link" data-scroll-target="#duality-and-two-mode-bonacich-prestige">Duality and Two-Mode Bonacich Prestige</a></li>
+  </ul></li>
   <li><a href="#two-mode-pagerank" id="toc-two-mode-pagerank" class="nav-link" data-scroll-target="#two-mode-pagerank">Two-Mode PageRank</a></li>
   <li><a href="#double-normalized-two-mode-pagerank" id="toc-double-normalized-two-mode-pagerank" class="nav-link" data-scroll-target="#double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</a></li>
   </ul>
@@ -398,55 +400,77 @@ div.csl-indent {
 </div>
 <p>Below is a quick function that plays a two-mode version of the status distribution game that we described at the beginning, and which is really just a modification of the one-mode HITS algorithm:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   tm.status <span class="ot">&lt;-</span> <span class="cf">function</span>(p, g, <span class="at">r =</span> <span class="dv">4</span>) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">ncol</span>(p), <span class="fu">ncol</span>(p), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
-<span id="cb2-3"><a href="#cb2-3"></a>      d <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   tm.status <span class="ot">&lt;-</span> <span class="cf">function</span>(A1, A2, <span class="at">norm =</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">ncol</span>(A1), <span class="fu">ncol</span>(A1), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
 <span id="cb2-4"><a href="#cb2-4"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a>      <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb2-5"><a href="#cb2-5"></a>      <span class="cf">while</span> (delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
 <span id="cb2-6"><a href="#cb2-6"></a>         o.y <span class="ot">&lt;-</span> y <span class="co">#old group status scores</span></span>
-<span id="cb2-7"><a href="#cb2-7"></a>         x <span class="ot">&lt;-</span> p <span class="sc">%*%</span> o.y <span class="co">#new people scores a function of people matrix and old group scores </span></span>
-<span id="cb2-8"><a href="#cb2-8"></a>         x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scores</span></span>
-<span id="cb2-9"><a href="#cb2-9"></a>         y <span class="ot">&lt;-</span> g <span class="sc">%*%</span> x <span class="co">#new group scores a function of group matrix and new people scores</span></span>
-<span id="cb2-10"><a href="#cb2-10"></a>         y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scores</span></span>
-<span id="cb2-11"><a href="#cb2-11"></a>         <span class="cf">if</span> (k <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
-<span id="cb2-12"><a href="#cb2-12"></a>            d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(y) <span class="sc">-</span> <span class="fu">abs</span>(o.y))) <span class="co">#diff. between new and old group status scores</span></span>
-<span id="cb2-13"><a href="#cb2-13"></a>            }</span>
-<span id="cb2-14"><a href="#cb2-14"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb2-15"><a href="#cb2-15"></a>         }</span>
-<span id="cb2-16"><a href="#cb2-16"></a>      x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">max</span>(x) <span class="co">#norming person scores by maximum</span></span>
-<span id="cb2-17"><a href="#cb2-17"></a>      y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">max</span>(y) <span class="co">#norming group scores by maximum</span></span>
-<span id="cb2-18"><a href="#cb2-18"></a>      p.s <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">as.vector</span>(x), r)</span>
-<span id="cb2-19"><a href="#cb2-19"></a>      g.s <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">as.vector</span>(y), r)</span>
-<span id="cb2-20"><a href="#cb2-20"></a>      <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(p)</span>
-<span id="cb2-21"><a href="#cb2-21"></a>      <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(g)</span>
-<span id="cb2-22"><a href="#cb2-22"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> p.s, <span class="at">g.s =</span> g.s, <span class="at">k =</span> k))</span>
-<span id="cb2-23"><a href="#cb2-23"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-7"><a href="#cb2-7"></a>         x <span class="ot">&lt;-</span> A1 <span class="sc">%*%</span> o.y <span class="co">#new people scores a function of people matrix and old group scores </span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>         <span class="cf">if</span> (norm <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb2-9"><a href="#cb2-9"></a>            x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new people status scores if norm is TRUE</span></span>
+<span id="cb2-10"><a href="#cb2-10"></a>            }</span>
+<span id="cb2-11"><a href="#cb2-11"></a>         y <span class="ot">&lt;-</span> A2 <span class="sc">%*%</span> x <span class="co">#new group scores a function of group matrix and new people scores</span></span>
+<span id="cb2-12"><a href="#cb2-12"></a>         <span class="cf">if</span> (norm <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb2-13"><a href="#cb2-13"></a>         y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new group status scores if norm is TRUE</span></span>
+<span id="cb2-14"><a href="#cb2-14"></a>            }</span>
+<span id="cb2-15"><a href="#cb2-15"></a>         <span class="cf">if</span> (k <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb2-16"><a href="#cb2-16"></a>            delta <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(y) <span class="sc">-</span> <span class="fu">abs</span>(o.y))) <span class="co">#diff. between new and old group status scores</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a>            }</span>
+<span id="cb2-18"><a href="#cb2-18"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb2-19"><a href="#cb2-19"></a>         }</span>
+<span id="cb2-20"><a href="#cb2-20"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y, <span class="at">k =</span> k))</span>
+<span id="cb2-21"><a href="#cb2-21"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Line 2 initializes the original status scores for each group stored in the <code>y</code> object, which are just set to <span class="math inline">\(|G|^{-1}\)</span> where <span class="math inline">\(|G|\)</span> is the number of groups (the number of columns of the bi-adjacency matrix <span class="math inline">\(\mathbf{A}\)</span>). Line 3 initializes the <span class="math inline">\(\delta\)</span> value, which determines when the <code>while</code> loop stops. Then, inside the <code>while</code> loop, we assign status scores to the people equal to the sum of the status scores of the groups they belong to (line 7) which is just <span class="math inline">\(\mathbf{A}\)</span> post-multiplied by the group status vector <span class="math inline">\(\mathbf{y}\)</span>, then we normalize the people status score vector in line 8 using the Euclidean norm. In line 9 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new group status scores in line 10 and compute the difference between these new group scores and the old one. When the difference is small (<span class="math inline">\(\delta = 10^{-10}\)</span>) the <code>while</code> loop stops.</p>
-<p>And now we can use the function to estimate the status scores for people and groups:</p>
+<p>Line 2 initializes the original status scores for each group stored in the <code>y</code> object, which are just set to <span class="math inline">\(|G|^{-1}\)</span> where <span class="math inline">\(|G|\)</span> is the number of groups (the number of columns of the bi-adjacency matrix <span class="math inline">\(\mathbf{A}\)</span>). Line 3 initializes the <span class="math inline">\(\delta\)</span> value, which determines when the <code>while</code> loop stops. Then, inside the <code>while</code> loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 7, which is just <span class="math inline">\(\mathbf{A}\)</span> post-multiplied by the group status vector <span class="math inline">\(\mathbf{y}\)</span>, then we normalize the people status score vector in line 8 using the Euclidean norm if the <code>norm</code> option is set to <code>TRUE</code>. In line 11 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new group status scores in line 13 (if the <code>norm</code> argument is set to <code>TRUE</code>) and compute the difference between these new group scores and the old one to calculate <span class="math inline">\(\delta\)</span>. When <span class="math inline">\(\delta\)</span> is small (<span class="math inline">\(\delta \leq 10^{-10}\)</span>) the <code>while</code> loop stops as the old and new scores have achieved convergence.</p>
+<p>We can now use the <code>tm.status</code> function to estimate the status scores for people and groups:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   tm.hits <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(A, <span class="fu">t</span>(A))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Here are the scores for the people:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   tm.hits<span class="sc">$</span>p.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">round</span>(tm.hits<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.hits<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-   0.9033    0.8345    1.0000    0.8447    0.4539    0.5639    0.6162    0.4858 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-   0.6370    0.5894    0.5041    0.5945    0.7480    0.7122    0.5415    0.3547 
-   OLIVIA     FLORA 
-   0.1877    0.1877 </code></pre>
+<pre><code>           [,1]
+EVELYN    0.903
+LAURA     0.834
+THERESA   1.000
+BRENDA    0.845
+CHARLOTTE 0.454
+FRANCES   0.564
+ELEANOR   0.616
+PEARL     0.486
+RUTH      0.637
+VERNE     0.589
+MYRNA     0.504
+KATHERINE 0.594
+SYLVIA    0.748
+NORA      0.712
+HELEN     0.542
+DOROTHY   0.355
+OLIVIA    0.188
+FLORA     0.188</code></pre>
 </div>
 </div>
 <p>And for the groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   tm.hits<span class="sc">$</span>g.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">round</span>(tm.hits<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.hits<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  6/27    3/2   4/12   9/26   2/25   5/19   3/15   9/16    4/8   6/10   2/23 
-0.2802 0.2970 0.4991 0.3474 0.6350 0.6467 0.7570 1.0000 0.7490 0.3363 0.1767 
-   4/7  11/21    8/3 
-0.4003 0.2229 0.2229 </code></pre>
+<pre><code>       [,1]
+6/27  0.280
+3/2   0.297
+4/12  0.499
+9/26  0.347
+2/25  0.635
+5/19  0.647
+3/15  0.757
+9/16  1.000
+4/8   0.749
+6/10  0.336
+2/23  0.177
+4/7   0.400
+11/21 0.223
+8/3   0.223</code></pre>
 </div>
 </div>
 <p>Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).</p>
@@ -532,9 +556,8 @@ div.csl-indent {
 </div>
 <p>Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using <code>tm.status</code> or in the one-mode projection (Bonacich) using the <code>status1</code> function.</p>
 <p>The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones that attract the most central (highest activity) members.</p>
-</section>
-<section id="duality-and-eigenvector-two-mode-status" class="level2">
-<h2 class="anchored" data-anchor-id="duality-and-eigenvector-two-mode-status">Duality and Eigenvector Two-Mode Status</h2>
+<section id="duality-and-two-mode-bonacich-prestige" class="level3">
+<h3 class="anchored" data-anchor-id="duality-and-two-mode-bonacich-prestige">Duality and Two-Mode Bonacich Prestige</h3>
 <p>Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> of the eigenvector centralities on the nodes in the other mode they are connected to <span class="citation" data-cites="faust97">(<a href="#ref-faust97" role="doc-biblioref">Faust 1997, 170</a>)</span>.</p>
 <p>For instance the unnormalized eigenvector status scores for persons and groups are:</p>
 <div class="cell">
@@ -572,6 +595,7 @@ div.csl-indent {
 </div>
 <p>Which is indeed the eigenvector score for the event held on 6/27.</p>
 <p>Duality at work!</p>
+</section>
 </section>
 <section id="two-mode-pagerank" class="level2">
 <h2 class="anchored" data-anchor-id="two-mode-pagerank">Two-Mode PageRank</h2>
@@ -771,27 +795,56 @@ FLORA     0.00</code></pre>
 </div>
 <p>So now, to calculate the two-mode PageRank status score, we just play our two-mode status game on these matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   <span class="fu">tm.status</span>(P.n, G.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   tm.pr <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n, G.n, <span class="at">norm =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Note that because the bi-adjacency matrices that go into the <code>tm.status</code> function are already normalized, we can set the <code>norm</code> argument of the function to <code>FALSE</code>.</p>
+<p>Here are the resulting scores for the people:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>$p.s
-   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-    1.000     0.875     1.000     0.875     0.500     0.500     0.500     0.375 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-    0.500     0.500     0.500     0.750     0.875     1.000     0.625     0.250 
-   OLIVIA     FLORA 
-    0.250     0.250 
-
-$g.s
-  6/27    3/2   4/12   9/26   2/25   5/19   3/15   9/16    4/8   6/10   2/23 
-0.2143 0.2143 0.4286 0.2857 0.5714 0.5714 0.7143 1.0000 0.8571 0.3571 0.2857 
-   4/7  11/21    8/3 
-0.4286 0.2143 0.2143 
-
-$k
-[1] 35</code></pre>
+<pre><code>           [,1]
+EVELYN    0.966
+LAURA     0.845
+THERESA   0.965
+BRENDA    0.844
+CHARLOTTE 0.483
+FRANCES   0.479
+ELEANOR   0.480
+PEARL     0.361
+RUTH      0.481
+VERNE     0.487
+MYRNA     0.493
+KATHERINE 0.753
+SYLVIA    0.874
+NORA      1.000
+HELEN     0.619
+DOROTHY   0.241
+OLIVIA    0.247
+FLORA     0.247</code></pre>
 </div>
 </div>
-<p>The resulting scores are the same ones returned by the “co-HITS” algorithm of <span class="citation" data-cites="deng_etal09">Deng, Lyu, and King (<a href="#ref-deng_etal09" role="doc-biblioref">2009</a>)</span>. On this ranking, Nora, Theresa, and Evelyn are tied at the top and Olivia and Flora are tied at the bottom. The top ranked event is the one that took place on 9/16.</p>
+<p>And for the groups:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       [,1]
+6/27  0.213
+3/2   0.213
+4/12  0.425
+9/26  0.283
+2/25  0.566
+5/19  0.568
+3/15  0.715
+9/16  1.000
+4/8   0.863
+6/10  0.365
+2/23  0.291
+4/7   0.437
+11/21 0.220
+8/3   0.220</code></pre>
+</div>
+</div>
+<p>The resulting scores are the same ones returned by the “co-HITS” algorithm of <span class="citation" data-cites="deng_etal09">Deng, Lyu, and King (<a href="#ref-deng_etal09" role="doc-biblioref">2009</a>)</span>. On this ranking, Nora is the top person and Dorothy is the least prestigious. The top ranked event is the one that took place on 9/16.</p>
 </section>
 <section id="double-normalized-two-mode-pagerank" class="level2">
 <h2 class="anchored" data-anchor-id="double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</h2>
@@ -800,17 +853,12 @@ $k
 <p>To do that, it would be useful to come up with versions of <code>P.n</code> and <code>G.n</code> that normalize (for persons) by the exclusivity of the groups they attend <em>and</em> by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members <em>and</em> by their number of members they go to, so as not to give an advantage to well-attended events.</p>
 <p>In the case of <code>P.n</code> we can do that by pre-multiplying this matrix, which already adjusts for group size by <code>D.p</code> which is the diagonal matrix containing each person’s number of memberships:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> P.n</span>
-<span id="cb41-2"><a href="#cb41-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>And we do the same with <code>G.n</code>:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   G.n2 <span class="ot">&lt;-</span> D.g <span class="sc">%*%</span> G.n</span>
-<span id="cb42-2"><a href="#cb42-2"></a>   <span class="fu">rownames</span>(G.n2) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> P.n</span>
+<span id="cb44-2"><a href="#cb44-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s see what’s inside the new <code>P.n2</code> matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   <span class="fu">round</span>(P.n2, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="fu">round</span>(P.n2, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          6/27  3/2 4/12 9/26 2/25 5/19 3/15 9/16  4/8 6/10 2/23  4/7 11/21
 EVELYN    0.04 0.04 0.02 0.03 0.02 0.02 0.00 0.01 0.01 0.00 0.00 0.00  0.00
@@ -855,7 +903,7 @@ FLORA     0.00</code></pre>
 <p>We can see that now, people with lots of memberships (like Evelyn) get their centrality points reduced relative to people with not that many memberships like Charlotte.</p>
 <p>This is easy to see if we compare the row sums of the two matrices, which give us the total amount of centrality points each person has to distribute:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="fu">rowSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">rowSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
 1.4880952 1.2547619 1.2547619 1.1714286 0.6416667 0.4880952 0.4214286 0.2797619 
@@ -864,7 +912,7 @@ FLORA     0.00</code></pre>
    OLIVIA     FLORA 
 0.3333333 0.3333333 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">rowSums</span>(P.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   <span class="fu">rowSums</span>(P.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    EVELYN      LAURA    THERESA     BRENDA  CHARLOTTE    FRANCES    ELEANOR 
 0.18601190 0.17925170 0.15684524 0.16734694 0.16041667 0.12202381 0.10535714 
@@ -875,29 +923,58 @@ FLORA     0.00</code></pre>
 </div>
 </div>
 <p>Note that while in the original <code>P.n</code> matrix Evelyn has way more centrality points to distribute than Charlotte (a ratio of 2.32), this discrepancy is much smaller in the new <code>P.n2</code> double-normalized matrix (a ratio of 1.16).</p>
-<p>Now to compute our double-normalized PageRank status scores, we just play the status game on the new matrices:</p>
+<p>Now to compute our double-normalized PageRank status scores, we just play the status game on this new matrix and its transpose:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   <span class="fu">tm.status</span>(P.n2, G.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1"></a>   tm.bgrm <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n2, <span class="fu">t</span>(P.n2), <span class="at">norm =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Which implements the “BGRM” algorithm of <span class="citation" data-cites="rui_etal07">Rui et al. (<a href="#ref-rui_etal07" role="doc-biblioref">2007, 589</a>, eq. 8)</span>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>Here are the resulting scores for the people:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>$p.s
-   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-   0.0814    0.0607    0.0811    0.0587    0.0551    0.0497    0.0567    0.1161 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-   0.1001    0.1411    0.1877    0.2351    0.2118    0.4066    0.4713    0.1446 
-   OLIVIA     FLORA 
-   1.0000    1.0000 
-
-$g.s
-  6/27    3/2   4/12   9/26   2/25   5/19   3/15   9/16    4/8   6/10   2/23 
-0.0317 0.0337 0.0370 0.0371 0.0449 0.0670 0.1016 0.1113 0.3955 0.1827 1.0000 
-   4/7  11/21    8/3 
-0.1728 0.1400 0.1400 
-
-$k
-[1] 47</code></pre>
+<pre><code>           [,1]
+EVELYN    0.099
+LAURA     0.077
+THERESA   0.096
+BRENDA    0.075
+CHARLOTTE 0.071
+FRANCES   0.062
+ELEANOR   0.066
+PEARL     0.123
+RUTH      0.108
+VERNE     0.149
+MYRNA     0.197
+KATHERINE 0.249
+SYLVIA    0.225
+NORA      0.418
+HELEN     0.479
+DOROTHY   0.150
+OLIVIA    1.000
+FLORA     1.000</code></pre>
 </div>
 </div>
-<p>Which implements the “BGRM” algorithm of <span class="citation" data-cites="rui_etal07">Rui et al. (<a href="#ref-rui_etal07" role="doc-biblioref">2007</a>)</span>. We can see that the most highly ranked women are now Olivia and Flora (in contrast to Evelyn, Theresa, and Nora in the standard PageRank scores) and the top event is the one held on 2/23.</p>
+<p>And for the groups:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       [,1]
+6/27  0.040
+3/2   0.041
+4/12  0.046
+9/26  0.046
+2/25  0.054
+5/19  0.075
+3/15  0.109
+9/16  0.119
+4/8   0.401
+6/10  0.189
+2/23  1.000
+4/7   0.179
+11/21 0.146
+8/3   0.146</code></pre>
+</div>
+</div>
+<p>We can see that the most highly ranked women are now Olivia and Flora (in contrast to Evelyn, Theresa, and Nora in the standard PageRank scores), who used to be toward the bottom when using the traditional Bonacich prestige or PageRank scoring. In the same way, the top event is now the one held on 2/23, which wasn’t particularly distinguished using the other ranking algorithms.</p>
 
 
 
@@ -927,6 +1004,7 @@ Rui, Xiaoguang, Mingjing Li, Zhiwei Li, Wei-Ying Ma, and Nenghai Yu. 2007. <span
 
 <ol>
 <li id="fn1"><p>Where the weight (for obscure technical reasons) is the inverse of the square root of the first eigenvalue obtained from the <code>eigen</code> analysis.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Which stands for “Bipartite Graph Reinforcement Model.”<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
