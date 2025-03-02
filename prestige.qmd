@@ -83,7 +83,7 @@ This is what the network looks like:
 
 ```{r}
 #| echo: false
-#| fig-cap: "Krackhardt's Manager Data."
+#| fig-cap: "Krackhardt's Managers Friendship Network (Undirected)"
 #| fig-height: 7
    library(ggraph)
    set.seed(456)
@@ -543,26 +543,26 @@ Let's see how it works.
 Recall that PageRank works on the $\mathbf{P}$ matrix, which is defined like this:
 
 $$
-\mathbf{P}_{h} = \mathbf{D}_{out}^{-1}\mathbf{A}
+\mathbf{P}_{a} = \mathbf{D}_{out}^{-1}\mathbf{A}
 $$
 
 In `R` we compute it like this:
 
 ```{r}
-   P.h <- D.o %*% A
+   P.a <- D.o %*% A
 ```
 
 
 This matrix is row-stochastic, because each row is divided by the row total (the outdegrees of each node), meaning its rows sum to one, like we saw before:
 
 ```{r}
-   rowSums(P.h)
+   rowSums(P.a)
 ```
 
 It is also possible to compute the **indegree normalized** version of the $\mathbf{P}$ matrix, defined like this:
 
 $$
-\mathbf{P}_{a} = \mathbf{D}_{in}^{-1} \mathbf{A}^T
+\mathbf{P}_{h} = \mathbf{D}_{in}^{-1} \mathbf{A}^T
 $$
 
 Where $\mathbf{D}_{in}^{-1}$ is a matrix containing the inverse of the indegrees along the diagonals (and zeroes elsewhere) and $\mathbf{A}^T$ is the transpose of the adjacency matrix. Each non-zero entry of is thus equal to one divided by that row node's indegree. 
@@ -571,14 +571,14 @@ In `R` we compute it like this:
 
 ```{r}
    D.i <- diag(1/colSums(A))
-   P.a <- D.i %*% t(A)
+   P.h <- D.i %*% t(A)
 ```
 
 
-Like $\mathbf{P}_{h}$ the $\mathbf{P}_{a}$ matrix is row-stochastic, meaning its rows sum to 1.0:
+Like the $\mathbf{P}_{a}$ matrix, the $\mathbf{P}_{a}$ matrix is row-stochastic, meaning its rows sum to 1.0:
 
 ```{r}
-   rowSums(P.a)
+   rowSums(P.h)
 ```
 
 To get the SALSA version of the hub and authority scores, we can just play our status game over newly defined versions of the hub and authority matrices [@langville_meyer05, p. 156]. 
@@ -614,9 +614,9 @@ Which means that inequalities will be defined according to differences in the in
 And now to obtain our SALSA hub and authority scores, we simply play our `status1` game on (the transpose of) these matrices, just like we did for PageRank:
 
 ```{r}
-   salsa.h <- status1(t(Q.a)) 
-   salsa.h/max(salsa.h)
-   salsa.a <- status1(t(Q.h)) 
+   salsa.h <- status1(t(Q.h)) 
+   round(salsa.h/max(salsa.h), 2)
+   salsa.a <- status1(t(Q.a)) 
    round(salsa.a/max(salsa.a), 2)
 ```
 
@@ -702,8 +702,10 @@ We then use the function below to normalize each status score to be within the m
       x <- x - mean(x)
       return(x)
    }
-   round(norm.v(h2), 3)
-   round(norm.v(a2), 3)
+   h2 <- round(norm.v(h2), 3)
+   a2 <- round(norm.v(a2), 3)
+   h2
+   a2
 ```
 
 Now, these scores don't seem useless. They are different across each node; some are positive and some are negative. 
@@ -721,8 +723,8 @@ And the correspondence analysis scores---on the first dimension---fo the Krackha
 
 ```{r}
    ca.res <- CA(A, graph = FALSE)
-   ca.h <- ca.res$col$coord[, 1]
-   ca.a <- ca.res$row$coord[, 1]
+   ca.h <- ca.res$row$coord[, 1]
+   ca.a <- ca.res$col$coord[, 1]
 ```
 
 In line 1 we store the `CA` results in the object `ca.res`. We then grab the `CA` scores associated with the columns of the adjacency matrix and put them in the object `ca.h` in line 2 and the scores associated with the rows of the adjacency matrix and put them in the object `ca.a`.
@@ -736,6 +738,66 @@ Now for the big reveal:
 
 Which shows that indeed the CA scores are the same ones as we obtain from playing our status game on the corrected versions of the un-transposed SALSA hub and authorities matrices!
 
+But what are the CA scores supposed to capture? Let's look at them side-by-side next to the regular hub and authority scores, as shown in @tbl-ha.
+
+```{r}
+#| echo: false
+#| label: tbl-ha
+#| tbl-cap: "Hubs and Authorties Scores for Krackhardt's managers advice network"
+   ha.tab <- data.frame(salsa.h, salsa.a, ca.hub = h2, ca.auth = a2)
+   ha.tab <- round(ha.tab, 3)
+   ha.tab <- ha.tab[order(ha.tab$salsa.h, decreasing = TRUE), ]
+   library(kableExtra)
+   kbl(ha.tab, 
+      format = "html", align = "c") %>% 
+      kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+      column_spec(1, bold = TRUE)
+```
+
+Using information in @tbl-ha, @fig-ca shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
+
+```{r}
+#| label: fig-ca
+#| fig-cap: "Krackhardt's managers advice network (top hubs in blue and top authorities in red)"
+#| fig-width: 8
+#| fig-height: 8
+#| echo: false
+   #install.packages("ggraph")
+   library(ggraph)
+    l <- ggraph(g, layout = 'kk')
+    l <- as.matrix(data.frame(h2, a2*-1))  
+    c <- salsa.a - salsa.h
+    p <- ggraph(g, layout = l)
+    p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
+    p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
+    p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
+                                arrow = arrow(length = unit(2, 'mm')),
+                                end_cap = circle(4, 'mm'), 
+                                sep = unit(3, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
+    p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
+                                    low = "blue", 
+                                    high =  "red", 
+                                    mid = "gray", 
+                                    midpoint = mean(c))
+    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+    p <- p + theme_minimal() 
+    p <- p + theme(legend.position = "none", 
+                   axis.text = element_text(size = 12),
+                   axis.title = element_text(size = 16))
+    p <- p + labs(x = "CA Hub Score", y = "CA Authority Score")
+    p
+```
+
+We can see that the CA hub score places the hubbiest of hubs (blue nodes) in the lower-right quadrant of the diagram, with positive CA hub scores and negative CA authority scores (this last multiplied by minus one from the ones shown above). Note from @tbl-ha, that the nodes in this region (e.g. {15, 5, 3, 19, 9, 13}) all have large SALSA hub scores and very low SALSA authority scores. 
+
+In the same way, the most authoritative of authorities (red nodes) appear in the upper-left side, with negative CA hub scores and positive CA authority scores. Note that nodes in this region have very large SALSA authority scores and very low SALSA hub scores. 
+
+Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7, 4, 18, 10}) are "ambidextrous" nodes, showcasing relatively large scores as both hubs and authorities according to SAlSA. 
+
+Thus what the CA scores seem to be doing is separating out the purest examples of hubs and authorities in the network from those who play both roles. 
+
+<!--
 
 ## Hybrid PageRank/HITS Approaches
 @borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
@@ -843,7 +905,7 @@ Like before, we can treat the the Regular Hub, and Authority Scores, their SALSA
        caption = "Top Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
       column_spec(1, bold = TRUE)
 ```
-
+-->
 
 
 
