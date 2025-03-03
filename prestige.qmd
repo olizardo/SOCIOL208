@@ -319,6 +319,152 @@ And, of course, the (normalized) scores produced by this approach are identical 
 
 So the distributional model of status is the same one implemented in the PageRank algorithm!
 
+## PageRank as a Markov Difussion Model
+
+Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
+
+So our status game can best be understood as a special case of a **diffusion** game, where what's being diffused through the network is status itself. Let's see how this would work. 
+
+Imagine we want to spread something through the Krackhardt managers friendship network like a rumor or a piece of information. We start with a seed node $i$ and then track "where" the rumor is at each time step in the network (where the location is a person in the network). The rules of the game are the Markov diffusion model we described above. At each time step the rumor sits on some $j$ and it diffuses to one of $j$'s neighbors $k$ with probability $p_{jk}$. Where the rumor has been before that time step does not affect where it goes in the present.
+
+This sequence of transmission events is called a **markov chain**, and when it happens in a graph it is called a **random walk** on the graph. The node at which the rumor sits at a given time $t$ is called the **state** of the markov chain at $t$. For instance, the following function prints out *every* state of the markov chain for some series of steps $q$, given a network transition matrix $\mathbf{P}$ (the `w` argument in the function):
+
+```{r}
+   markov.chain1 <- function(w, seed = 1, q = 100) {
+      state <- 0 #initializing state vector
+      nodes < - c(1:ncol(w)) #vector of node ids
+      i <- seed #setting seed node
+      for (t in 1:q) {
+         state[t] <- sample(nodes, 1, prob = w[i, ]) #new state of the chain
+         i <- state[t] #new source node
+      }
+   return(state)
+   }
+```
+
+The function above sets the "seed" node to that given in the argument `seed` (in this case node 1) in line 2. It sets the nodes at risk of being in the chain to the number of nodes in the network (in this case the number of columns of the $\mathbf{P}$ matrix) in line 3. Then, in line 4, it enters the `for` loop to run `q` times (in this case 100 times). In line 6 the `state` vector at `t` is set to a random node sampled from the row of the $\mathbf{P}$ matrix that corresponds to that node with probability equal to the $p_{ij}$ entry in the matrix. For instance when it comes to first node that row looks like:
+
+```{r}
+   round(P[1, ], 2)
+```
+
+Which means that nodes {`which(P[1, ]!=0)`} have an 11% chance each of being sampled in line 6 and the other ones have no chance. Then in line 7 the new source node is set to whatever neighbor of $i$ was sampled in line 6. 
+
+Here's a markov chain state sequence of length 100 from the managers friendship network, starting with node 1 as the seed:
+
+```{r}
+   markov.chain1(P)
+```
+
+We can of course create a longer one by changing the `q` argument while setting the seed node to 5:
+
+```{r}
+   markov.chain1(P, q = 500, seed = 5)
+```
+
+Note that one thing that happens here is that the rumor goes through some nodes more often than others. One thing that you may be thinking is that the odds that a node will keep repeating itself in this chain has to do with how many neighbors they have since that increases the chances that they will be chosen in the `sample` line of the function. If you think that, you will be right!
+
+One thing we can do with the long vector of numbers above is compute the *probability* that the chain will be in some state or another after a number of steps $q$. To do that, all we have to do is find out the number of times each of the numbers (from one through twenty one) repeats itself, and then divide by the total number of steps. 
+
+In `R` we can do that like this, using `q = 50000`:
+
+```{r}
+   states <- markov.chain1(P, q = 50000, seed = 1)
+   count <- table(states)
+   p <- count/length(states)
+   names(p) <- names(count)
+   round(p, 2)
+```
+
+Line 1 computes the states of the markov chain after 50000 iterations using our `markov.chain1` function. Then line 2 uses the native `R` function `table` as a handy trick to compute how many times each node shows up in the chain stored in the `count` object: 
+
+```{r}
+#| code-line-numbers: false
+   count
+```
+
+Finally, line 4 divides these numbers by the length of the chain to get the probability. 
+
+Note that the numbers stored in the `p` vector are readily interpretable. For instance, the `0.06` in the first spot tells us that if we were to run this chain many times and check where the rumor is at step one-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth.  
+
+Like well behaved probabilities, these numbers sum to 1.0:
+
+```{r}
+   sum(p)
+```
+
+We can incorporate these steps in to a new and improved function like thus:
+
+```{r}
+   markov.chain2 <- function(w, seed = 1, q = 100) {
+      state <- 0
+      nodes < - c(1:ncol(w))
+      i <- seed
+      for (t in 1:q) {
+         state[t] <- sample(nodes, 1, prob = w[i, ])
+         i <- state[t]
+      }
+   count <- table(states)
+   p <- count/length(states)
+   names(p) <- names(count)
+   return(p)
+   }
+```
+
+Which now does everything in one step:
+
+```{r}
+   markov.chain2(P, q = 500)
+```
+
+There is another way to compute these probabilities more directly from the $\mathbf{P}$ matrix. The basic idea is that at any time $t$, the distribution of probabilities across nodes in the network stored in the vector $\mathbf{x}$ is given by:
+
+$$
+\mathbf{x}(t) = \mathbf{P}^T\mathbf{x}(t-1)
+$$
+
+With the initial probability vector given by:
+
+$$
+x(0) = e^{(i)}
+$$
+
+Where $e^{(i)}$ is a vector containing all zeros except for the $i^{th}$ spot, where it contains a one. 
+
+Here's an `R` function that implements this idea:
+
+```{r}
+   markov.chain3 <- function(w, init = 1, steps = 100) {
+      x <- rep(0, nrow(w))
+      x[init] <- 1
+      P.t <- t(w)
+      for (t in 1:steps) {
+         x <- P.t %*% x
+         }
+   x <- as.vector(x)
+   names(x) <- 1:ncol(w)
+   return(x)
+   }
+```
+
+And we can see what it spits out:
+
+```{r}
+   p3 <- markov.chain3(P)
+   round(p3, 2)
+```
+
+Which are the same as our older more complicated function above.
+
+Now you may have noticed this already, but these are the same numbers produced by the the PageRank status game!
+
+```{r}
+   names(pr) <- 1:21
+   round(pr, 2)
+```
+
+This gives us another (and perhaps) more intuitive interpretation of what the PageRank prestige ranking is all about. Nodes have more prestige if they are more "central" in a network where something is spreading via a random walk process. Higher ranked nodes will be visited more often by the random walker, less-highly-ranked nodes less. 
+
 ## PageRank with Damping and Teleportation in Directed Graphs
 
 PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
@@ -334,8 +480,6 @@ We then compute the $\mathbf{P}$ matrix:
    D.o <- diag(1/rowSums(A))
    P <- D.o %*% A 
 ```
-
-Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the directed graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on a node and the with probability $p_{ij}$ it jumps to one of that node's out-neighbors. The probabilities are stored in the matrix $\mathbf{P}$. 
 
 One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
 
@@ -615,27 +759,29 @@ And now to obtain our SALSA hub and authority scores, we simply play our `status
 
 ```{r}
    salsa.h <- status1(t(Q.h)) 
-   round(salsa.h/max(salsa.h), 2)
+   round(salsa.h/sum(salsa.h), 2)
    salsa.a <- status1(t(Q.a)) 
-   round(salsa.a/max(salsa.a), 2)
+   round(salsa.a/sum(salsa.a), 2)
 ```
 
 What are these numbers? Well, it turns out that they are equivalent to the out and indegrees of each node, divided by the total number of edges in the network [@fouss_etal04, p. 451].
 
-So the SALSA hub and authority scores can also be obtained like this:
+So the SALSA hub and authority scores can also be obtained like this, without having to play our status game over any matrix:
 
 ```{r}
-   out.ratio <- rowSums(A)/sum(A)
-   out.ratio/max(out.ratio)
-   in.ratio <- colSums(A)/sum(A)
-   round(in.ratio/max(in.ratio), 2)
+   round(rowSums(A)/sum(A), 2)
+   round(colSums(A)/sum(A), 2)
 ```
+
+Note that for the SALSA scores we use a different normalization compared to before. Instead of dividing by the maximum, we divide by the sum, so that the vector of SALSA hub and authority scores sum to 1.0. 
+
+The reason for this is that, as @fouss_etal04 explain, these numbers have a straightforward interpretation in terms of the *probability* that a random walker in the network will find itself in that particular node, when the walker goes from hub -> authority -> hub -> authority (e.g., never going from hub to hub or authority to authority) using the entries in the `P.a` and `P.h` matrices to determine the probability of jumping from hub $i$ to authority $j$ and vice versa. Thus, the higher the probability the more "central" the specific hub or authority is.
 
 <!--We could, of course, create "Google" versions of these matrices and compute our SALSA version of the hub and authorities scores by incorporating a damping factor, teleportation, and all the rest [@rafiei_mendelzon00]. -->
 
 ## Correspondence Analysis
 
-@fouss_etal04 show that there is a link between a method to analyze two-way tables called **correspondence analysis**, and both Lempel and Moran's SALSA and Kleinberg's HITS algorithms. 
+@fouss_etal04 also show that there is a link between a method to analyze two-way tables called **correspondence analysis**, and both Lempel and Moran's SALSA and Kleinberg's HITS algorithms. 
 
 They first ask: What if we play our status distribution game not on the *transpose* of the SALSA hub and authority matrices like we just did but just on the regular matrices without transposition?
 
@@ -793,13 +939,11 @@ We can see that the CA hub score places the hubbiest of hubs (blue nodes) in the
 
 In the same way, the most authoritative of authorities (red nodes) appear in the upper-left side, with negative CA hub scores and positive CA authority scores. Note that nodes in this region have very large SALSA authority scores and very low SALSA hub scores. 
 
-Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7, 4, 18, 10}) are "ambidextrous" nodes, showcasing relatively large scores as both hubs and authorities according to SAlSA. 
+Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7, 4, 18, 10}) are "ambidextrous" nodes, showcasing relatively large scores as both hubs and authorities according to SALSA. 
 
 Thus what the CA scores seem to be doing is separating out the purest examples of hubs and authorities in the network from those who play both roles. 
 
-<!--
-
-## Hybrid PageRank/HITS Approaches
+## A Hybrid PageRank/HITS Approach
 @borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
 
 ### Picky Hubs
@@ -875,6 +1019,8 @@ And the resulting hubs and authorities scores are:
    round(hits.res3$h/max(hits.res3$h), 3)
 ```
 
+
+<!--
 ## A Final Ranking of Prestige Scores
 
 Like before, we can treat the the Regular Hub, and Authority Scores, their SALSA versions, and their hub and authority averaged versions as "centralities" defined over nodes in the graph. In that case we might be interested in how different nodes in Krackhardt's High Tech Managers network stack up according to the different status criteria:
