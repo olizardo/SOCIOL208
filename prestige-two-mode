@@ -1,0 +1,267 @@
+<!--
+## Two-Mode Networks as Prisms
+
+We can use the same "prismatic" mode of status distribution to rank nodes in two-mode networks that we used in the standard one-mode case. The difference is that in the one-mode case you gain status by connecting to entities of the same "type" as you (e.g., other people). In the two-mode case, your status reflects the status of the "other type" entities that you connect to. And vice versa. 
+
+For instance, if the two entities are people and groups [@breiger74], then people gain status by connecting to high status groups and groups gain status by connecting to high-status people. In other words, people distribute status points to the groups they belong to and groups distribute status points to the people that belong to them. 
+
+When it comes to **eigenvector**-style measures, the neat idea is that *people are central if they belong to central groups and groups and central if their members are central people* (with people centrality defined by membership in central groups) can be effectively captured by these metrics [@bonacich91].
+
+For this reason, measures of status and prestige are particularly applicable to two-mode networks. The reason is that the *reflective* principle behind these measures interacts nicely with the *duality* principle. 
+
+## Eigenvector Status in the Southern Women Data
+
+Let's see an example using the classic Southern Women dataset. We can load it from the trusty `networkdata` package, and extract the bi-adjacency matrix from the `igraph` object:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- southern_women
+   A <- as.matrix(as_biadjacency_matrix(g))
+```
+
+Below is a quick function that plays a two-mode version of the status distribution game that we described at the beginning, which is really just a modification of the one-mode HITS algorithm:
+
+```{r}
+   tm.status <- function(p, g, e = 1e-10, r = 4) {
+      y <- matrix(1/ncol(p), ncol(p), 1) #initial group status column vector set to a constant
+      d <- 1 
+      k <- 0
+      while (d > e) {
+         o.y <- y #old group status scores
+         x <- p %*% o.y #new people scores a function of people matrix and old group scores 
+         x <- x/norm(x, type = "E") #normalizing new status scores
+         y <- g %*% x #new group scores a function of group matrix and new people scores
+         y <- y/norm(y, type = "E") #normalizing new status scores
+         if (k > 1) {
+            d <- abs(sum(abs(y) - abs(o.y))) #diff. between new and old group status scores
+            }
+         k <- k + 1
+         }
+      x <- x/max(x) #norming person scores by maximum
+      y <- y/max(y) #norming group scores by maximum
+      p.s <- round(as.vector(x), r)
+      g.s <- round(as.vector(y), r)
+      names(p.s) <- rownames(p)
+      names(g.s) <- rownames(g)
+   return(list(p.s = p.s, g.s = g.s, k = k))
+   }
+```
+
+Line 2 initializes the original status scores for each group, which are just set to $|G|^{-1}$ where $|G|$ is the number of groups (the number of columns of the bi-adjacency matrix $\mathbf{A}$). Line 3 initializes the $\delta$ value, which determines when the `while` loop stops. Then, inside the `while` loop, we assign status scores to the people equal to the sum of the status scores of the groups they belong to (line 7) which is just $\mathbf{A}$ post-multiplied by the group status vector $\mathbf{y}$, then we normalize the people status score vector in line 8 using the Euclidean norm. In line 9 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7. Then we normalize the new  group status scores in line 10 and compute the difference between these new group scores and the old one. When the difference is small ($\delta = 10^{-10}$) the `while` loop stops. 
+
+And now we can use the function to estimate the status scores for people and groups:
+
+```{r}
+   tm.hits <- tm.status(A, t(A))
+```
+
+Here are the scores for the people:
+
+```{r}
+   tm.hits$p.s
+```
+
+And for the groups:
+
+```{r}
+   tm.hits$g.s
+```
+
+Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).
+
+When we use the usual affiliation matrix `A` and its transpose `t(A)` as inputs, the `tm.status` function implements the biHITS algorithm described in @liao_etal14. One thing to note in this regard is that the biHITS algorithm is just a rediscovery of the dual status eigenvector centrality scoring described much earlier by @bonacich91. 
+
+Interestingly as @bonacich91 noted in that paper, the eigenvector status scores can *also* be obtained by playing the one-mode version of the status game over the Breiger-style one-mode projections of the two-mode network. 
+
+To see this, let's play the usual status game defined by the function `status1` over the one mode projections. For people this would be:
+
+```{r}
+   p.s <- status1(A %*% t(A))
+   names(p.s) <- rownames(A)
+   round(p.s, 3)
+```
+
+And for groups:
+
+```{r}
+   g.s <- status1(t(A) %*% A)
+   names(g.s) <- colnames(A)
+   round(g.s, 3)
+```
+
+Lo and behold, these are the same status scores we obtained via the biHITS approach. 
+
+Also like eigenvector style measures for two-mode networks, the iterative status game scores can be obtained as a solution to an linear algebra eigenvector problem involving the relevant matrices over which the game is played.
+
+In the case of the two-mode eigenvector scores, as @bonacich91 also noted, it turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices:
+
+$$
+\lambda x = (\mathbf{A}\mathbf{A}^T)x
+$$
+
+$$
+\lambda y = (\mathbf{A}^T\mathbf{A})y
+$$
+
+In `R` we can do this using the `eigen` function:
+
+```{r}
+   eig.p <- eigen(A %*% t(A))
+   eig.g <- eigen(t(A) %*% A)
+   p.s <- eig.p$vector[, 1] * -1
+   g.s <- eig.g$vector[, 1] * -1
+   names(p.s) <- rownames(A)
+   names(g.s) <- colnames(A)
+   round(p.s, 3)
+   round(g.s, 3)
+```
+
+Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using `tm.status` or in the one-mode projection (Bonacich) using the `status1` function. This becomes obvious once we normalized the eigenvecto scores by their maximum:
+
+```{r}
+   round(p.s/max(p.s), 4)
+   round(g.s/max(g.s), 4)
+```
+
+The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones that attract the most central (highest activity) members. 
+
+## Duality and Eigenvector Two-Mode Status
+
+Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum^[Where the weight (for obscure technical reasons) is the inverse of the square root of the first eigenvalue obtained from the `eigen` analysis.] of the eigenvector centralities on the nodes in the other mode they are connected to [@faust97, p. 170].
+
+So for any person, let's say {EVELYN}, their eigenvector centrality is equal to:
+
+```{r}
+   sum(A["EVELYN", ] * g.s) * 1/sqrt(eig.p$values[1])
+```
+
+Which is indeed Evelyn's Eigenvector score. 
+
+The same goes for the eigenvector score of groups, which are just a weighted sum of the Eigenvector centralities of the people who belong to them:
+
+```{r}
+   sum(A[, "6/27"] * p.s) *1/sqrt(eig.p$values[1])
+```
+
+Which is indeed the eigenvector score for the event held on 6/27. Duality at work!
+
+
+## Two-Mode PageRank
+
+Like in the case of the usual eigenvector approach to calculating status, the distribution game in the function `tm.status` assumes that persons and groups distribute the same amount of status regardless of their own degree (which you recall for people is the number of memberships and for groups is the number of members). 
+
+But just like with regular PageRank for one-mode networks, we can change this assumption in the two-mode case by presuming that people get more status points to distribute when they belong to exclusive (smaller) groups, and groups get more status to distribute when their members are more selective in their affiliation behavior (they have a smaller number of memberships).
+
+To do that, we create new versions of the affiliation matrix $\mathbf{A}$ and its transpose $\mathbf{A}^T$ normalized by the group and persons degrees (respectively). 
+
+To do this, imagine that $\mathbf{D}_p$ is a matrix containing the *inverse* of the degrees of each person (number of memberships) along the diagonals. This matrix can be created in `R` as follows:
+
+```{r}
+   D.p <- diag(1/rowSums(A))
+   round(D.p, 2)
+```
+
+Recalling that the row sums of $\mathbf{A}$ give us the person degrees.
+
+And then we do the same for groups by creating a matrix $\mathbf{D}_g$ containing the *inverse* of the degrees of each group (number of members) along the diagonals.
+
+```{r}
+   D.g <- diag(1/colSums(A))
+   round(D.g, 2)
+```
+
+Recalling that the column sums of $\mathbf{A}$ give us the group degrees.
+
+Now we can construct degree-normalized versions of the original bi-adjacency matrix and its transpose like this:
+
+```{r}
+   P.n <- A %*% D.g 
+   colnames(P.n) <- colnames(A)
+   G.n <- t(A) %*% D.p
+   colnames(G.n) <- rownames(A)
+```
+
+Let's see what's in the matrix `P.n`:
+
+```{r}
+   round(P.n, 2)
+```
+
+The `P.n` matrix is of the same dimensions as the original affiliation matrix `A`. However, the ${ij}^{th}$ cell is now equal to $1/k_j$ where $k_j$ is the number of members of group $j$. That means that if group $j$ has a lot of members then the ${ij}^{th}$ cell will contain a small number (as in column in the non-zero entries in the column corresponding to event `9-16`) but when the group is small, the ${ij}^{th}$ cell will contain a bigger number (as in the non-zero entries in the column corresponding to event `11-21`). This means the people who belong to smaller groups will have more centrality points to distribute. 
+
+The same goes for groups, as we can see by checking out the `G.n` matrix:
+
+```{r}
+   round(G.n, 2)
+```
+
+Note that both matrices `P.n` and `G.n` are **column stochastic** which means that its columns sum to one. We can check for this property as follows:
+
+```{r}
+   colSums(P.n)
+   colSums(G.n)
+```
+
+So now, to calculate the two-mode PageRank status score, we just play our two-mode status game on these matrices: 
+
+```{r}
+   tm.status(P.n, G.n)
+```
+
+The resulting scores are the same ones returned by the "co-HITS" algorithm of @deng_etal09. On this ranking, Nora, Theresa, and Evelyn are tied at the top and Olivia and Flora are tied at the bottom. 
+
+## Double Normalized Two-Mode PageRank
+
+Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person's centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).
+
+However, the PageRank centrality rankings can still be affected by the sheer *number* of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events. 
+
+To do that, it would be useful to come up with versions of `P.n` and `G.n` that normalize (for persons) by the exclusivity of the groups they attend *and* by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members *and* by their number of members they go to, so as not to give an advantage to well-attended events. 
+
+We can do this by coming up with a double-normalized versio of the affiliation matrix $\mathbf{A}^*$ that adjusts for both group size and number of memberships as follows:
+
+$$
+\mathbf{A}^* = \mathbf{D}_p\mathbf{A}\mathbf{D}_g
+$$
+
+Where everything is as we defined it before. In `R` we can do this as follows:
+
+```{r}
+   A.n <- D.p %*% A %*% D.g
+   rownames(A.n) <- rownames(A)
+   colnames(A.n) <- colnames(A)
+```
+
+Let's see what's inside the `A.n` matrix:
+
+```{r}
+   round(A.n, 2)
+```
+
+We can see that now, people with lots of memberships (like Evelyn) get their centrality points reduced relative to people with not that many memberships like Charlotte. 
+
+This is easy to see if we compare the row sums of the two matrices, which give us the total amount of centrality points each person has to distribute:
+
+```{r}
+   rowSums(P.n)
+   rowSums(A.n)
+```
+
+Note that while in the `P.n` matrix Evelyn has way more centrality pointts to distribute than Charlotte (a ratio of `r round(rowSums(P.n)[1]/rowSums(P.n)[5], 2)`), this discrepancy is much smaller in the `A.n` double-normalized matrix (a ratio of `r round(rowSums(A.n)[1]/rowSums(A.n)[5], 2)`). 
+
+Now to compute our double-normalized PageRank status scores, we just play the status game on the double-normalized matrix and its tranpose:
+
+```{r}
+   tm.status(A.n, t(A.n))
+```
+
+```{r}
+   D.p2 <- diag(1/sqrt(rowSums(A)))
+   D.g2 <- diag(1/sqrt(colSums(A)))
+   A.n2 <- D.p2 %*% A %*% D.g2
+   rownames(A.n2) <- rownames(A)
+   colnames(A.n2) <- colnames(A)
+   tm.status(A.n2, t(A.n2))
+```
+-->
