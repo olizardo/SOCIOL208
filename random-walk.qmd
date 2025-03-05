@@ -13,11 +13,175 @@ format:
 
 ## The Average First Passage Time
 
+Imagine something is diffusing through a network starting with some seed node $i$ following a series of discrete time steps. If the graph is connected, the thing will eventually reach every node in the network. However, depending on the connectivity structure of the graph, it will reach some nodes (e.g., those at a smaller graph theoretic distance from the seed node) sooner than others. 
+
+Here's a function called `first.pass1` that records the minimum number of steps that it takes for something to get to each node in a graph starting from a given seed node:
+
+```{r}
+   first.pass1 <- function(w, seed = 1) {
+      fp <- rep(0, ncol(w))
+      k <- 1
+      i <- seed
+      while(sum(fp[-seed] == 0) != 0) {
+         j <- sample(c(1:ncol(w)), 1, prob = w[i, ]) 
+         if (fp[j] == 0 & j != seed) {fp[j] <- k}
+         i <- j
+         k <- k + 1
+         }
+   names(fp) <- 1:ncol(w)
+   return(fp)
+   }
+```
+
+The function takes a transition matrix $\mathbf{P}$ as the primary input (of the sort we discussed when talking about [status and prestige](#prestige.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node.
+
+Let's test it out using the friendship network from the Krackhardt high-tech managers data:
+
 ```{r}
    library(networkdata)
    library(igraph)
-   g <- as.undirected(ht_friends, mode = "collapse")
+   g <- as_undirected(ht_friends, mode = "collapse")
    A <- as.matrix(as_adjacency_matrix(g))
-   D.o <- diag(1/rowSums(A))
-   P <- D.o %*% A
+   P <- diag(1/rowSums(A)) %*% A    
+   set.seed(456)
+   first.pass1(P)
 ```
+
+We can see for instance that the rumor got to node 16 in just one time step, but that it took 24 time steps to get to node 3 and 137 (!) to get to node 3.
+
+So it seems like this, the minimum time it takes for something that starts with me to get to you [@fouss_etal04], is a good measure of the proximity between me and you in the graph. 
+
+However, we wouldn't want to use just one run of the diffusion process to calculate this proximity measure. Instead a better approach is to use the *average time* it takes for something to get to the other nodes when it starts from a given node. 
+
+To do that, we can just `replicate` the `first.pass1` function some number of times (e.g., $n = 100$) and take an average:
+
+```{r}
+   set.seed(456)
+   first.res <- replicate(100, first.pass1(P))
+   round(rowMeans(first.res), 2)
+```
+
+We can see that according to this measure, called **the average first passage time** [@fouss_etal16, p. 36], when we start with node 1, things get relatively quickly to node 17 ($\hat{t} = 8.7$) but they take forever to get to node 13 ($\hat{t} = 86.8$).
+
+We can of course, write a function to compute the average first passage time from one node to another using every node in the graph as the initial seed:
+
+```{r}
+   first.pass2 <- function(w, n) {
+      m <- rowMeans(replicate(n, first.pass1(w)))
+      for (i in 2:nrow(w)) {
+         m <- rbind(m, rowMeans(replicate(n, first.pass1(w, seed = i))))
+      }
+   rownames(m) <- 1:nrow(w)
+   return(m)
+   }
+```
+
+And the result (showing the first ten rows and columns) is:
+
+```{r}
+   set.seed(456)
+   round(first.pass2(P, 100), 1)[1:10, 1:10]
+```
+
+The accuracy of the average first pass estimate we get depends on the number of replications we use to get the average. The bigger, the more accurate. However, it can take a lot of computing time if we increased `n` to a giant number.
+
+Thankfully there is a way to use matrix algebra magic to compute the average first pass at the limit ($n \approx \infty$).
+
+To do that, first we need to compute a matrix called the **graph Laplacian**, which is defined as:
+
+$$
+\mathbf{L} = \mathbf{D} - \mathbf{A}
+$$
+
+Where $\mathbf{D}$ is a diagonal matrix containing the degrees of each node in the graph along the diagonals and zeroes everywhere else. 
+
+In `R` we can compute $\mathbf{L}$ like this:
+
+```{r}
+   D <- diag(rowSums(A))
+   L <- D - A
+```
+
+Once we have $\mathbf{L}$, we need to compute a variation known by the less than memorable name of the **Moore-Penrose Pseudo-Inverse** of the Laplacian, written as $\mathbf{L}^+$. 
+
+Despite the terrible name, $\mathbf{L}^+$ is easy to compute:
+
+```{r}
+   E <- matrix(1/nrow(A), nrow(A), nrow(A))
+   L.plus <- solve(L - E) + E
+```
+
+As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell. 
+
+Now, the average first passage time between every pair of nodes in the network, contained in the matrix $\mathbf{M}$ is given by:
+
+$$
+\mathbf{M} = vol(A)(\mathbf{e}\mathbf{L}^+_{diag})^T - vol(A)\mathbf{L}^+ + (\mathbf{L}^+\mathbf{d})\mathbf{e}^T -\mathbf{e}(\mathbf{d}^T\mathbf{L}^+)
+$$
+
+Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to $\mathbf{L}^+$, while $vol(A) = \sum_{ij} a_{ij}$ is just the sum of the non-zero entries in the adjacency matrix, $\mathbf{e}$ is a column vector of ones with as many rows as the number of nodes in the graph, $\mathbf{d}$ is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, and $\mathbf{L}^+_{diag}$ is a vector containing the diagonal entries of $\mathbf{L}^+$ at each position. 
+
+The following `R` code constructs $\mathbf{M}$ step by step:
+
+```{r}
+   e <- matrix(1, nrow(A), 1)
+   d <- rowSums(A)
+   M <- sum(A) * t(e %*% diag(L.plus))
+   M <- M - (sum(A) * L.plus)
+   M <- M + (L.plus %*% d) %*% t(e)
+   M <- M - (e %*% (t(d) %*% L.plus))
+   rownames(M) <- 1:nrow(A)
+   colnames(M) <- 1:nrow(A)
+   M <- t(M)
+```
+
+And now for the big reveal:
+
+```{r}
+   round(M, 1)[1:10, 1:10]
+```
+
+Which shows entries pretty close in value to the ones we obtained by iteration and averaging. 
+
+Once we have the average first passage time, we can compute another important quantity called the **average commute distance** between two nodes $i$ and $j$ ($n_{ij}$). This is the number of steps it takes for a random walker to start at node  $i$, reach another specific node $j$ and then *get back* to the original node $i$. 
+
+It turns out that $n_{ij}$ is pretty simple to compute, once we know the average first passage time between every pair of nodes $m_{ij}$, since it is just:
+
+$$
+   n_{ij} = m_{ij} + m_{ji}
+$$
+
+So it is just the entries of $\mathbf{M}$ on the upper triangle added to the corresponding entries in the lower triangle:
+
+```{r}
+   N <- M + t(M)
+   round(N[1:10, 1:10], 1)
+```
+
+Note that the entries in this matrix are symmetric. They thus function as a **similarity metric** between nodes; the lower the average commute distance, the closer or more similar the two nodes are. 
+
+Of course, there's also math to compute $\mathbf{N}$ directly from $\mathbf{L}^+$ using the same ingredients we used before. It goes like this:
+
+$$
+\mathbf{N} = (\mathbf{L}^+_{diag}\mathbf{e}^T + \mathbf{e}\mathbf{L}^+_{diag} - 2\mathbf{L}^+)vol(A)
+$$
+
+Which is actually a much less monstrous and simpler expression than before. 
+
+
+The following `R` code constructs $\mathbf{N}$ step by step:
+
+```{r}
+   N <- diag(L.plus) %*% t(e)
+   N <- N + (e %*% diag(L.plus))
+   N <- N - (2 * L.plus)
+   N <- N * sum(A)
+   round(N, 1)[1:10, 1:10]
+```
+
+Which as you can see, gives us the results we seek. 
+
+<!--
+
+-->
+
