@@ -781,17 +781,103 @@ The reason for this is that, as @fouss_etal04 explain, these numbers have a stra
 
 <!--We could, of course, create "Google" versions of these matrices and compute our SALSA version of the hub and authorities scores by incorporating a damping factor, teleportation, and all the rest [@rafiei_mendelzon00]. -->
 
-## Correspondence Analysis
+## HITS versus Principal Components Analysis
 
-@fouss_etal04 also show that there is a link between a method to analyze two-way tables called **correspondence analysis**, and both Lempel and Moran's SALSA and Kleinberg's HITS algorithms. 
+@saerens_fouss05 argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA). 
+
+In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which in the this case is the network's adjacency matrix). Technically we could also just argue that PCA is just HITS on a **centered adjacency matrix**, as we will see in just a bit. 
+
+Let's see how this works. First, let's create a *centered* version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the column mean (the average score of all individuals on that variable) from each individual's score. 
+
+So to get the centered network adjacency matrix, we first need to compute the corresponding **column means** of the matrix. Note that this will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}_i/n$):
+
+
+```{r}
+   cm <- colMeans(A)
+   round(cm, 2)
+```
+
+Now that we have this vector of column means, all we need to do is subtract it from each column of the adjacency matrix, to create the centered adjacency matrix:
+
+```{r}
+   A.c <- t(t(A) - cm)
+```
+
+Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and "untranspose" the resulting matrix back. 
+
+Note that indeed, the column means of the centered adjacency matrix are zero:
+
+```{r}
+   round(colMeans(A.c), 2)
+```
+
+Now all we need to do is play our HITS status game on the centered adjacency matrix:
+
+```{r}
+   hits.res <- status2(A.c)
+   round(hits.res$h, 3)
+   round(hits.res$a, 3)
+```
+
+We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:
+
+```{r}
+   norm.v <- function(x) {
+      x <- x - min(x)
+      x <- x/max(x)
+      x <- x - mean(x)
+      return(x)
+   }
+   h2 <- round(norm.v(hits.res$h), 3)
+   a2 <- round(norm.v(hits.res$a), 3)
+   names(h2) <- 1:21
+   names(a2) <- 1:21
+```
+
+And the resulting normalized scores for each node in the Krackhardt managers advice network are:
+
+```{r}
+   round(h2, 3)
+   round(a2, 3)
+```
+
+@saerens_fouss05 show that these are the same scores we would obtain from a simple PCA of the regular old adjacency matrix. To see this, let's do the PCA analysis using the `PCA` function from the package `FactorMineR`.^[See [http://factominer.free.fr/](http://factominer.free.fr/) for all of the package's capabilities.]
+
+```{r}
+   library(FactoMineR)
+   pca.res <- PCA(A, graph = FALSE, scale.unit = FALSE)
+```
+
+Note that we set the argument `scale.unit` to `FALSE` so that the PCA is conducted on the original adjacency matrix and not a scaled version of it!
+
+The `PCA` function stores the corresponding scores for the rows and columns of the matrix in these objects:
+
+```{r}
+   pca.h <- pca.res$ind$coord[, 1]
+   pca.a <- pca.res$var$coord[, 1]
+   names(pca.a) <- 1:21
+```
+
+And now, for the big reveal:
+
+```{r}
+   round(norm.v(pca.h), 3)
+   round(norm.v(pca.a), 3)
+```
+
+Which are indeed the same scores we obtained earlier when we played our status game on the centered adjacency matrix!
+
+## HITS and SALSA versus Correspondence Analysis
+
+@fouss_etal04 also argue that there is a close link between a method to analyze two-way tables called **correspondence analysis**, and both Lempel and Moran's SALSA and Kleinberg's HITS algorithms. 
 
 They first ask: What if we play our status distribution game not on the *transpose* of the SALSA hub and authority matrices like we just did but just on the regular matrices without transposition?
 
 Here's what happens:
 
 ```{r}
-   status1(Q.h) 
-   status1(Q.a) 
+   round(status1(Q.h), 3)
+   round(status1(Q.a), 3)
 ```
 
 OK, so that's weird. All that we get is a vector with the same number repeated twenty one times (in this case, the number of nodes in the graph). What's going on?
@@ -835,39 +921,33 @@ Now, we create new SALSA hub and authority matrices, which are equal to the orig
 And now we play our status game on these matrices:
 
 ```{r}
-   h2 <- status1(Q.h2)
-   a2 <- status1(Q.a2)
-   names(h2) <- 1:21
-   names(a2) <- 1:21
+   h3 <- status1(Q.h2)
+   a3 <- status1(Q.a2)
+   names(h3) <- 1:21
+   names(a3) <- 1:21
 ```
 
-We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:
+We then use the same function we used for the PCA scores to normalize each status score to be within the minus one to plus one interval and have mean zero:
 
 ```{r}
-   norm.v <- function(x) {
-      x <- x - min(x)
-      x <- x/max(x)
-      x <- x - mean(x)
-      return(x)
-   }
-   h2 <- round(norm.v(h2), 3)
-   a2 <- round(norm.v(a2), 3)
-   h2
-   a2
+   h3 <- norm.v(h3)
+   a3 <- norm.v(a3)
 ```
 
-Now, these scores don't seem useless. They are different across each node; some are positive and some are negative. 
+And the resulting scores are:
+
+```{r}
+   round(h3, 3)
+   round(a3, 3)
+```
+
+Now, these scores don't seem useless. They are different across each node; and like the PCA scores we obtained earlier, some are positive and some are negative. 
 
 @fouss_etal04 show that these are the same scores you would obtain from a correspondence analysis of the original affiliation matrix. 
 
-Let's check that out in our case. First, we load the package `FactoMineR` which can be used to compute the correspondence analysis of any matrix in `R` using the function `CA`:
+Let's check that out in our case. First, we load the package `FactoMineR` which can be used to compute the correspondence analysis of any matrix in `R` using the function `CA` from the `FactoMineR` package. 
 
-
-```{r}
-   library(FactoMineR)
-```
-
-And the correspondence analysis scores---on the first dimension---fo the Krackhardt advice network can be obtained like this:
+The correspondence analysis scores---on the first dimension---fo the Krackhardt advice network can be obtained like this:
 
 ```{r}
    ca.res <- CA(A, graph = FALSE)
@@ -913,7 +993,7 @@ Using information in @tbl-ha, @fig-ca shows a point and line network plot but us
    #install.packages("ggraph")
    library(ggraph)
     l <- ggraph(g, layout = 'kk')
-    l <- as.matrix(data.frame(h2, a2*-1))  
+    l <- as.matrix(data.frame(h3, a3*-1))  
     c <- salsa.a - salsa.h
     p <- ggraph(g, layout = l)
     p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
