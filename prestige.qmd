@@ -219,7 +219,7 @@ While the top indegree centrality node (2) also gets the top Eigenvector Central
 
 ## A Degree-Normalized Model of Status (AKA PageRank)
 
-Note that the model of status distribution implied by the Bonacich's **Eigenvector Centrality** just reviewed implies that each actor distributes the same amount of status *independently* of the number of connections they have. Status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
+Note that the model of status distribution implied by the Eigenvector Centrality approach just reviewed implies that each actor distributes the same amount of status *independently* of the number of connections they have. Status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
 
 This is why the eigenvector idea rewards nodes who are connected to popular others more. Even though everyone begins with a single unit of status, well-connected nodes by degree end up having more of it to distribute. 
 
@@ -256,7 +256,9 @@ We can then create the $\mathbf{P}$ matrix corresponding to the undirected versi
    P <- D.o %*% A
 ```
 
-So this is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. 
+Recalling that `%*%` is the `R` matrix multiplication operator.
+
+So the resulting $\mathbf{P}$ is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. 
 
 Here are the first 10 rows and columns of the new matrix:
 
@@ -777,7 +779,7 @@ So the SALSA hub and authority scores can also be obtained like this, without ha
 
 Note that for the SALSA scores we use a different normalization compared to before. Instead of dividing by the maximum, we divide by the sum, so that the vector of SALSA hub and authority scores sum to 1.0. 
 
-The reason for this is that, as @fouss_etal04 explain, these numbers have a straightforward interpretation in terms of the *probability* that a random walker in the network will find itself in that particular node, when the walker goes from hub -> authority -> hub -> authority (e.g., never going from hub to hub or authority to authority) using the entries in the `P.a` and `P.h` matrices to determine the probability of jumping from hub $i$ to authority $j$ and vice versa. Thus, the higher the probability the more "central" the specific hub or authority is.
+The reason for this is that, as @fouss_etal04 explain, these numbers have a straightforward interpretation in terms of the *probability* that a random walker in the network will find itself in that particular node, when the walker goes from hub -> authority -> hub -> authority (e.g., never going from hub to hub or authority to authority) using the entries in the `P.a` and `P.h` matrices to determine the probability of jumping from hub $i$ to authority $j$ and vice versa. Thus, the higher the probability the more "central" the specific hub or authority is, just like the random walk interpretation of the PageRank scores.
 
 <!--We could, of course, create "Google" versions of these matrices and compute our SALSA version of the hub and authorities scores by incorporating a damping factor, teleportation, and all the rest [@rafiei_mendelzon00]. -->
 
@@ -982,19 +984,44 @@ But what are the CA scores supposed to capture? Let's look at them side-by-side 
       column_spec(1, bold = TRUE)
 ```
 
-Using information in @tbl-ha, @fig-ca shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
+Using information in @tbl-ha, @fig-ca-1 shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
 
 ```{r}
 #| label: fig-ca
 #| fig-cap: "Krackhardt's managers advice network (top hubs in blue and top authorities in red)"
 #| fig-width: 8
 #| fig-height: 8
+#| fig-subcap: 
+#|   - "CA Coordinates"
+#|   - "PCA Coordinates"
+#| layout-ncol: 2
 #| echo: false
    #install.packages("ggraph")
    library(ggraph)
     l <- ggraph(g, layout = 'kk')
     l <- as.matrix(data.frame(h3, a3*-1))  
     c <- salsa.a - salsa.h
+    p <- ggraph(g, layout = l)
+    p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
+    p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
+    p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
+                                arrow = arrow(length = unit(2, 'mm')),
+                                end_cap = circle(4, 'mm'), 
+                                sep = unit(3, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
+    p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
+                                    low = "blue", 
+                                    high =  "red", 
+                                    mid = "gray", 
+                                    midpoint = mean(c))
+    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+    p <- p + theme_minimal() 
+    p <- p + theme(legend.position = "none", 
+                   axis.text = element_text(size = 12),
+                   axis.title = element_text(size = 16))
+    p <- p + labs(x = "PCA Hub Score", y = "PCA Authority Score")
+    p
+    l <- as.matrix(data.frame(h2, a2))  
     p <- ggraph(g, layout = l)
     p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
     p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
@@ -1024,6 +1051,8 @@ In the same way, the most authoritative of authorities (red nodes) appear in the
 Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7, 4, 18, 10}) are "ambidextrous" nodes, showcasing relatively large scores as both hubs and authorities according to SALSA. 
 
 Thus what the CA scores seem to be doing is separating out the purest examples of hubs and authorities in the network from those who play both roles. 
+
+Note that as shown in @fig-ca-2, we get an even stronger separation between hubs and authorities when using the PCA scores to place nodes in a common space, with all the authorities (except nodes 7 and 21) to the upper left, and the hubs on the right-hand side of the plot. 
 
 ## A Hybrid PageRank/HITS Approach
 @borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
