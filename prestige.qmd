@@ -79,23 +79,39 @@ We will use a data set collected by David Krackhardt on the friendships of 21 ma
    g <- as_undirected(ht_friends, mode = "collapse")
 ```
 
-This is what the network looks like:
+The undirected friendship network is shown in @fig-krack-1.
 
 ```{r}
+#| label: fig-krack
+#| fig-cap: "Krackhardt's managers network"
+#| fig-width: 8
+#| fig-height: 8
+#| fig-subcap: 
+#|   - "Friendship (Undirected)"
+#|   - "Advice (directed)"
+#| layout-ncol: 2
 #| echo: false
-#| fig-cap: "Krackhardt's Managers Friendship Network (Undirected)"
-#| fig-height: 7
    library(ggraph)
    set.seed(456)
-    p <- ggraph(g, layout = 'dh')
+    p <- ggraph(g, layout = 'auto')
     p <- p + geom_edge_fan(color = gray(0.5), edge_width = 0.25)
-    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
-    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+    p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 6, color = "white")
+    p <- p + theme_graph() 
+    p
+   set.seed(456)
+    p <- ggraph(ht_advice, layout = 'auto')
+    p <- p + geom_edge_parallel(color = gray(0.5), edge_width = 0.25,
+                             arrow = arrow(length = unit(4, 'mm')),
+                             end_cap = circle(6, 'mm'), 
+                             sep = unit(5, 'mm'))    
+   p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 6, color = "white")
     p <- p + theme_graph() 
     p
 ```
 
-We extract the adjacency matrix corresponding to this network:
+We then extract the adjacency matrix corresponding to this network:
 
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
@@ -471,21 +487,23 @@ This gives us another (and perhaps) more intuitive interpretation of what the Pa
 
 ## PageRank with Damping and Teleportation in Directed Graphs
 
-PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
+PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. A 
 
 ```{r}
    g <- ht_advice
    A <- as.matrix(as_adjacency_matrix(g))
 ```
 
-We then compute the $\mathbf{P}$ matrix:
+A plot of the advice network is shown in @fig-krack-2. 
+
+We then compute the $\mathbf{P}$ matrix corresponding to this network:
 
 ```{r}
    D.o <- diag(1/rowSums(A))
    P <- D.o %*% A 
 ```
 
-One issue that arises is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 above, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
+One issue that arises in computing the $\mathbf{P}$ for directed graphs is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in @fig-krack-2, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
 
 To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.
 
@@ -545,7 +563,7 @@ So we need to make our status game a bit more complicated (but not too much) to 
 
 ```{r}
    status2 <- function(w) {
-     a <- rep(1, nrow(w))  #initializing authority scores
+     a <- rep(1/nrow(w), nrow(w))  #initializing authority scores
      d <- 1 #initializing delta
      k <- 0 #initializing counter
      while (d >= 1e-10) {
@@ -561,7 +579,7 @@ So we need to make our status game a bit more complicated (but not too much) to 
    }
 ```
 
-Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then update the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7 normalize them in line 8 and update the new authority scores to be the sum (across each in-neighbor) of these new hub scores. 
+Everything is like our previous `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes or the number of rows in the adjacency matrix) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then updates the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7 normalize them in line 8 and update the new authority scores to be the sum (across each in-neighbor) of these new hub scores, which are then themselves normalized in line 10. 
 
 So at each step $t$, the authority and hub scores are calculated like this:
 
@@ -597,7 +615,7 @@ Note that the just like the `status2` function, the `igraph` function `hits_scor
 
 ## Hubs, Authorities and Eigenvectors
 
-Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the eigenvectors of a network proximity matrix (the adjacency matrix $\mathbf{A}$ and the probability matrix $\mathbf{P}$ respectively). It would be surprising if the same wasn't true of the hub and authority status scores.
+Recall that both the eigenvector and PageRank status scores computed via the network status distribution game routine ended up being equivalent to the leading eigenvector of a network proximity matrix (the adjacency matrix $\mathbf{A}$ and the probability matrix $\mathbf{P}$ respectively). It would be surprising if the same wasn't true of the hub and authority status scores.
 
 Let's find out which ones!
 
@@ -644,14 +662,16 @@ In information science, $\mathbf{M}_h$ and $\mathbf{M}_a$ matrices have special 
 #| fig-width: 6
    nodes <- unique(c(2, 11, neighbors(g, 2), neighbors(g, 11)))
    g.sub <- subgraph(g, nodes)
+   V(g.sub)$name <- nodes
+   plot(g.sub)
    set.seed(456)
-   p <- ggraph(g.sub, layout = 'fr')
+   p <- ggraph(g.sub, layout = 'auto')
    p <- p + geom_edge_parallel(color = "steelblue", edge_width = 1,
                              arrow = arrow(length = unit(4, 'mm')),
                              end_cap = circle(6, 'mm'), 
                              sep = unit(5, 'mm'))
    p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
-   p <- p + geom_node_text(aes(label = nodes), size = 5.5, color = "white")
+   p <- p + geom_node_text(aes(label = name), size = 5.5, color = "white")
    p <- p + theme_graph() 
    p
 ```
@@ -791,7 +811,7 @@ In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which 
 
 Let's see how this works. First, let's create a *centered* version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the column mean (the average score of all individuals on that variable) from each individual's score. 
 
-So to get the centered network adjacency matrix, we first need to compute the corresponding **column means** of the matrix. Note that this will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}/n$), which is kind of a normalized degree centrality score, except the usual normalizatio is to divide by $n-1$ as we saw in our discussion of [centrality](centrality.qmd).
+So to get the centered network adjacency matrix, we first need to compute the corresponding **column means** of the matrix. Note that this will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}/n$), which is kind of a normalized degree centrality score, except the usual normalization is to divide by $n-1$ (so as to have a maximume of 1.0) as we saw in our discussion of [centrality](centrality.qmd).
 
 First, let's compute the column means vector, using the native `R` function `colMeans` which takes a matrix as input and returns a vector of column means:
 
@@ -807,7 +827,7 @@ Now that we have this vector of column means, all we need to do is subtract it f
    A.c <- t(t(A) - cm)
 ```
 
-Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and "untranspose" back. We can use the `colMeans` function to check that the column means of the centered adjacency matrix are indeed zero:
+Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and "untranspose" back to the original (by taking the transpose of the transpose). We can use the `colMeans` function to check that the column means of the centered adjacency matrix are indeed zero:
 
 ```{r}
    round(colMeans(A.c), 2)
@@ -873,6 +893,8 @@ And now, for the big reveal:
 ```
 
 Which are indeed the same scores we obtained earlier when we played our status game on the centered adjacency matrix!
+
+We will see one way to interpret these scores in the next section.
 
 ## HITS and SALSA versus Correspondence Analysis
 
@@ -952,7 +974,7 @@ Now, these scores don't seem useless. They are different across each node; and l
 
 @fouss_etal04 show that these are the same scores you would obtain from a correspondence analysis (CA) of the original affiliation matrix. 
 
-Let's check that out in our case. The same package we used to compute the PCA of the adjacency matrix (`FactoMineR`)can be used to compute the correspondence analysis of any matrix in `R` using the function `CA`:
+Let's check that out in our case. The same package we used to compute the PCA of the adjacency matrix (`FactoMineR`) can be used to compute the correspondence analysis of any matrix in `R`, including a network adjacency matrix, using the function `CA`:
 
 ```{r}
    #library(FactoMineR)
@@ -973,7 +995,7 @@ Now for the big reveal:
 
 Which shows that indeed the CA scores are the same ones as we obtain from playing our status game on the corrected versions of the un-transposed SALSA hub and authorities matrices!
 
-But what are the CA scores supposed to capture? Let's look at them side-by-side next to the SALSA hub and authority scores, as shown in @tbl-ha.
+But what are the CA (and PCA) scores supposed to capture? Let's look at them side-by-side next to the SALSA hub and authority scores, as shown in @tbl-ha which has nodes rank ordered by their SALSA hub score.
 
 ```{r}
 #| echo: false
@@ -1057,7 +1079,7 @@ Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7
 
 Thus what the CA scores seem to be doing is separating out the purest examples of hubs and authorities in the network from those who play both roles. 
 
-Note that as shown in @fig-ca-2, we get an even stronger separation between hubs and authorities when using the PCA scores to place nodes in a common space, with all the authorities (except nodes 7 and 21) to the upper left, and the hubs on the right-hand side of the plot. 
+Note that as shown in @fig-ca-2, we get an even stronger separation between hubs and authorities when using the PCA scores to place nodes in a common space, with all the authorities (except nodes 7 and 21) to the upper left, and the hubs on the right-hand side of the plot. So  the PCA scores reflect the same distinction between hub and authority status as the CA scores. 
 
 ## A Hybrid PageRank/HITS Approach
 @borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
