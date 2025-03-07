@@ -1303,7 +1303,8 @@ div.csl-indent {
 <p><span class="citation" data-cites="saerens_fouss05">Saerens and Fouss (<a href="#ref-saerens_fouss05" role="doc-biblioref">2005</a>)</span> argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA).</p>
 <p>In fact, they argue that HITS is just PCA on an <em>uncentered data matrix</em> (which in the this case is the network’s adjacency matrix). Technically we could also just argue that PCA is just HITS on a <strong>centered adjacency matrix</strong>, as we will see in just a bit.</p>
 <p>Let’s see how this works. First, let’s create a <em>centered</em> version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the column mean (the average score of all individuals on that variable) from each individual’s score.</p>
-<p>So to get the centered network adjacency matrix, we first need to compute the corresponding <strong>column means</strong> of the matrix. Note that this will be equivalent to each individual’s <strong>indegree</strong> (the sum of the columns) divided by the total number of nodes in the network (<span class="math inline">\(k^{in}_i/n\)</span>):</p>
+<p>So to get the centered network adjacency matrix, we first need to compute the corresponding <strong>column means</strong> of the matrix. Note that this will be equivalent to each individual’s <strong>indegree</strong> (the sum of the columns) divided by the total number of nodes in the network (<span class="math inline">\(k^{in}/n\)</span>), which is kind of a normalized degree centrality score, except the usual normalizatio is to divide by <span class="math inline">\(n-1\)</span> as we saw in our discussion of <a href="./centrality.html">centrality</a>.</p>
+<p>First, let’s compute the column means vector, using the native <code>R</code> function <code>colMeans</code> which takes a matrix as input and returns a vector of column means:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb107"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb107-1"><a href="#cb107-1"></a>   cm <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(A)</span>
 <span id="cb107-2"><a href="#cb107-2"></a>   <span class="fu">round</span>(cm, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1316,8 +1317,7 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb109"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb109-1"><a href="#cb109-1"></a>   A.c <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(A) <span class="sc">-</span> cm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and “untranspose” the resulting matrix back.</p>
-<p>Note that indeed, the column means of the centered adjacency matrix are zero:</p>
+<p>Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and “untranspose” back. We can use the <code>colMeans</code> function to check that the column means of the centered adjacency matrix are indeed zero:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb110"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb110-1"><a href="#cb110-1"></a>   <span class="fu">round</span>(<span class="fu">colMeans</span>(A.c), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1326,42 +1326,35 @@ div.csl-indent {
 </div>
 <p>Now all we need to do is play our HITS status game on the centered adjacency matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb112"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1"></a>   hits.res <span class="ot">&lt;-</span> <span class="fu">status2</span>(A.c)</span>
-<span id="cb112-2"><a href="#cb112-2"></a>   <span class="fu">round</span>(hits.res<span class="sc">$</span>h, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code> [1] -0.116 -0.268  0.228  0.173  0.261 -0.307 -0.019 -0.084  0.171  0.239
-[11] -0.241 -0.302 -0.114 -0.243  0.410 -0.172 -0.211  0.276  0.076  0.148
-[21]  0.096</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1"></a>   <span class="fu">round</span>(hits.res<span class="sc">$</span>a, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code> [1] 0.218 0.154 0.192 0.147 0.155 0.196 0.030 0.331 0.140 0.235 0.329 0.211
-[13] 0.208 0.269 0.130 0.274 0.299 0.185 0.208 0.308 0.020</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb112"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb112-1"><a href="#cb112-1"></a>   hits.res <span class="ot">&lt;-</span> <span class="fu">status2</span>(A.c)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb116"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb116-1"><a href="#cb116-1"></a>   norm.v <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb116-2"><a href="#cb116-2"></a>      x <span class="ot">&lt;-</span> x <span class="sc">-</span> <span class="fu">min</span>(x)</span>
-<span id="cb116-3"><a href="#cb116-3"></a>      x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">max</span>(x)</span>
-<span id="cb116-4"><a href="#cb116-4"></a>      x <span class="ot">&lt;-</span> x <span class="sc">-</span> <span class="fu">mean</span>(x)</span>
-<span id="cb116-5"><a href="#cb116-5"></a>      <span class="fu">return</span>(x)</span>
-<span id="cb116-6"><a href="#cb116-6"></a>   }</span>
-<span id="cb116-7"><a href="#cb116-7"></a>   h2 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">norm.v</span>(hits.res<span class="sc">$</span>h), <span class="dv">3</span>)</span>
-<span id="cb116-8"><a href="#cb116-8"></a>   a2 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">norm.v</span>(hits.res<span class="sc">$</span>a), <span class="dv">3</span>)</span>
-<span id="cb116-9"><a href="#cb116-9"></a>   <span class="fu">names</span>(h2) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb116-10"><a href="#cb116-10"></a>   <span class="fu">names</span>(a2) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb113"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb113-1"><a href="#cb113-1"></a>   norm.v <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb113-2"><a href="#cb113-2"></a>      x <span class="ot">&lt;-</span> x <span class="sc">-</span> <span class="fu">min</span>(x)</span>
+<span id="cb113-3"><a href="#cb113-3"></a>      x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">max</span>(x)</span>
+<span id="cb113-4"><a href="#cb113-4"></a>      x <span class="ot">&lt;-</span> x <span class="sc">-</span> <span class="fu">mean</span>(x)</span>
+<span id="cb113-5"><a href="#cb113-5"></a>      <span class="fu">return</span>(x)</span>
+<span id="cb113-6"><a href="#cb113-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And the resulting normalized scores for each node in the Krackhardt managers advice network are:</p>
+<p>The first thing the function does (line 2) is subtract the minimum value from the vector (which becomes zero), in line 3 we divided by the maximum (which becomes one), and in line 4 we subtract the mean from each value.</p>
+<p>The following code applies the normalization to the results from our status game on the centered adjacency matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb117"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb117-1"><a href="#cb117-1"></a>   <span class="fu">round</span>(h2, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb114-1"><a href="#cb114-1"></a>   h2 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">norm.v</span>(hits.res<span class="sc">$</span>h), <span class="dv">3</span>)</span>
+<span id="cb114-2"><a href="#cb114-2"></a>   a2 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">norm.v</span>(hits.res<span class="sc">$</span>a), <span class="dv">3</span>)</span>
+<span id="cb114-3"><a href="#cb114-3"></a>   <span class="fu">names</span>(h2) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb114-4"><a href="#cb114-4"></a>   <span class="fu">names</span>(a2) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And the resulting normalized hub and authority scores for each node in the Krackhardt managers advice network are:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb115"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb115-1"><a href="#cb115-1"></a>   <span class="fu">round</span>(h2, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 -0.162 -0.374  0.318  0.241  0.364 -0.429 -0.027 -0.117  0.239  0.334 -0.335 
     12     13     14     15     16     17     18     19     20     21 
 -0.421 -0.160 -0.339  0.571 -0.240 -0.295  0.385  0.105  0.206  0.134 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb119"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1"></a>   <span class="fu">round</span>(a2, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb117"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb117-1"><a href="#cb117-1"></a>   <span class="fu">round</span>(a2, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
  0.052 -0.155 -0.031 -0.177 -0.150 -0.020 -0.555  0.415 -0.199  0.106  0.411 
@@ -1371,26 +1364,26 @@ div.csl-indent {
 </div>
 <p><span class="citation" data-cites="saerens_fouss05">Saerens and Fouss (<a href="#ref-saerens_fouss05" role="doc-biblioref">2005</a>)</span> show that these are the same scores we would obtain from a simple PCA of the regular old adjacency matrix. To see this, let’s do the PCA analysis using the <code>PCA</code> function from the package <code>FactorMineR</code>.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb121"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb121-1"><a href="#cb121-1"></a>   <span class="fu">library</span>(FactoMineR)</span>
-<span id="cb121-2"><a href="#cb121-2"></a>   pca.res <span class="ot">&lt;-</span> <span class="fu">PCA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>, <span class="at">scale.unit =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb119"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1"></a>   <span class="fu">library</span>(FactoMineR)</span>
+<span id="cb119-2"><a href="#cb119-2"></a>   pca.res <span class="ot">&lt;-</span> <span class="fu">PCA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>, <span class="at">scale.unit =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Note that we set the argument <code>scale.unit</code> to <code>FALSE</code> so that the PCA is conducted on the original adjacency matrix and not a scaled version of it!</p>
+<p>Note that we set the argument <code>scale.unit</code> to <code>FALSE</code> so that the PCA is conducted on the centered adjacency matrix and not a standardized (to unit variance) version of it.</p>
 <p>The <code>PCA</code> function stores the corresponding scores for the rows and columns of the matrix in these objects:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb122"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb122-1"><a href="#cb122-1"></a>   pca.h <span class="ot">&lt;-</span> pca.res<span class="sc">$</span>ind<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
-<span id="cb122-2"><a href="#cb122-2"></a>   pca.a <span class="ot">&lt;-</span> pca.res<span class="sc">$</span>var<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
-<span id="cb122-3"><a href="#cb122-3"></a>   <span class="fu">names</span>(pca.a) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb120"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb120-1"><a href="#cb120-1"></a>   pca.h <span class="ot">&lt;-</span> pca.res<span class="sc">$</span>ind<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
+<span id="cb120-2"><a href="#cb120-2"></a>   pca.a <span class="ot">&lt;-</span> pca.res<span class="sc">$</span>var<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
+<span id="cb120-3"><a href="#cb120-3"></a>   <span class="fu">names</span>(pca.a) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now, for the big reveal:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(pca.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb121"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb121-1"><a href="#cb121-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(pca.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 -0.162 -0.374  0.318  0.241  0.364 -0.429 -0.027 -0.117  0.239  0.334 -0.335 
     12     13     14     15     16     17     18     19     20     21 
 -0.421 -0.160 -0.339  0.571 -0.240 -0.295  0.385  0.105  0.206  0.134 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb125"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(pca.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb123-1"><a href="#cb123-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(pca.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
  0.052 -0.155 -0.031 -0.177 -0.150 -0.020 -0.555  0.415 -0.199  0.106  0.411 
@@ -1406,12 +1399,12 @@ div.csl-indent {
 <p>They first ask: What if we play our status distribution game not on the <em>transpose</em> of the SALSA hub and authority matrices like we just did but just on the regular matrices without transposition?</p>
 <p>Here’s what happens:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb127"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb127-1"><a href="#cb127-1"></a>   <span class="fu">round</span>(<span class="fu">status1</span>(Q.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb125"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb125-1"><a href="#cb125-1"></a>   <span class="fu">round</span>(<span class="fu">status1</span>(Q.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218
 [13] 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb129"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1"></a>   <span class="fu">round</span>(<span class="fu">status1</span>(Q.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb127"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb127-1"><a href="#cb127-1"></a>   <span class="fu">round</span>(<span class="fu">status1</span>(Q.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218
 [13] 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218 0.218</code></pre>
@@ -1424,12 +1417,12 @@ div.csl-indent {
 <p>How do we get that vector? Well, as always, there is a mathematical workaround. The trick is to create a new matrix that removes the influence of that first (useless) eigenvector and then play our status game on <em>that</em> matrix.</p>
 <p>To do that, let’s create a matrix that is equal to the original useless eigenvector times its own transpose. In <code>R</code> this goes like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb131"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb131-1"><a href="#cb131-1"></a>   v1 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.h)</span>
-<span id="cb131-2"><a href="#cb131-2"></a>   D <span class="ot">&lt;-</span> v1 <span class="sc">%*%</span> <span class="fu">t</span>(v1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb129"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1"></a>   v1 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.h)</span>
+<span id="cb129-2"><a href="#cb129-2"></a>   D <span class="ot">&lt;-</span> v1 <span class="sc">%*%</span> <span class="fu">t</span>(v1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>What’s in this matrix? Let’s see the first ten rows and columns:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb132"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb132-1"><a href="#cb132-1"></a>   <span class="fu">round</span>(D[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb130"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb130-1"><a href="#cb130-1"></a>   <span class="fu">round</span>(D[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]  [,9] [,10]
  [1,] 0.048 0.048 0.048 0.048 0.048 0.048 0.048 0.048 0.048 0.048
@@ -1446,7 +1439,7 @@ div.csl-indent {
 </div>
 <p>So it’s just a matrix of the same dimension as the SALSA hub matrix with the same number over and over. In fact that number is equal to:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb134"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb134-1"><a href="#cb134-1"></a>   <span class="fu">round</span>(<span class="fl">0.2182179</span><span class="sc">^</span><span class="dv">2</span>, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb132"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb132-1"><a href="#cb132-1"></a>   <span class="fu">round</span>(<span class="fl">0.2182179</span><span class="sc">^</span><span class="dv">2</span>, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.048</code></pre>
 </div>
@@ -1454,31 +1447,31 @@ div.csl-indent {
 <p>Which is just the useless constant status score squared.</p>
 <p>Now, we create new SALSA hub and authority matrices, which are equal to the original minus the constant <code>D</code> matrix above:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb136"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb136-1"><a href="#cb136-1"></a>   Q.h2 <span class="ot">&lt;-</span> Q.h <span class="sc">-</span> D</span>
-<span id="cb136-2"><a href="#cb136-2"></a>   Q.a2 <span class="ot">&lt;-</span> Q.a <span class="sc">-</span> D</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb134"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb134-1"><a href="#cb134-1"></a>   Q.h2 <span class="ot">&lt;-</span> Q.h <span class="sc">-</span> D</span>
+<span id="cb134-2"><a href="#cb134-2"></a>   Q.a2 <span class="ot">&lt;-</span> Q.a <span class="sc">-</span> D</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now we play our status game on these matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb137"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1"></a>   h3 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.h2)</span>
-<span id="cb137-2"><a href="#cb137-2"></a>   a3 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.a2)</span>
-<span id="cb137-3"><a href="#cb137-3"></a>   <span class="fu">names</span>(h3) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb137-4"><a href="#cb137-4"></a>   <span class="fu">names</span>(a3) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb135"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb135-1"><a href="#cb135-1"></a>   h3 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.h2)</span>
+<span id="cb135-2"><a href="#cb135-2"></a>   a3 <span class="ot">&lt;-</span> <span class="fu">status1</span>(Q.a2)</span>
+<span id="cb135-3"><a href="#cb135-3"></a>   <span class="fu">names</span>(h3) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb135-4"><a href="#cb135-4"></a>   <span class="fu">names</span>(a3) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We then use the same function we used for the PCA scores to normalize each status score to be within the minus one to plus one interval and have mean zero:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb138"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1"></a>   h3 <span class="ot">&lt;-</span> <span class="fu">norm.v</span>(h3)</span>
-<span id="cb138-2"><a href="#cb138-2"></a>   a3 <span class="ot">&lt;-</span> <span class="fu">norm.v</span>(a3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb136"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb136-1"><a href="#cb136-1"></a>   h3 <span class="ot">&lt;-</span> <span class="fu">norm.v</span>(h3)</span>
+<span id="cb136-2"><a href="#cb136-2"></a>   a3 <span class="ot">&lt;-</span> <span class="fu">norm.v</span>(a3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And the resulting scores are:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb139"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1"></a>   <span class="fu">round</span>(h3, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb137"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1"></a>   <span class="fu">round</span>(h3, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
  0.007 -0.436  0.074  0.074  0.138 -0.626 -0.019 -0.098  0.023  0.374 -0.063 
     12     13     14     15     16     17     18     19     20     21 
 -0.530  0.334 -0.243  0.212  0.119 -0.147  0.292  0.290  0.107  0.115 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb141"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb141-1"><a href="#cb141-1"></a>   <span class="fu">round</span>(a3, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb139"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb139-1"><a href="#cb139-1"></a>   <span class="fu">round</span>(a3, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 -0.008 -0.146  0.299 -0.106  0.414 -0.329 -0.455 -0.005  0.223 -0.049 -0.027 
@@ -1487,34 +1480,35 @@ div.csl-indent {
 </div>
 </div>
 <p>Now, these scores don’t seem useless. They are different across each node; and like the PCA scores we obtained earlier, some are positive and some are negative.</p>
-<p><span class="citation" data-cites="fouss_etal04">Fouss, Renders, and Saerens (<a href="#ref-fouss_etal04" role="doc-biblioref">2004</a>)</span> show that these are the same scores you would obtain from a correspondence analysis of the original affiliation matrix.</p>
-<p>Let’s check that out in our case. First, we load the package <code>FactoMineR</code> which can be used to compute the correspondence analysis of any matrix in <code>R</code> using the function <code>CA</code> from the <code>FactoMineR</code> package.</p>
-<p>The correspondence analysis scores—on the first dimension—fo the Krackhardt advice network can be obtained like this:</p>
+<p><span class="citation" data-cites="fouss_etal04">Fouss, Renders, and Saerens (<a href="#ref-fouss_etal04" role="doc-biblioref">2004</a>)</span> show that these are the same scores you would obtain from a correspondence analysis (CA) of the original affiliation matrix.</p>
+<p>Let’s check that out in our case. The same package we used to compute the PCA of the adjacency matrix (<code>FactoMineR</code>)can be used to compute the correspondence analysis of any matrix in <code>R</code> using the function <code>CA</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb143"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb143-1"><a href="#cb143-1"></a>   ca.res <span class="ot">&lt;-</span> <span class="fu">CA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb143-2"><a href="#cb143-2"></a>   ca.h <span class="ot">&lt;-</span> ca.res<span class="sc">$</span>row<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
-<span id="cb143-3"><a href="#cb143-3"></a>   ca.a <span class="ot">&lt;-</span> ca.res<span class="sc">$</span>col<span class="sc">$</span>coord[, <span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb141"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb141-1"><a href="#cb141-1"></a>   <span class="co">#library(FactoMineR)</span></span>
+<span id="cb141-2"><a href="#cb141-2"></a>   ca.res <span class="ot">&lt;-</span> <span class="fu">CA</span>(A, <span class="at">graph =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb141-3"><a href="#cb141-3"></a>   ca.h <span class="ot">&lt;-</span> ca.res<span class="sc">$</span>row<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
+<span id="cb141-4"><a href="#cb141-4"></a>   ca.a <span class="ot">&lt;-</span> ca.res<span class="sc">$</span>col<span class="sc">$</span>coord[, <span class="dv">1</span>]</span>
+<span id="cb141-5"><a href="#cb141-5"></a>   <span class="fu">names</span>(ca.a) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>In line 1 we store the <code>CA</code> results in the object <code>ca.res</code>. We then grab the <code>CA</code> scores associated with the columns of the adjacency matrix and put them in the object <code>ca.h</code> in line 2 and the scores associated with the rows of the adjacency matrix and put them in the object <code>ca.a</code>.</p>
+<p>In line 2 we store the <code>CA</code> results in the object <code>ca.res</code>. We then grab the <code>CA</code> scores associated with the columns of the adjacency matrix and put them in the object <code>ca.h</code> in line 3 and the scores associated with the rows of the adjacency matrix and put them in the object <code>ca.a</code> inline 4.</p>
 <p>Now for the big reveal:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb144"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(ca.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb142"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb142-1"><a href="#cb142-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(ca.h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
  0.007 -0.436  0.074  0.074  0.138 -0.626 -0.019 -0.098  0.023  0.374 -0.063 
     12     13     14     15     16     17     18     19     20     21 
 -0.530  0.334 -0.243  0.212  0.119 -0.147  0.292  0.290  0.107  0.115 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb146"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(ca.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb144"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb144-1"><a href="#cb144-1"></a>   <span class="fu">round</span>(<span class="fu">norm.v</span>(ca.a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>    V1     V2     V3     V4     V5     V6     V7     V8     V9    V10    V11 
+<pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 -0.008 -0.146  0.299 -0.106  0.414 -0.329 -0.455 -0.005  0.223 -0.049 -0.027 
-   V12    V13    V14    V15    V16    V17    V18    V19    V20    V21 
+    12     13     14     15     16     17     18     19     20     21 
 -0.158  0.291  0.035  0.323  0.026 -0.057 -0.114  0.291  0.139 -0.586 </code></pre>
 </div>
 </div>
 <p>Which shows that indeed the CA scores are the same ones as we obtain from playing our status game on the corrected versions of the un-transposed SALSA hub and authorities matrices!</p>
-<p>But what are the CA scores supposed to capture? Let’s look at them side-by-side next to the regular hub and authority scores, as shown in <a href="#tbl-ha">Table&nbsp;1</a>.</p>
+<p>But what are the CA scores supposed to capture? Let’s look at them side-by-side next to the SALSA hub and authority scores, as shown in <a href="#tbl-ha">Table&nbsp;1</a>.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="tbl-ha" class="anchored">
@@ -1766,33 +1760,33 @@ div.csl-indent {
 <p>We can do this by changing the way we compute the hub score of each node. Instead of just summing the authority scores of all the nodes they point to (like in regular HITS) we instead take the <em>average</em> of the authority scores of all nodes they point to. We then feed this average back to the authority score calculation.</p>
 <p>This entails slightly modifying the HITS status game as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb148"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb148-1"><a href="#cb148-1"></a>   status3 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb148-2"><a href="#cb148-2"></a>     a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w))  <span class="co">#initializing authority scores</span></span>
-<span id="cb148-3"><a href="#cb148-3"></a>     d.o <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#outdegree of each node</span></span>
-<span id="cb148-4"><a href="#cb148-4"></a>     d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing delta</span></span>
-<span id="cb148-5"><a href="#cb148-5"></a>     k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
-<span id="cb148-6"><a href="#cb148-6"></a>     <span class="cf">while</span> (d <span class="sc">&gt;=</span> <span class="fl">1e-10</span>) {</span>
-<span id="cb148-7"><a href="#cb148-7"></a>         o.a <span class="ot">&lt;-</span> a <span class="co">#old authority scores</span></span>
-<span id="cb148-8"><a href="#cb148-8"></a>         h <span class="ot">&lt;-</span> (w <span class="sc">%*%</span> o.a) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span>d.o <span class="co">#new hub scores a function of previous authority scores of their out-neighbors</span></span>
-<span id="cb148-9"><a href="#cb148-9"></a>         h <span class="ot">&lt;-</span> h<span class="sc">/</span><span class="fu">norm</span>(h, <span class="at">type =</span> <span class="st">"E"</span>)</span>
-<span id="cb148-10"><a href="#cb148-10"></a>         a <span class="ot">&lt;-</span> <span class="fu">t</span>(w) <span class="sc">%*%</span> h <span class="co">#new authority scores a function of current hub scores of their in-neighbors</span></span>
-<span id="cb148-11"><a href="#cb148-11"></a>         a <span class="ot">&lt;-</span> a<span class="sc">/</span><span class="fu">norm</span>(a, <span class="at">type =</span> <span class="st">"E"</span>)</span>
-<span id="cb148-12"><a href="#cb148-12"></a>         d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(o.a) <span class="sc">-</span> <span class="fu">abs</span>(a))) <span class="co">#delta between old and new authority scores</span></span>
-<span id="cb148-13"><a href="#cb148-13"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb148-14"><a href="#cb148-14"></a>         }</span>
-<span id="cb148-15"><a href="#cb148-15"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">h =</span> <span class="fu">as.vector</span>(h), <span class="at">a =</span> <span class="fu">as.vector</span>(a), <span class="at">k =</span> k))</span>
-<span id="cb148-16"><a href="#cb148-16"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb146"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb146-1"><a href="#cb146-1"></a>   status3 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb146-2"><a href="#cb146-2"></a>     a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w))  <span class="co">#initializing authority scores</span></span>
+<span id="cb146-3"><a href="#cb146-3"></a>     d.o <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#outdegree of each node</span></span>
+<span id="cb146-4"><a href="#cb146-4"></a>     d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing delta</span></span>
+<span id="cb146-5"><a href="#cb146-5"></a>     k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
+<span id="cb146-6"><a href="#cb146-6"></a>     <span class="cf">while</span> (d <span class="sc">&gt;=</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb146-7"><a href="#cb146-7"></a>         o.a <span class="ot">&lt;-</span> a <span class="co">#old authority scores</span></span>
+<span id="cb146-8"><a href="#cb146-8"></a>         h <span class="ot">&lt;-</span> (w <span class="sc">%*%</span> o.a) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span>d.o <span class="co">#new hub scores a function of previous authority scores of their out-neighbors</span></span>
+<span id="cb146-9"><a href="#cb146-9"></a>         h <span class="ot">&lt;-</span> h<span class="sc">/</span><span class="fu">norm</span>(h, <span class="at">type =</span> <span class="st">"E"</span>)</span>
+<span id="cb146-10"><a href="#cb146-10"></a>         a <span class="ot">&lt;-</span> <span class="fu">t</span>(w) <span class="sc">%*%</span> h <span class="co">#new authority scores a function of current hub scores of their in-neighbors</span></span>
+<span id="cb146-11"><a href="#cb146-11"></a>         a <span class="ot">&lt;-</span> a<span class="sc">/</span><span class="fu">norm</span>(a, <span class="at">type =</span> <span class="st">"E"</span>)</span>
+<span id="cb146-12"><a href="#cb146-12"></a>         d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(o.a) <span class="sc">-</span> <span class="fu">abs</span>(a))) <span class="co">#delta between old and new authority scores</span></span>
+<span id="cb146-13"><a href="#cb146-13"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb146-14"><a href="#cb146-14"></a>         }</span>
+<span id="cb146-15"><a href="#cb146-15"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">h =</span> <span class="fu">as.vector</span>(h), <span class="at">a =</span> <span class="fu">as.vector</span>(a), <span class="at">k =</span> k))</span>
+<span id="cb146-16"><a href="#cb146-16"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Note that the only modification is the addition of the multiplication by the inverse of the outdegrees in line 8, which divides the standard HITS hub score by the outdegree of each hub.</p>
 <p>The resulting hubs and authorities scores are:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb149"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb149-1"><a href="#cb149-1"></a>   hits.res2 <span class="ot">&lt;-</span> <span class="fu">status3</span>(A)</span>
-<span id="cb149-2"><a href="#cb149-2"></a>   <span class="fu">round</span>(hits.res2<span class="sc">$</span>a<span class="sc">/</span><span class="fu">max</span>(hits.res2<span class="sc">$</span>a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb147"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb147-1"><a href="#cb147-1"></a>   hits.res2 <span class="ot">&lt;-</span> <span class="fu">status3</span>(A)</span>
+<span id="cb147-2"><a href="#cb147-2"></a>   <span class="fu">round</span>(hits.res2<span class="sc">$</span>a<span class="sc">/</span><span class="fu">max</span>(hits.res2<span class="sc">$</span>a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.693 1.000 0.221 0.414 0.223 0.538 0.759 0.494 0.187 0.470 0.552 0.361
 [13] 0.174 0.498 0.180 0.395 0.451 0.817 0.174 0.375 0.893</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb151"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb151-1"><a href="#cb151-1"></a>   <span class="fu">round</span>(hits.res2<span class="sc">$</span>h<span class="sc">/</span><span class="fu">max</span>(hits.res2<span class="sc">$</span>h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb149"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb149-1"><a href="#cb149-1"></a>   <span class="fu">round</span>(hits.res2<span class="sc">$</span>h<span class="sc">/</span><span class="fu">max</span>(hits.res2<span class="sc">$</span>h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.749 0.818 0.635 0.657 0.619 1.000 0.716 0.762 0.683 0.493 0.916 0.925
 [13] 0.639 0.972 0.543 0.835 0.842 0.508 0.590 0.642 0.604</code></pre>
@@ -1805,32 +1799,32 @@ div.csl-indent {
 <p>In the same way, depending on the application, it might make more sense to assign a larger hub score to hubs that point to <em>exclusive authorities</em> (authorities that are sought after by a few select others) and discount the hubness of hubs that point to <em>popular authorities</em> (those who are sought after by everyone).</p>
 <p>We can implement this approach—let’s call it the “AuthAvg” algorithm—with a slight modification of the <code>status2</code> function similar to the one we used to create <code>status3</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb153"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb153-1"><a href="#cb153-1"></a>   status4 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb153-2"><a href="#cb153-2"></a>     a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w))  <span class="co">#initializing authority scores</span></span>
-<span id="cb153-3"><a href="#cb153-3"></a>     d.i <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree of each node</span></span>
-<span id="cb153-4"><a href="#cb153-4"></a>     d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing delta</span></span>
-<span id="cb153-5"><a href="#cb153-5"></a>     k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
-<span id="cb153-6"><a href="#cb153-6"></a>     <span class="cf">while</span> (d <span class="sc">&gt;=</span> <span class="fl">1e-10</span>) {</span>
-<span id="cb153-7"><a href="#cb153-7"></a>         o.a <span class="ot">&lt;-</span> a <span class="co">#old authority scores</span></span>
-<span id="cb153-8"><a href="#cb153-8"></a>         h <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.a <span class="co">#new hub scores a function of previous authority scores of their out-neighbors</span></span>
-<span id="cb153-9"><a href="#cb153-9"></a>         h <span class="ot">&lt;-</span> h<span class="sc">/</span><span class="fu">norm</span>(h, <span class="at">type =</span> <span class="st">"E"</span>)</span>
-<span id="cb153-10"><a href="#cb153-10"></a>         a <span class="ot">&lt;-</span> (<span class="fu">t</span>(w) <span class="sc">%*%</span> h) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span>d.i <span class="co">#new authority scores a function of current hub scores of their in-neighbors</span></span>
-<span id="cb153-11"><a href="#cb153-11"></a>         a <span class="ot">&lt;-</span> a<span class="sc">/</span><span class="fu">norm</span>(a, <span class="at">type =</span> <span class="st">"E"</span>)</span>
-<span id="cb153-12"><a href="#cb153-12"></a>         d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(o.a) <span class="sc">-</span> <span class="fu">abs</span>(a))) <span class="co">#delta between old and new authority scores</span></span>
-<span id="cb153-13"><a href="#cb153-13"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb153-14"><a href="#cb153-14"></a>         }</span>
-<span id="cb153-15"><a href="#cb153-15"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">h =</span> <span class="fu">as.vector</span>(h), <span class="at">a =</span> <span class="fu">as.vector</span>(a), <span class="at">k =</span> k))</span>
-<span id="cb153-16"><a href="#cb153-16"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb151"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb151-1"><a href="#cb151-1"></a>   status4 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb151-2"><a href="#cb151-2"></a>     a <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w))  <span class="co">#initializing authority scores</span></span>
+<span id="cb151-3"><a href="#cb151-3"></a>     d.i <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree of each node</span></span>
+<span id="cb151-4"><a href="#cb151-4"></a>     d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing delta</span></span>
+<span id="cb151-5"><a href="#cb151-5"></a>     k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
+<span id="cb151-6"><a href="#cb151-6"></a>     <span class="cf">while</span> (d <span class="sc">&gt;=</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb151-7"><a href="#cb151-7"></a>         o.a <span class="ot">&lt;-</span> a <span class="co">#old authority scores</span></span>
+<span id="cb151-8"><a href="#cb151-8"></a>         h <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.a <span class="co">#new hub scores a function of previous authority scores of their out-neighbors</span></span>
+<span id="cb151-9"><a href="#cb151-9"></a>         h <span class="ot">&lt;-</span> h<span class="sc">/</span><span class="fu">norm</span>(h, <span class="at">type =</span> <span class="st">"E"</span>)</span>
+<span id="cb151-10"><a href="#cb151-10"></a>         a <span class="ot">&lt;-</span> (<span class="fu">t</span>(w) <span class="sc">%*%</span> h) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span>d.i <span class="co">#new authority scores a function of current hub scores of their in-neighbors</span></span>
+<span id="cb151-11"><a href="#cb151-11"></a>         a <span class="ot">&lt;-</span> a<span class="sc">/</span><span class="fu">norm</span>(a, <span class="at">type =</span> <span class="st">"E"</span>)</span>
+<span id="cb151-12"><a href="#cb151-12"></a>         d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(o.a) <span class="sc">-</span> <span class="fu">abs</span>(a))) <span class="co">#delta between old and new authority scores</span></span>
+<span id="cb151-13"><a href="#cb151-13"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb151-14"><a href="#cb151-14"></a>         }</span>
+<span id="cb151-15"><a href="#cb151-15"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">h =</span> <span class="fu">as.vector</span>(h), <span class="at">a =</span> <span class="fu">as.vector</span>(a), <span class="at">k =</span> k))</span>
+<span id="cb151-16"><a href="#cb151-16"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And the resulting hubs and authorities scores are:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb154"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb154-1"><a href="#cb154-1"></a>   hits.res3 <span class="ot">&lt;-</span> <span class="fu">status4</span>(A)</span>
-<span id="cb154-2"><a href="#cb154-2"></a>   <span class="fu">round</span>(hits.res3<span class="sc">$</span>a<span class="sc">/</span><span class="fu">max</span>(hits.res3<span class="sc">$</span>a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb152"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb152-1"><a href="#cb152-1"></a>   hits.res3 <span class="ot">&lt;-</span> <span class="fu">status4</span>(A)</span>
+<span id="cb152-2"><a href="#cb152-2"></a>   <span class="fu">round</span>(hits.res3<span class="sc">$</span>a<span class="sc">/</span><span class="fu">max</span>(hits.res3<span class="sc">$</span>a), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.651 0.579 0.877 0.694 0.819 0.658 0.548 0.784 0.855 0.733 0.761 0.736
 [13] 1.000 0.738 0.808 0.797 0.768 0.600 1.000 0.847 0.524</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb156"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb156-1"><a href="#cb156-1"></a>   <span class="fu">round</span>(hits.res3<span class="sc">$</span>h<span class="sc">/</span><span class="fu">max</span>(hits.res3<span class="sc">$</span>h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb154"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb154-1"><a href="#cb154-1"></a>   <span class="fu">round</span>(hits.res3<span class="sc">$</span>h<span class="sc">/</span><span class="fu">max</span>(hits.res3<span class="sc">$</span>h), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.266 0.116 0.700 0.564 0.734 0.035 0.358 0.341 0.593 0.734 0.119 0.072
 [13] 0.283 0.150 1.000 0.171 0.200 0.869 0.532 0.561 0.523</code></pre>
