@@ -51,6 +51,8 @@ We can see for instance that the rumor got to node 16 in just one time step, but
 
 So it seems like this, the minimum time it takes for something that starts with me to get to you [@fouss_etal04b], is a good measure of the proximity between me and you in the graph. 
 
+## Averaging Across Realizations
+
 However, we wouldn't want to use just one run of the diffusion process to calculate this proximity measure. Instead a better approach is to use the *average time* it takes for something to get to the other nodes when it starts from a given node. 
 
 To do that, we can just `replicate` the `first.pass1` function some number of times (e.g., $n = 100$) and take an average:
@@ -63,7 +65,7 @@ To do that, we can just `replicate` the `first.pass1` function some number of ti
 
 We can see that according to this measure, called **the average first passage time** [@fouss_etal16, p. 36], when we start with node 1, things get relatively quickly to node 17 ($\hat{t} = 8.7$) but they take forever to get to node 13 ($\hat{t} = 86.8$).
 
-We can of course, write a function to compute the average first passage time from one node to another using every node in the graph as the initial seed:
+We can of course, write a wrapper around the `first.pass1` function to compute the average first passage time from one node to another using every node in the graph as the initial seed:
 
 ```{r}
    first.pass2 <- function(w, n) {
@@ -83,9 +85,59 @@ And the result (showing the first ten rows and columns) is:
    round(first.pass2(P, 100), 1)[1:10, 1:10]
 ```
 
-The accuracy of the average first pass estimate we get depends on the number of replications we use to get the average. The bigger, the more accurate. However, it can take a lot of computing time if we increased `n` to a giant number.
+The accuracy of the average first passage time estimate we get depends on the number of replications we use to get the average. The bigger, the more accurate. However, it can take a lot of computing time if we increased `n` to a giant number.
 
-Thankfully there is a way to use matrix algebra magic to compute the average first pass at the limit ($n \approx \infty$).
+## Iterating Until Convergence
+
+There's another approach to computing the average first passage time that involves iterating through a matrix using the information in the transition matrix. The basic idea is that the average first passage time for a random walker that starts at node $i$ and ends at node $j$ is given by:
+
+$$
+m_{ij} = 1 + \sum^N_{j \neq k}p_{ik}m_{k,j}
+$$
+
+With the proviso that $m_{ii}$ is always equal to zero. What this tells us is that the average first passage time for a node by the product of the sum of the product of the probability that something can transition from a node $i$ to a third node $k$ (given by $p_{ik}$) and $m_{k,j}$ which is the average first passage time from that intermediary node $k$ to the destination node $j$. 
+
+Note that since we need to know $m_{k,j}$ to get $m_{i,j}$, then this opens up a chicken or the egg problem that we can solve through iteration. That is, we first start with a null value for all the entries of the $\mathbf{M}$ matrix (e.g., $m_{ij} = 0$ for all $i$ and $j$), compute an initial round of $m_{ij}$ estimates for all pairs of nodes $i$ and $j$ using the equation above, recompute $m_{i,j}$ using those new values, rinse, repeat, and stop after we don't get any changes. A function that implement this idea goes like this:
+
+```{r}
+   first.pass3 <- function(w) {
+      n <- nrow(w)
+      nodes <- 1:n
+      m <- matrix(0, n, n) #initializing M matrix values
+      colnames(m) <- 1:n
+      rownames(m) <- 1:n
+      d <- 1
+      z <- 1
+      while(d > 1e-05) {
+      old.m <- m
+      for (i in nodes) { #loop through every node
+         for (j in nodes[-i]) { #loop through every node except i
+            m[i,j] <- 1
+            for (k in nodes[-j]) { #loop through every node except i and j
+               m[i,j] <- m[i,j] + (w[i,k]*old.m[k,j]) #update M matrix values
+               }
+            }
+         }
+      z <- z + 1
+      d <- abs(sum(abs(m) - abs(old.m))) #difference between current and previous M matrix
+      } #end while loop
+      return(m)
+   }
+```
+
+This function takes the probability transition matrix $\mathbf{P}$ as input and returns $\mathbf{M}$ a matrix of average first passage times between every pair of nodes in the network. 
+
+And the result is:
+
+```{r}
+   round(first.pass3(P), 1)[1:10, 1:10]
+```
+
+Which are values pretty close to the ones we obtained by averaging earlier. 
+
+## Using the Laplacian Matrix
+
+Finally, there is a way to use matrix algebra magic to compute the average first pass at the limit ($n \approx \infty$) in closed form without averaging or iteractions.
 
 To do that, first we need to compute a matrix called the **graph Laplacian**, which is defined as:
 
@@ -142,6 +194,8 @@ And now for the big reveal:
 ```
 
 Which shows entries pretty close in value to the ones we obtained by iteration and averaging. 
+
+## The Average Commute Distance
 
 Once we have the average first passage time, we can compute another important quantity called the **average commute distance** between two nodes $i$ and $j$ ($n_{ij}$). This is the number of steps it takes for a random walker to start at node  $i$, reach another specific node $j$ and then *get back* to the original node $i$. 
 
@@ -200,6 +254,9 @@ Let's construct two vectors full of zeros of the same length as the number of no
 ```
 
 Neat!
+
+
+
 
 
 <!--
