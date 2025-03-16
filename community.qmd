@@ -40,15 +40,16 @@ If you remember your elementary probability theory, you know that the *joint* pr
 
 So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
 
-Let's move to a real example. @fig-friends shows two plots of the advice network from the `law_friends` data from the `networkdata` package. The first shows the nodes colored by status in the firm (partners versus associates) and the other shows the nodes colored by gender. It is pretty evident that there is more community by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.
+Let's move to a real example. @fig-friends shows two plots of the advice network from the `law_friends` data [@lazega01] from the `networkdata` package. The first shows the nodes colored by status in the firm (partners in tan versus associates in blue) and the other shows the nodes colored by gender (men in tan versus women in blue). It is pretty evident that there is more community partitioning in the network by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.
 
 ```{r}
 #| label: fig-friends
+#| fig-cap: "Law Firm Friendship Network"
 #| fig-height: 12
 #| fig-width: 12
 #| fig-subcap:
-#|   - "Law Firm Friendship Network by Status"
-#|   - "Law Firm Friendship Network by Gender"
+#|   - "Nodes colored by status (Partner/Associate)"
+#|   - "Nodes colored by Gender (Men/Women)"
 #| layout-ncol: 2
 #| echo: false
    library(networkdata)
@@ -340,19 +341,18 @@ Neat! It makes sense (given the name of the matrix) that we can compute the modu
 
 ## Using the Modularity Matrix to Find Communities
 
-Here's an even more useful property of the modularity matrix. Remember the network distribution game we played to defined our various reflective status measure in Handout 3? 
+Here's an even more useful property of the modularity matrix. Remember the network distribution game we played to defined our various reflective status measure in our discussion of [prestige](prestige.qmd)? 
 
 ```{r}
-   status1 <- function(A) {
-      n <- nrow(A) #number of actors
-      x <- rep(1, n) #initial status vector set to all ones
-      w <- 1 
+   status1 <- function(w) {
+      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+      d <- 1 #initial delta
       k <- 0 #initializing counter
-      while (w > 0.0001) {
+      while (d > 1e-10) {
           o.x <- x #old status scores
-          x <- A %*% x #new scores a function of old scores and adjacency matrix
+          x <- w %*% o.x #new scores a function of old scores and adjacency matrix
           x <- x/norm(x, type = "E") #normalizing new status scores
-          w <- abs(sum(abs(x) - abs(o.x))) #diff. between new and old scores
+          d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
           k <- k + 1 #incrementing while counter
       }
    return(as.vector(x))
@@ -368,7 +368,7 @@ What if we played it with the modularity matrix?
 
 This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actual a **partition** of the original graph into two communities? 
 
-Not only that, I have even better news. This is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups. 
+Not only that, I have even better news. This is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.^[Actually this is not true; finding the partition that maximizes the modularity in a graph is an NP hard problem [@brandes07], so this is just a pretty good approximation of that.] 
 
 Let's see some evidence for these claims in real data. 
 
@@ -390,7 +390,7 @@ And for the big check:
 
 Which is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is indeed an optimal binary partition of the `law_friends` network.
 
-Of course, you may also remember from the [Status and Prestige](https://olizardo.github.io/SOCIOL208/handout3.html) handout that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
+Of course, you may also remember from the [Status and Prestige](prestige.qmd) lesson that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
 
 $$
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
