@@ -385,7 +385,7 @@ div.csl-indent {
 <section id="the-problem-with-bipartite-projections" class="level2">
 <h2 class="anchored" data-anchor-id="the-problem-with-bipartite-projections">The Problem with Bipartite Projections</h2>
 <p>Recall from our lecture on <a href="./two-mode.html">two-mode networks</a> that a common approach to analyzing them is what <span class="citation" data-cites="everett_borgatti13">Everett and Borgatti (<a href="#ref-everett_borgatti13" role="doc-biblioref">2013</a>)</span> call the “dual projection” approach. This involves computing the row and column object projections from the original affiliation matrix due to <span class="citation" data-cites="breiger74">Breiger (<a href="#ref-breiger74" role="doc-biblioref">1974</a>)</span>. Nevertheless, one issue with this approach is that the result is a weighted network, which can be hard to analyze using our usual tools.</p>
-<p>Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and usually lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak <span class="citation" data-cites="neal14">Neal (<a href="#ref-neal14" role="doc-biblioref">2014</a>)</span> refers to as extracting the <strong>backbone</strong> of the bipartite projection.</p>
+<p>Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and usually lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak <span class="citation" data-cites="neal14">Neal (<a href="#ref-neal14" role="doc-biblioref">2014</a>)</span> refers to this problem as extracting the <strong>backbone</strong> of the bipartite projection.</p>
 <p>So let’s load up our trusty <em>Southern Women</em> data set and compute the bipartite projections:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(igraph)</span>
@@ -471,10 +471,10 @@ FLORA         1     1         1      1    2     1       1      2     0</code></p
 <p><span class="citation" data-cites="neal14">Neal (<a href="#ref-neal14" role="doc-biblioref">2014</a>)</span> proposes one such approach called the <strong>Stochastic Degree Sequence Model</strong> (SDSM). This approach compares the observed weights in each bipartite projection against those from a bipartite graph ensemble where the graphs in the ensemble are generated from a model that preserves the expected (average) degrees of the nodes in the two-mode network.</p>
 <p>We proceed as follows. First, we estimate a generalized linear model for binary outcomes (e.g., logit or probit, or your favorite other), where we predict the probability of observing an edge in the bipartite graph from the degrees of each node incident to each edge (and their statistical interaction). In <code>R</code> we can do this as follows. First, we create a dataset with the affiliation matrix as a response variable and the degrees of each node as coviarates:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   edges <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(A) <span class="co">#vectorized affiliation matrix</span></span>
-<span id="cb6-2"><a href="#cb6-2"></a>   p.degrees <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fu">rowSums</span>(A), <span class="fu">ncol</span>(A))) <span class="co">#person degree vector</span></span>
-<span id="cb6-3"><a href="#cb6-3"></a>   g.degrees <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fu">colSums</span>(A), <span class="at">each =</span> <span class="fu">nrow</span>(A))) <span class="co">#group degree vector</span></span>
-<span id="cb6-4"><a href="#cb6-4"></a>   dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> edges, <span class="at">d1 =</span> p.degrees, <span class="at">d2 =</span> g.degrees) <span class="co">#data frame</span></span>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   y <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(A) <span class="co">#vectorized affiliation matrix</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a>   d1 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fu">rowSums</span>(A), <span class="fu">ncol</span>(A))) <span class="co">#person degree vector</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a>   d2 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fu">colSums</span>(A), <span class="at">each =</span> <span class="fu">nrow</span>(A))) <span class="co">#group degree vector</span></span>
+<span id="cb6-4"><a href="#cb6-4"></a>   dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(y, d1, d2) <span class="co">#data frame</span></span>
 <span id="cb6-5"><a href="#cb6-5"></a>   dat[<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>, ] <span class="co">#first 25 rows of data frame</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   y d1 d2
@@ -543,14 +543,15 @@ Number of Fisher Scoring iterations: 5</code></pre>
 0.03 0.03 0.45 0.32 0.45 0.32 0.09 0.09 0.09 </code></pre>
 </div>
 </div>
-<p>Now, we use these predicted probabilities to generate an ensemble of graphs, where each edges int he graph is a Bernoulli draw from the predicted probability response vector. We can do this using the following function:</p>
+<p>Now, we use these predicted probabilities to generate an ensemble of graphs, where each edge in the graph is a Bernoulli draw from the predicted probability response vector. We can do this using the following function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   bipart.ensemble <span class="ot">&lt;-</span> <span class="cf">function</span>(x, r, c) {</span>
 <span id="cb12-2"><a href="#cb12-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(x <span class="sc">&gt;</span> <span class="fu">runif</span>(<span class="fu">length</span>(x)))</span>
-<span id="cb12-3"><a href="#cb12-3"></a>      A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(A, <span class="at">nrow =</span> r, <span class="at">ncol =</span> c, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-3"><a href="#cb12-3"></a>      A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(A, <span class="at">nrow =</span> r, <span class="at">ncol =</span> c)</span>
 <span id="cb12-4"><a href="#cb12-4"></a>      <span class="fu">return</span>(A)</span>
 <span id="cb12-5"><a href="#cb12-5"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>The above function uses the <code>runif</code> function in <code>R</code> to compare each predicted probability to a random number between zero and one, and then creates a new affiliation matrix that has a one in each cell if the predicted probability is larger than the corresponding random number.</p>
 <p>Let’s see how this works:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
@@ -560,27 +561,27 @@ Number of Fisher Scoring iterations: 5</code></pre>
 <span id="cb13-5"><a href="#cb13-5"></a>   A1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          6/27 3/2 4/12 9/26 2/25 5/19 3/15 9/16 4/8 6/10 2/23 4/7 11/21 8/3
-EVELYN       1   0    1    0    0    1    0    0   0    0    0   0     0   0
-LAURA        1   0    0    0    1    0    0    0   0    0    0   0     0   0
-THERESA      0   1    0    0    0    0    1    0   0    1    1   1     1   0
-BRENDA       0   0    1    1    0    0    1    0   1    0    0   0     0   1
-CHARLOTTE    1   0    0    0    0    0    0    0   0    0    0   0     0   0
-FRANCES      0   0    0    1    1    1    0    0   0    1    1   0     0   0
-ELEANOR      1   1    0    0    0    1    1    0   1    0    1   1     0   1
-PEARL        0   0    0    1    1    0    0    0   0    0    1   1     0   1
-RUTH         1   0    0    1    0    0    0    1   1    1    1   1     0   0
-VERNE        1   1    1    1    1    0    1    1   1    1    0   1     0   1
-MYRNA        1   1    1    1    0    1    1    1   1    0    0   1     1   1
-KATHERINE    1   1    1    1    1    1    1    1   0    1    1   0     0   0
-SYLVIA       0   0    0    0    0    0    0    0   0    0    0   0     0   1
-NORA         0   1    0    0    0    0    0    0   0    0    0   0     0   0
-HELEN        0   0    1    0    1    0    0    0   0    0    0   0     1   1
-DOROTHY      1   1    1    0    1    0    1    0   0    0    0   0     0   0
-OLIVIA       1   0    0    0    0    0    0    0   0    0    1   0     1   0
-FLORA        0   0    0    0    0    0    0    0   0    0    0   0     0   0</code></pre>
+EVELYN       1   1    0    0    0    1    1    1   0    0    0   1     1   1
+LAURA        0   0    1    1    1    0    1    1   1    1    1   0     0   0
+THERESA      1   0    1    1    1    1    0    1   1    1    0   1     0   1
+BRENDA       0   0    1    0    1    0    1    1   1    0    1   0     0   0
+CHARLOTTE    0   0    1    0    0    1    1    1   1    0    0   0     0   0
+FRANCES      1   0    0    0    0    1    0    0   0    0    0   0     0   0
+ELEANOR      0   0    0    0    0    0    0    1   0    0    0   0     0   0
+PEARL        0   0    0    0    1    1    1    1   1    0    0   0     0   0
+RUTH         0   0    1    0    1    0    0    1   1    0    0   0     1   0
+VERNE        0   0    1    0    0    0    0    1   1    0    0   0     0   0
+MYRNA        0   0    0    0    0    0    0    0   1    0    0   1     0   0
+KATHERINE    0   1    0    0    0    1    1    1   1    0    0   1     0   0
+SYLVIA       0   0    1    0    1    1    1    0   1    0    0   1     0   0
+NORA         0   0    0    0    1    0    1    1   1    0    0   1     0   0
+HELEN        1   0    1    0    0    0    1    1   1    0    0   1     0   0
+DOROTHY      0   0    0    0    0    0    1    1   1    0    0   0     0   0
+OLIVIA       0   1    0    0    0    0    0    1   1    0    0   1     0   0
+FLORA        0   0    0    0    1    0    0    1   1    0    0   0     0   0</code></pre>
 </div>
 </div>
-<p>Which generates an affiliation matrix realization from the predicted probabilities we calculated before, with the probability of each edge being a function of the degrees of each node in the original affiliation matrix. Now all we need to do is produce a bunch of these:</p>
+<p>Which generates an affiliation matrix realization from the predicted probabilities we calculated before, with the probability of each edge being a function of the degrees of each node in the original affiliation matrix. Now all we need to do is produce a bunch of these using the <code>replicate</code> function in <code>R</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
 <span id="cb15-2"><a href="#cb15-2"></a>   B <span class="ot">&lt;-</span> <span class="fu">replicate</span>(<span class="dv">100</span>, <span class="fu">bipart.ensemble</span>(mypreds, <span class="at">r =</span> <span class="fu">nrow</span>(A), <span class="at">c =</span> <span class="fu">ncol</span>(A)), <span class="at">simplify =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -593,7 +594,7 @@ FLORA        0   0    0    0    0    0    0    0   0    0    0   0     0   0</co
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   G.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(B, <span class="cf">function</span>(x) {<span class="fu">t</span>(x) <span class="sc">%*%</span> x}) <span class="co">#ensemble of column projections</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Now we generate a list of binary projections where two nodes are tied when the observed projections are larger than the generated projections:</p>
+<p>Now we generate a list of binary projections where two nodes are tied when their observed weight in the row or column projections is larger than the corresponding weight in the generated projections:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   P.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(P.list, <span class="cf">function</span>(x) {(P <span class="sc">&gt;</span> x) <span class="sc">*</span> <span class="dv">1</span>})</span>
 <span id="cb18-2"><a href="#cb18-2"></a>   G.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(G.list, <span class="cf">function</span>(x) {(G <span class="sc">&gt;</span> x) <span class="sc">*</span> <span class="dv">1</span>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -603,132 +604,132 @@ FLORA        0   0    0    0    0    0    0    0   0    0    0   0     0   0</co
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   P.exp <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, P.bin)</span>
 <span id="cb19-2"><a href="#cb19-2"></a>   G.exp <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, G.bin)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The “p-value” here is just one minus the cells of this matrix divided by the number of graphs in the ensemble:</p>
+<p>The “p-value” for each edge weight in the row and column projections is just one minus the cells of this matrix divided by the number of graphs in the ensemble:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   P.sig <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> P.exp<span class="sc">/</span><span class="dv">100</span></span>
 <span id="cb20-2"><a href="#cb20-2"></a>   G.sig <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> G.exp<span class="sc">/</span><span class="dv">100</span></span>
 <span id="cb20-3"><a href="#cb20-3"></a>   P.sig</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH
-EVELYN      1.00  0.00    0.00   0.00      0.05    0.04    0.09  0.17 0.13
-LAURA       0.00  1.00    0.00   0.00      0.00    0.00    0.00  0.36 0.16
-THERESA     0.00  0.00    1.00   0.00      0.00    0.05    0.04  0.29 0.09
-BRENDA      0.00  0.00    0.00   1.00      0.00    0.06    0.06  0.64 0.37
-CHARLOTTE   0.05  0.00    0.00   0.00      1.00    0.20    0.38  1.00 0.46
-FRANCES     0.04  0.00    0.05   0.06      0.20    1.00    0.30  0.83 0.83
-ELEANOR     0.09  0.00    0.04   0.06      0.38    0.30    1.00  0.65 0.68
-PEARL       0.17  0.36    0.29   0.64      1.00    0.83    0.65  1.00 0.84
-RUTH        0.13  0.16    0.09   0.37      0.46    0.83    0.68  0.84 1.00
-VERNE       0.75  0.61    0.64   0.92      0.89    1.00    1.00  1.00 0.98
-MYRNA       0.64  0.88    0.79   0.97      1.00    0.99    1.00  1.00 1.00
-KATHERINE   0.57  0.76    0.63   0.83      1.00    0.97    0.99  0.84 0.95
-SYLVIA      0.23  0.13    0.03   0.40      0.39    0.76    0.37  0.52 0.19
-NORA        0.18  0.02    0.06   0.15      0.67    0.72    0.47  0.48 0.51
-HELEN       0.63  0.15    0.28   0.24      0.40    0.91    0.40  0.94 0.56
-DOROTHY     0.17  0.43    0.19   0.67      1.00    0.77    0.92  0.27 0.54
-OLIVIA      0.47  1.00    0.60   1.00      1.00    1.00    1.00  0.87 0.75
-FLORA       0.21  1.00    0.48   1.00      1.00    1.00    1.00  0.43 0.73
+EVELYN      1.00  0.30    0.19   0.29      0.47    0.21    0.52  0.33 0.56
+LAURA       0.30  1.00    0.25   0.14      0.40    0.14    0.17  0.61 0.45
+THERESA     0.19  0.25    1.00   0.24      0.22    0.18    0.22  0.42 0.19
+BRENDA      0.29  0.14    0.24   1.00      0.19    0.14    0.14  0.67 0.46
+CHARLOTTE   0.47  0.40    0.22   0.19      1.00    0.50    0.52  1.00 0.51
+FRANCES     0.21  0.14    0.18   0.14      0.50    1.00    0.16  0.44 0.47
+ELEANOR     0.52  0.17    0.22   0.14      0.52    0.16    1.00  0.47 0.20
+PEARL       0.33  0.61    0.42   0.67      1.00    0.44    0.47  1.00 0.42
+RUTH        0.56  0.45    0.19   0.46      0.51    0.47    0.20  0.42 1.00
+VERNE       0.76  0.74    0.53   0.73      0.87    0.82    0.51  0.45 0.16
+MYRNA       0.84  0.98    0.83   0.96      1.00    0.92    0.89  0.48 0.53
+KATHERINE   0.96  0.98    0.97   1.00      1.00    0.93    0.94  0.57 0.67
+SYLVIA      0.98  0.93    0.91   0.96      0.97    0.94    0.77  0.63 0.44
+NORA        1.00  0.99    0.96   1.00      0.96    0.95    0.84  0.76 0.76
+HELEN       0.99  0.91    0.93   0.86      0.88    0.93    0.59  0.86 0.57
+DOROTHY     0.67  0.93    0.67   0.93      1.00    0.79    0.83  0.40 0.45
+OLIVIA      0.91  1.00    0.95   1.00      1.00    1.00    1.00  0.74 0.79
+FLORA       0.90  1.00    0.94   1.00      1.00    1.00    1.00  0.81 0.83
           VERNE MYRNA KATHERINE SYLVIA NORA HELEN DOROTHY OLIVIA FLORA
-EVELYN     0.75  0.64      0.57   0.23 0.18  0.63    0.17   0.47  0.21
-LAURA      0.61  0.88      0.76   0.13 0.02  0.15    0.43   1.00  1.00
-THERESA    0.64  0.79      0.63   0.03 0.06  0.28    0.19   0.60  0.48
-BRENDA     0.92  0.97      0.83   0.40 0.15  0.24    0.67   1.00  1.00
-CHARLOTTE  0.89  1.00      1.00   0.39 0.67  0.40    1.00   1.00  1.00
-FRANCES    1.00  0.99      0.97   0.76 0.72  0.91    0.77   1.00  1.00
-ELEANOR    1.00  1.00      0.99   0.37 0.47  0.40    0.92   1.00  1.00
-PEARL      1.00  1.00      0.84   0.52 0.48  0.94    0.27   0.87  0.43
-RUTH       0.98  1.00      0.95   0.19 0.51  0.56    0.54   0.75  0.73
-VERNE      1.00  1.00      0.99   0.23 0.53  0.69    0.86   0.95  0.80
-MYRNA      1.00  1.00      0.86   0.14 0.43  0.51    0.76   0.90  0.67
-KATHERINE  0.99  0.86      1.00   0.01 0.01  0.34    0.75   0.81  0.62
-SYLVIA     0.23  0.14      0.01   1.00 0.00  0.00    0.17   0.51  0.30
-NORA       0.53  0.43      0.01   0.00 1.00  0.00    0.68   0.18  0.06
-HELEN      0.69  0.51      0.34   0.00 0.00  1.00    0.55   0.64  0.35
-DOROTHY    0.86  0.76      0.75   0.17 0.68  0.55    1.00   0.30  0.39
-OLIVIA     0.95  0.90      0.81   0.51 0.18  0.64    0.30   1.00  0.03
-FLORA      0.80  0.67      0.62   0.30 0.06  0.35    0.39   0.03  1.00</code></pre>
+EVELYN     0.76  0.84      0.96   0.98 1.00  0.99    0.67   0.91  0.90
+LAURA      0.74  0.98      0.98   0.93 0.99  0.91    0.93   1.00  1.00
+THERESA    0.53  0.83      0.97   0.91 0.96  0.93    0.67   0.95  0.94
+BRENDA     0.73  0.96      1.00   0.96 1.00  0.86    0.93   1.00  1.00
+CHARLOTTE  0.87  1.00      1.00   0.97 0.96  0.88    1.00   1.00  1.00
+FRANCES    0.82  0.92      0.93   0.94 0.95  0.93    0.79   1.00  1.00
+ELEANOR    0.51  0.89      0.94   0.77 0.84  0.59    0.83   1.00  1.00
+PEARL      0.45  0.48      0.57   0.63 0.76  0.86    0.40   0.74  0.81
+RUTH       0.16  0.53      0.67   0.44 0.76  0.57    0.45   0.79  0.83
+VERNE      1.00  0.14      0.32   0.14 0.45  0.27    0.43   0.77  0.87
+MYRNA      0.14  1.00      0.10   0.17 0.56  0.25    0.46   0.80  0.83
+KATHERINE  0.32  0.10      1.00   0.05 0.28  0.47    0.52   0.83  0.85
+SYLVIA     0.14  0.17      0.05   1.00 0.22  0.30    0.61   0.85  0.90
+NORA       0.45  0.56      0.28   0.22 1.00  0.35    0.89   0.60  0.61
+HELEN      0.27  0.25      0.47   0.30 0.35  1.00    0.83   0.87  0.88
+DOROTHY    0.43  0.46      0.52   0.61 0.89  0.83    1.00   0.73  0.78
+OLIVIA     0.77  0.80      0.83   0.85 0.60  0.87    0.73   1.00  0.34
+FLORA      0.87  0.83      0.85   0.90 0.61  0.88    0.78   0.34  1.00</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   G.sig</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      6/27  3/2 4/12 9/26 2/25 5/19 3/15 9/16  4/8 6/10 2/23  4/7 11/21  8/3
-6/27  1.00 0.94 0.70 0.88 0.56 0.54 0.91 0.68 0.98 1.00 1.00 1.00  1.00 1.00
-3/2   0.94 1.00 0.60 0.86 0.54 0.45 0.88 0.62 0.88 1.00 1.00 1.00  1.00 1.00
-4/12  0.70 0.60 1.00 0.41 0.02 0.11 0.36 0.13 0.89 1.00 1.00 1.00  1.00 1.00
-9/26  0.88 0.86 0.41 1.00 0.50 0.74 0.56 0.60 0.88 1.00 1.00 1.00  1.00 1.00
-2/25  0.56 0.54 0.02 0.50 1.00 0.11 0.01 0.01 0.56 1.00 1.00 1.00  1.00 1.00
-5/19  0.54 0.45 0.11 0.74 0.11 1.00 0.17 0.02 0.34 0.96 1.00 0.99  0.98 0.99
-3/15  0.91 0.88 0.36 0.56 0.01 0.17 1.00 0.00 0.10 0.52 0.82 0.19  0.81 0.76
-9/16  0.68 0.62 0.13 0.60 0.01 0.02 0.00 1.00 0.00 0.28 0.99 0.05  0.90 0.72
-4/8   0.98 0.88 0.89 0.88 0.56 0.34 0.10 0.00 1.00 0.35 0.63 0.12  0.53 0.51
-6/10  1.00 1.00 1.00 1.00 1.00 0.96 0.52 0.28 0.35 1.00 0.74 0.10  0.38 0.34
-2/23  1.00 1.00 1.00 1.00 1.00 1.00 0.82 0.99 0.63 0.74 1.00 0.84  0.98 0.99
-4/7   1.00 1.00 1.00 1.00 1.00 0.99 0.19 0.05 0.12 0.10 0.84 1.00  0.61 0.51
-11/21 1.00 1.00 1.00 1.00 1.00 0.98 0.81 0.90 0.53 0.38 0.98 0.61  1.00 0.67
-8/3   1.00 1.00 1.00 1.00 1.00 0.99 0.76 0.72 0.51 0.34 0.99 0.51  0.67 1.00</code></pre>
+6/27  1.00 0.37 0.18 0.34 0.32 0.29 0.65 0.57 0.95 1.00 1.00 1.00  1.00 1.00
+3/2   0.37 1.00 0.17 0.47 0.36 0.32 0.72 0.63 0.81 1.00 1.00 1.00  1.00 1.00
+4/12  0.18 0.17 1.00 0.09 0.02 0.10 0.50 0.43 0.99 1.00 1.00 1.00  1.00 1.00
+9/26  0.34 0.47 0.09 1.00 0.18 0.39 0.50 0.71 0.87 1.00 1.00 1.00  1.00 1.00
+2/25  0.32 0.36 0.02 0.18 1.00 0.08 0.30 0.43 0.96 1.00 1.00 1.00  1.00 1.00
+5/19  0.29 0.32 0.10 0.39 0.08 1.00 0.49 0.41 0.86 0.93 0.96 0.95  0.93 0.87
+3/15  0.65 0.72 0.50 0.50 0.30 0.49 1.00 0.60 0.90 0.61 0.79 0.43  0.72 0.68
+9/16  0.57 0.63 0.43 0.71 0.43 0.41 0.60 1.00 0.80 0.53 0.98 0.44  0.89 0.79
+4/8   0.95 0.81 0.99 0.87 0.96 0.86 0.90 0.80 1.00 0.55 0.61 0.34  0.52 0.42
+6/10  1.00 1.00 1.00 1.00 1.00 0.93 0.61 0.53 0.55 1.00 0.46 0.00  0.17 0.17
+2/23  1.00 1.00 1.00 1.00 1.00 0.96 0.79 0.98 0.61 0.46 1.00 0.54  0.72 0.75
+4/7   1.00 1.00 1.00 1.00 1.00 0.95 0.43 0.44 0.34 0.00 0.54 1.00  0.19 0.15
+11/21 1.00 1.00 1.00 1.00 1.00 0.93 0.72 0.89 0.52 0.17 0.72 0.19  1.00 0.03
+8/3   1.00 1.00 1.00 1.00 1.00 0.87 0.68 0.79 0.42 0.17 0.75 0.15  0.03 1.00</code></pre>
 </div>
 </div>
-<p>We then connect two nodes in the backbone, when this value is below some standard threshold (e.g., <span class="math inline">\(p &lt; 0.10\)</span>):</p>
+<p>We then connect two nodes in the backbone, when this value is below some standard threshold (e.g., <span class="math inline">\(p &lt; 0.25\)</span>):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   P.back <span class="ot">&lt;-</span> (P.sig <span class="sc">&lt;</span> <span class="fl">0.10</span>) <span class="sc">*</span> <span class="dv">1</span></span>
-<span id="cb24-2"><a href="#cb24-2"></a>   G.back <span class="ot">&lt;-</span> (G.sig <span class="sc">&lt;</span> <span class="fl">0.10</span>) <span class="sc">*</span> <span class="dv">1</span></span>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   P.back <span class="ot">&lt;-</span> (P.sig <span class="sc">&lt;</span> <span class="fl">0.25</span>) <span class="sc">*</span> <span class="dv">1</span></span>
+<span id="cb24-2"><a href="#cb24-2"></a>   G.back <span class="ot">&lt;-</span> (G.sig <span class="sc">&lt;</span> <span class="fl">0.25</span>) <span class="sc">*</span> <span class="dv">1</span></span>
 <span id="cb24-3"><a href="#cb24-3"></a>   P.back</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH
-EVELYN         0     1       1      1         1       1       1     0    0
-LAURA          1     0       1      1         1       1       1     0    0
-THERESA        1     1       0      1         1       1       1     0    1
-BRENDA         1     1       1      0         1       1       1     0    0
-CHARLOTTE      1     1       1      1         0       0       0     0    0
-FRANCES        1     1       1      1         0       0       0     0    0
-ELEANOR        1     1       1      1         0       0       0     0    0
+EVELYN         0     0       1      0         0       1       0     0    0
+LAURA          0     0       0      1         0       1       1     0    0
+THERESA        1     0       0      1         1       1       1     0    1
+BRENDA         0     1       1      0         1       1       1     0    0
+CHARLOTTE      0     0       1      1         0       0       0     0    0
+FRANCES        1     1       1      1         0       0       1     0    0
+ELEANOR        0     1       1      1         0       1       0     0    1
 PEARL          0     0       0      0         0       0       0     0    0
-RUTH           0     0       1      0         0       0       0     0    0
-VERNE          0     0       0      0         0       0       0     0    0
+RUTH           0     0       1      0         0       0       1     0    0
+VERNE          0     0       0      0         0       0       0     0    1
 MYRNA          0     0       0      0         0       0       0     0    0
 KATHERINE      0     0       0      0         0       0       0     0    0
-SYLVIA         0     0       1      0         0       0       0     0    0
-NORA           0     1       1      0         0       0       0     0    0
+SYLVIA         0     0       0      0         0       0       0     0    0
+NORA           0     0       0      0         0       0       0     0    0
 HELEN          0     0       0      0         0       0       0     0    0
 DOROTHY        0     0       0      0         0       0       0     0    0
 OLIVIA         0     0       0      0         0       0       0     0    0
 FLORA          0     0       0      0         0       0       0     0    0
           VERNE MYRNA KATHERINE SYLVIA NORA HELEN DOROTHY OLIVIA FLORA
 EVELYN        0     0         0      0    0     0       0      0     0
-LAURA         0     0         0      0    1     0       0      0     0
-THERESA       0     0         0      1    1     0       0      0     0
+LAURA         0     0         0      0    0     0       0      0     0
+THERESA       0     0         0      0    0     0       0      0     0
 BRENDA        0     0         0      0    0     0       0      0     0
 CHARLOTTE     0     0         0      0    0     0       0      0     0
 FRANCES       0     0         0      0    0     0       0      0     0
 ELEANOR       0     0         0      0    0     0       0      0     0
 PEARL         0     0         0      0    0     0       0      0     0
-RUTH          0     0         0      0    0     0       0      0     0
-VERNE         0     0         0      0    0     0       0      0     0
-MYRNA         0     0         0      0    0     0       0      0     0
-KATHERINE     0     0         0      1    1     0       0      0     0
-SYLVIA        0     0         1      0    1     1       0      0     0
-NORA          0     0         1      1    0     1       0      0     1
-HELEN         0     0         0      1    1     0       0      0     0
+RUTH          1     0         0      0    0     0       0      0     0
+VERNE         0     1         0      1    0     0       0      0     0
+MYRNA         1     0         1      1    0     0       0      0     0
+KATHERINE     0     1         0      1    0     0       0      0     0
+SYLVIA        1     1         1      0    1     0       0      0     0
+NORA          0     0         0      1    0     0       0      0     0
+HELEN         0     0         0      0    0     0       0      0     0
 DOROTHY       0     0         0      0    0     0       0      0     0
-OLIVIA        0     0         0      0    0     0       0      0     1
-FLORA         0     0         0      0    1     0       0      1     0</code></pre>
+OLIVIA        0     0         0      0    0     0       0      0     0
+FLORA         0     0         0      0    0     0       0      0     0</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   G.back</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      6/27 3/2 4/12 9/26 2/25 5/19 3/15 9/16 4/8 6/10 2/23 4/7 11/21 8/3
-6/27     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-3/2      0   0    0    0    0    0    0    0   0    0    0   0     0   0
-4/12     0   0    0    0    1    0    0    0   0    0    0   0     0   0
-9/26     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-2/25     0   0    1    0    0    0    1    1   0    0    0   0     0   0
-5/19     0   0    0    0    0    0    0    1   0    0    0   0     0   0
-3/15     0   0    0    0    1    0    0    1   1    0    0   0     0   0
-9/16     0   0    0    0    1    1    1    0   1    0    0   1     0   0
-4/8      0   0    0    0    0    0    1    1   0    0    0   0     0   0
-6/10     0   0    0    0    0    0    0    0   0    0    0   1     0   0
+6/27     0   0    1    0    0    0    0    0   0    0    0   0     0   0
+3/2      0   0    1    0    0    0    0    0   0    0    0   0     0   0
+4/12     1   1    0    1    1    1    0    0   0    0    0   0     0   0
+9/26     0   0    1    0    1    0    0    0   0    0    0   0     0   0
+2/25     0   0    1    1    0    1    0    0   0    0    0   0     0   0
+5/19     0   0    1    0    1    0    0    0   0    0    0   0     0   0
+3/15     0   0    0    0    0    0    0    0   0    0    0   0     0   0
+9/16     0   0    0    0    0    0    0    0   0    0    0   0     0   0
+4/8      0   0    0    0    0    0    0    0   0    0    0   0     0   0
+6/10     0   0    0    0    0    0    0    0   0    0    0   1     1   1
 2/23     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-4/7      0   0    0    0    0    0    0    1   0    1    0   0     0   0
-11/21    0   0    0    0    0    0    0    0   0    0    0   0     0   0
-8/3      0   0    0    0    0    0    0    0   0    0    0   0     0   0</code></pre>
+4/7      0   0    0    0    0    0    0    0   0    1    0   0     1   1
+11/21    0   0    0    0    0    0    0    0   0    1    0   1     0   1
+8/3      0   0    0    0    0    0    0    0   0    1    0   1     1   0</code></pre>
 </div>
 </div>
 <p>And we can now plot the backbones:</p>
@@ -737,7 +738,7 @@ FLORA         0     0         0      0    1     0       0      1     0</code></p
 <span id="cb28-2"><a href="#cb28-2"></a>   G.p <span class="ot">&lt;-</span> <span class="fu">graph_from_adjacency_matrix</span>(P.back, <span class="at">mode =</span> <span class="st">"undirected"</span>, <span class="at">diag =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb28-3"><a href="#cb28-3"></a>   <span class="fu">plot</span>(G.p, </span>
 <span id="cb28-4"><a href="#cb28-4"></a>     <span class="at">vertex.size=</span><span class="dv">8</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb28-5"><a href="#cb28-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, </span>
+<span id="cb28-5"><a href="#cb28-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, <span class="at">edge.width =</span> <span class="dv">2</span>,</span>
 <span id="cb28-6"><a href="#cb28-6"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -753,7 +754,7 @@ FLORA         0     0         0      0    1     0       0      1     0</code></p
 <span id="cb29-2"><a href="#cb29-2"></a>   G.g <span class="ot">&lt;-</span> <span class="fu">graph_from_adjacency_matrix</span>(G.back, <span class="at">mode =</span> <span class="st">"undirected"</span>, <span class="at">diag =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb29-3"><a href="#cb29-3"></a>   <span class="fu">plot</span>(G.g, </span>
 <span id="cb29-4"><a href="#cb29-4"></a>     <span class="at">vertex.size=</span><span class="dv">8</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb29-5"><a href="#cb29-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, </span>
+<span id="cb29-5"><a href="#cb29-5"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, <span class="at">edge.curved=</span><span class="fl">0.2</span>, <span class="at">edge.width =</span> <span class="dv">2</span>,</span>
 <span id="cb29-6"><a href="#cb29-6"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -766,7 +767,7 @@ FLORA         0     0         0      0    1     0       0      1     0</code></p
 </div>
 <p>We can put together all of the above steps into a handy dandy function called <code>sdsm.back</code> which takes the affiliation matrix <span class="math inline">\(\mathbf{A}\)</span> as input and returns the two projection backbones as output:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   sdsm.back <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">n =</span> <span class="dv">100</span>, <span class="at">p.val =</span> <span class="fl">0.15</span>, <span class="at">seed =</span> <span class="dv">123</span>) {</span>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   sdsm.back <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">n =</span> <span class="dv">100</span>, <span class="at">p.val =</span> <span class="fl">0.25</span>, <span class="at">seed =</span> <span class="dv">123</span>) {</span>
 <span id="cb30-2"><a href="#cb30-2"></a>      <span class="fu">set.seed</span>(seed)</span>
 <span id="cb30-3"><a href="#cb30-3"></a>      r <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
 <span id="cb30-4"><a href="#cb30-4"></a>      c <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
@@ -779,16 +780,15 @@ FLORA         0     0         0      0    1     0       0      1     0</code></p
 <span id="cb30-11"><a href="#cb30-11"></a>      res <span class="ot">&lt;-</span> <span class="fu">glm</span>(y <span class="sc">~</span> d1<span class="sc">*</span>d2, <span class="at">data =</span> dat, <span class="at">family =</span> <span class="st">"binomial"</span>)</span>
 <span id="cb30-12"><a href="#cb30-12"></a>      pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(res, <span class="at">type =</span> <span class="st">"response"</span>)</span>
 <span id="cb30-13"><a href="#cb30-13"></a>      gen.aff <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb30-14"><a href="#cb30-14"></a>         <span class="fu">return</span>(<span class="fu">matrix</span>(<span class="fu">as.numeric</span>(w <span class="sc">&gt;</span> <span class="fu">runif</span>(<span class="fu">length</span>(w))), </span>
-<span id="cb30-15"><a href="#cb30-15"></a>                     <span class="at">nrow =</span> r, <span class="at">ncol =</span> c, <span class="at">byrow =</span> <span class="cn">TRUE</span>))         </span>
-<span id="cb30-16"><a href="#cb30-16"></a>      }</span>
-<span id="cb30-17"><a href="#cb30-17"></a>      B <span class="ot">&lt;-</span> <span class="fu">replicate</span>(n, <span class="fu">gen.aff</span>(pred), <span class="at">simplify =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb30-18"><a href="#cb30-18"></a>      P.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(B, <span class="cf">function</span>(x) {(P <span class="sc">&gt;</span> x <span class="sc">%*%</span> <span class="fu">t</span>(x)) <span class="sc">*</span> <span class="dv">1</span>})</span>
-<span id="cb30-19"><a href="#cb30-19"></a>      G.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(B, <span class="cf">function</span>(x) {(G <span class="sc">&gt;</span> <span class="fu">t</span>(x) <span class="sc">%*%</span> x) <span class="sc">*</span> <span class="dv">1</span>})</span>
-<span id="cb30-20"><a href="#cb30-20"></a>      P.back <span class="ot">&lt;-</span> ((<span class="dv">1</span> <span class="sc">-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, P.bin)<span class="sc">/</span>n) <span class="sc">&lt;</span> p.val) <span class="sc">*</span> <span class="dv">1</span></span>
-<span id="cb30-21"><a href="#cb30-21"></a>      G.back <span class="ot">&lt;-</span> ((<span class="dv">1</span> <span class="sc">-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, G.bin)<span class="sc">/</span>n) <span class="sc">&lt;</span> p.val) <span class="sc">*</span> <span class="dv">1</span></span>
-<span id="cb30-22"><a href="#cb30-22"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">P.back =</span> P.back, <span class="at">G.back =</span> G.back))</span>
-<span id="cb30-23"><a href="#cb30-23"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb30-14"><a href="#cb30-14"></a>         <span class="fu">return</span>(<span class="fu">matrix</span>(<span class="fu">as.numeric</span>(w <span class="sc">&gt;</span> <span class="fu">runif</span>(<span class="fu">length</span>(w))), <span class="at">nrow =</span> r, <span class="at">ncol =</span> c))    </span>
+<span id="cb30-15"><a href="#cb30-15"></a>         }</span>
+<span id="cb30-16"><a href="#cb30-16"></a>      B <span class="ot">&lt;-</span> <span class="fu">replicate</span>(n, <span class="fu">gen.aff</span>(pred), <span class="at">simplify =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb30-17"><a href="#cb30-17"></a>      P.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(B, <span class="cf">function</span>(x) {(P <span class="sc">&gt;</span> x <span class="sc">%*%</span> <span class="fu">t</span>(x)) <span class="sc">*</span> <span class="dv">1</span>})</span>
+<span id="cb30-18"><a href="#cb30-18"></a>      G.bin <span class="ot">&lt;-</span> <span class="fu">lapply</span>(B, <span class="cf">function</span>(x) {(G <span class="sc">&gt;</span> <span class="fu">t</span>(x) <span class="sc">%*%</span> x) <span class="sc">*</span> <span class="dv">1</span>})</span>
+<span id="cb30-19"><a href="#cb30-19"></a>      P.back <span class="ot">&lt;-</span> ((<span class="dv">1</span> <span class="sc">-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, P.bin)<span class="sc">/</span>n) <span class="sc">&lt;</span> p.val) <span class="sc">*</span> <span class="dv">1</span></span>
+<span id="cb30-20"><a href="#cb30-20"></a>      G.back <span class="ot">&lt;-</span> ((<span class="dv">1</span> <span class="sc">-</span> <span class="fu">Reduce</span>(<span class="st">"+"</span>, G.bin)<span class="sc">/</span>n) <span class="sc">&lt;</span> p.val) <span class="sc">*</span> <span class="dv">1</span></span>
+<span id="cb30-21"><a href="#cb30-21"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">P.back =</span> P.back, <span class="at">G.back =</span> G.back))</span>
+<span id="cb30-22"><a href="#cb30-22"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And voila:</p>
 <div class="cell">
@@ -796,60 +796,60 @@ FLORA         0     0         0      0    1     0       0      1     0</code></p
 <div class="cell-output cell-output-stdout">
 <pre><code>$P.back
           EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH
-EVELYN         1     1       1      1         1       1       0     0    0
-LAURA          1     1       1      1         1       1       1     0    1
-THERESA        1     1       1      1         1       1       1     0    1
-BRENDA         1     1       1      1         1       1       1     0    0
-CHARLOTTE      1     1       1      1         0       0       0     0    0
-FRANCES        1     1       1      1         0       0       0     0    0
-ELEANOR        0     1       1      1         0       0       0     0    0
+EVELYN         0     0       0      0         0       0       0     0    0
+LAURA          0     0       1      1         0       1       1     0    0
+THERESA        0     1       0      1         1       0       0     0    0
+BRENDA         0     1       1      0         1       1       1     0    0
+CHARLOTTE      0     0       1      1         0       0       0     0    0
+FRANCES        0     1       0      1         0       0       1     0    0
+ELEANOR        0     1       0      1         0       1       0     0    1
 PEARL          0     0       0      0         0       0       0     0    0
-RUTH           0     1       1      0         0       0       0     0    0
-VERNE          0     0       0      0         0       0       0     0    0
+RUTH           0     0       0      0         0       0       1     0    0
+VERNE          0     0       0      0         0       0       0     0    1
 MYRNA          0     0       0      0         0       0       0     0    0
 KATHERINE      0     0       0      0         0       0       0     0    0
-SYLVIA         0     1       1      0         0       0       0     0    0
-NORA           0     1       1      1         0       0       0     0    0
-HELEN          0     1       0      0         0       0       0     0    0
+SYLVIA         0     0       0      0         0       0       0     0    0
+NORA           0     0       0      0         0       0       0     0    0
+HELEN          0     0       0      0         0       0       0     0    0
 DOROTHY        0     0       0      0         0       0       0     0    0
 OLIVIA         0     0       0      0         0       0       0     0    0
 FLORA          0     0       0      0         0       0       0     0    0
           VERNE MYRNA KATHERINE SYLVIA NORA HELEN DOROTHY OLIVIA FLORA
 EVELYN        0     0         0      0    0     0       0      0     0
-LAURA         0     0         0      1    1     1       0      0     0
-THERESA       0     0         0      1    1     0       0      0     0
-BRENDA        0     0         0      0    1     0       0      0     0
+LAURA         0     0         0      0    0     0       0      0     0
+THERESA       0     0         0      0    0     0       0      0     0
+BRENDA        0     0         0      0    0     0       0      0     0
 CHARLOTTE     0     0         0      0    0     0       0      0     0
 FRANCES       0     0         0      0    0     0       0      0     0
 ELEANOR       0     0         0      0    0     0       0      0     0
 PEARL         0     0         0      0    0     0       0      0     0
-RUTH          0     0         0      0    0     0       0      0     0
-VERNE         0     0         0      0    0     0       0      0     0
-MYRNA         0     0         0      0    0     0       0      0     0
-KATHERINE     0     0         0      1    1     0       0      0     0
-SYLVIA        0     0         1      1    1     1       1      0     0
-NORA          0     0         1      1    1     1       0      1     1
-HELEN         0     0         0      1    1     0       0      0     0
-DOROTHY       0     0         0      1    0     0       0      0     0
-OLIVIA        0     0         0      0    1     0       0      0     1
-FLORA         0     0         0      0    1     0       0      1     0
+RUTH          1     0         0      0    0     0       0      0     0
+VERNE         0     1         0      1    0     0       0      0     0
+MYRNA         1     0         1      1    0     1       0      0     0
+KATHERINE     0     1         0      1    0     0       0      0     0
+SYLVIA        1     1         1      0    0     1       0      0     0
+NORA          0     0         0      0    0     0       0      0     0
+HELEN         0     1         0      1    0     0       0      0     0
+DOROTHY       0     0         0      0    0     0       0      0     0
+OLIVIA        0     0         0      0    0     0       0      0     1
+FLORA         0     0         0      0    0     0       0      1     0
 
 $G.back
       6/27 3/2 4/12 9/26 2/25 5/19 3/15 9/16 4/8 6/10 2/23 4/7 11/21 8/3
-6/27     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-3/2      0   0    0    0    0    0    0    0   0    0    0   0     0   0
-4/12     0   0    0    0    1    0    0    0   0    0    0   0     0   0
-9/26     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-2/25     0   0    1    0    0    1    1    1   0    0    0   0     0   0
-5/19     0   0    0    0    1    0    0    1   0    0    0   0     0   0
-3/15     0   0    0    0    1    0    1    1   1    0    0   0     0   0
-9/16     0   0    0    0    1    1    1    1   1    0    0   1     0   0
-4/8      0   0    0    0    0    0    1    1   1    0    0   1     0   0
-6/10     0   0    0    0    0    0    0    0   0    0    0   1     0   0
+6/27     0   0    1    0    0    0    0    0   0    0    0   0     0   0
+3/2      0   0    1    0    0    0    0    0   0    0    0   0     0   0
+4/12     1   1    0    1    1    1    0    0   0    0    0   0     0   0
+9/26     0   0    1    0    1    0    0    0   0    0    0   0     0   0
+2/25     0   0    1    1    0    1    0    0   0    0    0   0     0   0
+5/19     0   0    1    0    1    0    0    0   0    0    0   0     0   0
+3/15     0   0    0    0    0    0    0    0   0    0    0   0     0   0
+9/16     0   0    0    0    0    0    0    0   0    0    0   0     0   0
+4/8      0   0    0    0    0    0    0    0   0    0    0   0     0   0
+6/10     0   0    0    0    0    0    0    0   0    0    0   1     1   1
 2/23     0   0    0    0    0    0    0    0   0    0    0   0     0   0
-4/7      0   0    0    0    0    0    0    1   1    1    0   0     0   0
-11/21    0   0    0    0    0    0    0    0   0    0    0   0     0   0
-8/3      0   0    0    0    0    0    0    0   0    0    0   0     0   0</code></pre>
+4/7      0   0    0    0    0    0    0    0   0    1    0   0     1   1
+11/21    0   0    0    0    0    0    0    0   0    1    0   1     0   1
+8/3      0   0    0    0    0    0    0    0   0    1    0   1     1   0</code></pre>
 </div>
 </div>
 

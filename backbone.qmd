@@ -15,7 +15,7 @@ format:
 
 Recall from our lecture on [two-mode networks](two-mode.qmd) that a common approach to analyzing them is what @everett_borgatti13 call the "dual projection" approach. This involves computing the row and column object projections from the original affiliation matrix due to @breiger74. Nevertheless, one issue with this approach is that the result is a weighted network, which can be hard to analyze using our usual tools. 
 
-Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and usually lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak @neal14 refers to as extracting the **backbone** of the bipartite projection. 
+Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and usually lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak @neal14 refers to this problem as extracting the **backbone** of the bipartite projection. 
 
 So let's load up our trusty *Southern Women* data set and compute the bipartite projections:
 
@@ -54,10 +54,10 @@ Now, our job is to binarize these matrices by retaining adjacency relations betw
 We proceed as follows. First, we estimate a generalized linear model for binary outcomes (e.g., logit or probit, or your favorite other), where we predict the probability of observing an edge in the bipartite graph from the degrees of each node incident to each edge (and their statistical interaction). In `R` we can do this as follows. First, we create a dataset with the affiliation matrix as a response variable and the degrees of each node as coviarates:
 
 ```{r}
-   edges <- as.numeric(A) #vectorized affiliation matrix
-   p.degrees <- c(rep(rowSums(A), ncol(A))) #person degree vector
-   g.degrees <- c(rep(colSums(A), each = nrow(A))) #group degree vector
-   dat <- data.frame(y = edges, d1 = p.degrees, d2 = g.degrees) #data frame
+   y <- as.numeric(A) #vectorized affiliation matrix
+   d1 <- c(rep(rowSums(A), ncol(A))) #person degree vector
+   d2 <- c(rep(colSums(A), each = nrow(A))) #group degree vector
+   dat <- data.frame(y, d1, d2) #data frame
    dat[1:25, ] #first 25 rows of data frame
 ```
 
@@ -75,15 +75,17 @@ Then we compute the predicted probabilities for each case:
    round(mypreds[1:25], 2) #first 25 predictions
 ```
 
-Now, we use these predicted probabilities to generate an ensemble of graphs, where each edges int he graph is a Bernoulli draw from the predicted probability response vector. We can do this using the following function:
+Now, we use these predicted probabilities to generate an ensemble of graphs, where each edge in the graph is a Bernoulli draw from the predicted probability response vector. We can do this using the following function:
 
 ```{r}
    bipart.ensemble <- function(x, r, c) {
       A <- as.numeric(x > runif(length(x)))
-      A <- matrix(A, nrow = r, ncol = c, byrow = TRUE)
+      A <- matrix(A, nrow = r, ncol = c)
       return(A)
       }
 ```
+
+The above function uses the `runif` function in `R` to compare each predicted probability to a random number between zero and one, and then creates a new affiliation matrix that has a one in each cell if the predicted probability is larger than the corresponding random number. 
 
 Let's see how this works:
 
@@ -95,7 +97,7 @@ Let's see how this works:
    A1
 ```
 
-Which generates an affiliation matrix realization from the predicted probabilities we calculated before, with the probability of each edge being a function of the degrees of each node in the original affiliation matrix. Now all we need to do is produce a bunch of these:
+Which generates an affiliation matrix realization from the predicted probabilities we calculated before, with the probability of each edge being a function of the degrees of each node in the original affiliation matrix. Now all we need to do is produce a bunch of these using the `replicate` function in `R`:
 
 ```{r}
    set.seed(456)
@@ -114,7 +116,7 @@ And a bunch of group projections:
    G.list <- lapply(B, function(x) {t(x) %*% x}) #ensemble of column projections
 ```
 
-Now we generate a list of binary projections where two nodes are tied when the observed projections are larger than the generated projections:
+Now we generate a list of binary projections where two nodes are tied when their observed weight in the row or column projections is larger than the corresponding weight in the generated projections:
 
 ```{r}
    P.bin <- lapply(P.list, function(x) {(P > x) * 1})
@@ -128,7 +130,7 @@ We now add all of the matrices in each list to count the number of times the obs
    G.exp <- Reduce("+", G.bin)
 ```
 
-The "p-value" here is just one minus the cells of this matrix divided by the number of graphs in the ensemble:
+The "p-value" for each edge weight in the row and column projections is just one minus the cells of this matrix divided by the number of graphs in the ensemble:
 
 ```{r}
    P.sig <- 1 - P.exp/100
@@ -137,11 +139,11 @@ The "p-value" here is just one minus the cells of this matrix divided by the num
    G.sig
 ```
 
-We then connect two nodes in the backbone, when this value is below some standard threshold (e.g., $p < 0.10$):
+We then connect two nodes in the backbone, when this value is below some standard threshold (e.g., $p < 0.25$):
 
 ```{r}
-   P.back <- (P.sig < 0.10) * 1
-   G.back <- (G.sig < 0.10) * 1
+   P.back <- (P.sig < 0.25) * 1
+   G.back <- (G.sig < 0.25) * 1
    P.back
    G.back
 ```
@@ -156,7 +158,7 @@ And we can now plot the backbones:
    G.p <- graph_from_adjacency_matrix(P.back, mode = "undirected", diag = FALSE)
    plot(G.p, 
      vertex.size=8, vertex.frame.color="lightgray", 
-     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.dist=2, edge.curved=0.2, edge.width = 2,
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
@@ -168,14 +170,14 @@ And we can now plot the backbones:
    G.g <- graph_from_adjacency_matrix(G.back, mode = "undirected", diag = FALSE)
    plot(G.g, 
      vertex.size=8, vertex.frame.color="lightgray", 
-     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.dist=2, edge.curved=0.2, edge.width = 2,
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
 We can put together all of the above steps into a handy dandy function called `sdsm.back` which takes the affiliation matrix $\mathbf{A}$ as input and returns the two projection backbones as output:
 
 ```{r}
-   sdsm.back <- function(A, n = 100, p.val = 0.15, seed = 123) {
+   sdsm.back <- function(A, n = 100, p.val = 0.25, seed = 123) {
       set.seed(seed)
       r <- nrow(A)
       c <- ncol(A)
@@ -188,9 +190,8 @@ We can put together all of the above steps into a handy dandy function called `s
       res <- glm(y ~ d1*d2, data = dat, family = "binomial")
       pred <- predict(res, type = "response")
       gen.aff <- function(w) {
-         return(matrix(as.numeric(w > runif(length(w))), 
-                     nrow = r, ncol = c, byrow = TRUE))         
-      }
+         return(matrix(as.numeric(w > runif(length(w))), nrow = r, ncol = c))    
+         }
       B <- replicate(n, gen.aff(pred), simplify = FALSE)
       P.bin <- lapply(B, function(x) {(P > x %*% t(x)) * 1})
       G.bin <- lapply(B, function(x) {(G > t(x) %*% x) * 1})
