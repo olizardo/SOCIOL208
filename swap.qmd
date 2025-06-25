@@ -1,5 +1,5 @@
 ---
-title: "Statistical Models of Networks I"
+title: "Graph Ensembles in Networks"
 execute: 
   eval: true
   echo: true
@@ -22,11 +22,11 @@ There are many ways to go about this, but in the following handouts we will cove
 
 Second, there are models that treat each *link* in the network as a realization of some random process [@pattison_robins12]. Because a network is just a set of links, these models are also treating the network as random, but allow us to test more fine-grained *multivariate* hypotheses by conditioning on multiple characteristics of the ties and the nodes that are involved in each link at the same time. A popular, and extremely flexible approach to this type of multivariate statistical analysis of networks is the family of **exponential random graph models** usually abbreviated as ERGMs and pronounced "ergums." 
 
-In this handout we will discuss the first group of strategies focused on randomizing networks via either edge swapping or permutation. 
+In this handout we will discuss the group of strategies focused on randomizing networks via either edge swapping. [This handout](qap.qmd) covers network regression methods via permutation.
 
 ## Graph Ensembles
 
-A **graph ensemble** is just a set of graphs that share some graph level property (like the ones we studied in the very first [handout](https://olizardo.github.io/SOCIOL208/handout1.html)). For instance, they might have the same number of nodes, or the same number of edges, or both, but are different in terms of which particular nodes connect to which. 
+A **graph ensemble** is just a set of graphs that share some graph level property, like the ones we studied in the [very first handout](basic.qmd). For instance, they might have the same number of nodes, or the same number of edges, or both, but are different in terms of which particular nodes connect to which. 
 
 Note that if an ensemble of graphs has the same number of nodes and edges, they will also be identical with regard to any property that is a function of these two things, like the **density**. 
 
@@ -43,8 +43,7 @@ Let's see how this would work. First we load up a network, in this case Krackard
 ```{r}
    library(networkdata)
    library(igraph)
-   g <- ht_friends
-   g <- as_undirected(g, mode = "collapse")
+   g <- as_undirected(ht_friends, mode = "collapse")
 ```
 
 This is the undirected version of the friendship nominations network. Let's review some graph properties:
@@ -155,7 +154,7 @@ Note that other non-local graph properties (which don't depend directly on the n
 
 We will learn how to create graph ensembles that preserve specific node degrees in a bit. But first, let's see what we can do with graph ensembles.
 
-## Null Hypothesis Testing
+## Null Hypothesis Testing in Networks
 
 Remember that one thing we wanted to do is **null hypothesis testing**; that is, we want to see if something computed in the original graph is more or less than we would expect by chance, given a suitable "null model", which in our case is a network where the density---and thus expected degree---is preserved but people connect at random (sometimes called an **Erdos-Renyi** model). 
 
@@ -165,36 +164,28 @@ So let's compute something:
    assortativity(g, V(g)$level)
 ```
 
-This is Newman's **assortativity coefficient** (a.k.a., the modularity) for the nominal category of "Level" telling us that ties are more likely to form between managers of the same level in the company. Is this a "statistically significant" level of assortativity? 
+This is Newman's **assortativity coefficient** (a.k.a., the modularity),  which we covered [here](community.qmd), for the nominal category of "Level" telling us that ties are more likely to form between managers of the same level in the company. Is this a "statistically significant" level of assortativity? 
 
 Well compared to what? Compared to what we observe in an ensemble of graphs with the same number of nodes, edges, and density!
 
 How do we do that comparison?
 
-First, let's wrap the density-preserving rewiring into a function:
+First, let's create an ensemble of 1000 edge-swapped graphs, putting them all into a list object called `G`. To do that, we use the `R` function `replicate` which simulates a loop applying a function a specified number of times, in this case it will be our trusty `rewire` function with the graph `g` as input. 
+
 
 ```{r}
-   swap1 <- function(x, p = 1) {
-      x <- rewire(x, each_edge(prob = p, loops = FALSE, multiple = FALSE))
-      return(x)
-   }
-```
-
-Now, let's create an ensemble of 500 edge-swapped graphs, putting them all into a list:
-
-```{r}
-   G <- list() 
    set.seed(12345)
-   for (i in 1:500) {
-      G[[i]] <- swap1(g)
-   }
+   G <- replicate(500, 
+                  rewire(g, each_edge(prob = 1, loops = FALSE, multiple = FALSE)),
+                  simplify = FALSE
+                  )
 ```
 
-And now we compute our assortativity coefficient in each one of them using `sapply`:
+We can now we compute our assortativity coefficient in each one of them using `sapply`:
 
 ```{r}
    assort <- sapply(G, assortativity, values = V(g)$level)
-   round(assort, 2)[1:100]
+   round(assort, 2)[1:100] #first 100 values
 ```
 
 Note that the modularity is actually negative in most of these graphs, suggesting that when people form ties at random they are unlikely to magically end up being assortative by level. 
@@ -285,7 +276,46 @@ So it could be that the plain **average degree** (Erdos-Renyi) preserving model 
 
 In `igraph` there is a trusty function called `keeping_degseq`---which is used alongside the more general function `rewire` we used earlier---that allows us to scramble the edges in a graph while keeping the degrees of each node the same as the original. 
 
-The basic idea is to sample a pair of edges connecting vertices $a$ and $b$ and $c$ and $d$ respectively, delete them, and create two new edges (if they don't currently exist) between vertices $a$ and $c$ and between $b$ and $d$, repeating this process `niter` number of times. As it is clear, this randomizes connections but keeps the number of edges incident to each node the same [@maslov_sneppen02].  
+```{r, echo = FALSE}
+#| label: fig-swap
+#| fig-cap: "One degree preserving swap."
+#| fig-cap-location: margin
+#| fig-subcap:
+#|   - "Before swap."
+#|   - "After swap."
+#| layout-ncol: 2
+#| fig-width: 8
+#| fig-height: 8
+
+
+library(tidygraph)
+library(ggraph)
+    gr <- create_empty(4) %>% 
+        bind_edges(data.frame(from = 1, to = 2)) %>% 
+        bind_edges(data.frame(from = 3, to = 4)) %>% 
+        mutate(name = LETTERS[1:4]) %>% 
+        simplify()
+    l <- as.matrix(ggraph(gr, layout = 'auto')$data[, 1:2])
+    p <- ggraph(gr, layout = l)
+    p <- p + geom_edge_link(color = "steelblue", width = 1.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 22, color = "tan2") 
+    p <- p + geom_node_text(aes(label = name), size = 14, color = "white")
+    p1 <- p + theme_graph() 
+    p1
+    gr <- create_empty(4) %>% 
+        bind_edges(data.frame(from = 1, to = 4)) %>% 
+        bind_edges(data.frame(from = 2, to = 3)) %>% 
+        mutate(name = LETTERS[1:4]) %>% 
+        simplify()
+    p <- ggraph(gr, layout = l)
+    p <- p + geom_edge_link(color = "steelblue", width = 1.25) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 22, color = "tan2") 
+    p <- p + geom_node_text(aes(label = name), size = 14, color = "white")
+    p2 <- p + theme_graph() 
+    p2
+```
+
+The basic idea is to sample a pair of edges connecting vertices $a$ and $b$ and $c$ and $d$ respectively, delete them, and create two new edges (if they don't currently exist) between vertices $a$ and $c$ and between $b$ and $d$, repeating this process `niter` number of times. A toy example of the degree-preserving swap is shown in @fig-swap. This approach randomizes connections but keeps the number of edges incident to each node the same [@maslov_sneppen02].  
 
 Let's see how it works:
 
@@ -340,14 +370,11 @@ First, let's wrap the degree-preserving swap into a function:
    }
 ```
 
-Then let's create our graph ensemble this time using 500 graphs:
+Then let's create our graph ensemble using 500 graphs:
 
 ```{r}
-   G2 <- list() 
    set.seed(12345)
-   for (i in 1:500) {
-      G2[[i]] <- swap2(g)
-   }
+   G2 <- replicate(500, swap2(g), simplify = FALSE)
 ```
 
 And see where our observed value falls in the distribution:
@@ -391,257 +418,8 @@ But oh no, some reviewer who doesn't know what they are talking about asked for 
    1 - ecdf(abs(assort))(assortativity(g, V(g)$level))
 ```
 
-It's a rejection after all.
+It's a rejection after all :(
 
-## Cross-Network Correlation Using Permutation
-Consider the case where we measure two or more ties on the same set of actors. In that case, we could entertain hypotheses of the form: Is having a tie of type $A$ positively or negatively correlated with a tie of type $B$? 
-
-We can use an approach similar to the edge-swapping strategy to answer this question, since a bivariate correlation between ties between two networks is just like the univariate statistics we computed earlier (in that case the modularity, but it could been any network level statistic like the diameter or centralization).
-
-Let's see an example. Suppose we have a hypothesis that the relation of "friendship" should be correlated to that of "advice"; that is, *people are more likely to seek advice from friends*. 
-
-The Krackhardt High-Tech Managers data contains network information on both the advice and friendship relations between the actors. Let's load up the advice network:
-
-```{r}
-   g2 <- as_undirected(ht_advice, mode = "collapse")
-```
-
-And extract the corresponding adjacency matrices:
-
-```{r}
-   A.f <- as.matrix(as_adjacency_matrix(g))
-   A.d <- as.matrix(as_adjacency_matrix(g2))
-```
-
-The correlation between these two ties is then:
-
-```{r}
-   r <- cor(as.vector(A.f), as.vector(A.d))
-   round(r, 2)
-```
-
-Which is obtained by "vectorizing" the matrices and computing the Pearson correlation between the dyad vector (of length $21 \times 21 = 441$) corresponding to friendship ties and the dyad vector corresponding to advice ties. 
-
-Here, we see that there is a positive correlation between the two ($r = 0.26$) suggesting people tend to seek advice from friends (or befriend their advisors/advisees, as correlations don't imply directionality).
-
-However, is this correlation larger than we would expect by chance? For that, we need to know the range of correlations that would be obtained between on of the networks (e.g., advice) and a suitably randomized version of the other (e.g., friendship).
-
-The "permutation" approach [@borgatti_etal24, Chap. 14]---sometimes referred to by the less-than-wieldy name of the **Quadratic Assignment Procedure** (QAP) [@krackhardt88]---allows us to do that.
-
-Recall from our discussion of blockmodeling that a permutation of an adjacency matrix is just a reshuffling of its rows and columns. 
-
-For instance the original adjacency matrix of the Krackhardt Managers friendship nomination network is shown in @tbl-perm-1.
-
-We can permute the rows and columns of the matrix by randomly sampling numbers between 1 and 21 (the number of nodes in the network) and re-ordering the rows and columns of the matrix according to this new vector:
-
-```{r}
-   s <- sample(1:nrow(A.f))
-   s
-   A.f.perm <- A.f[s, s]
-```
-
-The new permuted matrix is shown in @tbl-perm-2.
-
-
-```{r}
-#| label: tbl-perm
-#| layout-ncol: 2
-#| tbl-cap: "An adjacency matrix and a permuted version"
-#| tbl-subcap: 
-#|   - "Original."
-#|   - "Permuted."
-#| echo: false 
-
-   library(kableExtra)
-   kbl(A.f, format = "html")
-   kbl(A.f.perm, format = "html")
-```
-
-
-Note that when we lose the labels on the nodes the permuted matrix contains that same information as the original, but scrambles the node labels. 
-
-So, in contrast to the edge swapping approach, which preserves some graph characteristics but loses others, in the permutation approach, *every* graph-level characteristic stays the same:
-
-```{r}
-   g.perm <- graph_from_adjacency_matrix(A.f.perm, mode = "undirected")
-   degree(g.perm)
-   degree(g)
-   #degree sequence
-   sort(degree(g.perm), decreasing = TRUE)
-   sort(degree(g), decreasing = TRUE)
-   #diameter
-   mean(distances(g.perm))
-   mean(distances(g))
-   #betweenness centralization
-   round(centr_betw(g.perm)$centralization, 2)
-   round(centr_betw(g)$centralization, 2)
-```
-
-A function that takes an undirected graph as input, permutes the corresponding adjacency matrix and returns the new graph as output looks like:
-
-
-```{r}
-   perm <- function(z) {
-      x <- as.matrix(as_adjacency_matrix(z))
-      s <- sample(1:nrow(x))
-      x <- x[s, s] #permuting matrix
-      w <- graph_from_adjacency_matrix(x, mode = "undirected")
-      return(w)
-   }
-```
-
-So to get a p-value for our cross-tie correlation all we need to do is to compute the correlation between the original advice network and a set of permuted graphs of the friendship network. 
-
-First, we create a 1000 graph ensemble of permuted friendship networks:
-
-
-```{r}
-   G3 <- list() 
-   set.seed(12345)
-   for (i in 1:1000) {
-      G3[[i]] <- perm(g)
-   }
-```
-
-Then we write a function for computing the correlation between two networks:
-
-```{r}
-   cor.net <- function(x1, x2) {
-   a <- as.matrix(as_adjacency_matrix(x1))
-   b <- as.matrix(as_adjacency_matrix(x2))      
-   r <- cor(as.vector(a), as.vector(b))
-   return(r)
-   }
-```
-
-And now we compute our correlation vector showing the first 100 elements:
-
-
-```{r}
-   corrs <- round(sapply(G3, cor.net, x2 = g2), 2)
-   corrs[1:100]
-```
-
-And here's a plot of where our estimated value sits on the grand scheme of things:
-
-
-```{r}
-   library(ggplot2)
-   p <- ggplot(data = data.frame(corrs), aes(x = corrs))
-   p <- p + geom_histogram(binwidth = 0.025, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = r, 
-                       color = "red", linetype = 1, linewidth = 1.5)
-   p <- p + geom_vline(xintercept = 0, linetype = 1, 
-                       color = "purple", linewidth = 1.5)
-   p <- p + theme_minimal() + labs(x = "Friendship/Advice Correlation", y = "Freq.")
-   p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.04, y=150, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=0.22, y=150, label= "Obs. Value", color = "red")
-   p
-```
-
-This looks pretty good, with only a tiny proportion of the correlations exceeding the observed value.
-
-We can check our p-value like before:
-
-```{r}
-   quantile(corrs, probs = 0.99)
-   r > quantile(corrs, probs = 0.99)
-   1 - ecdf(corrs)(r)
-```
-
-Which shows that the correlation between advice and friendship is significant at the $p = 0.001$ level ($p<0.01$). 
-
-Note that the result is also statistically significant using a two-tailed test:
-
-```{r}
-   1 - ecdf(abs(corrs))(r)
-```
-
-## Cross-Network Regression Using Permutation
-
-The permutation (QAP) approach can be extended to considering more than two network variables at the same time, which moves us into multivariable territory. The Krackhardt Managers data also contains information on *formal* links in the organization in the form of a graph of unidirectional "reports to whom" network, shown below:
-
-```{r}
-#| fig-width: 8
-#| fig-height: 8
-#| fig-cap: "Who reports to whom in the Krackhardt Manager's data."
-   plot(ht_reports)
-```
-
-We can see that there are four middle managers (2, 14, 18, and 21) all of whom report to the top manager (7).
-
-So let's say we wanted to predict advice ties from friendship ties while adjusting for the present of formal reporting ties. We could just run a regression like this:
-
-```{r}
-   A.r <- as.matrix(as_adjacency_matrix(
-      as_undirected(ht_reports, mode = "collapse")))
-   ht.dat <- data.frame(frs = as.vector(A.f), adv = as.vector(A.d), rep = as.vector(A.r))
-   reg.res <- lm(adv ~ frs + rep, data = ht.dat)
-   summary(reg.res)
-```
-
-Which shows that friendship has a statistically significant positive effect on being ties via an advice tie, net of the formal hierarchical link, which also has a positive effect.
-
-Of course, if you know anything about classical inference, you know the standard errors and associated t-statistics are useless, because the "cases" in the regression above are dyads, and they are *not* independent from one another because they form...a network!
-
-So we can use the permutation approach to get more credible p-values like we did with the correlation, turning the above into a "QAP Regression." 
-
-The basic idea is just to run the regression many times, while permuting the outcome variable; this would produce a distribution of coefficient estimates, and we can select the p-value non-parametrically like we did earlier.
-
-Here's a function that will run a regression and collect the coefficients:
-
-```{r}
-   run.reg <- function(x, indvars, dat) {
-      w <- as.matrix(as_adjacency_matrix(x))
-      dat <- data.frame(y.perm = as.vector(w), dat)
-      reg.res <- lm(reformulate(indvars, "y.perm"), data = dat)
-      return(as.vector(reg.res$coefficients))
-   }
-```
-
-We now create a graph ensemble of 1000 permuted advice networks:
-
-```{r}
-   G4 <- list() 
-   set.seed(12345)
-   for (i in 1:1000) {
-      G4[[i]] <- perm(g2)
-   }
-```
-
-And now we run the regression on our 1000 strong ensemble of permuted advice network graphs:
-
-```{r}
-   reg.list <- lapply(G4, run.reg, 
-                      indvars = c("frs", "rep"), dat = ht.dat)
-   betas <- as.matrix(do.call(rbind, reg.list))
-   colnames(betas) <- c("Int.Est", "Fr.Est", "Rep.Est")
-   head(betas) 
-```
-
-And now we compute the p-values as before and gather them into a table:
-
-```{r}
-   p.vals <- c(1 - ecdf(abs(betas[, 1]))(reg.res$coefficients[1]),
-               1 - ecdf(abs(betas[, 2]))(reg.res$coefficients[2]),
-               1 - ecdf(abs(betas[, 3]))(reg.res$coefficients[3])
-               )
-   z.scores <- round(abs(qnorm(p.vals)), 3)
-   z.scores[1] <- "--"
-   reg.tab <- data.frame(reg.res$coefficients, z.scores, p.vals)
-   rownames(reg.tab) <- c("Intercept", "Friend Tie", "Formal Tie")
-   names(reg.tab) <- c("Estimate", "z-score", "p-value")
-   kbl(reg.tab[c(2:3), ], rownames = TRUE, format = "html", digits = 3,
-       caption = "Predictors of Advice Ties") %>% 
-             column_spec(1, italic = TRUE) %>% 
-      kable_styling(full_width = TRUE,
-                     bootstrap_options = c("hover", 
-                                           "condensed", 
-                                           "responsive")) 
-```
-
-Which shows that indeed friendship and formal reporting ties are both statistically significant predictors of advice ties after accounting for network interdependencies.
 
 
 
