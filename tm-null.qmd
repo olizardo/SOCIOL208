@@ -45,13 +45,11 @@ Now, let's compute something on this network, like the **degree correlation** be
 First let's create an edge list data frame with the incident nodes' degrees and compute the correlation between the respective degrees:
 
 ```{r}
-   v.a <- as.vector(A)
-   rn <- rep(rownames(A), ncol(A))
-   cn <- rep(colnames(A), each = nrow(A))
-   rd <- rep(rowSums(A), ncol(A))
-   cd <- rep(colSums(A), each = nrow(A))
-   d <- data.frame(p = rn,  c = cn, e = v.a, rd =  rd, cd = cd)
-   cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd)
+   v.a <- as.vector(A) #adjacency relations
+   rd <- rep(rowSums(A), ncol(A)) #row degrees
+   cd <- rep(colSums(A), each = nrow(A)) #column degrees
+   d <- data.frame(e = v.a, rd =  rd, cd = cd)
+   cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd) #degree correlation among adjacent nodes
 ```
 
 Which is negative, suggesting degree **anti-correlation** in this network (people with lots of memberships tend to belong to smaller groups). 
@@ -160,14 +158,14 @@ So let's see how our observed value stacks up in the grand scheme:
    p
 ```
 
-Which looks close to the tail end of the negative spectrum. We can compute the value that corresponds to the 99th percentile of the assortativity distribution from the ensemble and then see if what observe is below that value (corresponding to $p < 0.01$). 
+Which looks close to the tail end of the negative spectrum. We can compute the value that corresponds to the 1st percentile of the assortativity distribution from the ensemble and then see if what observe is below that value ($p < 0.01$). 
 
 ```{r}
-   quantile(corrs, probs = 0.99)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.99)
+   quantile(corrs, probs = 0.01)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
 ```
 
-Which is definitely true in this null graph ensemble, suggesting that degree anti-correlation is present in the SW data, net of density. 
+Which is definitely true in this null graph ensemble, suggesting that degree anti-correlation is present in the SW data, at statistically significant levels, net of density. 
 
 As before, if we wanted a more stringent two-tailed we would need to create a vector with the *absolute value* of the two-mode degree correlation: 
 
@@ -175,4 +173,4 @@ As before, if we wanted a more stringent two-tailed we would need to create a ve
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-Which is stil statistically significant at conventional levels. 
+Which is still statistically significant at conventional levels. 
