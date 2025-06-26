@@ -174,3 +174,160 @@ As before, if we wanted a more stringent two-tailed we would need to create a ve
 ```
 
 Which is still statistically significant at conventional levels. 
+
+## Fixed Degree Models
+As we already noted, the two-mode Erdos-Renyi model fixes the number of edges (and thus the density and average degrees) in the network, but does not preserve the original degree distributions. We might want to test our hypotheses by using a two-mode graph ensemble that "controls for" the node degrees. 
+
+How do we do that? One complication is that we have two sets of degrees so we have more options than in the one mode case. We can fix the row (person) degree, or the column (group) degree or *both* degrees. 
+
+Let's begin with the simplest case, in which we fix *either* the row or column degree but not both. 
+
+### Fixing Row Degrees
+
+To fix the row degrees, we need to randomize the entries in each row of the biadjacency matrix, while preserving the number of ones in that row. One way to do this is to write a function that takes an observed row of the matrix, randomizes it and then substitutes it for the observed row:
+
+```{r}
+   rand.row <- function(r) {
+      return(r[sample(1:length(r))])
+      }
+```
+
+Now we can just `apply` the `rand.row` function to each row of the biadjacency matrix `A` to generate a new matrix `A.r`:
+
+```{r}
+   A.r <- apply(A, 1, rand.row)
+   A.r <- t(A.r)
+   rownames(A.r) <- rownames(A)
+   colnames(A.r) <- colnames(A)
+```
+
+Here's the original matrix `A`:
+
+```{r}
+   A
+```
+
+And the reshuffled matrix `A.r`
+
+```{r}
+   A.r
+```
+
+Note that the new matrix `A.r` preserves the person degrees of the original:
+
+```{r}
+   rowSums(A)
+   rowSums(A.r)
+```
+
+But not the group degrees:
+
+```{r}
+   colSums(A)
+   colSums(A.r)
+```
+
+All the other lower order statistics like density are preserved:
+
+```{r}
+   sum(A.r)/(nrow(A.r)*ncol(A.r))
+```
+
+Now we package everything into a function:
+
+```{r}
+   fix.deg <- function(x, mode = 1) {
+      w <- apply(x, mode, function(r) {r[sample(1:length(r))]})
+      if (mode == 1) {
+         w <- t(w)
+         }
+      rownames(w) <- rownames(x)
+      colnames(w) <- colnames(x)
+      return(w)
+      }
+```
+
+And generate a graph ensemble of reshuffled matrices that preserve the person degrees:
+
+```{r}
+   set.seed(4567)
+   G <- replicate(500, fix.deg(A), simplify = FALSE)
+```
+
+Let's compute the degree correlations across this ensemble and see how our observed value stacks up in the grand scheme:
+
+```{r}
+   corrs <- sapply(G, tm.deg.corr)
+   library(ggplot2)
+   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+                       color = "red", linetype = 1, linewidth = 1.5)
+   p <- p + geom_vline(xintercept = 0, linetype = 1, 
+                       color = "purple", linewidth = 1.5)
+   p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
+   p <- p + theme(axis.text = element_text(size = 12))
+   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p
+```
+
+Looking pretty good! Let's check the p-value:
+
+```{r}
+   quantile(corrs, probs = 0.01)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+```
+
+Note that our result is not longer statistically significant at the $p <0.01$ level, but it can be defended at the $p < 0.05$ level. Still a chance of getting published.
+
+### Fixing Row Degrees
+
+We can fix the column degrees using the same `fix.deg` function as earlier, but this time, we just change the `mode` to equal `2` argument to apply the functions to the columns and not the rows. 
+
+For instance:
+
+```{r}
+   A.c <- fix.deg(A, mode = 2)
+   A.c
+```
+
+Which generates a reshuffled adjacency matrix that preserves the group degrees:
+
+```{r}
+   colSums(A)
+   colSums(A.c)
+```
+
+And now test our hypothesis on an ensemble of graphs with fixed group degrees:
+
+
+```{r}
+   set.seed(4567)
+   G <- replicate(500, fix.deg(A, mode = 2), simplify = FALSE)
+   corrs <- sapply(G, tm.deg.corr)
+   library(ggplot2)
+   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+                       color = "red", linetype = 1, linewidth = 1.5)
+   p <- p + geom_vline(xintercept = 0, linetype = 1, 
+                       color = "purple", linewidth = 1.5)
+   p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
+   p <- p + theme(axis.text = element_text(size = 12))
+   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p
+```
+
+Uh oh, adjusting for group degrees seems to have made our conclusions a bit more shaky. Let' see:
+
+```{r}
+   quantile(corrs, probs = 0.01)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+```
+
+Still significant at $p < 0.05$! Regardless, it is clear that our earlier conclusions from the Erdos-Renyi model were a bit too optimistic. What happens when we try to fix *both* the row and column degrees?
+
