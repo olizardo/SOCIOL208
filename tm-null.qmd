@@ -56,23 +56,26 @@ Which is negative, suggesting degree **anti-correlation** in this network (peopl
 
 Is this value statistically significant net of the network density? To find out, we need to create a **two-mode graph ensemble** of networks with the same density, number of persons, and number of groups as SW. 
 
-A simple approach goes like this. First, let's create a vectorized version of the adjacency matrix and assign a number from 1:$M$ (where $M = |P| \times |G|$, the number of cells in the biadjacency matrix) to each value:
+A simple approach goes like this: first, let's create a vectorized version of the adjacency matrix:
 
 ```{r}
    v.a <- as.vector(A)
-   M <- nrow(A)*ncol(A)
-   names(v.a) <- 1:M
    v.a
 ```
 
-Now we can just permute the labels of the vector, and  re-order them to generate a new biadjacency matrix `A.perm`
+These are the biadjacency matrix entries stretched out into a long vector of length equals to the number of rows multiplied by the number of columns of the matrix. 
+
+Then we just reshuffle the values of this vector by sampling vector positions:
 
 ```{r}
-   s <- sample(1:M)
-   v.perm <- v.a
-   names(v.perm) <- s
-   v.perm <- v.perm[names(v.a)] #reordering vector
-   A.perm <- matrix(v.perm, nrow = nrow(A)) #creating permuted biadjacency matrix
+   v.shuff <- v.a[sample(1:length(v.a))]
+```
+
+
+Now we can just generate a new biadjacency matrix `A.perm` from the reshuffled vector `v.shuff`:
+
+```{r}
+   A.perm <- matrix(v.shuff, nrow = nrow(A)) #creating permuted biadjacency matrix
    rownames(A.perm) <- rownames(A)
    colnames(A.perm) <- colnames(A)
    A.perm
@@ -103,13 +106,9 @@ We can now package the two-mode permutation steps into a function called `tm.per
 
 ```{r}
    tm.perm <- function(x) {
-      z <- nrow(x)*ncol(x)
-      l <- as.character(1:z)
-      s <- sample(1:z)
-      v <- as.vector(x)
-      names(v) <- s
-      v <- v[l]
-      w <- matrix(v, nrow = nrow(x))
+      v.a <- as.vector(x)
+      v.s <- v.a[sample(1:length(v.a))]
+      w <- matrix(v.s, nrow = nrow(x))
       rownames(w) <- rownames(x)
       colnames(w) <- colnames(x)
       return(w)
