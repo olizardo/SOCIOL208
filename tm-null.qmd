@@ -299,6 +299,13 @@ Which generates a reshuffled adjacency matrix that preserves the group degrees:
    colSums(A.c)
 ```
 
+But *not* the person degrees:
+
+```{r}
+   rowSums(A)
+   rowSums(A.c)
+```
+
 And now we test our hypothesis that there is degree anti-correlation in the SW data on an ensemble of graphs with fixed group degrees:
 
 
@@ -332,3 +339,85 @@ Still significant at $p < 0.05$!
 
 Regardless, it is clear that our earlier conclusions from the Erdos-Renyi model were a bit too optimistic. What happens when we try to fix *both* the row and column degrees?
 
+### Fixing Row and Column Degrees
+To fix row and column degrees, we play a swapping game. At each round, we select two random persons $a$ and $b$. Each person collects their memberships and calculates the memberships they have that the other person does not have (and vice versa). Thus, $a$ has a set of memberships that $b$ does not have, and $b$ has a set of memberships that $a$ does not have. Then they trade memberships $n$ times where $n$ is a number between zero and the minimum of the size of the two sets of memberships that the other person does not have. We repeat this trading game for $k$ number of times. 
+
+Below is a function called `make.swap` that implements this algorithm, called "curveball" [@neal_etal24]. The function takes the biadjacency matrix as input and repeats the process described above 500 times:
+
+
+```{r}
+   make.swap <- function(x, k = 500) {
+      z <- 1 #initializing counter
+      while(z <= k) {
+         a <- sample(rownames(x), 1) #selecting random person 
+         b <- sample(rownames(x), 1) #selecting random person
+         a.m <- names(which(x[a, ] == 1)) #person a's memberships
+         b.m <- names(which(x[b, ] == 1)) #person b's memberships
+         ab <- setdiff(a.m, b.m) #memberships that a has that b does not
+         ba <- setdiff(b.m, a.m) #memberships that b has that a does not
+         w <- sample(0:min(length(ab), length(ba)), size = 1) #number of rounds of trade
+         if (w > 0) {
+            for (i in 1:w) {
+               ab.m <- sample(ab, 1) #membership that a will transfer to b
+               ba.m <- sample(ba, 1) #membership that b will transfer to a
+               x[a, ab.m] <- 0 #a loses membership
+               x[b, ab.m] <- 1 #b gains membership
+               x[b, ba.m] <- 0 #b loses membership
+               x[a, ba.m] <- 1 #a gains membership
+               a.m <- names(which(x[a, ] == 1)) #updating a's memberships
+               b.m <- names(which(x[b, ] == 1)) #updating b's memberships
+               ab <- setdiff(a.m, b.m) #updating differences between a and b's memberships
+               ba <- setdiff(b.m, a.m) #updating differences between b and a's memberships
+               }
+            }
+         z <- z + 1 #incrementing counter
+         }
+      return(x)
+   }
+```
+
+Here's an example:
+
+```{r}
+   A.s <- make.swap(A)
+   A.s
+```
+
+We can see that while the specifc entries of the swapped biadjacency matrix `A.s` are different from those of the original matrix `A` both the row and column degrees are preserved:
+ 
+```{r}
+   rowSums(A.s)
+   rowSums(A)
+   colSums(A.s)
+   colSums(A)
+```
+
+And now we create our graph ensemble with fixed row *and* column degrees, and test our degree anti-correlation hypothesis:
+
+```{r}
+   set.seed(4567)
+   G <- replicate(500, make.swap(A), simplify = FALSE)
+   corrs <- sapply(G, tm.deg.corr)
+   library(ggplot2)
+   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+                       color = "red", linetype = 1, linewidth = 1.5)
+   p <- p + geom_vline(xintercept = 0, linetype = 1, 
+                       color = "purple", linewidth = 1.5)
+   p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
+   p <- p + theme(axis.text = element_text(size = 12))
+   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p
+```
+
+Note that once we fix the person and group degrees, all the degree correlations observed in the ensemble are negative (below zero). The observed value also does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. Let's check the p-value:
+
+```{r}
+   quantile(corrs, probs = 0.01)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+```
+
+While the observed value is not significant using the threshold of $p < 0.05$, it is just under the conventional threshold of significance at $p < 0.05$! Publication hopes survive. 
