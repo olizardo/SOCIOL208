@@ -17,7 +17,7 @@ Not surprisingly, a similar suite of techniques exist for the two-mode case, but
 
 ## Two-Mode Erdos-Renyi Model
 
-Like with one-mode networks, the simplest null model for two-mode networks is one that preserves the number of nodes and the number of edges. This model, like we saw before, also preserves anything that is a function of these two-quantities. In the two-mode case, this is the bipartite graph's **density** and the average degrees of the nodes in each mode (recall that two-mode networks have two average degrees). This is thus a two-mode version of the **Erdos-Renyi** null model. 
+Like with one-mode networks, the simplest null model for two-mode networks is one that preserves the number of nodes and the number of edges. This model, like we saw in the one-mode network case, also preserves anything that is a function of these two-quantities. In the two-mode case, this is the bipartite graph's **density** and the average degrees of the nodes in each mode (recall that two-mode networks have two average degrees). This is thus a two-mode version of the **Erdos-Renyi** null model. 
 
 Let's load up the *Southern Women* (SW) data and see how it works:
 
@@ -56,14 +56,14 @@ Which is negative, suggesting degree **anti-correlation** in this network (peopl
 
 Is this value statistically significant net of the network density? To find out, we need to create a **two-mode graph ensemble** of networks with the same density, number of persons, and number of groups as SW. 
 
-A simple approach goes like this: first, let's create a vectorized version of the adjacency matrix:
+A simple approach goes like this: First, let's create a vectorized version of the adjacency matrix:
 
 ```{r}
    v.a <- as.vector(A)
    v.a
 ```
 
-These are the biadjacency matrix entries stretched out into a long vector of length equals to the number of rows multiplied by the number of columns of the matrix. 
+These are the biadjacency matrix entries stretched out into a long vector of length equal to the number of rows multiplied by the number of columns of the matrix. 
 
 Then we just reshuffle the values of this vector by sampling vector positions:
 
@@ -100,7 +100,6 @@ But *not* the same degree distributions:
    colSums(A)
    colSums(A.perm)
 ```
-
 
 We can now package the two-mode permutation steps into a function called `tm.perm`:
 
@@ -279,7 +278,7 @@ Looking pretty good! Let's check the p-value:
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-Note that our result is not longer statistically significant at the $p <0.01$ level, but it can be defended at the $p < 0.05$ level. Still a chance of getting published.
+Note that our result is no longer statistically significant at the $p <0.01$ level, but it can be defended at the $p < 0.05$ level. Still a chance of getting published.
 
 ### Fixing Column Degrees
 
@@ -349,8 +348,9 @@ Below is a function called `make.swap` that implements this algorithm, called "c
    make.swap <- function(x, k = 500) {
       z <- 1 #initializing counter
       while(z <= k) {
-         a <- sample(rownames(x), 1) #selecting random person 
-         b <- sample(rownames(x), 1) #selecting random person
+         n <- sample(rownames(x), 2) #sampling two people at random
+         a <- n[1] #person a
+         b <- n[2] #person b
          a.m <- names(which(x[a, ] == 1)) #person a's memberships
          b.m <- names(which(x[b, ] == 1)) #person b's memberships
          ab <- setdiff(a.m, b.m) #memberships that a has that b does not
@@ -412,12 +412,26 @@ And now we create our graph ensemble with fixed row *and* column degrees, and te
    p
 ```
 
-Note that once we fix the person and group degrees, all the degree correlations observed in the ensemble are negative (below zero). The observed value also does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. Let's check the p-value:
+Note that once we fix the person and group degrees, most of the degree correlations observed in the ensemble are negative (below zero). The observed value also does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. 
+
+Let's check the p-value at $p < 0.01$:
 
 ```{r}
    quantile(corrs, probs = 0.01)
    tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+```
+
+Not close to significant it seems. How about $p < 0.05$?
+
+```{r}
+   quantile(corrs, probs = 0.05)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+```
+
+That does not seem to work either! What's the actual p-value?
+
+```{r}
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-While the observed value is not significant using the threshold of $p < 0.05$, it is just under the conventional threshold of significance at $p < 0.05$! Publication hopes survive. 
+As suspected the two-tailed test indicates that the hypothesis of degree anti-correlation is no longer justified in these data even using a criterion of $p < 0.05$. Looks like our paper won't be published after all :(
