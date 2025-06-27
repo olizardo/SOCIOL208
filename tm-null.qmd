@@ -27,7 +27,7 @@ Let's load up the *Southern Women* (SW) data and see how it works:
    A <- as_biadjacency_matrix(southern_women)
 ```
 
-Let's compute some basic network statistics:
+Let's compute some [basic two-mode network statistics](two-mode.qmd):
 
 ```{r}
    d <- sum(A)/(nrow(A)*ncol(A)) #density
@@ -42,34 +42,31 @@ We can see that the density of the SW network is $d=$ `r round(d, 2)`, the avera
 
 Now, let's compute something on this network, like the **degree correlation** between people and groups, answering  the question: Do people with lots of memberships tend to join larger groups?
 
-First let's create an edge list data frame with the incident nodes' degrees as the two main columns and compute the correlation between the respective degrees:
+We already know the answer to this question for the SW data from the [two-mode network analysis lecture notes](two-mode.qmd), which is negative. In this network people with a lot of memberships connect to smaller groups. 
 
-```{r}
-   v.a <- as.vector(A) #adjacency relations
-   rd <- rep(rowSums(A), ncol(A)) #row degrees
-   cd <- rep(colSums(A), each = nrow(A)) #column degrees
-   d <- data.frame(e = v.a, rd =  rd, cd = cd)
-   cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd) #degree correlation among adjacent nodes
-```
-
-Which is negative, suggesting **degree anti-correlation** in this network (people with lots of memberships tend to belong to smaller groups). 
-
-Is this value statistically significant net of the network density? To find out, we need to create a two-mode **graph ensemble** of networks with the same density, number of persons, and number of groups as SW. 
-
-Before we get to that, let's package the steps above into a two-mode degree correlation function:
+Here's a version of that function that takes the biadjacency matrix as input, creates the bipartite matrix from it and returns the two-mode degree correlation:
 
 ```{r}
    tm.deg.corr <- function(x) {
-      d <- data.frame(e = as.vector(x), 
-                      rd = rep(rowSums(x), ncol(x)), 
-                      cd = rep(colSums(x), each = nrow(x)))
+      B <- rbind(
+                  cbind(matrix(0, nrow = nrow(x), ncol = nrow(x)), x),
+                  cbind(t(x), matrix(0, nrow = ncol(x), ncol = ncol(x)))
+                  ) #creating bipartite matrix
+      d <- data.frame(e = as.vector(B), 
+                      rd = rep(rowSums(B), ncol(B)), 
+                      cd = rep(colSums(B), each = nrow(B))
+                      )
       return(cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd))
    }
 ```
 
-This function takes the biadjacency matrix as input, and returns the correlations between the degrees of nodes in each mode. 
+```{r}
+   tm.deg.corr(A)
+```
 
-OK, now back to generating an Erdos-Renyi two-mode network. A simple approach goes like this: 
+Which is the same number we got before. 
+
+Now let's see how we can generate an Erdos-Renyi two-mode network with a specified number of edges. A simple approach goes like this: 
 
 First, let's create a vectorized version of the adjacency matrix:
 
@@ -119,16 +116,14 @@ We can now package the two-mode permutation steps into a function called `tm.per
 
 ```{r}
    tm.perm <- function(x) {
-      v.a <- as.vector(x)
-      v.s <- v.a[sample(1:length(v.a))]
-      w <- matrix(v.s, nrow = nrow(x))
+      w <- matrix(as.vector(x)[sample(1:length(v.a))], nrow = nrow(x))
       rownames(w) <- rownames(x)
       colnames(w) <- colnames(x)
       return(w)
    }
 ```
 
-And generate a 500 strong Erdos-Renyi graph ensemble for the SW data:
+And generate a 500 strong two-mode Erdos-Renyi graph ensemble for the SW data:
 
 ```{r}
    set.seed(4567)
@@ -155,7 +150,7 @@ So let's see how our observed value stacks up in the grand scheme:
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
    p <- p + annotate("text", x=-0.04, y=45, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.23, y=45, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.3, y=45, label= "Obs. Value", color = "red")
    p
 ```
 
@@ -166,15 +161,22 @@ It looks like our observed value is close to the tail end of the negative spectr
    tm.deg.corr(A) < quantile(corrs, probs = 0.01)
 ```
 
-Which is definitely true in this null graph ensemble, suggesting that degree anti-correlation is present in the SW data, at statistically significant levels, net of density. 
+Whoops. Looks like the observed value is not extreme enough using a $p <0.01$ criterion of statistical significance. Let's try a less stringent one:
 
-As before, if we wanted a more stringent two-tailed we would need to create a vector with the *absolute value* of the two-mode degree correlation: 
+```{r}
+   quantile(corrs, probs = 0.05)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+```
+
+Aha! A test of the hypothesis that the observed value is smaller than the value at the 95th percentile of the distribution of values in this null graph ensemble returns a positive answer, suggesting that degree anti-correlation is present in the SW data, at statistically significant levels, net of density. 
+
+As before, if we wanted a more stringent **two-tailed test** we would need to create a vector with the *absolute value* of the two-mode degree correlation: 
 
 ```{r}
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-Which is still statistically significant at conventional levels. 
+Which is still statistically significant at conventional levels ($p <0.05$). 
 
 ## Fixed Degree Models
 As we already noted, the two-mode Erdos-Renyi model fixes the number of edges (and thus the density and average degrees) in the network, but does not preserve the original degree distributions. We might want to test our hypotheses by using a two-mode graph ensemble that "controls for" the node degrees. 
@@ -268,19 +270,19 @@ Let's compute the degree correlations across this ensemble and see how our obser
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
    p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.3, y=47, label= "Obs. Value", color = "red")
    p
 ```
 
 Looking pretty good! Let's check the p-value:
 
 ```{r}
-   quantile(corrs, probs = 0.01)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+   quantile(corrs, probs = 0.05)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-Note that our result is no longer statistically significant at the $p <0.01$ level, but it can be defended at the $p < 0.05$ level. Still a chance of getting published.
+Neat! Our result can continue to be defended at the $p < 0.05$ level. Still a chance of getting published.
 
 ### Fixing Column Degrees
 We can fix the column degrees using the same `fix.deg` function as earlier, but this time, we just change the `mode` argument to equal `2`, to `apply` the function to the columns and not the rows of the matrix `A`. 
@@ -326,16 +328,18 @@ Let's see how things look:
                        color = "purple", linewidth = 1.5)
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.05, y=85, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.31, y=85, label= "Obs. Value", color = "red")
    p
 ```
 
-Uh oh, adjusting for group degrees seems to have made our conclusions a bit more shaky. Let' see:
+Uh oh, adjusting for group degrees seems to have made our conclusions a bit more shaky. All of the estimated degree correlations are negative (below zero) and our observed value does not seem to be as extreme as before.   
+
+Let' see what the p-values say:
 
 ```{r}
-   quantile(corrs, probs = 0.01)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+   quantile(corrs, probs = 0.05)
+   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
@@ -416,28 +420,21 @@ Plotting the results gives us:
                        color = "purple", linewidth = 1.5)
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.03, y=50, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.24, y=50, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.03, y=70, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.31, y=70, label= "Obs. Value", color = "red")
    p
 ```
 
-Note that once we fix the person and group degrees, most of the degree correlations observed in the ensemble are negative (below zero). The observed value also does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. 
+Like before, all of the estimated degree correlations are below zero, and also like before, the observed value does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. 
 
-Let's check the p-value at $p < 0.01$:
-
-```{r}
-   quantile(corrs, probs = 0.01)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
-```
-
-Not close to significant it seems. How about $p < 0.05$?
+Let's check the p-value at $p < 0.05$:
 
 ```{r}
    quantile(corrs, probs = 0.05)
    tm.deg.corr(A) < quantile(corrs, probs = 0.05)
 ```
 
-That does not seem to work either! What's the actual p-value?
+No longer significant! What's the actual p-value? 
 
 ```{r}
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))

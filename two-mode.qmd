@@ -31,7 +31,7 @@ Note that bipartite graphs can be be used to represent both two-mode and regular
 
 So whether or not a graph is bipartite is something you can check for. 
 
-Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history: For a classic sampling of such analyses see [here](https://www.csc2.ncsu.edu/faculty/mpsingh/local/Social/f16/wrap/readings/Freeman-social-groups.pdf)) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fourteen social events [@breiger74]:
+Let's see how that works. Let us load the most famous two-mode network data set (kind of the Drosophila of two-mode network analysis; one of the most repeatedly analyzed social structures in history: For a classic sampling of such analyses see [here](https://www.csc2.ncsu.edu/faculty/mpsingh/local/Social/f16/wrap/readings/Freeman-social-groups.pdf)) a network composed of eighteen women from the social elite of a tiny town in the south in the 1930s who attended fourteen social events [@breiger74], otherwise know as the Southern Women (SW) data:
 
 ```{r}
    library(igraph)
@@ -84,7 +84,7 @@ We can add this as a node attribute to our graph so that way we know which node 
    V(g)$type <- bipartite_mapping(g)$type
 ```
 
-## The biadjacency (Affiliation) Matrix
+## The Biadjacency (Affiliation) Matrix
 
 Once you have your bipartite graph loaded up, you may want (if the graph is small enough) to check out the graph's affiliation matrix $A$. 
 
@@ -106,7 +106,7 @@ Note that if we were to use the regular `as_adjacency_matrix` function on a bipa
    B
 ```
 
-This bipartite adjacency matrix $\mathbf{B}$ is of dimensions $(M + N) \times (M + N)$, which is $(18 + 14) \times (18 + 14) = 32 \times 32$ in the Southern Women data; it has the following block structure [@fouss_etal16, p. 12]:
+This bipartite adjacency matrix $\mathbf{B}$ is of dimensions $(M + N) \times (M + N)$, which is $(18 + 14) \times (18 + 14) = 32 \times 32$ in the SW data; it has the following block structure [@fouss_etal16, p. 12]:
 
 $$
 \mathbf{B} = \left[
@@ -121,11 +121,11 @@ Where $\mathbf{O}$ is just the all zeros matrix of the relevant dimensions, and 
 
 ## Bipartiteness as "Anti-Community"
 
-Recall from the [community lecture](community.qmd), that community structure is defined by clusters of nodes that have more connections among themselves than they do with outsiders. If you think about it, a bipartite graph has the *opposite* of this going on. Nodes of the same type have *zero* connections among themselves, and they have *all* their connections with nodes of the other group!
+Recall from the [community structure lecture notes](community.qmd), that community structure is defined by clusters of nodes that have more connections among themselves than they do with outsiders. If you think about it, a bipartite graph has the *opposite* of this going on. Nodes of the same type have *zero* connections among themselves, and they have *all* their connections with nodes of the other group!
 
 So that means that *bipartite structure* is the mirror image of *community structure* (in the two group case). This also means that if we were to compute the modularity of a bipartite graph, using the node type as the grouping variable we should get the theoretical minimum of this measure (which you may recall is $Q = -\frac{1}{2}$).
 
-Let's try it out, by computing the modularity from the bipartite adjacency matrix of the Southern Women data, using node type as the grouping variable:
+Let's try it out, by computing the modularity from the bipartite adjacency matrix of the SW data, using node type as the grouping variable:
 
 ```{r}
    V(g)$comm <- as.numeric(bipartite_mapping(g)$type) + 1
@@ -137,6 +137,8 @@ And indeed, we recover the theoretical minimum value of the modularity [@brandes
 ## Basic Two-Mode Network Statistics
 
 We can calculate some basic network statistics from the affiliation (biadjacency) matrix. We have two number of nodes to calculate, but only one quantity for the number of edges.
+
+### Number of Nodes and Edges
 
 The number of nodes on the people side $N$ is just the number of rows of $A$:
 
@@ -188,7 +190,23 @@ Which is the same as:
    sum(A)
 ```
 
-### Degree Statistics
+### Density
+As we saw in the case of one-mode networks, one of the most basic network statistics that can be derived from the above quantities is the **density** (observed number of edges divided by maximum possible number of edges in the graph). 
+
+In a two-mode network, density is given by:
+
+$$
+d = \frac{|E|}{N \times M}
+$$
+
+Where $|E|$ is the number of edges in the network. In our case we can compute the density as follows:
+
+```{r}
+   d <- sum(A)/(nrow(A) * ncol(A))
+   d
+```
+
+## Degree-Based Statistics
 
 Because we have two sets of degrees, all the basic degree statistics in the network double up. So we have two mean degrees, two maximum degrees, and two minimum degree to take care of:
 
@@ -228,23 +246,9 @@ Is the same as the sum of degrees of events:
 
 Note that in a bipartite graph, therefore, the sum of degrees of nodes in each node set is equal to the $|E|$, the number of edges in the graph!
 
-### Density
-As we saw in the case of one-mode networks, one of the most basic network statistics that can be derived from the above quantities is the **density** (observed number of edges divided by maximum possible number of edges in the graph). 
 
-In a two-mode network, density is given by:
 
-$$
-d = \frac{|E|}{N \times M}
-$$
-
-Where $|E|$ is the number of edges in the network. In our case we can compute the density as follows:
-
-```{r}
-   d <- sum(A)/(nrow(A) * ncol(A))
-   d
-```
-
-## Degree Centrality
+### Degree Centrality
 In a two-mode network, there are two degree sets, each corresponding to one set of nodes. For the people, in this case, their degree (centrality) is just the number of events they attend, and for the groups, it's just the number of people that attend each event. 
 
 As we have already seen, we can get each from the affiliation matrix. The degree of the people are just the row sums:
@@ -285,6 +289,58 @@ Or with `igraph`:
    round(degree(g)/c(rep(14, 18), rep(18, 14)), 3)
 ```
 
+### Average Nearest Neighbor Degree
+
+For each person (group) we may also be interested in whether they connect to more or less central groups (persons). As such, we can compute the **average nearest neighbor degree** for persons and groups. 
+
+For people this is equivalent to multiplying the vector of group degrees by the entries of the affiliation matrix, and then dividing by the degrees of each person:
+
+```{r}
+   knn.p <- A * colSums(A)
+   knn.p
+   knn.p <- rowSums(knn.p)/rowSums(A)
+   round(knn.p, 2)
+```
+
+We can see that for Flora, the average number of members of the groups she connects to is very high, while the opposite is the case for Myrna. 
+
+We can do the same for groups:
+
+```{r}
+   knn.g <- t(A) * rowSums(A)
+   knn.g
+   knn.g <- rowSums(knn.g)/colSums(A)
+   round(knn.g, 2)
+```
+
+### Degree Correlation
+
+Finally, we can also compute the degree correlation between the nodes in each mode. This tell us whether people with more memberships connect to larger (positive correlation) or smaller (negative correlation) groups. 
+
+Here's a function to compute the degree correlation in a two mode network from the bipartite matrix:
+
+```{r}
+   tm.deg.corr <- function(x) {
+      d <- data.frame(e = as.vector(x), 
+                      rd = rep(rowSums(x), ncol(x)), 
+                      cd = rep(colSums(x), each = nrow(x)),
+                      rn = rep(rownames(x), ncol(x)),
+                      cn = rep(colnames(x), each = nrow(x))
+                      )
+      r <- cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd)
+      return(list(r = r, d = d))
+   }
+```
+
+The `tm.deg.corr` function creates a data frame set with as many rows as there are entries in the bipartite matrix, and three columns: `e` recording whether there is a one or a zero for that particular combination of nodes (line 2), `rd` recording the degree of that node (line 3), and `cd` recording other node (line 4); lines 5 and 6 record the node labels for that dyad. Then in line 8 the function computes the Pearson correlations between the degrees of persons and groups that are connected in the data frame (e.g., `e = 1`).
+
+We can now apply our function to the SW data:
+
+```{r}
+   tm.deg.corr(B)$r
+```
+
+Which tells us that there is degree **anti-correlation** in this network: People with more memberships tend to belong to smaller groups, and people with less memberships connect to bigger groups.
 
 ## Geodesic Distances
 
@@ -712,7 +768,7 @@ A (longish) function to compute the SimRank similarity between nodes in a two mo
 
 This function takes the biadjacency matrix $\mathbf{A}$ as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).
 
-Here's how that would work in the Southern Women data. First we compute the SimRank scores:
+Here's how that would work in the SW data. First we compute the SimRank scores:
 
 ```{r}
    sim.res <- TM.SimRank(A)
