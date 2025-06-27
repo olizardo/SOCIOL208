@@ -17,7 +17,7 @@ Not surprisingly, a similar suite of techniques exist for the two-mode case, but
 
 ## Two-Mode Erdos-Renyi Model
 
-Like with one-mode networks, the simplest null model for two-mode networks is one that preserves the number of nodes and the number of edges. This model, like we saw in the one-mode network case, also preserves anything that is a function of these two-quantities. In the two-mode case, this is the bipartite graph's **density** and the average degrees of the nodes in each mode (recall that two-mode networks have two average degrees). This is thus a two-mode version of the **Erdos-Renyi** null model. 
+Like with one-mode networks, the simplest null model for two-mode networks is one that preserves the number of nodes and the number of edges. This model, like we saw in the one-mode network case, also preserves anything that is a function of these two-quantities. In the two-mode case, this is the bipartite graph's **density** and the average degrees of the nodes in each mode (recall that two-mode networks [have two average degrees](two-mode.qmd)). This is thus a two-mode version of the **Erdos-Renyi** null model. 
 
 Let's load up the *Southern Women* (SW) data and see how it works:
 
@@ -42,7 +42,7 @@ We can see that the density of the SW network is $d=$ `r round(d, 2)`, the avera
 
 Now, let's compute something on this network, like the **degree correlation** between people and groups, answering  the question: Do people with lots of memberships tend to join larger groups?
 
-First let's create an edge list data frame with the incident nodes' degrees and compute the correlation between the respective degrees:
+First let's create an edge list data frame with the incident nodes' degrees as the two main columns and compute the correlation between the respective degrees:
 
 ```{r}
    v.a <- as.vector(A) #adjacency relations
@@ -52,25 +52,39 @@ First let's create an edge list data frame with the incident nodes' degrees and 
    cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd) #degree correlation among adjacent nodes
 ```
 
-Which is negative, suggesting degree **anti-correlation** in this network (people with lots of memberships tend to belong to smaller groups). 
+Which is negative, suggesting **degree anti-correlation** in this network (people with lots of memberships tend to belong to smaller groups). 
 
-Is this value statistically significant net of the network density? To find out, we need to create a **two-mode graph ensemble** of networks with the same density, number of persons, and number of groups as SW. 
+Is this value statistically significant net of the network density? To find out, we need to create a two-mode **graph ensemble** of networks with the same density, number of persons, and number of groups as SW. 
 
-A simple approach goes like this: First, let's create a vectorized version of the adjacency matrix:
+Before we get to that, let's package the steps above into a two-mode degree correlation function:
+
+```{r}
+   tm.deg.corr <- function(x) {
+      d <- data.frame(e = as.vector(x), 
+                      rd = rep(rowSums(x), ncol(x)), 
+                      cd = rep(colSums(x), each = nrow(x)))
+      return(cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd))
+   }
+```
+
+This function takes the biadjacency matrix as input, and returns the correlations between the degrees of nodes in each mode. 
+
+OK, now back to generating an Erdos-Renyi two-mode network. A simple approach goes like this: 
+
+First, let's create a vectorized version of the adjacency matrix:
 
 ```{r}
    v.a <- as.vector(A)
    v.a
 ```
 
-These are the biadjacency matrix entries stretched out into a long vector of length equal to the number of rows multiplied by the number of columns of the matrix. 
+These are just the biadjacency matrix entries stretched out into a long vector of length equal to the number of rows multiplied by the number of columns of the matrix (`r nrow(A)` $\times$ `r ncol(A)` $=$ `r nrow(A)*ncol(A)`). 
 
-Then we just reshuffle the values of this vector by sampling vector positions:
+Then we just reshuffle the values of this vector by reassigning vector positions across the entire length of the vector at random:
 
 ```{r}
    v.shuff <- v.a[sample(1:length(v.a))]
 ```
-
 
 Now we can just generate a new biadjacency matrix `A.perm` from the reshuffled vector `v.shuff`:
 
@@ -114,25 +128,14 @@ We can now package the two-mode permutation steps into a function called `tm.per
    }
 ```
 
-And generate an Erdos-Renyi graph ensemble for the SW data:
+And generate a 500 strong Erdos-Renyi graph ensemble for the SW data:
 
 ```{r}
    set.seed(4567)
    G <- replicate(500, tm.perm(A), simplify = FALSE)
 ```
 
-We then package the steps above into a two-mode degree correlation function:
-
-```{r}
-   tm.deg.corr <- function(x) {
-      d <- data.frame(e = as.vector(x), 
-                      rd = rep(rowSums(x), ncol(x)), 
-                      cd = rep(colSums(x), each = nrow(x)))
-      return(cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd))
-   }
-```
-
-And compute it across our ensemble:
+We can now `sapply` the `tm.deg.corr` function from before across our ensemble to get 500 degree correlations:
 
 ```{r}
    corrs <- sapply(G, tm.deg.corr)
@@ -151,12 +154,12 @@ So let's see how our observed value stacks up in the grand scheme:
                        color = "purple", linewidth = 1.5)
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.04, y=45, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.23, y=45, label= "Obs. Value", color = "red")
    p
 ```
 
-Which looks close to the tail end of the negative spectrum. We can compute the value that corresponds to the 1st percentile of the assortativity distribution from the ensemble and then see if what observe is below that value ($p < 0.01$). 
+It looks like our observed value is close to the tail end of the negative spectrum, suggesting it is statistically improbable to have been obvserved by chance. We can compute the value that corresponds to the 1st percentile of the assortativity distribution from the ensemble and then see if what observe is below that value ($p < 0.01$). 
 
 ```{r}
    quantile(corrs, probs = 0.01)
@@ -245,18 +248,17 @@ Now we package everything into a function:
       }
 ```
 
-And generate a graph ensemble of reshuffled matrices that preserve the person degrees:
+We then generate a graph ensemble of reshuffled matrices that preserve the person degrees, and compute our degree correlations in that set of networks:
 
 ```{r}
    set.seed(4567)
    G <- replicate(500, fix.deg(A), simplify = FALSE)
+   corrs <- sapply(G, tm.deg.corr)
 ```
 
 Let's compute the degree correlations across this ensemble and see how our observed value stacks up in the grand scheme:
 
-```{r}
-   corrs <- sapply(G, tm.deg.corr)
-   library(ggplot2)
+```{r, echo=FALSE}
    p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
    p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
    p <- p + geom_vline(xintercept = tm.deg.corr(A), 
@@ -281,7 +283,6 @@ Looking pretty good! Let's check the p-value:
 Note that our result is no longer statistically significant at the $p <0.01$ level, but it can be defended at the $p < 0.05$ level. Still a chance of getting published.
 
 ### Fixing Column Degrees
-
 We can fix the column degrees using the same `fix.deg` function as earlier, but this time, we just change the `mode` argument to equal `2`, to `apply` the function to the columns and not the rows of the matrix `A`. 
 
 For instance:
@@ -312,7 +313,11 @@ And now we test our hypothesis that there is degree anti-correlation in the SW d
    set.seed(4567)
    G <- replicate(500, fix.deg(A, mode = 2), simplify = FALSE)
    corrs <- sapply(G, tm.deg.corr)
-   library(ggplot2)
+```
+
+Let's see how things look:
+
+```{r, echo=FALSE}
    p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
    p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
    p <- p + geom_vline(xintercept = tm.deg.corr(A), 
@@ -345,7 +350,7 @@ Below is a function called `make.swap` that implements this algorithm, called "c
 
 
 ```{r}
-   make.swap <- function(x, k = 500) {
+   make.swap <- function(x, k = 100) {
       z <- 1 #initializing counter
       while(z <= k) {
          n <- sample(rownames(x), 2) #sampling two people at random
@@ -398,7 +403,11 @@ And now we create our graph ensemble with fixed row *and* column degrees, and te
    set.seed(4567)
    G <- replicate(500, make.swap(A), simplify = FALSE)
    corrs <- sapply(G, tm.deg.corr)
-   library(ggplot2)
+```
+
+Plotting the results gives us:
+
+```{r, echo=FALSE}
    p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
    p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
    p <- p + geom_vline(xintercept = tm.deg.corr(A), 
@@ -407,8 +416,8 @@ And now we create our graph ensemble with fixed row *and* column degrees, and te
                        color = "purple", linewidth = 1.5)
    p <- p + theme_minimal() + labs(x = "Q by Level", y = "Freq.")
    p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.23, y=47, label= "Obs. Value", color = "red")
+   p <- p + annotate("text", x=-0.03, y=50, label= "Zero Point", color = "purple")
+   p <- p + annotate("text", x=-0.24, y=50, label= "Obs. Value", color = "red")
    p
 ```
 
@@ -434,4 +443,4 @@ That does not seem to work either! What's the actual p-value?
    1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
-As suspected the two-tailed test indicates that the hypothesis of degree anti-correlation is no longer justified in these data even using a criterion of $p < 0.05$. Looks like our paper won't be published after all :(
+As suspected, the two-tailed test indicates that the hypothesis of degree anti-correlation is no longer justified in these data even using a criterion of $p < 0.05$. Looks like our paper won't be published after all :(
