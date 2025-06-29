@@ -15,7 +15,7 @@ format:
 
 Recall from our lecture on [two-mode networks](two-mode.qmd) that a common approach to analyzing them is what @everett_borgatti13 call the "dual projection" approach. This involves computing the row and column object projections from the original affiliation matrix due to @breiger74. Nevertheless, one issue with this approach is that the result is a weighted network, which can be hard to analyze using our usual tools. 
 
-Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and usually lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak @neal14 refers to this problem as extracting the **backbone** of the bipartite projection. 
+Moreover, because just sharing a single membership (member) will create a connection between any two persons (groups) in the row (column) projection, the resulting weighted graphs are dense and therefore lack meaningful or interesting structure. Thus, a common task is to try to prune and binarize bipartite projections. Zak @neal14 refers to this problem as extracting the **backbone** of the bipartite projection. 
 
 So let's load up our trusty *Southern Women* data set and compute the bipartite projections:
 
@@ -45,13 +45,15 @@ And the $\mathbf{G}$ matrix looks like this:
    G
 ```
 
-Now, our job is to binarize these matrices by retaining adjacency relations between nodes whose weights is significantly larger than we would expect given a suitable null model. This is a situation perfectly tailored for graph ensembles!
+Now, our job is to binarize these matrices by retaining adjacency relations between nodes whose weights is significantly larger than we would expect given a suitable null model. This is a situation perfectly tailored for [two-mode graph ensembles](tm-null.qmd)!
 
-## The Stochastic Degree Sequence Model
+## The Stochastic Degree Sequence Model (Logit version)
 
 @neal14 proposes one such approach called the **Stochastic Degree Sequence Model** (SDSM). This approach compares the observed weights in each bipartite projection against those from a bipartite graph ensemble where the graphs in the ensemble are generated from a model that preserves the expected (average) degrees of the nodes in the two-mode network. 
 
-We proceed as follows. First, we estimate a generalized linear model for binary outcomes (e.g., logit or probit, or your favorite other), where we predict the probability of observing an edge in the bipartite graph from the degrees of each node incident to each edge (and their statistical interaction). In `R` we can do this as follows. First, we create a dataset with the affiliation matrix as a response variable and the degrees of each node as coviarates:
+We proceed as follows. To begin, we estimate a generalized linear model for binary outcomes (e.g., logit or probit, or your favorite other), where we predict the probability of observing an edge in the bipartite graph from the degrees of each node incident to each edge (and their statistical interaction). In `R` we can do this in three steps:
+
+First, we create a dataset with the affiliation matrix as a response variable and the degrees of each node as covariates:
 
 ```{r}
    y <- as.numeric(A) #vectorized affiliation matrix
@@ -61,14 +63,14 @@ We proceed as follows. First, we estimate a generalized linear model for binary 
    dat[1:25, ] #first 25 rows of data frame
 ```
 
-Then we estimate a logit regression:
+Second, we estimate a logit regression with the degrees as predictors:
 
 ```{r}
-   mylogit <- glm(y ~ d1*d2, data = dat, family = "binomial")
+   mylogit <- glm(y ~ d1 + d2, data = dat, family = "binomial")
    summary(mylogit)
 ```
 
-Then we compute the predicted probabilities for each case:
+Third, we compute the predicted probabilities for each case:
 
 ```{r}
    mypreds <- predict(mylogit, type = "response")
@@ -174,10 +176,10 @@ And we can now plot the backbones:
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-We can put together all of the above steps into a handy dandy function called `sdsm.back` which takes the affiliation matrix $\mathbf{A}$ as input and returns the two projection backbones as output:
+We can put together all of the above steps into a handy dandy function called `sdsm.logit` which takes the affiliation matrix $\mathbf{A}$ as input and returns the two projection backbones as output:
 
 ```{r}
-   sdsm.back <- function(A, n = 100, p.val = 0.25, seed = 123) {
+   sdsm.logit <- function(A, n = 100, p.val = 0.25, seed = 123) {
       set.seed(seed)
       r <- nrow(A)
       c <- ncol(A)
@@ -204,7 +206,7 @@ We can put together all of the above steps into a handy dandy function called `s
 And voila:
 
 ```{r}
-   sdsm.back(A)
+   sdsm.logit(A)
 ```
 
 
