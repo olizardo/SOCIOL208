@@ -155,25 +155,25 @@ And we can now plot the backbones:
 ```{r}
 #| fig-height: 12
 #| fig-width: 12
-#| fig-cap: "One mode backbone of people using the SDSM."
+#| label: fig-back
+#| fig-cap: "Backbones of Southern Women Data Using Logit SDSM"
+#| fig-subcap:
+#|   - "Persons"
+#|   - "Groups"
+#| layout-ncol: 2
+#| echo: false
    set.seed(123)
    G.p <- graph_from_adjacency_matrix(P.back, mode = "undirected", diag = FALSE)
    plot(G.p, 
      vertex.size=8, vertex.frame.color="lightgray", 
-     vertex.label.dist=2, edge.curved=0.2, edge.width = 2,
-     vertex.label.cex = 1.25, edge.color = "lightgray")
-```
-
-```{r}
-#| fig-height: 12
-#| fig-width: 12
-#| fig-cap: "One mode backbone of groups using the SDSM."
+     vertex.label.dist=2, edge.curved=0.2, edge.width = 3,
+     vertex.label.cex = 1.25, edge.color = "steelblue")
    set.seed(123)
    G.g <- graph_from_adjacency_matrix(G.back, mode = "undirected", diag = FALSE)
    plot(G.g, 
      vertex.size=8, vertex.frame.color="lightgray", 
-     vertex.label.dist=2, edge.curved=0.2, edge.width = 2,
-     vertex.label.cex = 1.25, edge.color = "lightgray")
+     vertex.label.dist=2, edge.curved=0.2, edge.width = 3,
+     vertex.label.cex = 1.25, edge.color = "steelblue")
 ```
 
 We can put together all of the above steps into a handy dandy function called `sdsm.logit` which takes the affiliation matrix $\mathbf{A}$ as input and returns the two projection backbones as output:
@@ -188,9 +188,8 @@ We can put together all of the above steps into a handy dandy function called `s
       y <- as.numeric(A) #vectorized affiliation matrix
       d1 <- c(rep(rowSums(A), ncol(A))) #person degree vector
       d2 <- c(rep(colSums(A), each = nrow(A))) #group degree vector
-      dat <- data.frame(y, d1, d2) #data frame
-      res <- glm(y ~ d1 + d2, data = dat, family = "binomial")
-      pred <- predict(res, type = "response")
+      pred <- predict(glm(y ~ d1 + d2, data = data.frame(y, d1, d2), 
+                 family = "binomial")) #getting predictions from glm
       gen.aff <- function(w) {
          return(matrix(as.numeric(w > runif(length(w))), nrow = r, ncol = c))    
          }
