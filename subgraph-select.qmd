@@ -1,0 +1,131 @@
+---
+title: "Selecting a Subgraph Based on Edge Conditions"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+ 
+A great question asked in class goes as follows: What if I want to create a subgraph based on selecting a subset of a nodes, and then the other nodes in the graph that are that set of node's in-neighbors?
+
+Let's see how that would work. 
+
+First, we create a vector with the node ids of our **focal nodes**, which will be women under 40 in the `law_advice` network from the package `networkdata`.
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   library(ggraph)
+   yw <- which(V(law_advice)$gender == 2 & V(law_advice)$age < 40)
+   yw
+```
+
+Second, we need to collect the node ids of the people who point to these set of nodes; that is, each of these node's **in-neighbors**. For that, we use the `igraph` function `neighbors`:
+
+```{r}
+   yw_in <- list() #creating empty list
+   k <- 1 #counter for list position
+   for (i in yw) {
+      nei <- neighbors(law_advice, i, mode = "in") 
+      nei <- as.vector(nei) #vector of in-neighbors ids
+      yw_in[[k]] <- nei #adding to list
+      k <- k + 1 #incrementing counter
+   }
+```
+
+Line one creates an (empty) `list` object in `R`. The beauty of a list object is that it is an object that can hold other objects (vectors, matrices, `igraph` graph objects, etc.) as members (it can also have other lists as members, with lists all the way down). For a primer on how to work with `R` lists see [here](https://rstudio.github.io/r-manuals/r-intro/Lists-and-data-frames.html)
+
+The idea is to populate this initially empty list with the vectors of the in-neighbor ids of each node listed in the vector `yw`. Lines 2-8 do that using a simple `for` loop starring the `igraph` command `neighbors`, a function which takes two inputs: an `igraph` graph object, and a node id. The argument "mode" ("in" or "out" for directed graphs), tells it which kid of neighbors you want (not necessary for undirected graphs). Here we want the in-neighbors, so `mode` = "in".
+
+Now we have a `list` object in `R` of length equal to the number of younger women (12 in this case) with each entry equal to the ids of those women's in-neighbors. 
+```{r}
+   length(yw_in)
+   head(yw_in)
+```
+
+Now we need to create a vector of the unique ids of these nodes. To do this, we just to "unlist" all of the node ids to create a simple vector from the list object. 
+
+The `unlist` native `R` function does that for us, taking a list as input and returning all of the elements inside each of the separate objects stored in the list as output. Here we wrap that call in the `unique` native `R` function to eliminate repeats (common in-neighbors across women):
+
+```{r}
+   yw_in <- unique(unlist(yw_in))
+   yw_in
+```
+
+Of course, because the younger women are their own in-neighbors, they are included in this vector, so we need to get rid of them:
+
+```{r}
+   yw_in <- setdiff(yw_in, yw)
+   yw_in
+```
+
+We use the native command `setdiff` to find the elements in vector yw_in that are not contained in the vector of young women ids yw or the difference between the set of nodes ids stored in yw_in and the set of node ids stored in yw.
+
+Now that we have the vector of ids of the focal nodes and the vector of ids of their in-neighbors, we are ready to create our subgraph! All we need to do is specify we want *both* the younger law firm women and their in-neighbors in our node-induced subgraph:
+
+```{r}
+   g <- subgraph(law_advice, c(yw, yw_in))
+```
+
+We can even specify a new vertex attribute, differentiating the focal network from the in-neighbor network.
+
+```{r}
+   V(g)$net_status <- c(rep(1, length(yw)), rep(2, length(c(yw, yw_in)) - length(yw)))
+   vertex_attr(g)
+```
+
+Finally, we create an **edge deleted subgraph** including only the incoming advice edges from nodes who are *not* younger women in the firm to younger women and deleting everything other link:
+
+```{r}
+   e.rem <- E(g)[V(g)[net_status==1] %->% V(g)[net_status==1]] 
+   #selecting edges from younger women to younger women
+   g.r <- delete_edges(g, e.rem) #removing edges
+   e.rem <- E(g.r)[V(g.r)[net_status==1] %->% V(g.r)[net_status==2]] 
+   #selecting edges from younger women to non-younger women
+   g.r <- delete_edges(g.r, e.rem) #removing edges
+   e.rem <- E(g.r)[V(g.r)[net_status==2] %->% V(g.r)[net_status==2]] 
+   #selecting edges from non-younger women to non-younger women
+   g.r <- delete_edges(g.r, e.rem) #removing edges
+   Iso = which(degree(g.r)==0) #selecting isolates
+   g.r <- delete_vertices(g.r, Iso) #removing isolates
+```
+
+Here we can see both the `delete_edges` and `delete_vertices` functions from `igraph` in action. Both take some graph object as input followed by either an edge sequence (in this case produced by E(g))or a vector of node ids respectively. In both cases those particular edges or nodes are removed from the graph.
+
+The other neat functionality we see on display here is the `igraph` %->% operator for directed graph edges (the equivalent for undirected graphs is the double dash %--%). This allows us to select a set of edges according to a vertex condition (e.g., homophilous (same group) edges or edges that link a member from group a to a member from group b). 
+
+So the code chunk:
+
+```{r}
+   E(g)[V(g)[net_status==1] %->% V(g)[net_status==1]] 
+```
+
+Takes the edge set of the graph g (E(g)) and gives us the subset of edges that go from a vertex with net_status equal to one to another vertex that also has net_status equal to one (in this case edges directed from one of our focal nodes to another one of our focal nodes). This, of course, happens to be all the directed edges linking nodes one through twelve in the network. The same go for the other calls to the same function using different logical combinations of values of net_status between nodes. 
+
+FINALLY, can now plot the incoming advice network to younger women (in red):
+
+```{r}
+#| echo: false
+#| fig-cap: "Women lawyers advice network showing incoming links from outside the group (blue nodes) to younger women (red nodes)"
+#| fig-cap-location: margin
+#| fig-height: 6
+   set.seed(123)
+    p <- ggraph(g.r, layout = 'gem')
+    p <- p + geom_edge_parallel(color = gray(.35), edge_width = 0.1,
+                                arrow = arrow(
+                                length = unit(2, 'mm')),
+                                end_cap = circle(3, 'mm'), 
+                                sep = unit(2, 'mm'))
+    p <- p + geom_node_point(aes(x = x, y = y, 
+                                 color = as.factor(net_status)), size = 5) 
+    p <- p + scale_color_manual(labels = c("Younger Women", "Other Lawyers"), 
+                                values = c("red", "blue"))
+    p <- p + theme_graph() + theme(legend.title = element_blank(), 
+                                   legend.position = "bottom")
+    p
+```
