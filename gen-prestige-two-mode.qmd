@@ -1,0 +1,140 @@
+---
+title: "Generalized Prestige Scoring in Two-Mode Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+  html:
+    code-line-numbers: true
+---
+
+In the lecture note on [Status and Prestige in Two-Mode Netwoks](prestige-two-mode.qmd) we examine various ways of assigning scores to the row and column objects of the biadjacency matrix to derive status scores for the nodes of a two-mode network. 
+
+The dual scoring approach due to @bonacich91 (the dual "Eigenvector Centrality") serves as the standard here, with other approaches (e.g., PageRank-style scoring) serving as deviations and tweaks on the general formula. All can be modeled as the "prismatic" [@podolny01] distribution of status within a system, where nodes in one mode get status from the status of the nodes in each mode and vice versa. 
+
+In formuelese, the iterative two-mode network status scoring can formalized as follows. At each iteration $q$ the vector of status scores for the row nodes $\mathbf{s}^R$ and the column nodes $\mathbf{s}^C$ is given by: 
+
+\begin{equation}
+    s^R_i(q) = \sum_j\mathbf{A}_{ij}s^C_j(q-1)
+\end{equation}
+
+
+\begin{equation}
+    s^C_j(q) = \sum_i\mathbf{A}_{ij}s^R_i(q-1)
+\end{equation}
+
+With the restriction that at the initial step $q = 0$, $\mathbf{s}(0)^C = \mathbf{1}$ where $\mathbf{1}$ is the all ones vector of length equals to the number of columns of the biadjacency matrix. At iteration $q > 0$ we normalize both score vectors:
+
+\begin{equation}
+    \mathbf{s}^R(q) = \frac{\mathbf{s}^R(q)}{||\mathbf{s}^R(q)||_2}
+\end{equation}
+
+\begin{equation}
+    \mathbf{s}^C(q) = \frac{\mathbf{s}^C(q)}{||\mathbf{s}^C(q)||_2}
+\end{equation}
+
+
+Where $||\mathbf{s}||_2 = \sqrt{\sum_i s_i^2}$ is the Euclidean vector norm. 
+
+As [noted before](prestige-two-mode.qmd), one way to generalize the Bonacich scoring is by substituting some other matrix other than $\mathbf{A}$ like the row-stochastic matrix $\mathbf{P}$ into the above equations and let the process run until convergence. 
+
+In a technical paper, @pugliese_etal16 [p. 1909] hint at an alternative way to generalize the usual status scoring in two-mode networks that involves changing the status scores themselves while keeping the standard biadjacency matrix $\mathbf{A}$ in place.
+
+Their basic idea is that at each time step in the iteration we can substitute the following for the current status scores:
+
+\begin{equation}
+    s^R_i(q) = \left(\sum_j\mathbf{A}_{ij}\left[s^C_j(q-1)\right]^{-\gamma}\right)^{-\frac{1}{\gamma}}
+\end{equation}
+
+
+\begin{equation}
+    s^C_j(q) = \left(\sum_i\mathbf{A}_{ij}\left[s^R_i(q-1)\right]^{-\delta}\right)^{-\frac{1}{\delta}}
+\end{equation}
+
+This generalization works like this: When the parameter $\gamma = 1$ it has the effect of *inverting* the row object's status scores that go into the calculation of the column object's status (inside the parentheses), meaning that column objects that connect to *low status* row objects receive *more* status. However, the same parameter outside the parentheses reverses the first inversion, such that column objects receive more status when they connect almost exclusively to high-status row objects and shun the low status ones. 
+
+The $\delta$ parameters work similarly. When $\delta = 1$ the column object's status scores that go into the calculation of the focal row object's status are reversed, so that row objects receive *more* status when they connect to *low status* row objects (inside the parentheses). The same parameter (outside the parentheses) reverses this inversion, such that the status of a given row object increases when they connect to high status column objects and shun the low status ones. 
+
+Note that when both parameters $\{\gamma, \delta\} = -1$ the equations above reduce to the usual Bonacich dual scoring. Different parameter value combinations $\{\gamma, \delta\}$ in the $\{+1, -1\}$ range instantiate different ways in which status operates in a given system. 
+
+Why would we want to generalize status scoring in this way? Recall that the basic principle of Bonacich scoring is based on the equation of status and *popularity*/*activity*. In the canonical case of persons and groups [@breiger74], an event receives status from being attended by high-status individuals and an individual receives status from being affiliated with a high status event; in each case, status from the point of view of the event means having highly active mebmers, and from the point of view of the individual it means being affiliated with popular events. 
+
+But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing. Analysts noticed that the most developed countries produce both "complex" products that other highly developed economies produce and also less "complex" (e.g., natural resources) products that the other less developed economics produce. That  means that the "complexity" of a product cannot be derived simply taking a summary of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production. 
+
+So one approach is to set $\delta = 1$ above so that a product's status is the sum of the inverse of the inverse of the status of the countries that produce it. This means that a product's status decreases non-linearly when it is produced by low status countries. We can of course apply the same reasoning to a country's status and set $\gamma = 1$, which models a system in which a country's status decreases non-linearly when it produces low status products. A system in which *both* countries and product status decrease non-linearly when they are affiliated with low-status objects, would have *both* $\delta = 1$ and  $\gamma = 1$.
+
+So the generalized status scoring model above allows us to consider different status distribution  regimes, which we can characterize as follows:
+
+|$\gamma$|$\delta$|Status Distribution Regime|
+|-------|--------|--------|--------|------|
+|-1|-1|Popularity Brings Status|
+|-1|1|Column Low-Status Contamination for Row Objects|
+|-1|1|Row Low-Status Contamination for Column Objects|
+|1|1|Generalized Low-Status Contamination|
+
+Let's see how this would work with real data. Let's load up the trusty Southern Women (SW) data:
+
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- southern_women
+   A <- as.matrix(as_biadjacency_matrix(g))
+```
+
+And here's a function that modifies the status distribution game function to incorporate generalized status scores parameters:
+
+```{r}
+   tm.status <- function(w, a = 1, b = 1) {
+      y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
+      z <- t(w)
+      delta <- 1 
+      k <- 0
+      while (delta > 1e-10) {
+         o.y <- y 
+         x <- (w %*% (o.y^-a))^(1/-a) #generalized status scores for people
+         x <- x/norm(x, type = "E") #normalizing new people status scores 
+         y <- (z %*% (x^-b))^(1/-b) #generalized status scores for groups
+         y <- y/norm(y, type = "E") #normalizing new group status scores 
+         if (k > 1) {
+            delta <- abs(sum(abs(y) - abs(o.y))) 
+            }
+         k <- k + 1
+         }
+   return(list(p.s = x, g.s = y, k = k))
+   }
+```
+
+We then run the function for the four status distribution regimes:
+
+```{r}
+   s1 <- tm.status(A, -1, -1)
+   s2 <- tm.status(A, -1, 1)
+   s3 <- tm.status(A, 1, -1)
+   s4 <- tm.status(A, 1, 1)
+```
+
+Now we check out the different status orderings. For people, this looks like this:
+
+```{r}
+   s1.col <- data.frame(n = rownames(s1$p.s)[order(s1$p.s/max(s1$p.s), decreasing = TRUE)],
+                   s = round(sort(s1$p.s/max(s1$p.s), decreasing = TRUE), 2))
+   s2.col <- data.frame(n = rownames(s2$p.s)[order(s2$p.s/max(s2$p.s), decreasing = TRUE)],
+                   s = round(sort(s2$p.s/max(s2$p.s), decreasing = TRUE), 2))
+   s3.col <- data.frame(n = rownames(s3$p.s)[order(s3$p.s/max(s3$p.s), decreasing = TRUE)],
+                   s = round(sort(s3$p.s/max(s3$p.s), decreasing = TRUE), 2))
+   s4.col <- data.frame(n = rownames(s4$p.s)[order(s4$p.s/max(s4$p.s), decreasing = TRUE)],
+                   s = round(sort(s4$p.s/max(s4$p.s), decreasing = TRUE), 2))
+   s.tab <- cbind(s1.col, s2.col, s3.col, s4.col)
+   library(kableExtra)
+   kbl(s.tab, format = "pipe", 
+       align = c("l", "c", "l", "c", "l", "c", "l", "c"),
+       col.names = c("Name", "Bonacich", "Name", "Col. Contamination", "Name", "Row Contamination", "Name", "Double Contamination")) %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+
+
