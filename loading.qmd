@@ -1,0 +1,55 @@
+---
+title: "Loading Network Data from a File"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+When get network data from an archival source, and it will be in the form of a **matrix** or an **edge list**, typically in some kind of comma separated value (csv) format. Here will show how to input that into `R` to create an `igraph` network object from an outside file.
+
+First we will write the *Pulp Fiction* data into an edge list and save it to your local folder as a csv file.
+
+First, let's load the data and transform it into an edgelist:
+
+```{r}
+   library(igraph)
+   library(networkdata)
+   g <- movie_559 #pulp fiction data
+   #install.packages(here)
+   library(here)
+   g.el <- as_edgelist(g) #transforming graph to edgelist
+   names(g.el) <- c("name1", "name2")
+```
+
+Now, let's write it into disk:
+
+```{r}
+   write.csv(g.el, here("pulp.csv"))
+```
+
+The `write.csv` function just saves an `R` object into a .csv file. Here the `R` object is "g.el" and we asked it to save just the columns which contain the name of each character. This represents the adjacency relations in the network as an edge list. We use the package `here` to keep track of our working directory. See [here](https://here.r-lib.org/) (pun intended) for details.
+
+Now suppose that's the network we want to work with and it's saved in our hard drive. To load it, we just type:
+
+```{r}
+   g.el <- read.csv(here("pulp.csv"), 
+                    col.names = c("name1", "name2"))
+   head(g.el)
+```
+
+Which gives us the edge list we want now saved into an `R` object of class `data.frame`. So all we need is to convert that into an `igraph` object. To do that we use one of the many `graph_from...` functions in the `igraph` package. In this case, we want `graph_from_edgelist` because our network is stored as an edge list:
+
+```{r}
+   g.el <- as.matrix(g.el)
+   g <- graph_from_edgelist(g.el, directed = FALSE)
+   V(g)
+   E(g)
+```
+
+Which gives us back the original `igraph` object. Note that first we converted the `data.frame` object into a `matrix` object. We also specified that the graph is **undirected** by setting the option `directed` to false.

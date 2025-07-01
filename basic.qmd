@@ -253,44 +253,24 @@ And the graph's degree correlation [@newman03] is just the Pearson correlation b
 
 The result $r_{deg} = -0.29$ tells us that there is *anti-correlation* by degree in the *Pulp Fiction* network. That is high-degree characters tend to appear with low degree characters, or conversely, high-degree characters (like Marsellus and Jules) don't appear together very often.
 
+If you hate `dplyr` (and some people do with a passion) here's a relatively quick way to do the same thing without it:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g)) #vectorized version of adjacency matrix
+   dat <- data.frame(e = as.vector(A), 
+                     rd = rep(rowSums(A), ncol(A)), 
+                     cd = rep(colSums(A), each = nrow(A)),
+                     rn = rep(rownames(A), ncol(A)),
+                     cn = rep(colnames(A), each = nrow(A))
+                     )
+   cor(dat[dat$e == 1, ]$rd, dat[dat$e == 1, ]$cd)
+```
+
 Of course, `igraph` has a function called `assortativity_degree` that does all the work for us:
 
 ```{r}
    assortativity_degree(g)
 ```
-
-## Interlude: Loading Network Data from a File
-
-When get network data from an archival source, and it will be in the form of a **matrix** or an **edge list**, typically in some kind of comma separated value (csv) format. Here will show how to input that into `R` to create an `igraph` network object from an outside file.
-
-First we will write the *Pulp Fiction* data into an edge list and save it to disk. We already did that earlier with the "g.el" object. So all we have to do is save it to your local folder as a csv file:
-
-```{r}
-   #install.packages(here)
-   library(here)
-   write.csv(d.el[c("name1", "name2")], here("pulp.csv"))
-```
-
-The `write.csv` function just saves an `R` object into a .csv file. Here the `R` object is "g.el" and we asked it to save just the columns which contain the name of each character. This represents the adjacency relations in the network as an edge list. We use the package `here` to keep track of our working directory. See [here](https://here.r-lib.org/) (pun intended) for details.
-
-Now suppose that's the network we want to work with and it's saved in our hard drive. To load it, we just type:
-
-```{r}
-   g.el <- read.csv(here("pulp.csv"), 
-                    col.names = c("name1", "name2"))
-   head(g.el)
-```
-
-Which gives us the edge list we want now saved into an `R` object of class `data.frame`. So all we need is to convert that into an `igraph` object. To do that we use one of the many `graph_from...` functions in the `igraph` package. In this case, we want `graph_from_edgelist` because our network is stored as an edge list:
-
-```{r}
-   g.el <- as.matrix(g.el)
-   g <- graph_from_edgelist(g.el, directed = FALSE)
-   V(g)
-   E(g)
-```
-
-Which gives us back the original `igraph` object we have been working with. Note that first we converted the `data.frame` object into a `matrix` object. We also specified that the graph is **undirected** by setting the option `directed` to false.
 
 ## The Average Shortest Path Length
 
@@ -313,7 +293,7 @@ The maximum distance between two nodes in the graph (the longest shortest path t
 
 This means that in the *Pulp Fiction* network the maximum degree of separation between two characters is a path of length 8. 
 
-Of course, we cann also call the `igraph` function `diammeter`:
+Of course, we cann also call the `igraph` function `diameter`:
 
 ```{r}
    diameter(g)
