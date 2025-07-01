@@ -46,25 +46,29 @@ In a technical paper, @pugliese_etal16 [p. 1909] hint at an alternative way to g
 Their basic idea is that at each time step in the iteration we can substitute the following for the current status scores:
 
 \begin{equation}
-    s^R_i(q) = \left(\sum_j\mathbf{A}_{ij}\left[s^C_j(q-1)\right]^{-\gamma}\right)^{-\frac{1}{\gamma}}
+    s^R_i(q) = \left(\sum_j\mathbf{A}_{ij}\left[s^C_j(q-1)\right]^{-\delta}\right)^{-\frac{1}{\delta}}
 \end{equation}
 
 
 \begin{equation}
-    s^C_j(q) = \left(\sum_i\mathbf{A}_{ij}\left[s^R_i(q-1)\right]^{-\delta}\right)^{-\frac{1}{\delta}}
+    s^C_j(q) = \left(\sum_i\mathbf{A}_{ij}\left[s^R_i(q-1)\right]^{-\gamma}\right)^{-\frac{1}{\gamma}}
 \end{equation}
 
-This generalization works like this: When the parameter $\gamma = 1$ it has the effect of *inverting* the row object's status scores that go into the calculation of the column object's status (inside the parentheses), meaning that column objects that connect to *low status* row objects receive *more* status. However, the same parameter outside the parentheses reverses the first inversion, such that column objects receive more status when they connect almost exclusively to high-status row objects and shun the low status ones. 
+This generalization works like this: When the parameter $\gamma = 1$ it has the effect of *inverting* the row object's status scores ($s^R_i(q-1)$) that go into the calculation of the column object's status (inside the parentheses), meaning that column objects that connect to *low status* row objects receive *more* status. However, the same parameter outside the parentheses reverses the first inversion, such that column objects receive more status when they connect almost exclusively to high-status row objects and shun the low status ones. 
 
-The $\delta$ parameters work similarly. When $\delta = 1$ the column object's status scores that go into the calculation of the focal row object's status are reversed, so that row objects receive *more* status when they connect to *low status* row objects (inside the parentheses). The same parameter (outside the parentheses) reverses this inversion, such that the status of a given row object increases when they connect to high status column objects and shun the low status ones. 
+The $\delta$ parameters work similarly. When $\delta = 1$ the column object's status scores ($s^C_i(q-1)$) that go into the calculation of the focal row object's status are reversed, so that row objects receive *more* status when they connect to *low status* row objects (inside the parentheses). The same parameter (outside the parentheses) reverses this inversion, such that the status of a given row object increases when they connect to high status column objects and shun the low status ones. 
 
 Note that when both parameters $\{\gamma, \delta\} = -1$ the equations above reduce to the usual Bonacich dual scoring. Different parameter value combinations $\{\gamma, \delta\}$ in the $\{+1, -1\}$ range instantiate different ways in which status operates in a given system. 
 
-Why would we want to generalize status scoring in this way? Recall that the basic principle of Bonacich scoring is based on the equation of status and *popularity*/*activity*. In the canonical case of persons and groups [@breiger74], an event receives status from being attended by high-status individuals and an individual receives status from being affiliated with a high status event; in each case, status from the point of view of the event means having highly active mebmers, and from the point of view of the individual it means being affiliated with popular events. 
+Why would we want to generalize status scoring in this way? Recall that the basic principle of Bonacich scoring is based on the equation of status and *popularity*/*activity*. In the canonical case of persons and groups [@breiger74], an event receives status from being attended by high-status individuals and an individual receives status from being affiliated with a high status event; in each case, status from the point of view of the event means having highly active members, and from the point of view of the individual it means being affiliated with popular events. 
 
-But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing. Analysts noticed that the most developed countries produce both "complex" products that other highly developed economies produce and also less "complex" (e.g., natural resources) products that the other less developed economics produce. That  means that the "complexity" of a product cannot be derived simply taking a summary of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production. 
+But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing. Analysts noticed that the most developed countries produce both "complex" products that only a select few of other highly developed economies produce and also less "complex" (e.g., natural resources) products that the other less developed economics produce. That  means that the "complexity" of a product cannot be derived simply taking a summary of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production. 
 
-So one approach is to set $\delta = 1$ above so that a product's status is the sum of the inverse of the inverse of the status of the countries that produce it. This means that a product's status decreases non-linearly when it is produced by low status countries. We can of course apply the same reasoning to a country's status and set $\gamma = 1$, which models a system in which a country's status decreases non-linearly when it produces low status products. A system in which *both* countries and product status decrease non-linearly when they are affiliated with low-status objects, would have *both* $\delta = 1$ and  $\gamma = 1$.
+So one approach is to set $\gamma = 1$ above so that a product's status is the sum of the inverse of the inverse of the status of the countries that produce it. This means that a product's status decreases non-linearly when it is produced by low status countries. This feeds back into the calculation of a country's status, such that producing low status products "contaminates" the status of a given country driving it downwards. 
+
+We can of course apply the same reasoning to a country's status and set $\delta = 1$, which models a system in which a country's status decreases non-linearly when it produces low status products. This feeds back into the calculation of a product's status, such that a product produced by a low status country is downgraded in a stronger way. 
+
+A system in which *both* countries and product status decrease non-linearly when they are affiliated with low-status objects (double status contammination, feeding back into one another), would have *both* $\gamma = 1$ and  $\delta = 1$.
 
 So the generalized status scoring model above allows us to consider different status distribution  regimes, which we can characterize as follows:
 
@@ -88,19 +92,19 @@ Let's see how this would work with real data. Let's load up the trusty Southern 
 And here's a function that modifies the status distribution game function to incorporate generalized status scores parameters:
 
 ```{r}
-   tm.status <- function(w, a = -1, b = -1) {
+   tm.status <- function(w, gamma = -1, delta = -1) {
       y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
       z <- t(w)
-      delta <- 1 
+      epsilon <- 1 
       k <- 0
-      while (delta > 1e-10) {
+      while (epsilon > 1e-10) {
          o.y <- y 
-         x <- (w %*% (o.y^-a))^(1/-a) #generalized status scores for people
+         x <- (w %*% (o.y^-delta))^(1/-delta) #generalized status scores for people
          x <- x/norm(x, type = "E") #normalizing new people status scores 
-         y <- (z %*% (x^-b))^(1/-b) #generalized status scores for groups
+         y <- (z %*% (x^-gamma))^(1/-gamma) #generalized status scores for groups
          y <- y/norm(y, type = "E") #normalizing new group status scores 
          if (k > 1) {
-            delta <- abs(sum(abs(y) - abs(o.y))) 
+            epsilon <- abs(sum(abs(y) - abs(o.y))) 
             }
          k <- k + 1
          }
@@ -111,10 +115,10 @@ And here's a function that modifies the status distribution game function to inc
 We then run the function for the four status distribution regimes:
 
 ```{r}
-   s1 <- tm.status(A)
-   s2 <- tm.status(A, -1, 1)
-   s3 <- tm.status(A, 1, -1)
-   s4 <- tm.status(A, 1, 1)
+   s1 <- tm.status(A) #Bonacich Scores
+   s2 <- tm.status(A, gamma = 1, delta = -1) #column contamination
+   s3 <- tm.status(A, gamma = -1, delta = 1) #row contamination
+   s4 <- tm.status(A, gamma = 1, delta = 1) #double contamination
 ```
 
 Now we check out the different status orderings. For people, this looks like this:
@@ -154,5 +158,12 @@ And for the groups:
    kbl(s.tab, format = "pipe", 
        align = c("l", "c", "l", "c", "l", "c", "l", "c"),
        col.names = c("Group", "Bonacich", "Group", "Col. Contamination", "Group", "Row Contamination", "Group", "Double Contamination")) %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+And the original biadjacency matrix is:
+
+
+```{r}
+   kbl(A, format = "pipe") %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
