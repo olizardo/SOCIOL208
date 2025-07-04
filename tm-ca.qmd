@@ -48,16 +48,6 @@ In `R` can compute $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$, using the classic So
    rownames(P.gp) <- colnames(A)
 ```
 
-```{r}
-   library(FactoMineR)
-   ca.res <- CA(A, graph = FALSE)
-   a <- rowSums(A)
-   b <- colSums(A) 
-   M <- A/sqrt(a %*% t(b))
-   P <- M %*% t(M)
-   b <- eigen(P)
-```
-
 And we can check that both $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$ are indeed row stochastic:
 
 ```{r}
@@ -226,7 +216,7 @@ Let's see the normalization function at work, extracting the first two dimension
 
 Great! Now we have two sets (unit variance versus eigenvalue variance) of normalized CA scores for persons and groups on the first two dimensions. 
 
-## The Duality of CA Scores Between Persons and Groups
+## The Duality of Persons and Groups CA Scores
 
 Just like as we saw when discussing the [Bonacich Eigenvector centrality in the two-mode case](tm-prestige.qmd), there is a *duality* between the CA scores assigned to the person and the groups on each dimension, such that the scores for each person are a weighted sum of the scores assigned to each group on that dimension and vice versa [@faust97, 171]. 
 
@@ -307,13 +297,65 @@ Also like before, we can use the scores obtained from the CA analysis to re-arra
 
 Here CA seems to have detected two separate clusters of actors who preferentially attend two distinct clusters of events! 
 
-The three events in the middle $\{3/15, 9/16, 4/8\}$ don't seem to differentiate between participants in each cluster (everyone attends)--they thus appear near the origin in the CA diagram, indicating a weak association with either dimension. 
+The three events in the middle *\{3/15, 9/16, 4/8\}* don't seem to differentiate between participants in each cluster (everyone attends)--they thus appear near the origin in the CA diagram, indicating a weak association with either dimension. 
 
 However, the events to the left (with clusters of participants in the lower-left) and to the right of the x-axis (with clusters of participants in the upper-right) are attended preferentially by distinct groups of participants; they thus appear at the extreme left and right positions of the first dimension of the CA diagram. 
 
-In the same way, the four people in the middle $\{Ruth, Dorothy, Pearl, Verne\}$ only attend the undifferentiated, popular events, so that means that they are not strongly associated with either cluster of actors (and thus appear near the origin in the CA diagram). The top and bottom participants, by contrast, appear to the extreme right and left in the CA diagram, indicating a strong association with the underlying dimensions.
+In the same way, the four people in the middle *\{Ruth, Dorothy, Pearl, Verne\}* only attend the undifferentiated, popular events, so that means that they are not strongly associated with either cluster of actors (and thus appear near the origin in the CA diagram). The top and bottom participants, by contrast, appear to the extreme right and left in the CA diagram, indicating a strong association with the underlying dimensions.
 
-Note the similarity between this blocking and that obtained from the structural equivalence analysis in the previous handout.
+Note the similarity between this blocking and that obtained from the [generalized vertex similarity analysis of the same network](tm-similarity.qmd).
 
+## Another way of Performing CA in a Two-Mode Network
 
+@sciarra_etal20 suggest an alternative way of computing CA for two-mode networks that avoids the issue of having to do the eigendecomposition of an asymmetric matrix (like the $\mathbf{P}_{PP}$ and $\mathbf{P}_{GG}$) above. Their suggestion is to normalize the biadjacency matrix $\mathbf{A}$, before computing the degree-weighted projections, according to the formula:
 
+$$
+\tilde{\mathbf{A}} = \mathbf{D^{-2}_P}\mathbf{A}\mathbf{D^{-2}_G}
+$$
+
+Where $\mathbf{D^{-2}}$ is a matrix containing the inverse of the *square root* of the degrees in diagonals and zero everywhere else. 
+
+We can then obtain *symmetric* versions of the projection matrices, by applying the usual Breiger @breiger74 projection formula:
+
+$$
+\mathbf{P} = \tilde{\mathbf{A}}\tilde{\mathbf{A}}^T
+$$
+
+$$
+\mathbf{G} = \tilde{\mathbf{A}}^T\tilde{\mathbf{A}}
+$$
+
+The matrices $\mathbf{P}$ and $\mathbf{G}$ no longer have the nice interpretation of being Markov transition matrices that the $\mathbf{P}_{pp}$ $\mathbf{P}_{gg}$ matrices have, but the fact that they are symmetric can be an advantage in facilitating the eigendecomposition computation, as they are guaranteed to have real-valued solutions. 
+
+Let's see how this would work:
+
+```{r}
+   D2.p <- diag(1/sqrt(rowSums(A)))
+   D2.g <- diag(1/sqrt(colSums(A)))
+   A2 <- D2.p %*% A %*% D2.g
+   P <- A2 %*% t(A2)
+   G <- t(A2) %*% A2
+```
+
+We can check that indeed $\mathbf{P}$ and $\mathbf{G}$ are symmetric:
+
+```{r}
+   isSymmetric(P)
+   isSymmetric(G)
+```
+
+And now we can obtain the row and column CA scores via eigendecomposition of these matrices:
+
+```{r}
+   eig.vec.p2 <- eigen(P)$vectors
+   eig.vec.g2 <- eigen(G)$vectors
+```
+
+As @sciarra_etal20 [p. 3] also note, to have the eigenvectors obtained via this procedure match the CA scores, we need to rescale the standard CA scores by multiplying them by the square root of the degrees of the row and column nodes:
+
+```{r}
+   cor(CA.res$Z.u.p[, 1] * sqrt(rowSums(A)), eig.vec.p2[, 2])
+   cor(CA.res$Z.u.g[, 1] * sqrt(colSums(A)), eig.vec.g2[, 2])
+```
+
+Which as we can see, results in perfectly correlated scores across the two methods. 
