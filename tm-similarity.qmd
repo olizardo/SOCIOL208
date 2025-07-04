@@ -1,0 +1,287 @@
+---
+title: "Similarity and Equivalence in Two-Mode Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+   
+## Normalized Vertex Similarity Metrics
+
+Note that the [one-mode projections](tm-duality.qmd) can be considered unnormalized similarity matrices [just like in the case of regular networks](similarity.qmd). That means that if we have the degrees of nodes in each mode, we can transform this matrix into any of the **normalized vertex similarity** metrics we discussed before, including Jaccard, Cosine, Dice, LHN, and so on. 
+
+Let's see how this would work in our trusty *Southern Women* dataset:
+
+```{r}
+   library(igraph)
+   library(networkdata)
+   g <- southern_women
+```
+
+Repackaging our vertex similarity function for the two-mode case, we have:
+
+```{r}
+   vertex.sim <- function(x) {
+      A <- as.matrix(as_biadjacency_matrix(x))
+      M <- nrow(A) #number of persons
+      N <- ncol(A) #number of groups
+      p.d <- rowSums(A) #person degrees
+      g.d <- colSums(A) #group degrees
+      P <- A %*% t(A) #person projection
+      G <- t(A) %*% A #group projection
+      J.p <- diag(1, M, M)
+      J.g <- diag(1, N, N)
+      C.p <- diag(1, M, M)
+      C.g <- diag(1, N, N)
+      D.p <- diag(1, M, M)
+      D.g <- diag(1, N, N)
+      L.p <- diag(1, M, M)
+      L.g <- diag(1, N, N)
+      for (i in 1:M) {
+         for (j in 1:M) {
+            if (i < j) {
+               J.p[i,j] <- P[i,j]/(P[i,j] + p.d[i] + p.d[j])
+               J.p[j,i] <- P[i,j]/(P[i,j] + p.d[i] + p.d[j])
+               C.p[i,j] <- P[i,j]/(sqrt(p.d[i] * p.d[j]))
+               C.p[j,i] <- P[i,j]/(sqrt(p.d[i] * p.d[j]))
+               D.p[i,j] <- (2*P[i,j])/(2*P[i,j] + p.d[i] + p.d[j])
+               D.p[j,i] <- (2*P[i,j])/(2*P[i,j] + p.d[i] + p.d[j])
+               L.p[i,j] <- P[i,j]/(p.d[i] * p.d[j])
+               L.p[j,i] <- P[i,j]/(p.d[i] * p.d[j])
+               }
+            }
+         }
+      for (i in 1:N) {
+         for (j in 1:N) {
+            if (i < j) {
+               J.g[i,j] <- G[i,j]/(G[i,j] + g.d[i] + g.d[j])
+               J.g[j,i] <- G[i,j]/(G[i,j] + g.d[i] + g.d[j])
+               C.g[i,j] <- G[i,j]/(sqrt(g.d[i] * g.d[j]))
+               C.g[j,i] <- G[i,j]/(sqrt(g.d[i] * g.d[j]))
+               D.g[i,j] <- (2*G[i,j])/(2*G[i,j] + g.d[i] + g.d[j])
+               D.g[j,i] <- (2*G[i,j])/(2*G[i,j] + g.d[i] + g.d[j])
+               L.g[i,j] <- G[i,j]/(g.d[i] * g.d[j])
+               L.g[j,i] <- G[i,j]/(g.d[i] * g.d[j])
+               }
+            }
+         }
+      return(list(J.p = J.p, C.p = C.p, D.p = D.p, L.p = L.p,
+                  J.g = J.g, C.g = C.g, D.g = D.g, L.g = L.g))
+      }
+```
+
+Using this function to compute the Jaccard similarity between people yields:
+
+```{r}
+   J.p <- vertex.sim(g)$J.p
+   rownames(J.p) <- rownames(A)
+   colnames(J.p) <- rownames(A)
+   round(J.p, 2)
+```
+
+## Structural Equivalence
+
+And, of course, once we have a similarity we can cluster nodes based on approximate structural equivalence by transforming proximities to distances:
+
+```{r}
+   D <- as.dist(1- J.p)
+   hc.p <- hclust(D, method = "ward.D2")
+   plot(hc.p)
+```
+
+And for events:
+
+```{r}
+   J.g <- vertex.sim(g)$J.g
+   rownames(J.g) <- colnames(A)
+   colnames(J.g) <- colnames(A)
+   D <- as.dist(1- J.g)
+   hc.g <- hclust(D, method = "ward.D2")
+   plot(hc.g)
+```
+
+We can then derive cluster memberships for people and groups from the `hclust` object:
+
+```{r}
+   library(dendextend)
+   clus.p <- sort(cutree(hc.p, 4)) #selecting four clusters for people
+   clus.p
+   clus.g <- sort(cutree(hc.g, 3)) #selecting three clusters for groups
+   clus.g
+```
+
+And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 [p. 210, table 5]:
+
+```{r}
+   library(ggcorrplot)
+   p <- ggcorrplot(t(A[names(clus.p), names(clus.g)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 7.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
+   p
+```
+
+Which reveals a number of almost complete (one-blocks) and almost null (zero-blocks) in the social structure, with a reduced image matrix that looks like:
+
+```{r}
+   library(kableExtra)
+   IM <- matrix(0, 4, 3)
+   IM[1, ] <- c(0, 1, 0)
+   IM[2, ] <- c(0, 1, 1)
+   IM[3, ] <- c(0, 1, 0)
+   IM[4, ] <- c(1, 1, 0)
+   rownames(IM) <- c("P.Block1", "P.Block2", "P.Block3", "P.Block4")
+   colnames(IM) <- c("E.Block1", "E.Block2", "E.Block3")
+   kbl(IM, format = "html", , align = "c") %>% 
+      column_spec(1, bold = TRUE) %>% 
+      kable_styling(full_width = TRUE,
+                     bootstrap_options = c("hover", "condensed", "responsive"))
+
+```
+
+## Generalized Vertex Similarity
+
+Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the *same* objects (groups), and two objects (groups) are similar if they are chosen by the *same* people. 
+
+We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* (not necessarily the same) objects, and two objects are similar if they are chosen by *similar* (not necessarily the same) people.
+
+This leads to the same problem setup that inspired the **SimRank** approach [@jeh_widom02]. 
+
+A (longish) function to compute the SimRank similarity between nodes in a two mode network goes as follows:
+
+```{r}
+   TM.SimRank <- function(A, C = 0.8, iter = 10) {
+        nr <- nrow(A)
+        nc <- ncol(A)
+        dr <- rowSums(A)
+        dc <- colSums(A)
+        Sr <- diag(1, nr, nr) #baseline similarity: every node maximally similar to themselves
+        Sc <- diag(1, nc, nc) #baseline similarity: every node maximally similar to themselves
+        rn <- rownames(A)
+        cn <- colnames(A)
+        rownames(Sr) <- rn
+        colnames(Sr) <- rn
+        rownames(Sc) <- cn
+        colnames(Sc) <- cn
+        m <- 1
+        while(m < iter) {
+             Sr.pre <- Sr
+             Sc.pre <- Sc
+             for(i in 1:nr) {
+                  for(j in 1:nr) {
+                       if (i != j) {
+                            a <- names(which(A[i, ] == 1)) #objects chosen by i
+                            b <- names(which(A[j, ] == 1)) #objects chosen by j
+                            Scij <- 0
+                            for (k in a) {
+                                 for (l in b) {
+                                      Scij <- Scij + Sc[k, l] #i's similarity to j
+                                 }
+                            }
+                            Sr[i, j] <- C/(dr[i] * dr[j]) * Scij
+                       }
+                  }
+             }
+             for(i in 1:nc) {
+                  for(j in 1:nc) {
+                       if (i != j) {
+                            a <- names(which(A[, i] == 1)) #people who chose object i
+                            b <- names(which(A[, j] == 1)) #people who chose object j
+                            Srij <- 0
+                            for (k in a) {
+                                 for (l in b) {
+                                      Srij <- Srij + Sr[k, l] #i's similarity to j
+                                 }
+                            }
+                            Sc[i, j] <- C/(dc[i] * dc[j]) * Srij
+                       }
+                  }
+             }
+             m <- m + 1
+        }
+        return(list(Sr = Sr, Sc = Sc))
+   }
+```
+
+This function takes the biadjacency matrix $\mathbf{A}$ as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).
+
+Here's how that would work in the SW data. First we compute the SimRank scores:
+
+```{r}
+   sim.res <- TM.SimRank(A)
+```
+
+Then we peek inside the people similarity matrix:
+
+```{r}
+   round(sim.res$Sr[1:10, 1:10], 3)
+```
+
+And the group similarity matrix:
+
+```{r}
+   round(sim.res$Sc[1:10, 1:10], 3)
+```
+
+Like before we can use these results to define two sets of distances:
+
+```{r}
+   D.p <- as.dist(1 - sim.res$Sr)
+   D.g <- as.dist(1 - sim.res$Sc)
+```
+
+Subject to hierarchical clustering:
+
+```{r}
+   hc.p <- hclust(D.p, method = "ward.D2")
+   hc.g <- hclust(D.g, method = "ward.D2")
+```
+
+And plot:
+
+```{r}
+   plot(hc.p)
+   plot(hc.g)
+```
+
+Get cluster memberships for people and groups from the `hclust` object:
+
+```{r}
+   clus.p <- sort(cutree(hc.p, 4)) #selecting four clusters for people
+   clus.p
+   clus.g <- sort(cutree(hc.g, 3)) #selecting three clusters for groups
+   clus.g
+```
+
+And block the biadjacency matrix:
+
+```{r}
+   p <- ggcorrplot(t(A[names(clus.p), names(clus.g)]), 
+                   colors = c("white", "white", "red")) 
+   p <- p + theme(legend.position = "none", 
+                  axis.text.y = element_text(size = 8),
+                  axis.text.x = element_text(size = 8, angle = 0),
+                  )
+   p <- p + scale_x_discrete(position = "top") 
+   p <- p + geom_hline(yintercept = 7.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 10.5, linewidth = 2, color = "blue")
+   p
+```
+
+Note that this block solution is similar (pun intended) but not *exactly* the same as the one based on structural equivalence we obtained earlier, although it would lead to the same reduced image matrix for the blocks.

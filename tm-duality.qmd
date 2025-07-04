@@ -1,0 +1,137 @@
+---
+title: "The Duality of Persons and Groups"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+Recall that in the [one-mode case](prestige.qmd), multiplying the adjacency matrix times its transpose yields the **common neighbors matrix** $\mathbf{M}$:
+
+$$
+\mathbf{M} = \mathbf{A}\mathbf{A}^T
+$$
+
+As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in another mode, this also reveals the **duality of persons and groups**: The connections between people are made up of the groups they share, and the connections between groups are revealed by the groups they share.
+
+Thus, computing the common neighbors matrix for both persons and groups (also called the **projection** of the two-mode network into each of its modes) produces a one-mode similarity matrix between people and groups, where the similarities are defined by the number of objects in the other mode that they share. 
+
+For the people the relevant projection is:
+
+$$
+\mathbf{P} = \mathbf{A}\mathbf{A}^T
+$$
+
+And for the groups:
+
+$$
+\mathbf{G} = \mathbf{A}^T\mathbf{A}
+$$
+
+Let's see how this works out with real data by loading our usual friend the *Southern Women* data:
+
+```{r}
+    library(igraph)
+    library(networkdata)
+    g <- southern_women
+    A <- as_biadjacency_matrix(g)
+```
+
+In this case, the above equations yield:
+
+```{r}
+   P <- A %*% t(A)
+   P
+   G <- t(A) %*% A
+   G
+```
+
+The off-diagonal entries of these square person by person (group by group) matrices is the number of groups (people) shared by each person (group) and the diagonals are the number of memberships of each person (the size of each group/event).
+
+In `igraph` the  relevant function is called `bipartite_projection`. It takes a graph as an input and returns a list containing `igraph` graph objects of both projections by default:
+
+```{r}
+   Proj <- bipartite_projection(g)
+   G.p <- Proj[[1]]
+   G.g <- Proj[[2]]
+```
+
+In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code below to set the `edge.width`:
+
+```{r}
+   edge_attr(G.p)
+   edge_attr(G.g)
+```
+
+So to get the weighted projection matrix, we need to type:
+
+```{r}
+   as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
+```
+
+```{r}
+   as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
+```
+We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.with` argument to the value of the edge weight attribute in the corresponding graph:
+
+```{r}
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "One mode projection of people."
+   set.seed(123)
+   plot(G.p, 
+     vertex.size=8, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.cex = 1.25, edge.color = "lightgray",
+     edge.width = E(G.p)$weight)
+```
+
+```{r}
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "One mode projection of groups"
+   set.seed(123)
+   plot(G.g, 
+     vertex.size=8, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.cex = 1.25, edge.color = "lightgray",
+     edge.width = E(G.g)$weight)
+```
+
+Note that because both `G.p` and `G.g` are **weighted graphs** we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).
+
+In `igraph` we can do this using the `strength` function, which takes a weighted graph object as input:
+
+```{r}
+   strength(G.p)
+   strength(G.g)
+```
+
+Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:
+
+1. For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.
+
+1. For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.
+
+We can verify this relationship for $EVELYN$:
+
+```{r}
+   sum.size.evelyn <- sum(A["EVELYN", ] * degree(g)[which(V(g)$type == TRUE)]) #sum of the sizes of the groups Evelyn belongs to
+   sum.size.evelyn - degree(g)[which(V(g)$name == "EVELYN")]
+```
+
+Which is indeed Evelyn's vertex strength. 
+
+Dually, the same relation applies to groups:
+
+```{r}
+   sum.mem.6.27 <- sum(A[, "6/27"] * degree(g)[which(V(g)$type == FALSE)]) #sum of the memberships of people in the first group
+   sum.mem.6.27 - degree(g)[which(V(g)$name == "6/27")]
+```
+
+Which is indeed the vertex strength of the event held on 6/27.
