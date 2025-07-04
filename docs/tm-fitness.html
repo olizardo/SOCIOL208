@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>SOCIOL 208 - Centrality in Two-Mode Networks</title>
+<title>SOCIOL 208 - Fitness and Complexity in Two Mode Networks</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -143,11 +143,14 @@ div.csl-indent {
   }
 }</script>
 
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
-<meta property="og:title" content="SOCIOL 208 - Centrality in Two-Mode Networks">
-<meta property="og:description" content="We have already seen how to calculate the simplest measure of centrality in two-mode networks (degree) in the basic two-mode statistics lecture.">
+<meta property="og:title" content="SOCIOL 208 - Fitness and Complexity in Two Mode Networks">
+<meta property="og:description" content="In a highly cited piece, Tacchella et al. (2012) introduce a new prestige metric for two-mode networks that relies on the same “prismatic” model of status distribution we considered before.">
 <meta property="og:site-name" content="SOCIOL 208">
 </head>
 
@@ -157,7 +160,7 @@ div.csl-indent {
   <header id="quarto-header" class="headroom fixed-top">
   <nav class="quarto-secondary-nav" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
     <div class="container-fluid d-flex justify-content-between">
-      <h1 class="quarto-secondary-nav-title">Centrality in Two-Mode Networks</h1>
+      <h1 class="quarto-secondary-nav-title">Fitness and Complexity in Two Mode Networks</h1>
       <button type="button" class="quarto-btn-toggle btn" aria-label="Show secondary navigation">
         <i class="bi bi-chevron-right"></i>
       </button>
@@ -324,7 +327,7 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./tm-centrality.html" class="sidebar-item-text sidebar-link active">Centrality in Two-Mode Networks</a>
+  <a href="./tm-centrality.html" class="sidebar-item-text sidebar-link">Centrality in Two-Mode Networks</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -359,7 +362,7 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./tm-fitness.html" class="sidebar-item-text sidebar-link">Fitness and Complexity in Two Mode Networks</a>
+  <a href="./tm-fitness.html" class="sidebar-item-text sidebar-link active">Fitness and Complexity in Two Mode Networks</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -462,18 +465,17 @@ div.csl-indent {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#geodesic-distances" id="toc-geodesic-distances" class="nav-link active" data-scroll-target="#geodesic-distances">Geodesic Distances</a></li>
-  <li><a href="#closeness-centrality" id="toc-closeness-centrality" class="nav-link" data-scroll-target="#closeness-centrality">Closeness Centrality</a></li>
-  <li><a href="#betweenness-centrality" id="toc-betweenness-centrality" class="nav-link" data-scroll-target="#betweenness-centrality">Betweenness Centrality</a></li>
+  <li><a href="#the-fitnesscomplexity-score" id="toc-the-fitnesscomplexity-score" class="nav-link active" data-scroll-target="#the-fitnesscomplexity-score">The Fitness/Complexity Score</a></li>
+  <li><a href="#beyond-status-as-popularityactivity" id="toc-beyond-status-as-popularityactivity" class="nav-link" data-scroll-target="#beyond-status-as-popularityactivity">Beyond Status as Popularity/Activity</a></li>
   </ul>
-<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/tm-centrality.qmd" class="toc-action">View source</a></p></div></div></nav>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/tm-fitness.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title d-none d-lg-block">Centrality in Two-Mode Networks</h1>
+<h1 class="title d-none d-lg-block">Fitness and Complexity in Two Mode Networks</h1>
 </div>
 
 
@@ -488,174 +490,299 @@ div.csl-indent {
 
 </header>
 
-<p>We have already seen how to calculate the simplest measure of centrality in two-mode networks (degree) in the <a href="./tm-basic.html">basic two-mode statistics</a> lecture. Here we extend the discussion to the other two of the big three, <strong>closeness</strong> and <strong>betwennness</strong>. As always, we load up the usual <em>Southern Women</em> (SW) data:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(igraph)</span>
-<span id="cb1-2"><a href="#cb1-2"></a>    <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-3"><a href="#cb1-3"></a>    g <span class="ot">&lt;-</span> southern_women</span>
-<span id="cb1-4"><a href="#cb1-4"></a>    A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<section id="geodesic-distances" class="level2">
-<h2 class="anchored" data-anchor-id="geodesic-distances">Geodesic Distances</h2>
-<p>Geodesic distances work a bit different in two-mode networks because of the only between-node-sets edges restriction.</p>
-<p>For instance, the minimum geodesic distance <span class="math inline">\(g_{ii'}\)</span> between two people is two (a person cannot be adjacent to another person), but it is one between a person and a group (if the person is a member of the group).</p>
-<p>In the same way, a group <span class="math inline">\(g\)</span> cannot be at geodesic distance less than three from a person <span class="math inline">\(p*\)</span> who is not a member, because the shortest path is <span class="math inline">\(g-p-g^*-p^*\)</span>.</p>
-<p>That is, there has to be some other group <span class="math inline">\(g^*\)</span> shared between a member <span class="math inline">\(p\)</span> of the focal group <span class="math inline">\(g\)</span> and another person <span class="math inline">\(p^*\)</span> for the shortest path between <span class="math inline">\(g\)</span> and the non-member <span class="math inline">\(p^*\)</span> to exist, and that involves three links at minimum: <span class="math inline">\(g-p\)</span>, <span class="math inline">\(p-g^*\)</span>, and <span class="math inline">\(g^*-p^*\)</span>. This means that the links in paths in two-mode networks always alternate between persons and group nodes.</p>
-<p>Beyond that geodesic distances work the same way. In <code>igraph</code> when we use the <code>distances</code> function on a bipartite graph, we get:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   D.pg <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
-<span id="cb2-2"><a href="#cb2-2"></a>   <span class="fu">head</span>(D.pg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>          EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH
-EVELYN         0     2       2      2         2       2       2     2    2
-LAURA          2     0       2      2         2       2       2     2    2
-THERESA        2     2       0      2         2       2       2     2    2
-BRENDA         2     2       2      0         2       2       2     2    2
-CHARLOTTE      2     2       2      2         0       2       2     4    2
-FRANCES        2     2       2      2         2       0       2     2    2
-          VERNE MYRNA KATHERINE SYLVIA NORA HELEN DOROTHY OLIVIA FLORA 6/27 3/2
-EVELYN        2     2         2      2    2     2       2      2     2    1   1
-LAURA         2     2         2      2    2     2       2      4     4    1   1
-THERESA       2     2         2      2    2     2       2      2     2    3   1
-BRENDA        2     2         2      2    2     2       2      4     4    1   3
-CHARLOTTE     2     4         4      2    2     2       4      4     4    3   3
-FRANCES       2     2         2      2    2     2       2      4     4    3   3
-          4/12 9/26 2/25 5/19 3/15 9/16 4/8 6/10 2/23 4/7 11/21 8/3
-EVELYN       1    1    1    1    3    1   1    3    3   3     3   3
-LAURA        1    3    1    1    1    1   3    3    3   3     3   3
-THERESA      1    1    1    1    1    1   1    3    3   3     3   3
-BRENDA       1    1    1    1    1    1   3    3    3   3     3   3
-CHARLOTTE    1    1    1    3    1    3   3    3    3   3     3   3
-FRANCES      1    3    1    1    3    1   3    3    3   3     3   3</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">tail</span>(D.pg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>      EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH VERNE
-4/8        1     3       1      3         3       3       3     1    1     1
-6/10       3     3       3      3         3       3       3     3    3     3
-2/23       3     3       3      3         3       3       3     3    3     3
-4/7        3     3       3      3         3       3       3     3    3     1
-11/21      3     3       3      3         3       3       3     3    3     3
-8/3        3     3       3      3         3       3       3     3    3     3
-      MYRNA KATHERINE SYLVIA NORA HELEN DOROTHY OLIVIA FLORA 6/27 3/2 4/12 9/26
-4/8       1         1      1    1     3       1      1     1    2   2    2    2
-6/10      1         1      1    1     1       3      3     3    4   4    4    4
-2/23      3         3      3    1     1       3      1     1    4   4    4    4
-4/7       1         1      1    1     1       3      3     3    4   4    4    4
-11/21     3         1      1    1     3       3      3     3    4   4    4    4
-8/3       3         1      1    1     3       3      3     3    4   4    4    4
-      2/25 5/19 3/15 9/16 4/8 6/10 2/23 4/7 11/21 8/3
-4/8      2    2    2    2   0    2    2   2     2   2
-6/10     4    2    2    2   2    0    2   2     2   2
-2/23     4    2    2    2   2    2    0   2     2   2
-4/7      4    2    2    2   2    2    2   0     2   2
-11/21    4    2    2    2   2    2    2   2     0   2
-8/3      4    2    2    2   2    2    2   2     2   0</code></pre>
-</div>
-</div>
-<p>Which is a square matrix of dimensions <span class="math inline">\((M + N) \times (M + N)\)</span>; that’s <span class="math inline">\((18 + 14) \times (18 + 14) = 32 \times 32\)</span> in our case.</p>
-<p>We can check in <code>R</code>:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">dim</span>(D.pg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 32 32</code></pre>
-</div>
-</div>
-<p>As we can see in the distance matrix, distances between nodes in the same set are even <span class="math inline">\(g_{ii'|jj'} = \{2, 4, \ldots\}\)</span> but distances in nodes in different sets are odd <span class="math inline">\(g_{ij|ji} = \{1, 3, \ldots\}\)</span>. Beyond this hiccup, distances can be interpreted in the same way as one-mode networks.</p>
+<section id="the-fitnesscomplexity-score" class="level2">
+<h2 class="anchored" data-anchor-id="the-fitnesscomplexity-score">The Fitness/Complexity Score</h2>
+<p>In a highly cited piece, <span class="citation" data-cites="tacchella_etal12">Tacchella et al. (<a href="#ref-tacchella_etal12" role="doc-biblioref">2012</a>)</span> introduce a new prestige metric for two-mode networks that relies on the same “prismatic” model of status distribution we considered <a href="./tm-prestige.html">before</a>. They called the prestige metrics they obtained “fitness” and “complexity” because they developed in the empirical context of calculating metrics for ranking nations based on their competitive advantage in exporting products, which means analyzing a two-mode country-by-product matrix <span class="citation" data-cites="hidalgo_hausmann09">(<a href="#ref-hidalgo_hausmann09" role="doc-biblioref">Hidalgo and Hausmann 2009</a>)</span>.</p>
+<p>However, we considered as a general social network measure, it is clear that their approach is a prestige metric for two-mode networks that combines ideas from Bonacich Eigenvector scoring and PageRank scoring that we covered in the <a href="./tm-prestige.html">two-mode prestige lesson</a>.</p>
+<p>Their basic idea is that when we are (asymmetrically) interested in determining the status or prestige of nodes in one particular mode, we should not use summaries (e.g., sums or averages) of the scores for nodes in the other mode in determining their status. Instead, we should deeply discount those nodes that connect to low status nodes in the other end.</p>
+<p>To understand what they are getting at, it helps to write down the Bonacich prestige scoring in equation form, as we go through each iteration of the status distribution game:</p>
+<p>At each iteration <span class="math inline">\(q\)</span>, the vector of status scores for the row nodes <span class="math inline">\(\mathbf{s}^R\)</span> and the column nodes <span class="math inline">\(\mathbf{s}^C\)</span> is given by:</p>
+<p><span id="eq-iter1"><span class="math display">\[
+s^R_i(q) = \sum_j\mathbf{A}_{ij}s^C_j(q-1)
+\tag{1}\]</span></span></p>
+<p><span id="eq-iter2"><span class="math display">\[
+s^C_j(q) = \sum_i\mathbf{A}_{ij}s^R_i(q-1)
+\tag{2}\]</span></span></p>
+<p>Where <span class="math inline">\(\mathbf{A}\)</span> is the two-mode network’s biadjacency matrix, and with the restriction that at the initial step <span class="math inline">\(\mathbf{s}(0)^C = \mathbf{1}\)</span> where <span class="math inline">\(\mathbf{1}\)</span> is the all ones vector of length equals to the number of columns of the biadjacency matrix <span class="math inline">\(\mathbf{A}\)</span>.</p>
+<p>At each iteration <span class="math inline">\(q &gt; 0\)</span> we normalize both score vectors:</p>
+<p><span id="eq-norm1"><span class="math display">\[
+\mathbf{s}^R(q) = \frac{\mathbf{s}^R(q)}{\left\langle\mathbf{s}^R(q)\right\rangle}
+\tag{3}\]</span></span></p>
+<p><span id="eq-norm2"><span class="math display">\[
+\mathbf{s}^C(q) = \frac{\mathbf{s}^C(q)}{\left\langle\mathbf{s}^C(q)\right\rangle}
+\tag{4}\]</span></span></p>
+<p>Where <span class="math inline">\(\left\langle \mathbf{s} \right\rangle\)</span> is the Euclidean vector norm, and the continue iterating until the differences between the vectors across successive iterations is minimal.</p>
+<p>So far, this is what we <a href="./tm-prestige.html">covered before</a>. What <span class="citation" data-cites="tacchella_etal12">Tacchella et al. (<a href="#ref-tacchella_etal12" role="doc-biblioref">2012</a>)</span> propose is to substitute <a href="#eq-iter2">Equation&nbsp;2</a> above with:</p>
+<p><span id="eq-gen2"><span class="math display">\[
+    s^C_j(q) = \left[\sum_i\mathbf{A}_{ij}\left(s^R_i(q-1)\right)^{-1}\right]^{-1}
+\tag{5}\]</span></span></p>
+<p>Which means that first (inner parentheses) we take the reciprocal of the row-mode nodes’ status scores, sum them across column-mode nodes (such that column-mode nodes that connect to low status row-mode nodes get a big score), and then take the reciprocal of the reciprocal to get back to a measure of status for column-mode nodes. This non-linear transformation heavily discounts the status scores assigned to row-mode nodes whenever they connect to unpopular column-mode nodes.</p>
 </section>
-<section id="closeness-centrality" class="level2">
-<h2 class="anchored" data-anchor-id="closeness-centrality">Closeness Centrality</h2>
-<p>This means that (unnormalized) closeness centrality works the same way as it does in regular networks:</p>
+<section id="beyond-status-as-popularityactivity" class="level2">
+<h2 class="anchored" data-anchor-id="beyond-status-as-popularityactivity">Beyond Status as Popularity/Activity</h2>
+<p>How should we understand this modification? Recall that the basic principle of standard Bonacich prestige scoring is based on the equation of status and <em>popularity</em>/<em>activity</em>. In the canonical case of persons and groups <span class="citation" data-cites="breiger74">(<a href="#ref-breiger74" role="doc-biblioref">Breiger 1974</a>)</span>, an event receives status from being attended by high-status individuals and an individual receives status from being affiliated with a high status event; in each case, status from the point of view of the event means having highly active members, and from the point of view of the individual it means being affiliated with popular events.</p>
+<p>But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing <span class="citation" data-cites="hidalgo_hausmann09">(<a href="#ref-hidalgo_hausmann09" role="doc-biblioref">Hidalgo and Hausmann 2009</a>)</span>. Analysts noticed that the most developed countries produce both “complex” (i.e., high status) products that only a select few of other highly developed economies produce (like semiconductors) and also less “complex” (i.e., low status, like extractive natural resources) products that the other less developed economics produce <span class="citation" data-cites="tacchella_etal12">(<a href="#ref-tacchella_etal12" role="doc-biblioref">Tacchella et al. 2012</a>)</span>. That means that the “complexity” (i.e., status score) of a product cannot be derived simply taking a summary (e.g., sum or average) of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production.</p>
+<p>Applying the same reasoning to the aforementioned case of persons and groups <span class="citation" data-cites="breiger74">(<a href="#ref-breiger74" role="doc-biblioref">Breiger 1974</a>)</span>, an equivalent situation would go as follows. Imagine there is a set of elite women and a set of elite events that only the elite women attend. However, elite women are also endowed with a spirit of <em>noblesse oblige</em>, which means that the most elite of them <em>also</em> attend non-elite events. This means that when determining the status of the <em>events</em> it is not very informative to know that elites affiliate with them; rather, we should weigh more heavily whether <em>non-elites</em> affiliate with an event in determining an event’s status, such that as the number of non-elite women who affiliate with an event increases, a given event’s status is downgraded in a non-linear way which feeds back into the computation of each woman’s prestige.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">round</span>(<span class="fu">closeness</span>(g), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-    0.017     0.015     0.017     0.015     0.013     0.014     0.014     0.014 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-    0.015     0.015     0.014     0.015     0.016     0.017     0.015     0.014 
-   OLIVIA     FLORA      6/27       3/2      4/12      9/26      2/25      5/19 
-    0.012     0.012     0.012     0.012     0.013     0.012     0.014     0.016 
-     3/15      9/16       4/8      6/10      2/23       4/7     11/21       8/3 
-    0.017     0.019     0.018     0.013     0.012     0.013     0.012     0.012 </code></pre>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
+<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> southern_women</span>
+<span id="cb1-4"><a href="#cb1-4"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(g))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-</div>
-<p>Which is just the inverse of the sums of the distances matrix for people and groups counting their geodesic distances to nodes of both sets.</p>
-<p>However, as <span class="citation" data-cites="borgatti_everett97">Borgatti and Everett (<a href="#ref-borgatti_everett97" role="doc-biblioref">1997</a>)</span> note, if we want <em>normalized</em> closeness centralities, we can’t use the off-the-shelf normalization for one-mode networks in <code>igraph</code> (<span class="math inline">\(n-1\)</span>) as it will give us non-sense results because now we have two sets of nodes.</p>
-<p>Instead, we need to normalize the closeness score for each node set by its theoretical maximum for each node set.</p>
-<p>For people, this is:</p>
-<p><span class="math display">\[
-N + 2(M - 1)
-\]</span></p>
-<p>And for groups/events this same quantity is:</p>
-<p><span class="math display">\[
-M + 2(N - 1)
-\]</span></p>
-<p>The basic idea is that nodes can be at minimum geodesic distance <span class="math inline">\(g = 1\)</span> from nodes of the other set (for people, groups; for groups, people) and at minimum distance <span class="math inline">\(g = 2\)</span> from nodes of their own set, with their own presence eliminated by subtraction <span class="citation" data-cites="borgatti_everett97">(<a href="#ref-borgatti_everett97" role="doc-biblioref">Borgatti and Everett 1997</a>)</span>.</p>
-<p>In our case, we create a normalization vector with these quantities of length <span class="math inline">\(M + N\)</span>:</p>
+<p>And here’s a function called <code>tm.fitness</code> that modifies the old two-mode status distribution game function <a href="./tm-prestige.html">we played before</a> to compute the fitness and complexity prestige scores for persons and groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
-<span id="cb10-2"><a href="#cb10-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
-<span id="cb10-3"><a href="#cb10-3"></a>   n.p <span class="ot">&lt;-</span> N <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> (M <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb10-4"><a href="#cb10-4"></a>   n.e <span class="ot">&lt;-</span> M <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> (N <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb10-5"><a href="#cb10-5"></a>   norm.vec <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(n.p, M), <span class="fu">rep</span>(n.e, N))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   tm.fitness <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">ncol</span>(w), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>      z <span class="ot">&lt;-</span> <span class="fu">t</span>(w)</span>
+<span id="cb2-4"><a href="#cb2-4"></a>      epsilon <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
+<span id="cb2-5"><a href="#cb2-5"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a>      <span class="cf">while</span> (epsilon <span class="sc">&gt;</span> <span class="fl">1e-15</span>) {</span>
+<span id="cb2-7"><a href="#cb2-7"></a>         o.y <span class="ot">&lt;-</span> y </span>
+<span id="cb2-8"><a href="#cb2-8"></a>         x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.y <span class="co">#fitness status scores for people</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a>         x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co">#normalizing new people status scores </span></span>
+<span id="cb2-10"><a href="#cb2-10"></a>         y <span class="ot">&lt;-</span> (z <span class="sc">%*%</span> x<span class="sc">^-</span><span class="dv">1</span>)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#complexity status scores for groups</span></span>
+<span id="cb2-11"><a href="#cb2-11"></a>         y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co">#normalizing new group status scores </span></span>
+<span id="cb2-12"><a href="#cb2-12"></a>         <span class="cf">if</span> (k <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb2-13"><a href="#cb2-13"></a>            epsilon <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(y) <span class="sc">-</span> <span class="fu">abs</span>(o.y))) </span>
+<span id="cb2-14"><a href="#cb2-14"></a>            }</span>
+<span id="cb2-15"><a href="#cb2-15"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb2-16"><a href="#cb2-16"></a>         }</span>
+<span id="cb2-17"><a href="#cb2-17"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y, <span class="at">k =</span> k))</span>
+<span id="cb2-18"><a href="#cb2-18"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And normalized closeness is:</p>
+<p>And we apply it to the SW data:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   <span class="fu">round</span>(norm.vec<span class="sc">/</span><span class="fu">rowSums</span>(D.pg), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-    0.800     0.727     0.800     0.727     0.600     0.667     0.667     0.667 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-    0.706     0.706     0.686     0.727     0.774     0.800     0.727     0.649 
-   OLIVIA     FLORA      6/27       3/2      4/12      9/26      2/25      5/19 
-    0.585     0.585     0.524     0.524     0.564     0.537     0.595     0.688 
-     3/15      9/16       4/8      6/10      2/23       4/7     11/21       8/3 
-    0.733     0.846     0.786     0.550     0.537     0.564     0.524     0.524 </code></pre>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    fc <span class="ot">&lt;-</span> <span class="fu">tm.fitness</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-</div>
-<p>Which are the same numbers in <span class="citation" data-cites="borgatti_everett97">Borgatti and Everett (<a href="#ref-borgatti_everett97" role="doc-biblioref">1997</a>, table 1, column 6)</span>.</p>
-</section>
-<section id="betweenness-centrality" class="level2">
-<h2 class="anchored" data-anchor-id="betweenness-centrality">Betweenness Centrality</h2>
-<p>As <span class="citation" data-cites="borgatti_everett97">Borgatti and Everett (<a href="#ref-borgatti_everett97" role="doc-biblioref">1997</a>)</span> also note, the normalizations for betweenness centrality in the two-mode case are a bit more involved. This is because they depend on which node set is larger than the other.</p>
-<p>For the larger node set, which in our case is the people, the normalization is:</p>
-<p><span class="math display">\[
-2(M-1)(N-1)
-\]</span></p>
-<p>For the smaller node set, which in our case is the groups/events, the normalization is:</p>
-<p><span class="math display">\[
-\frac{1}{2}(N)(N-1)+\frac{1}{2}(M-1)(M-2)+(M-1)(N-1)
-\]</span></p>
-<p>Remember that you have to switch this around if you are analyzing a network with more groups than people.</p>
-<p>Creating the relevant vectors:</p>
+<p>We also calculate the usual Bonacich eigenvector scores for comparison purposes:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   n.p <span class="ot">&lt;-</span> <span class="dv">2</span><span class="sc">*</span>(M<span class="dv">-1</span>)<span class="sc">*</span>(N<span class="dv">-1</span>)</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   n.e <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>)<span class="sc">*</span>(N<span class="sc">*</span>(N<span class="dv">-1</span>))<span class="sc">+</span>(<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>)<span class="sc">*</span>(M<span class="dv">-1</span>)<span class="sc">*</span>(M<span class="dv">-2</span>)<span class="sc">+</span>(M<span class="dv">-1</span>)<span class="sc">*</span>(N<span class="dv">-1</span>)</span>
-<span id="cb13-3"><a href="#cb13-3"></a>   norm.vec <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(n.p, M), <span class="fu">rep</span>(n.e, N))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   eig.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A <span class="sc">%*%</span> <span class="fu">t</span>(A))</span>
+<span id="cb4-2"><a href="#cb4-2"></a>   eig.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(<span class="fu">t</span>(A) <span class="sc">%*%</span> A)</span>
+<span id="cb4-3"><a href="#cb4-3"></a>   p.s <span class="ot">&lt;-</span> eig.p<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb4-4"><a href="#cb4-4"></a>   g.s <span class="ot">&lt;-</span> eig.g<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb4-5"><a href="#cb4-5"></a>   <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb4-6"><a href="#cb4-6"></a>   <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And normalized betweenness is:</p>
+<p>And we put them in a table. Here are the people:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(<span class="fu">betweenness</span>(g)<span class="sc">/</span>norm.vec, <span class="dv">4</span>)<span class="sc">*</span><span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-     9.72      5.17      8.82      4.98      1.07      1.08      0.95      0.68 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-     1.69      1.58      1.65      4.77      7.22     11.42      4.27      0.20 
-   OLIVIA     FLORA      6/27       3/2      4/12      9/26      2/25      5/19 
-     0.51      0.51      0.22      0.21      1.84      0.78      3.80      6.56 
-     3/15      9/16       4/8      6/10      2/23       4/7     11/21       8/3 
-    13.07     24.60     22.75      1.15      1.98      1.83      0.23      0.23 </code></pre>
+<div class="cell-output-display">
+<div id="tbl-people" class="anchored">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;border-bottom: 0;"><caption>Table&nbsp;1:  Status Scores for Persons </caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Person </th>
+   <th style="text-align:left;"> Bonacich </th>
+   <th style="text-align:center;"> Fitness/Complexity </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> THERESA </td>
+   <td style="text-align:left;"> 1.000 </td>
+   <td style="text-align:center;"> 0.669 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> EVELYN </td>
+   <td style="text-align:left;"> 0.903 </td>
+   <td style="text-align:center;"> 1.000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> BRENDA </td>
+   <td style="text-align:left;"> 0.845 </td>
+   <td style="text-align:center;"> 0.666 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> LAURA </td>
+   <td style="text-align:left;"> 0.834 </td>
+   <td style="text-align:center;"> 0.842 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> SYLVIA </td>
+   <td style="text-align:left;"> 0.748 </td>
+   <td style="text-align:center;"> 0.759 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> NORA </td>
+   <td style="text-align:left;"> 0.712 </td>
+   <td style="text-align:center;"> 0.777 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> RUTH </td>
+   <td style="text-align:left;"> 0.637 </td>
+   <td style="text-align:center;"> 0.049 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> ELEANOR </td>
+   <td style="text-align:left;"> 0.616 </td>
+   <td style="text-align:center;"> 0.066 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> KATHERINE </td>
+   <td style="text-align:left;"> 0.594 </td>
+   <td style="text-align:center;"> 0.741 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> VERNE </td>
+   <td style="text-align:left;"> 0.589 </td>
+   <td style="text-align:center;"> 0.055 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> FRANCES </td>
+   <td style="text-align:left;"> 0.564 </td>
+   <td style="text-align:center;"> 0.126 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> HELEN </td>
+   <td style="text-align:left;"> 0.542 </td>
+   <td style="text-align:center;"> 0.110 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> MYRNA </td>
+   <td style="text-align:left;"> 0.504 </td>
+   <td style="text-align:center;"> 0.091 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> PEARL </td>
+   <td style="text-align:left;"> 0.486 </td>
+   <td style="text-align:center;"> 0.026 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> CHARLOTTE </td>
+   <td style="text-align:left;"> 0.454 </td>
+   <td style="text-align:center;"> 0.294 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> DOROTHY </td>
+   <td style="text-align:left;"> 0.355 </td>
+   <td style="text-align:center;"> 0.007 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> OLIVIA </td>
+   <td style="text-align:left;"> 0.188 </td>
+   <td style="text-align:center;"> 0.006 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> FLORA </td>
+   <td style="text-align:left;"> 0.188 </td>
+   <td style="text-align:center;"> 0.006 </td>
+  </tr>
+</tbody>
+<tfoot><tr><td style="padding: 0; " colspan="100%">
+<sup>*</sup> Scores normalized by dividing by the maximum.</td></tr></tfoot>
+</table>
+
 </div>
 </div>
-<p>Which are (with some slight differences and rounding errors) the same numbers in <span class="citation" data-cites="borgatti_everett97">Borgatti and Everett (<a href="#ref-borgatti_everett97" role="doc-biblioref">1997</a>, table 2, column 3)</span>.</p>
+</div>
+<p>And the groups:</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-groups" class="anchored">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;border-bottom: 0;"><caption>Table&nbsp;2:  Status Scores for Groups. </caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Group </th>
+   <th style="text-align:left;"> Bonacich </th>
+   <th style="text-align:center;"> Fitness/Complexity </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 3/2 </td>
+   <td style="text-align:left;"> 0.297 </td>
+   <td style="text-align:center;"> 1.000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 6/27 </td>
+   <td style="text-align:left;"> 0.280 </td>
+   <td style="text-align:center;"> 0.998 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 11/21 </td>
+   <td style="text-align:left;"> 0.223 </td>
+   <td style="text-align:center;"> 0.932 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 8/3 </td>
+   <td style="text-align:left;"> 0.223 </td>
+   <td style="text-align:center;"> 0.932 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 9/26 </td>
+   <td style="text-align:left;"> 0.347 </td>
+   <td style="text-align:center;"> 0.498 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 4/12 </td>
+   <td style="text-align:left;"> 0.499 </td>
+   <td style="text-align:center;"> 0.223 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 6/10 </td>
+   <td style="text-align:left;"> 0.336 </td>
+   <td style="text-align:center;"> 0.153 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 4/7 </td>
+   <td style="text-align:left;"> 0.400 </td>
+   <td style="text-align:center;"> 0.087 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 2/25 </td>
+   <td style="text-align:left;"> 0.635 </td>
+   <td style="text-align:center;"> 0.071 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 5/19 </td>
+   <td style="text-align:left;"> 0.647 </td>
+   <td style="text-align:center;"> 0.054 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 3/15 </td>
+   <td style="text-align:left;"> 0.757 </td>
+   <td style="text-align:center;"> 0.051 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 9/16 </td>
+   <td style="text-align:left;"> 1.000 </td>
+   <td style="text-align:center;"> 0.014 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 2/23 </td>
+   <td style="text-align:left;"> 0.177 </td>
+   <td style="text-align:center;"> 0.011 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;font-weight: bold;"> 4/8 </td>
+   <td style="text-align:left;"> 0.749 </td>
+   <td style="text-align:center;"> 0.006 </td>
+  </tr>
+</tbody>
+<tfoot><tr><td style="padding: 0; " colspan="100%">
+<sup>*</sup> Scores normalized by dividing by the maximum.</td></tr></tfoot>
+</table>
+
+</div>
+</div>
+</div>
+<p>Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While <em>{Theresa}</em> is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, <em>{Evelyn}</em> becomes the top person, with <em>{Theresa}</em> dropping to the sixth spot. In the same way while <em>{Nora}</em> is ranked sixth by the Bonacich prestige, her standing improves to third in the fitness scoring.</p>
+<p>The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While <em>{9/16}</em> is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring being the third lowest ranked. All of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event <em>{2/23}</em>, which is low on both accountings.</p>
 
 
 
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
-<div id="ref-borgatti_everett97" class="csl-entry" role="doc-biblioentry">
-Borgatti, Stephen P, and Martin G Everett. 1997. <span>“Network Analysis of 2-Mode Data.”</span> <em>Social Networks</em> 19 (3): 243–69.
+<div id="ref-breiger74" class="csl-entry" role="doc-biblioentry">
+Breiger, Ronald L. 1974. <span>“The Duality of Persons and Groups.”</span> <em>Social Forces</em> 53 (2): 181–90.
+</div>
+<div id="ref-hidalgo_hausmann09" class="csl-entry" role="doc-biblioentry">
+Hidalgo, César A, and Ricardo Hausmann. 2009. <span>“The Building Blocks of Economic Complexity.”</span> <em>Proceedings of the National Academy of Sciences</em> 106 (26): 10570–75.
+</div>
+<div id="ref-tacchella_etal12" class="csl-entry" role="doc-biblioentry">
+Tacchella, Andrea, Matthieu Cristelli, Guido Caldarelli, Andrea Gabrielli, and Luciano Pietronero. 2012. <span>“A New Metrics for Countries’ Fitness and Products’ Complexity.”</span> <em>Scientific Reports</em> 2 (1): 723.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
