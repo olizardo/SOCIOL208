@@ -1,0 +1,146 @@
+---
+title: "The Eigendecomposition of a Square Matrix"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In this lecture, we review the idea of an **eigendecomposition** of a square matrix. Let's say we have the following matrix $\mathbf{B}$ of dimensions $3 \times 3$:
+
+```{r}
+   set.seed(567)
+   B <- matrix(round(runif(9), 2), nrow = 3, ncol = 3)
+   B
+```
+
+Most matrices like this can be decomposed into two other matrices $\mathbf{U}$ and $\mathbf{\lambda}$, such that the following matrix multiplication equation is true:
+
+$$
+\mathbf{B} = \mathbf{U}\mathbf{\lambda}\mathbf{U}^{-1}
+$$
+
+Both $\mathbf{U}$ and $\mathbf{\lambda}$ are of the same dimensions as the original, with $\mathbf{U}$ having numbers in each cell and $\mathbf{\lambda}$ being a matrix with values along the diagonals and zeros everywhere else. 
+
+The column values of $\mathbf{U}$ are called the **eigenvectors** of $\mathbf{B}$ and the diagonal values of $\mathbf{\lambda}$ are called the **eigenvalues** of $\mathbf{B}$.
+
+In `R` you can find the values that yield the eigendecomposition of any square matrix (if one exists) using the function `eigen`. 
+
+So in our case this would be:
+
+```{r}
+   eig.res <- eigen(B)
+   eig.res
+```
+
+The function `eigen` returns a list with two components, one called `values` are the diagonal values of $\mathbf{\lambda}$, and the other one called `vectors` is the eigenvector matrix $\mathbf{U}$.
+
+We can check that these two elements can help us reconstruct the original matrix as follows:
+
+```{r}
+   lambda <- diag(eig.res$values)
+   U <- eig.res$vectors
+   B.rec <- U %*% lambda %*% solve(U)
+   B.rec
+```
+
+Which are indeed the original values of $\mathbf{B}$!
+
+Now imagine that the matrix $\mathbf{B}$ is *symmetrical*:
+
+```{r}
+   B[upper.tri(B)] <- B[lower.tri(B)]
+   B
+```
+
+And let's do the eigendecomposition of this matrix:
+
+```{r}
+   eig.res <- eigen(B)
+   eig.res
+```
+
+The interesting thing here is that now the reconstruction equation boils down to:
+
+$$
+\mathbf{B} = \mathbf{U}\mathbf{\lambda}\mathbf{U}^T
+$$
+
+Note that now we just need to post-multiply $\mathbf{U}\mathbf{\lambda}$ by the *transpose* of $\mathbf{U}$ rather than the inverse, which is a much simpler matrix operation.
+
+We can check that this is true as follows:
+
+```{r}
+   lambda <- diag(eig.res$values)
+   U <- eig.res$vectors
+   B.rec <- U %*% lambda %*% t(U)
+   B.rec
+```
+
+Which are indeed the original values of the symmetric version of $\mathbf{B}$!
+
+Now, the idea is that we can perform the asymmetric or symmetric eigendecomposition with any matrix, including a network adjacency matrix or a proximity matrix derived from it. 
+
+In fact, we have already done a partial version of the matrix eigendecomposition many times before, because the reflective status game is a way to compute the first column (leading eigenvector) of the $\mathbf{U}$ matrix for any proximity or adjacency matrix you feed into it.
+
+The more important thing is that, once you have the eigendecomposition of a matrix, and the full set of eigenvectors stored in $\mathbf{U}$, the first few columns of $\mathbf{U}$, gives us the best *low dimensional approximation* of the original matrix. 
+
+For instance, in the above case, the one-dimensional (also called "rank one") approximation of the original matrix is given by:
+
+$$
+\mathbf{B}_{1-dim} = u_1\lambda_1u_1^T
+$$
+
+Where $u$ is just the first column (eigenvector) of $\mathbf{U}$, and $\lambda_1$ is just the first eigenvalue. 
+
+In `R` we can do this approximation as follows:
+
+```{r}
+   u.1 <- as.matrix(U[, 1]) #column vector
+   B.1dim <- u.1 %*% lambda[1, 1] %*% t(u.1)
+   round(B.1dim, 2)
+```
+
+Which are not quite the same as the original values of $\mathbf{B}$, but they are not wildly far off either. 
+
+If we wanted to be more accurate, however, we would use a *two-dimensional* approximation (rank two) and thus use more of the information:
+
+$$
+\mathbf{B}_{2-dim} = u_1\lambda_1u_1^T + u_2\lambda_2u_2^T
+$$
+
+In `R`:
+
+```{r}
+   u.2 <- as.matrix(U[, 2])
+   B.2dim <- u.1 %*% lambda[1, 1] %*% t(u.1) + u.2 %*% lambda[2, 2] %*% t(u.2)
+   round(B.2dim, 2)
+```
+
+Which are not the same as the original, but are now a bit closer!
+
+Of course, if we wanted to reconstruct the original matrix, all we have to do is add the product of the eigenvector, eigenvalue, and transpose of the eigenvector across all three dimensions of the matrix:
+
+```{r}
+   u.3 <- as.matrix(U[, 3])
+   B.3dim <- 
+      u.1 %*% lambda[1, 1] %*% t(u.1) + 
+      u.2 %*% lambda[2, 2] %*% t(u.2) + 
+      u.3 %*% lambda[3, 3] %*% t(u.3)
+   round(B.3dim, 2)
+```
+
+Which reconstructs the original values. 
+
+So in general, if you have a symmetric square matrix $\mathbf{B}$ of dimensions $k \times k$, and you obtain an eigenvalue decomposition of $\mathbf{B}$ with eigenvectors stored in the columns of $\mathbf{U}$ and eigenvalues in $\lambda$, then the rank-$p$ approximation of the original matrix is given by:
+ 
+$$
+\mathbf{B}_{rank-p} = \sum_{m = 1}^p u_{m}\lambda_mu_m^T
+$$
+
+When $p = k$, the equation above gives you the original matrix back. When $p<k$ you get the best guess as to what the original was, given $p$ dimensions.
