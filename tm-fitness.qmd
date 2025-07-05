@@ -50,7 +50,7 @@ Where $\left\langle \mathbf{s} \right\rangle$ is the Euclidean vector norm, and 
 So far, this is what we [covered before](tm-prestige.qmd). What @tacchella_etal12 propose is to substitute @eq-iter2 above with:
 
 $$
-    s^C_j(q) = \left[\sum_i\mathbf{A}_{ij}\left(s^R_i(q-1)\right)^{-1}\right]^{-1}
+   s^C_j(q) = \left[\sum_i\mathbf{A}_{ij}\left(s^R_i(q-1)\right)^{-1}\right]^{-1}
 $${#eq-gen2}
 
 Which means that first (inner parentheses) we take the reciprocal of the row-mode nodes' status scores, sum them across column-mode nodes (such that column-mode nodes that connect to low status row-mode nodes get a big score), and then take the reciprocal of the reciprocal to get back to a measure of status for column-mode nodes. This non-linear transformation heavily discounts the status scores assigned to column-mode nodes whenever they connect to lower status row-mode nodes. 
@@ -81,9 +81,9 @@ And here's a function called `tm.fitness` that modifies the old two-mode status 
       while (epsilon > 1e-15) {
          o.y <- y 
          x <- w %*% o.y #fitness status scores for people
-         x <- x/norm(x, type = "F") #normalizing new people status scores 
+         x <- x/mean(x) #normalizing new people status scores 
          y <- (z %*% x^-1)^-1 #complexity status scores for groups
-         y <- y/norm(y, type = "F") #normalizing new group status scores 
+         y <- y/mean(y) #normalizing new group status scores 
          if (k > 1) {
             epsilon <- abs(sum(abs(y) - abs(o.y))) 
             }
@@ -119,7 +119,7 @@ And we put them in a table. Here are the people:
    library(kableExtra)
    library(dplyr)
    s.tab <- data.frame(b = p.s/max(p.s), fc = fc$p.s/max(fc$p.s)) |> 
-      arrange(desc(b))
+      arrange(desc(fc))
    kbl(s.tab, format = "pipe", digits = 3,
        align = c("l", "c", "c"),
        col.names = c("Person", "Bonacich", "Fitness/Complexity")) %>% 
@@ -145,6 +145,7 @@ And the groups:
    footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
 ```
 
-Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While *\{Theresa\}* is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, *\{Evelyn\}* becomes the top person, with *\{Theresa\}* dropping to the sixth spot. In the same way while *\{Nora\}* is ranked sixth by the Bonacich prestige, her standing improves to third in the fitness scoring. 
+Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While *\{Theresa\}* is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, *\{Evelyn\}* becomes the top person, with *\{Theresa\}* dropping to the sixth spot. In the same way while *\{Nora\}* is ranked sixth by the Bonacich prestige, her standing improves to second in the fitness scoring. 
 
-The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While *\{9/16\}* is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring ending up third from the bottom. Instead, the top even by complexity is \{3/2\} a relatively low-status even according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event *\{2/23\}*, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (*r* =  `r round(cor(g.s, fc$g.s),2)`).
+The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While *\{9/16\}* is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring ending up second from the bottom. Instead, the top even by complexity is \{3/2\} a relatively low-status even according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event *\{2/23\}*, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (*r* =  `r round(cor(g.s, fc$g.s),2)`). This is different from the person ranks, which agree more closely (*r* =  `r round(cor(p.s, fc$p.s),2)`).
+
