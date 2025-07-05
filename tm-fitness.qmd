@@ -149,3 +149,46 @@ Each table sorts persons and groups according to the fitness/complexity score. W
 
 The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While *\{9/16\}* is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring ending up second from the bottom. Instead, the top even by complexity is \{3/2\} a relatively low-status even according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event *\{2/23\}*, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (*r* =  `r round(cor(g.s, fc$g.s),2)`). This is different from the person ranks, which agree more closely (*r* =  `r round(cor(p.s, fc$p.s),2)`).
 
+```{r}
+   tm.gen.fitness <- function(w, delta = 1, gamma = 1, iter = 1000) {
+      y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
+      z <- t(w)
+      k <- 0
+      while (k < iter) {
+         o.y <- y 
+         x <- (w %*% o.y^-delta)^-(1/delta) #fitness status scores for people
+         x <- x/mean(x) #normalizing new people status scores 
+         y <- (z %*% x^-gamma)^-(1/gamma) #complexity status scores for groups
+         y <- y/mean(y) #normalizing new group status scores 
+         k <- k + 1
+         }
+   return(list(p.s = x, g.s = y, k = k))
+   }
+```
+
+```{r}
+   fc1 <- tm.gen.fitness(A, delta = -1, gamma = -1)
+   fc2 <- tm.gen.fitness(A, delta = -1, gamma = 1)
+   fc3 <- tm.gen.fitness(A, delta = 1, gamma = -1)
+   fc4 <- tm.gen.fitness(A, delta = 2, gamma = 0.5)
+```
+
+```{r}
+#| echo: false
+#| tbl-cap: "Status Scores for Persons"
+   library(kableExtra)
+   library(dplyr)
+   s.tab <- data.frame(fc1 = fc1$p.s/max(fc1$p.s), 
+                        fc2 = fc2$p.s/max(fc2$p.s),
+                        fc3 = fc3$p.s/max(fc3$p.s),
+                        fc4 = fc4$p.s/max(fc4$p.s)
+                        ) |> 
+      arrange(desc(fc1))
+   s.tab
+```
+   kbl(s.tab, format = "pipe", digits = 3,
+       align = c("l", "c", "c", "c", "c"),
+       col.names = c("Person", "Bonacich", "Fitness (C)", "Fitness (R)", "Fitness (RC)")) %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+   column_spec(1, bold = TRUE) |> 
+   footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
