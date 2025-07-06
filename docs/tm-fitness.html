@@ -769,6 +769,52 @@ s^C_j(q) = \sum_i\mathbf{A}_{ij}s^R_i(q-1)
 </div>
 <p>Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While <em>{Theresa}</em> is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, <em>{Evelyn}</em> becomes the top person, with <em>{Theresa}</em> dropping to the sixth spot. In the same way while <em>{Nora}</em> is ranked sixth by the Bonacich prestige, her standing improves to second in the fitness scoring.</p>
 <p>The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While <em>{9/16}</em> is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring ending up second from the bottom. Instead, the top even by complexity is {3/2} a relatively low-status even according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event <em>{2/23}</em>, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (<em>r</em> = -0.68). This is different from the person ranks, which agree more closely (<em>r</em> = 0.78).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   tm.gen.fitness <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">delta =</span> <span class="dv">1</span>, <span class="at">gamma =</span> <span class="dv">1</span>, <span class="at">iter =</span> <span class="dv">1000</span>) {</span>
+<span id="cb5-2"><a href="#cb5-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">ncol</span>(w), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
+<span id="cb5-3"><a href="#cb5-3"></a>      z <span class="ot">&lt;-</span> <span class="fu">t</span>(w)</span>
+<span id="cb5-4"><a href="#cb5-4"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb5-5"><a href="#cb5-5"></a>      <span class="cf">while</span> (k <span class="sc">&lt;</span> iter) {</span>
+<span id="cb5-6"><a href="#cb5-6"></a>         o.y <span class="ot">&lt;-</span> y </span>
+<span id="cb5-7"><a href="#cb5-7"></a>         x <span class="ot">&lt;-</span> (w <span class="sc">%*%</span> o.y<span class="sc">^-</span>delta)<span class="sc">^-</span>(<span class="dv">1</span><span class="sc">/</span>delta) <span class="co">#fitness status scores for people</span></span>
+<span id="cb5-8"><a href="#cb5-8"></a>         x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">mean</span>(x) <span class="co">#normalizing new people status scores </span></span>
+<span id="cb5-9"><a href="#cb5-9"></a>         y <span class="ot">&lt;-</span> (z <span class="sc">%*%</span> x<span class="sc">^-</span>gamma)<span class="sc">^-</span>(<span class="dv">1</span><span class="sc">/</span>gamma) <span class="co">#complexity status scores for groups</span></span>
+<span id="cb5-10"><a href="#cb5-10"></a>         y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">mean</span>(y) <span class="co">#normalizing new group status scores </span></span>
+<span id="cb5-11"><a href="#cb5-11"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb5-12"><a href="#cb5-12"></a>         }</span>
+<span id="cb5-13"><a href="#cb5-13"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y, <span class="at">k =</span> k))</span>
+<span id="cb5-14"><a href="#cb5-14"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   fc1 <span class="ot">&lt;-</span> <span class="fu">tm.gen.fitness</span>(A, <span class="at">delta =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">gamma =</span> <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb6-2"><a href="#cb6-2"></a>   fc2 <span class="ot">&lt;-</span> <span class="fu">tm.gen.fitness</span>(A, <span class="at">delta =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">gamma =</span> <span class="dv">1</span>)</span>
+<span id="cb6-3"><a href="#cb6-3"></a>   fc3 <span class="ot">&lt;-</span> <span class="fu">tm.gen.fitness</span>(A, <span class="at">delta =</span> <span class="dv">1</span>, <span class="at">gamma =</span> <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb6-4"><a href="#cb6-4"></a>   fc4 <span class="ot">&lt;-</span> <span class="fu">tm.gen.fitness</span>(A, <span class="at">delta =</span> <span class="dv">2</span>, <span class="at">gamma =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-tbl-cap="Status Scores for Persons">
+<div class="cell-output cell-output-stdout">
+<pre><code>                fc1         fc2         fc3       fc4
+THERESA   1.0000000 0.669147044 0.008893852 0.4261160
+EVELYN    0.9033105 1.000000000 0.005951295 0.4530310
+BRENDA    0.8446830 0.666303533 0.008931808 0.4883959
+LAURA     0.8344714 0.841534959 0.007071952 0.4888818
+SYLVIA    0.7479813 0.759149640 0.007839423 0.4473089
+NORA      0.7121701 0.776947977 0.007659837 0.6469804
+RUTH      0.6369764 0.049414054 0.120437296 0.4418250
+ELEANOR   0.6162130 0.065996969 0.090175278 0.4943145
+KATHERINE 0.5944761 0.741487639 0.008026155 0.4790866
+VERNE     0.5893687 0.055131552 0.107947171 0.4496324
+FRANCES   0.5639176 0.126239496 0.047142893 0.5322269
+HELEN     0.5415181 0.110118995 0.054044219 0.5211563
+MYRNA     0.5040700 0.090985628 0.065409177 0.4796601
+PEARL     0.4858270 0.025798717 0.230681825 0.4713670
+CHARLOTTE 0.4539402 0.294229824 0.020226689 1.0000000
+DOROTHY   0.3546904 0.006975837 0.853129872 0.4869986
+OLIVIA    0.1877427 0.005951295 1.000000000 0.8693094
+FLORA     0.1877427 0.005951295 1.000000000 0.8693094</code></pre>
+</div>
+</div>
+<p>kbl(s.tab, format = “pipe”, digits = 3, align = c(“l”, “c”, “c”, “c”, “c”), col.names = c(“Person”, “Bonacich”, “Fitness (C)”, “Fitness (R)”, “Fitness (RC)”)) %&gt;% kable_styling(bootstrap_options = c(“hover”, “condensed”, “responsive”)) %&gt;% column_spec(1, bold = TRUE) |&gt; footnote(symbol = c(“Scores normalized by dividing by the maximum.”))</p>
 
 
 

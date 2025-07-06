@@ -466,12 +466,17 @@ div.csl-indent {
    
   <ul>
   <li><a href="#two-mode-networks-as-prisms" id="toc-two-mode-networks-as-prisms" class="nav-link active" data-scroll-target="#two-mode-networks-as-prisms">Two-Mode Networks as Prisms</a></li>
-  <li><a href="#bonacich-prestige-in-the-southern-women-data" id="toc-bonacich-prestige-in-the-southern-women-data" class="nav-link" data-scroll-target="#bonacich-prestige-in-the-southern-women-data">Bonacich Prestige in the Southern Women Data</a>
+  <li><a href="#two-mode-bonacich-prestige" id="toc-two-mode-bonacich-prestige" class="nav-link" data-scroll-target="#two-mode-bonacich-prestige">Two-Mode Bonacich Prestige</a>
   <ul class="collapse">
-  <li><a href="#duality-and-two-mode-bonacich-prestige" id="toc-duality-and-two-mode-bonacich-prestige" class="nav-link" data-scroll-target="#duality-and-two-mode-bonacich-prestige">Duality and Two-Mode Bonacich Prestige</a></li>
+  <li><a href="#the-dual-projection-approach" id="toc-the-dual-projection-approach" class="nav-link" data-scroll-target="#the-dual-projection-approach">The Dual Projection Approach</a></li>
+  <li><a href="#the-eigenvector-approach" id="toc-the-eigenvector-approach" class="nav-link" data-scroll-target="#the-eigenvector-approach">The Eigenvector Approach</a></li>
+  <li><a href="#the-duality-of-bonacich-prestige" id="toc-the-duality-of-bonacich-prestige" class="nav-link" data-scroll-target="#the-duality-of-bonacich-prestige">The Duality of Bonacich Prestige</a></li>
   </ul></li>
-  <li><a href="#two-mode-pagerank" id="toc-two-mode-pagerank" class="nav-link" data-scroll-target="#two-mode-pagerank">Two-Mode PageRank</a></li>
+  <li><a href="#two-mode-pagerank" id="toc-two-mode-pagerank" class="nav-link" data-scroll-target="#two-mode-pagerank">Two-Mode PageRank</a>
+  <ul class="collapse">
+  <li><a href="#the-eigenvector-approach-for-two-mode-pagerank" id="toc-the-eigenvector-approach-for-two-mode-pagerank" class="nav-link" data-scroll-target="#the-eigenvector-approach-for-two-mode-pagerank">The Eigenvector Approach for Two-Mode PageRank</a></li>
   <li><a href="#double-normalized-two-mode-pagerank" id="toc-double-normalized-two-mode-pagerank" class="nav-link" data-scroll-target="#double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</a></li>
+  </ul></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/tm-prestige.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -498,12 +503,12 @@ div.csl-indent {
 <section id="two-mode-networks-as-prisms" class="level2">
 <h2 class="anchored" data-anchor-id="two-mode-networks-as-prisms">Two-Mode Networks as Prisms</h2>
 <p>We can use the same “prismatic” mode of status distribution to rank nodes in two-mode networks that we used in the <a href="./prestige.html">standard one-mode case</a>. The difference is that in the one-mode case you gain status by connecting to entities of the same “type” as you (e.g., other people). In the two-mode case, your status reflects the status of the “other type” entities that you connect to. And vice versa.</p>
-<p>For instance, if the two entities are people and groups <span class="citation" data-cites="breiger74">(<a href="#ref-breiger74" role="doc-biblioref">Breiger 1974</a>)</span>, then people gain status by connecting to high status groups and groups gain status by connecting to high-status people. In other words, people distribute status points to the groups they belong to and groups distribute status points to the people that belong to them.</p>
+<p>For instance, if the two entities are persons and groups <span class="citation" data-cites="breiger74">(<a href="#ref-breiger74" role="doc-biblioref">Breiger 1974</a>)</span>, then people gain status by connecting to high status groups and groups gain status by connecting to high-status people. In other words, people distribute status points to the groups they belong to and groups distribute status points to the people that belong to them.</p>
 <p>When it comes to <strong>eigenvector</strong>-style measures, the neat idea is that <em>people are central if they belong to central groups and groups and central if their members are central people</em> (with people centrality defined by membership in central groups) can be effectively captured by these metrics <span class="citation" data-cites="bonacich91">(<a href="#ref-bonacich91" role="doc-biblioref">Bonacich 1991</a>)</span>.</p>
 <p>For this reason, measures of status and prestige are particularly applicable to two-mode networks. The reason is that the <em>reflective</em> principle behind these measures interacts nicely with the <em>duality</em> principle.</p>
 </section>
-<section id="bonacich-prestige-in-the-southern-women-data" class="level2">
-<h2 class="anchored" data-anchor-id="bonacich-prestige-in-the-southern-women-data">Bonacich Prestige in the Southern Women Data</h2>
+<section id="two-mode-bonacich-prestige" class="level2">
+<h2 class="anchored" data-anchor-id="two-mode-bonacich-prestige">Two-Mode Bonacich Prestige</h2>
 <p>Let’s see an example using the classic Southern Women dataset. We can load it from the trusty <code>networkdata</code> package, and extract the bi-adjacency matrix from the <code>igraph</code> object:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
@@ -513,30 +518,31 @@ div.csl-indent {
 </div>
 <p>Below is a quick function that plays a two-mode version of the status distribution game that we described in the <a href="./prestige.html">status and prestige lesson</a>, and which is really just a modification of the one-mode HITS algorithm:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   tm.status <span class="ot">&lt;-</span> <span class="cf">function</span>(A1, A2) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">ncol</span>(A1), <span class="fu">ncol</span>(A1), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   tm.status <span class="ot">&lt;-</span> <span class="cf">function</span>(w, z) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>      y <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">ncol</span>(w), <span class="fu">ncol</span>(w), <span class="dv">1</span>) <span class="co">#initial group status column vector set to a constant</span></span>
 <span id="cb2-3"><a href="#cb2-3"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
 <span id="cb2-4"><a href="#cb2-4"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span></span>
 <span id="cb2-5"><a href="#cb2-5"></a>      <span class="cf">while</span> (delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
 <span id="cb2-6"><a href="#cb2-6"></a>         o.y <span class="ot">&lt;-</span> y <span class="co">#old group status scores</span></span>
-<span id="cb2-7"><a href="#cb2-7"></a>         x <span class="ot">&lt;-</span> A1 <span class="sc">%*%</span> o.y <span class="co">#new people scores a function of people matrix and old group scores </span></span>
+<span id="cb2-7"><a href="#cb2-7"></a>         x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.y <span class="co">#new people scores a function of people matrix and old group scores </span></span>
 <span id="cb2-8"><a href="#cb2-8"></a>         x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new people status scores </span></span>
-<span id="cb2-9"><a href="#cb2-9"></a>         y <span class="ot">&lt;-</span> A2 <span class="sc">%*%</span> x <span class="co">#new group scores a function of group matrix and new people scores</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a>         y <span class="ot">&lt;-</span> z <span class="sc">%*%</span> x <span class="co">#new group scores a function of group matrix and new people scores</span></span>
 <span id="cb2-10"><a href="#cb2-10"></a>         y <span class="ot">&lt;-</span> y<span class="sc">/</span><span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new group status scores </span></span>
 <span id="cb2-11"><a href="#cb2-11"></a>         <span class="cf">if</span> (k <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
 <span id="cb2-12"><a href="#cb2-12"></a>            delta <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(y) <span class="sc">-</span> <span class="fu">abs</span>(o.y))) <span class="co">#diff. between new and old group status scores</span></span>
 <span id="cb2-13"><a href="#cb2-13"></a>            }</span>
 <span id="cb2-14"><a href="#cb2-14"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
 <span id="cb2-15"><a href="#cb2-15"></a>         }</span>
-<span id="cb2-16"><a href="#cb2-16"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y, <span class="at">k =</span> k))</span>
+<span id="cb2-16"><a href="#cb2-16"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y))</span>
 <span id="cb2-17"><a href="#cb2-17"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The function goes like this:</p>
+<p>The function takes the two-mode <strong>biadjacency matrix</strong> <span class="math inline">\(\mathbf{A}\)</span> and its <strong>transpose</strong> <span class="math inline">\(\mathbf{A}^T\)</span> as input and returns a vector of row-mode nodes (e.g., persons) scores <code>p.s</code>, a vector of column-mode (e.g., groups) status scores <code>g.s</code>.</p>
+<p>The function works like this:</p>
 <ul>
 <li>Line 2 initializes the original status scores for each group stored in the <code>y</code> object, which are just set to <span class="math inline">\(|G|^{-1}\)</span> where <span class="math inline">\(|G|\)</span> is the number of groups (the number of columns of the bi-adjacency matrix <span class="math inline">\(\mathbf{A}\)</span>).</li>
-<li>Line 3 initializes the <span class="math inline">\(\delta\)</span> value, which determines when the <code>while</code> loop stops. Then, inside the <code>while</code> loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 6, which is just <span class="math inline">\(\mathbf{A}\)</span> post-multiplied by the group status vector <span class="math inline">\(\mathbf{y}\)</span>, then we normalize the people status score vector in line 8 using the Euclidean norm.</li>
-<li>In line 9 we calculate the new group status vector, which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7.</li>
-<li>Finally, we normalize the new group status scores in line 13 and compute the difference between these new group scores and the old one to calculate <span class="math inline">\(\delta\)</span>. When <span class="math inline">\(\delta\)</span> is small (<span class="math inline">\(\delta \leq 10^{-10}\)</span>) the <code>while</code> loop stops as the old and new scores have achieved convergence.</li>
+<li>Line 3 initializes the <span class="math inline">\(\delta\)</span> value, which determines when the <code>while</code> loop stops. Then, inside the <code>while</code> loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 7, which is just <span class="math inline">\(\mathbf{A}\)</span> (<code>w</code>) post-multiplied by the group status vector <span class="math inline">\(\mathbf{y}\)</span>, then we normalize the people status score vector in line 8 using the Euclidean vector norm.</li>
+<li>In line 9 we calculate the new group status vector (<code>y</code>), which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7 (the transpose of the matrix <code>z</code> post-multiplied by the vector <code>x</code>).</li>
+<li>Finally, we normalize the new group status scores in line 10 and compute the difference between these new group scores and the old one to calculate <span class="math inline">\(\delta\)</span>. When <span class="math inline">\(\delta\)</span> is small (<span class="math inline">\(\delta \leq 10^{-10}\)</span>) the <code>while</code> loop stops as the old and new scores have achieved convergence.</li>
 </ul>
 <p>We can now use the <code>tm.status</code> function to estimate the status scores for people and groups:</p>
 <div class="cell">
@@ -590,6 +596,8 @@ FLORA     0.188</code></pre>
 </div>
 <p>Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).</p>
 <p>When we use the usual affiliation matrix <code>A</code> and its transpose <code>t(A)</code> as inputs, the <code>tm.status</code> function implements the biHITS algorithm described in <span class="citation" data-cites="liao_etal14">Liao et al. (<a href="#ref-liao_etal14" role="doc-biblioref">2014</a>)</span>. One thing to note in this regard is that the biHITS algorithm is just a rediscovery of the two-mode prestige scoring described much earlier by <span class="citation" data-cites="bonacich91">Bonacich (<a href="#ref-bonacich91" role="doc-biblioref">1991</a>)</span>.</p>
+<section id="the-dual-projection-approach" class="level3">
+<h3 class="anchored" data-anchor-id="the-dual-projection-approach">The Dual Projection Approach</h3>
 <p>Interestingly as <span class="citation" data-cites="bonacich91">Bonacich (<a href="#ref-bonacich91" role="doc-biblioref">1991</a>)</span> noted in that paper, the eigenvector status scores can <em>also</em> be obtained by playing the one-mode version of the status game over the Breiger-style one-mode projections of the two-mode network.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
@@ -606,11 +614,12 @@ FLORA     0.188</code></pre>
 <span id="cb8-12"><a href="#cb8-12"></a>   <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
 <span id="cb8-13"><a href="#cb8-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>To see this, let’s play the usual status game defined by the function <code>status1</code> over the one mode projections. For people this would be:</p>
+<p>To see this, let’s play the usual status game defined by the function <code>status1</code> over the one mode projections <code>P</code> and <code>G</code>. For people this would be:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   p.s <span class="ot">&lt;-</span> <span class="fu">status1</span>(A <span class="sc">%*%</span> <span class="fu">t</span>(A))</span>
-<span id="cb9-2"><a href="#cb9-2"></a>   <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb9-3"><a href="#cb9-3"></a>   <span class="fu">round</span>(p.s<span class="sc">/</span><span class="fu">max</span>(p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A)</span>
+<span id="cb9-2"><a href="#cb9-2"></a>   p.s <span class="ot">&lt;-</span> <span class="fu">status1</span>(P)</span>
+<span id="cb9-3"><a href="#cb9-3"></a>   <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb9-4"><a href="#cb9-4"></a>   <span class="fu">round</span>(p.s<span class="sc">/</span><span class="fu">max</span>(p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
     0.903     0.834     1.000     0.845     0.454     0.564     0.616     0.486 
@@ -622,9 +631,10 @@ FLORA     0.188</code></pre>
 </div>
 <p>And for groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   g.s <span class="ot">&lt;-</span> <span class="fu">status1</span>(<span class="fu">t</span>(A) <span class="sc">%*%</span> A)</span>
-<span id="cb11-2"><a href="#cb11-2"></a>   <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb11-3"><a href="#cb11-3"></a>   <span class="fu">round</span>(g.s<span class="sc">/</span><span class="fu">max</span>(g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A </span>
+<span id="cb11-2"><a href="#cb11-2"></a>   g.s <span class="ot">&lt;-</span> <span class="fu">status1</span>(G)</span>
+<span id="cb11-3"><a href="#cb11-3"></a>   <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb11-4"><a href="#cb11-4"></a>   <span class="fu">round</span>(g.s<span class="sc">/</span><span class="fu">max</span>(g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
 0.280 0.297 0.499 0.347 0.635 0.647 0.757 1.000 0.749 0.336 0.177 0.400 0.223 
@@ -633,26 +643,31 @@ FLORA     0.188</code></pre>
 </div>
 </div>
 <p>Lo and behold, these are the same status scores we obtained via the biHITS approach.</p>
-<p>Also like eigenvector style measures for two-mode networks, the iterative status game scores can be obtained as a solution to an linear algebra eigenvector problem involving the relevant matrices over which the game is played.</p>
-<p>In the case of the two-mode eigenvector scores, as <span class="citation" data-cites="bonacich91">Bonacich (<a href="#ref-bonacich91" role="doc-biblioref">1991</a>)</span> also noted, it turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices:</p>
+</section>
+<section id="the-eigenvector-approach" class="level3">
+<h3 class="anchored" data-anchor-id="the-eigenvector-approach">The Eigenvector Approach</h3>
+<p>Of course, these scores are usually called two-mode “Eigenvector Centralities” because they can be obtained by solving the linear equation system:</p>
 <p><span class="math display">\[
-\lambda x = (\mathbf{A}\mathbf{A}^T)x
+\lambda \mathbf{x} = \mathbf{A}\mathbf{y}
 \]</span></p>
 <p><span class="math display">\[
-\lambda y = (\mathbf{A}^T\mathbf{A})y
+\lambda \mathbf{y} = \mathbf{A}^T\mathbf{x}
 \]</span></p>
-<p>In <code>R</code> we can do this using the <code>eigen</code> function:</p>
+<p>Which says that the status scores of persons <span class="math inline">\(\mathbf{x}\)</span> are just the sums of the status scores of the groups each person is connected to, and the status scores of groups <span class="math inline">\(\mathbf{y}\)</span> are just the sum of the scores of the people that join them.</p>
+<p>Just like we saw in the discussion of <a href="./prestige.html">prestige scoring for one-mode networks</a>, this is the usual cat chasing its own tail circular equation problem. To know the person status scores <span class="math inline">\(\mathbf{x}\)</span> we need to know the group status scores <span class="math inline">\(\mathbf{y}\)</span> and vice versa.</p>
+<p>This is also a classic eigenvector/eigenvaue problem, which means that we can find the person and groups status scores using the <a href="./eigen.html">eigendecomposition</a> approach.</p>
+<p>Since we have a rectangular biadjacency matrix, we can proceed in two ways. We can obtain the eigenvector/eigenvalue pairs via <strong>singular value decomposition</strong> of the biadjacency matrix itself, or value standard eigendecomposition of each of its projections.</p>
+<p>Let’s see the first approach first, using the <code>R</code> function <code>svd</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   eig.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A <span class="sc">%*%</span> <span class="fu">t</span>(A))</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   eig.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(<span class="fu">t</span>(A) <span class="sc">%*%</span> A)</span>
-<span id="cb13-3"><a href="#cb13-3"></a>   p.s <span class="ot">&lt;-</span> eig.p<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
-<span id="cb13-4"><a href="#cb13-4"></a>   g.s <span class="ot">&lt;-</span> eig.g<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
-<span id="cb13-5"><a href="#cb13-5"></a>   <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb13-6"><a href="#cb13-6"></a>   <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   eig <span class="ot">&lt;-</span> <span class="fu">svd</span>(A) <span class="co">#singular value decomposition of biadjacency matrix</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>   eig.p <span class="ot">&lt;-</span> eig<span class="sc">$</span>u[, <span class="dv">1</span>] <span class="sc">*-</span><span class="dv">1</span>  <span class="co">#vector of person prestige scores</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a>   eig.g <span class="ot">&lt;-</span> eig<span class="sc">$</span>v[, <span class="dv">1</span>] <span class="sc">*-</span><span class="dv">1</span> <span class="co">#vector of group prestige scores</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a>   <span class="fu">names</span>(eig.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb13-5"><a href="#cb13-5"></a>   <span class="fu">names</span>(eig.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And for the big reveal:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(p.s<span class="sc">/</span><span class="fu">max</span>(p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(eig.p<span class="sc">/</span><span class="fu">max</span>(eig.p), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
     0.903     0.834     1.000     0.845     0.454     0.564     0.616     0.486 
@@ -661,7 +676,7 @@ FLORA     0.188</code></pre>
    OLIVIA     FLORA 
     0.188     0.188 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">round</span>(g.s<span class="sc">/</span><span class="fu">max</span>(g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">round</span>(eig.g<span class="sc">/</span><span class="fu">max</span>(eig.g), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
 0.280 0.297 0.499 0.347 0.635 0.647 0.757 1.000 0.749 0.336 0.177 0.400 0.223 
@@ -669,14 +684,51 @@ FLORA     0.188</code></pre>
 0.223 </code></pre>
 </div>
 </div>
-<p>Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using <code>tm.status</code> or in the one-mode projection (Bonacich) using the <code>status1</code> function.</p>
+<p>Which are the same scores we obtained earlier.</p>
+<p>For the second approach, as <span class="citation" data-cites="bonacich91">Bonacich (<a href="#ref-bonacich91" role="doc-biblioref">1991</a>)</span> also noted, it turns out they can be computed by figuring out the leading eigenvector (what our status game does for any matrix) of the Breiger projection matrices:</p>
+<p><span class="math display">\[
+\lambda \mathbf{x} = (\mathbf{A}\mathbf{A}^T)\mathbf{x}
+\]</span></p>
+<p><span class="math display">\[
+\lambda \mathbf{y} = (\mathbf{A}^T\mathbf{A})\mathbf{y}
+\]</span></p>
+<p>In <code>R</code> we can do this using the <code>eigen</code> function:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   eig.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(P)</span>
+<span id="cb18-2"><a href="#cb18-2"></a>   eig.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(G)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>   p.s <span class="ot">&lt;-</span> eig.p<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb18-4"><a href="#cb18-4"></a>   g.s <span class="ot">&lt;-</span> eig.g<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb18-5"><a href="#cb18-5"></a>   <span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>   <span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And for the big reveal:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   <span class="fu">round</span>(p.s<span class="sc">/</span><span class="fu">max</span>(p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
+    0.903     0.834     1.000     0.845     0.454     0.564     0.616     0.486 
+     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
+    0.637     0.589     0.504     0.594     0.748     0.712     0.542     0.355 
+   OLIVIA     FLORA 
+    0.188     0.188 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   <span class="fu">round</span>(g.s<span class="sc">/</span><span class="fu">max</span>(g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
+0.280 0.297 0.499 0.347 0.635 0.647 0.757 1.000 0.749 0.336 0.177 0.400 0.223 
+  8/3 
+0.223 </code></pre>
+</div>
+</div>
+<p>Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using <code>tm.status</code>, playing the same game on the one-mode projection (Bonacich) using the <code>status1</code> function, or using <code>svd</code> to obtain the leading eigenvector of the biadjacency matrix.</p>
 <p>The scores are also readily interpretable: The most central people belong to the most central (largest membership) groups and the most central groups are the ones that attract the most central (highest activity) members.</p>
-<section id="duality-and-two-mode-bonacich-prestige" class="level3">
-<h3 class="anchored" data-anchor-id="duality-and-two-mode-bonacich-prestige">Duality and Two-Mode Bonacich Prestige</h3>
+</section>
+<section id="the-duality-of-bonacich-prestige" class="level3">
+<h3 class="anchored" data-anchor-id="the-duality-of-bonacich-prestige">The Duality of Bonacich Prestige</h3>
 <p>Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum of the eigenvector centralities on the nodes in the other mode they are connected to <span class="citation" data-cites="faust97">(<a href="#ref-faust97" role="doc-biblioref">Faust 1997, 170</a>)</span>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>For instance the unnormalized eigenvector status scores for persons and groups are:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   p.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   p.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
 0.3347340 0.3092247 0.3705636 0.3130088 0.1682137 0.2089673 0.2283461 0.1800298 
@@ -685,7 +737,7 @@ FLORA     0.188</code></pre>
    OLIVIA     FLORA 
 0.0695706 0.0695706 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   g.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   g.s</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      6/27        3/2       4/12       9/26       2/25       5/19       3/15 
 0.14194312 0.15047999 0.25285306 0.17599173 0.32173361 0.32761921 0.38350293 
@@ -695,7 +747,7 @@ FLORA     0.188</code></pre>
 </div>
 <p>So for any person, let’s say {EVELYN}, their eigenvector centrality is equal to:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   <span class="fu">sum</span>(A[<span class="st">"EVELYN"</span>, ] <span class="sc">*</span> g.s) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(eig.p<span class="sc">$</span>values[<span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   <span class="fu">sum</span>(A[<span class="st">"EVELYN"</span>, ] <span class="sc">*</span> g.s) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(eig.p<span class="sc">$</span>values[<span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.334734</code></pre>
 </div>
@@ -703,7 +755,7 @@ FLORA     0.188</code></pre>
 <p>Which is indeed Evelyn’s Eigenvector score.</p>
 <p>The same goes for the eigenvector score of groups, which are just a weighted sum of the Eigenvector centralities of the people who belong to them:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   <span class="fu">sum</span>(A[, <span class="st">"6/27"</span>] <span class="sc">*</span> p.s) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(eig.p<span class="sc">$</span>values[<span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   <span class="fu">sum</span>(A[, <span class="st">"6/27"</span>] <span class="sc">*</span> p.s) <span class="sc">*</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(eig.p<span class="sc">$</span>values[<span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.1419431</code></pre>
 </div>
@@ -719,8 +771,8 @@ FLORA     0.188</code></pre>
 <p>To do that, we create new versions of the affiliation matrix <span class="math inline">\(\mathbf{A}\)</span> and its transpose <span class="math inline">\(\mathbf{A}^T\)</span> normalized by the group and persons degrees (respectively).</p>
 <p>To do this, imagine that <span class="math inline">\(\mathbf{D}_p\)</span> is a matrix containing the <em>inverse</em> of the degrees of each person (number of memberships) along the diagonals. This matrix can be created in <code>R</code> as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">rowSums</span>(A))</span>
-<span id="cb26-2"><a href="#cb26-2"></a>   <span class="fu">round</span>(D.p, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">rowSums</span>(A))</span>
+<span id="cb31-2"><a href="#cb31-2"></a>   <span class="fu">round</span>(D.p, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
  [1,] 0.12 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00  0.00  0.00  0.00  0.00
@@ -765,8 +817,8 @@ FLORA     0.188</code></pre>
 <p>Recalling that the row sums of <span class="math inline">\(\mathbf{A}\)</span> give us the person degrees.</p>
 <p>And then we do the same for groups by creating a matrix <span class="math inline">\(\mathbf{D}_g\)</span> containing the <em>inverse</em> of the degrees of each group (number of members) along the diagonals.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">colSums</span>(A))</span>
-<span id="cb28-2"><a href="#cb28-2"></a>   <span class="fu">round</span>(D.g, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">colSums</span>(A))</span>
+<span id="cb33-2"><a href="#cb33-2"></a>   <span class="fu">round</span>(D.g, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
  [1,] 0.33 0.00 0.00 0.00 0.00 0.00  0.0 0.00 0.00   0.0  0.00  0.00  0.00
@@ -803,14 +855,14 @@ FLORA     0.188</code></pre>
 <p>Recalling that the column sums of <span class="math inline">\(\mathbf{A}\)</span> give us the group degrees.</p>
 <p>Now we can construct degree-normalized versions of the original bi-adjacency matrix and its transpose like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   P.n <span class="ot">&lt;-</span> A <span class="sc">%*%</span> D.g </span>
-<span id="cb30-2"><a href="#cb30-2"></a>   <span class="fu">colnames</span>(P.n) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb30-3"><a href="#cb30-3"></a>   G.n <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> D.p</span>
-<span id="cb30-4"><a href="#cb30-4"></a>   <span class="fu">colnames</span>(G.n) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   P.n <span class="ot">&lt;-</span> A <span class="sc">%*%</span> D.g </span>
+<span id="cb35-2"><a href="#cb35-2"></a>   <span class="fu">colnames</span>(P.n) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb35-3"><a href="#cb35-3"></a>   G.n <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> D.p</span>
+<span id="cb35-4"><a href="#cb35-4"></a>   <span class="fu">colnames</span>(G.n) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s see what’s in the matrix <code>P.n</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   <span class="fu">round</span>(P.n, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   <span class="fu">round</span>(P.n, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          6/27  3/2 4/12 9/26 2/25 5/19 3/15 9/16  4/8 6/10 2/23  4/7 11/21
 EVELYN    0.33 0.33 0.17 0.25 0.12 0.12  0.0 0.07 0.08  0.0 0.00 0.00  0.00
@@ -855,7 +907,7 @@ FLORA     0.00</code></pre>
 <p>The <code>P.n</code> matrix is of the same dimensions as the original affiliation matrix <code>A</code>. However, the <span class="math inline">\({ij}^{th}\)</span> cell is now equal to <span class="math inline">\(1/k_j\)</span> where <span class="math inline">\(k_j\)</span> is the number of members of group <span class="math inline">\(j\)</span>. That means that if group <span class="math inline">\(j\)</span> has a lot of members then the <span class="math inline">\({ij}^{th}\)</span> cell will contain a small number (as in column in the non-zero entries in the column corresponding to event <code>9-16</code>) but when the group is small, the <span class="math inline">\({ij}^{th}\)</span> cell will contain a bigger number (as in the non-zero entries in the column corresponding to event <code>11-21</code>). This means the people who belong to smaller groups will have more centrality points to distribute.</p>
 <p>The same goes for groups, as we can see by checking out the <code>G.n</code> matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   <span class="fu">round</span>(G.n, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a>   <span class="fu">round</span>(G.n, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH VERNE
 6/27    0.12  0.14    0.00   0.14      0.00    0.00    0.00  0.00 0.00  0.00
@@ -891,14 +943,14 @@ FLORA     0.00</code></pre>
 </div>
 <p>Note that both matrices <code>P.n</code> and <code>G.n</code> are <strong>column stochastic</strong> which means that its columns sum to one. We can check for this property as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   <span class="fu">colSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">colSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
     1     1     1     1     1     1     1     1     1     1     1     1     1 
   8/3 
     1 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   <span class="fu">colSums</span>(G.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   <span class="fu">colSums</span>(G.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
         1         1         1         1         1         1         1         1 
@@ -910,12 +962,12 @@ FLORA     0.00</code></pre>
 </div>
 <p>So now, to calculate the two-mode PageRank status score, we just play our two-mode status game on these matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   tm.pr <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n, G.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   tm.pr <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n, G.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Note that because the bi-adjacency matrices that go into the <code>tm.status</code> function are already normalized, we can set the <code>norm</code> argument of the function to <code>FALSE</code>.</p>
 <p>Here are the resulting scores for the people:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           [,1]
 EVELYN    1.000
@@ -940,7 +992,7 @@ FLORA     0.250</code></pre>
 </div>
 <p>And for the groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">round</span>(tm.pr<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.pr<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       [,1]
 6/27  0.214
@@ -961,20 +1013,74 @@ FLORA     0.250</code></pre>
 </div>
 <p>The resulting scores are the same ones returned by the “co-HITS” algorithm of <span class="citation" data-cites="deng_etal09">Deng, Lyu, and King (<a href="#ref-deng_etal09" role="doc-biblioref">2009</a>)</span>.</p>
 <p>On this ranking, the top persons are Theresa and Nora (who wasn’t as highly ranked according to the Bonacich prestige) and Dorothy, Olivia, and Flora are the least prestigious. The top ranked event is the one that took place on 9/16.</p>
+<p>We can of course obtain the same two-mode PageRank scores using different approaches. One alternative is to use the “PageRank” projections and play the regular (one-mode) status game on them:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   P.pr <span class="ot">&lt;-</span> P.n <span class="sc">%*%</span> G.n</span>
+<span id="cb49-2"><a href="#cb49-2"></a>   G.pr <span class="ot">&lt;-</span> G.n <span class="sc">%*%</span> P.n</span>
+<span id="cb49-3"><a href="#cb49-3"></a>   pr.p <span class="ot">&lt;-</span> <span class="fu">status1</span>(P.pr)</span>
+<span id="cb49-4"><a href="#cb49-4"></a>   pr.g <span class="ot">&lt;-</span> <span class="fu">status1</span>(G.pr)</span>
+<span id="cb49-5"><a href="#cb49-5"></a>   <span class="fu">names</span>(pr.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb49-6"><a href="#cb49-6"></a>   <span class="fu">names</span>(pr.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb49-7"><a href="#cb49-7"></a>   <span class="fu">round</span>(pr.p<span class="sc">/</span><span class="fu">max</span>(pr.p), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
+    1.000     0.875     1.000     0.875     0.500     0.500     0.500     0.375 
+     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
+    0.500     0.500     0.500     0.750     0.875     1.000     0.625     0.250 
+   OLIVIA     FLORA 
+    0.250     0.250 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1"></a>   <span class="fu">round</span>(pr.p<span class="sc">/</span><span class="fu">max</span>(pr.g), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
+    0.680     0.595     0.680     0.595     0.340     0.340     0.340     0.255 
+     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
+    0.340     0.340     0.340     0.510     0.595     0.680     0.425     0.170 
+   OLIVIA     FLORA 
+    0.170     0.170 </code></pre>
+</div>
+</div>
+<p>Neat!</p>
+<section id="the-eigenvector-approach-for-two-mode-pagerank" class="level3">
+<h3 class="anchored" data-anchor-id="the-eigenvector-approach-for-two-mode-pagerank">The Eigenvector Approach for Two-Mode PageRank</h3>
+<p>Another approach is to compute the leading eigenvector of the PageRank normalized projections using the <code>eigen</code> function:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1"></a>   pr.p <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">Re</span>(<span class="fu">eigen</span>(P.pr)<span class="sc">$</span>vectors[, <span class="dv">1</span>]))</span>
+<span id="cb53-2"><a href="#cb53-2"></a>   <span class="fu">names</span>(pr.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb53-3"><a href="#cb53-3"></a>   <span class="fu">round</span>(pr.p<span class="sc">/</span><span class="fu">max</span>(pr.p), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
+    1.000     0.875     1.000     0.875     0.500     0.500     0.500     0.375 
+     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
+    0.500     0.500     0.500     0.750     0.875     1.000     0.625     0.250 
+   OLIVIA     FLORA 
+    0.250     0.250 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   pr.g <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">Re</span>(<span class="fu">eigen</span>(G.pr)<span class="sc">$</span>vectors[, <span class="dv">1</span>]))</span>
+<span id="cb55-2"><a href="#cb55-2"></a>   <span class="fu">names</span>(pr.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb55-3"><a href="#cb55-3"></a>   <span class="fu">round</span>(pr.g<span class="sc">/</span><span class="fu">max</span>(pr.g), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
+0.214 0.214 0.429 0.286 0.571 0.571 0.714 1.000 0.857 0.357 0.286 0.429 0.214 
+  8/3 
+0.214 </code></pre>
+</div>
+</div>
+<p>Which gives us the same solutions as before.</p>
 </section>
-<section id="double-normalized-two-mode-pagerank" class="level2">
-<h2 class="anchored" data-anchor-id="double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</h2>
+<section id="double-normalized-two-mode-pagerank" class="level3">
+<h3 class="anchored" data-anchor-id="double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</h3>
 <p>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person’s centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</p>
 <p>However, the PageRank centrality rankings can still be affected by the sheer <em>number</em> of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events.</p>
 <p>To do that, it would be useful to come up with versions of <code>P.n</code> and <code>G.n</code> that normalize (for persons) by the exclusivity of the groups they attend <em>and</em> by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members <em>and</em> by their number of members they go to, so as not to give an advantage to well-attended events.</p>
 <p>In the case of <code>P.n</code> we can do that by pre-multiplying this matrix, which already adjusts for group size by <code>D.p</code> which is the diagonal matrix containing each person’s number of memberships:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> P.n</span>
-<span id="cb44-2"><a href="#cb44-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> P.n</span>
+<span id="cb57-2"><a href="#cb57-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s see what’s inside the new <code>P.n2</code> matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1"></a>   <span class="fu">round</span>(P.n2, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb58-1"><a href="#cb58-1"></a>   <span class="fu">round</span>(P.n2, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          6/27  3/2 4/12 9/26 2/25 5/19 3/15 9/16  4/8 6/10 2/23  4/7 11/21
 EVELYN    0.04 0.04 0.02 0.03 0.02 0.02 0.00 0.01 0.01 0.00 0.00 0.00  0.00
@@ -1019,7 +1125,7 @@ FLORA     0.00</code></pre>
 <p>We can see that now, people with lots of memberships (like Evelyn) get their centrality points reduced relative to people with not that many memberships like Charlotte.</p>
 <p>This is easy to see if we compare the row sums of the two matrices, which give us the total amount of centrality points each person has to distribute:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1"></a>   <span class="fu">rowSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   <span class="fu">rowSums</span>(P.n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
 1.4880952 1.2547619 1.2547619 1.1714286 0.6416667 0.4880952 0.4214286 0.2797619 
@@ -1028,7 +1134,7 @@ FLORA     0.00</code></pre>
    OLIVIA     FLORA 
 0.3333333 0.3333333 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1"></a>   <span class="fu">rowSums</span>(P.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   <span class="fu">rowSums</span>(P.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    EVELYN      LAURA    THERESA     BRENDA  CHARLOTTE    FRANCES    ELEANOR 
 0.18601190 0.17925170 0.15684524 0.16734694 0.16041667 0.12202381 0.10535714 
@@ -1041,12 +1147,12 @@ FLORA     0.00</code></pre>
 <p>Note that while in the original <code>P.n</code> matrix Evelyn has way more centrality points to distribute than Charlotte (a ratio of 2.32), this discrepancy is much smaller in the new <code>P.n2</code> double-normalized matrix (a ratio of 1.16).</p>
 <p>Now to compute our double-normalized PageRank status scores, we just play the status game on this new matrix and its transpose:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1"></a>   tm.bgrm <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n2, <span class="fu">t</span>(P.n2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   tm.bgrm <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n2, <span class="fu">t</span>(P.n2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Which implements the “BGRM” algorithm of <span class="citation" data-cites="rui_etal07">Rui et al. (<a href="#ref-rui_etal07" role="doc-biblioref">2007, 589</a>, eq. 8)</span>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
 <p>Here are the resulting scores for the people:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb52-1"><a href="#cb52-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           [,1]
 EVELYN    0.081
@@ -1071,7 +1177,7 @@ FLORA     1.000</code></pre>
 </div>
 <p>And for the groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       [,1]
 6/27  0.032
@@ -1357,6 +1463,7 @@ FLORA     1.000</code></pre>
 
 
 
+</section>
 </section>
 
 
