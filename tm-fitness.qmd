@@ -11,15 +11,17 @@ format:
       code-line-numbers: true
 ---
 
-## The Fitness/Complexity Score
+In a highly cited piece, @tacchella_etal12 introduce a new prestige metric for two-mode networks that relies on the same "prismatic" model of status distribution we considered [before](tm-prestige.qmd). 
 
-In a highly cited piece, @tacchella_etal12 introduce a new prestige metric for two-mode networks that relies on the same "prismatic" model of status distribution we considered [before](tm-prestige.qmd). They called the prestige metrics they obtained "fitness" and "complexity" because they developed in the empirical context of calculating metrics for ranking nations based on their competitive advantage in exporting products, which means analyzing a two-mode country-by-product matrix [@hidalgo_hausmann09]. 
+@tacchella_etal12 called the prestige metrics they obtained using their approach "fitness" and "complexity" because they developed in the empirical context of calculating metrics for ranking nations based on their competitive advantage in exporting products, which means analyzing a two-mode country-by-product matrix [@hidalgo_hausmann09]. 
 
-However, when considered in the more general context of two-mode network link analysis, it is clear that their approach is a prestige metric for two-mode networks that combines ideas from Bonacich Eigenvector scoring and PageRank scoring that we covered in the [two-mode prestige lesson](tm-prestige.qmd). 
+However, when considered in the more general context of two-mode network link analysis [@fouss_etal16], it is clear that their approach is a prestige metric for two-mode networks that combines ideas from Bonacich Eigenvector scoring and PageRank scoring that we covered in the [two-mode prestige lecture notes](tm-prestige.qmd). 
+
+## Fitness/Complexity Scores
 
 Their basic idea is that when we are (asymmetrically) interested in determining the status or prestige of nodes in one particular mode (e.g., the row-mode nodes), we should not use summaries (e.g., sums or averages) of the scores for nodes in the other (e.g., column) mode in determining their status. Instead, we should deeply discount those nodes that connect to low status nodes in the other end. 
 
-To understand what they are getting at, it helps to write down the Bonacich prestige scoring in equation form, as we go through each iteration of the status distribution game:
+To understand what they are getting at, it helps to write down the Bonacich prestige scoring in equation form, as we go through each iteration of the two-mode [status distribution game](tm-prestige.qmd):
 
 If you remember from the function `tm.status`, each iteration $q$, the vector of status scores for the row nodes $\mathbf{s}^R$ and the column nodes $\mathbf{s}^C$ is given by: 
 
@@ -53,15 +55,19 @@ $$
    s^C_j(q) = \left[\sum_i\mathbf{A}_{ij}\left(s^R_i(q-1)\right)^{-1}\right]^{-1}
 $${#eq-gen2}
 
-Which means that first (inner parentheses) we take the reciprocal of the row-mode nodes' status scores, sum them across column-mode nodes (such that column-mode nodes that connect to low status row-mode nodes get a big score), and then take the reciprocal of the reciprocal to get back to a measure of status for column-mode nodes. This non-linear transformation heavily discounts the status scores assigned to column-mode nodes whenever they connect to lower status row-mode nodes. 
+Which means that first (inner parentheses) we take the reciprocal of the row-mode nodes' status scores, sum them across column-mode nodes (such that column-mode nodes that connect to low status row-mode nodes get a big score), and then take the reciprocal of the reciprocal to get back to a measure of status for column-mode nodes. This non-linear transformation heavily discounts the status scores assigned to column-mode nodes whenever they connect to lower status row-mode nodes. @tacchella_etal12 also change the normalization step, using the mean value of the vector in denominator of @eq-norm1, and @eq-norm2. 
 
 ## Beyond Status as Popularity/Activity
 
 How should we understand this modification? Recall that the basic principle of standard Bonacich prestige scoring is based on the equation of status/prestige and *popularity*/*activity*. In the canonical case of persons and groups [@breiger74], an event receives status from being attended by high-status individuals and an individual receives status from being affiliated with a high status event; in each case, status from the point of view of the event means having highly active members, and from the point of view of the individual it means being affiliated with popular events. 
 
-But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing [@hidalgo_hausmann09]. Analysts noticed that the most developed countries produce both "complex" (i.e., high status) products that only a select few of other highly developed economies produce (like semiconductors) and also less "complex" (i.e., low status, like extractive  natural resources) products that the other less developed economics produce [@tacchella_etal12]. That  means that the "complexity" (i.e., status score) of a product cannot be derived simply taking a summary (e.g., sum or average) of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production. However, knowing that a product is produced by a low-status country is more informative (and should weigh more significantly in the determination of a product's status score) because low-status countries only produce low-status products. 
+But status may not always work this way. Consider the world-economic network linking countries to the products they have a competitive advantage in producing [@hidalgo_hausmann09]. Analysts noticed that the most developed countries produce both "complex" (i.e., high status) products that only a select few of other highly developed economies produce (like semiconductors) and also less "complex" (i.e., low status, like extractive  natural resources) products that the other less developed economics produce [@tacchella_etal12]. 
 
-Applying the same reasoning to the aforementioned case of persons and groups [@breiger74], an equivalent situation would go as follows. Imagine there is a set of elite women and a set of elite events that only the elite women attend. However, elite women are also endowed with a spirit of *noblesse oblige*, which means that the most elite of them *also* attend non-elite events. This means that when determining the status of the *events* it is not very informative to know that elites affiliate with them; rather, we should weigh more heavily whether *non-elites* affiliate with an event in determining an event's status, such that as the number of non-elite women who affiliate with an event increases, a given event's status is downgraded in a non-linear way which feeds back into the computation of each woman's prestige. 
+That  means that the "complexity" (i.e., status score) of a product cannot be derived simply taking a summary (e.g., sum or average) of the status score of the countries that produce it, because high status countries engage in both high and low status forms of production. However, knowing that a product is produced by a low-status country is more informative (and should weigh more significantly in the determination of a product's status score) because low-status countries only produce low-status products. 
+
+Applying the same reasoning to the aforementioned case of persons and groups [@breiger74], an equivalent situation would go as follows. Imagine there is a set of prestigious women and a set of prestigious events that only the prestigious women attend. However, prestigious women are also endowed with a spirit of *noblesse oblige*, which means that the most prestigious of them *also* attend low status events. 
+
+This means that when determining the prestige of the *events* it is not very informative to know that prestigious women affiliate with them; rather, we should weigh more heavily whether *low status* women affiliate with an event in determining an event's status, such that as the number of low-status women who affiliate with an event increases, a given event's status is downgraded in a non-linear way which feeds back into the computation of each woman's prestige. 
 
 ```{r}
    library(networkdata)
@@ -70,42 +76,39 @@ Applying the same reasoning to the aforementioned case of persons and groups [@b
    A <- as.matrix(as_biadjacency_matrix(g))
 ```
 
-And here's a function called `tm.fitness` that modifies the old two-mode status distribution game function [we played before](tm-prestige.qmd) to compute the fitness and complexity prestige scores for persons and groups:
+Here's a function called `tm.fitness` that modifies the old two-mode status distribution game function [we played before](tm-prestige.qmd) to compute the fitness and complexity prestige scores for persons and groups:
 
 ```{r}
-   tm.fitness <- function(w) {
+   tm.fitness <- function(w, iter = 1000) {
       y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
       z <- t(w)
-      epsilon <- 1 
       k <- 0
-      while (epsilon > 1e-15) {
+      while (k < iter) {
          o.y <- y 
          x <- w %*% o.y #fitness status scores for people
          x <- x/mean(x) #normalizing new people status scores 
          y <- (z %*% x^-1)^-1 #complexity status scores for groups
          y <- y/mean(y) #normalizing new group status scores 
-         if (k > 1) {
-            epsilon <- abs(sum(abs(y) - abs(o.y))) 
-            }
          k <- k + 1
          }
    return(list(p.s = x, g.s = y, k = k))
    }
 ```
 
-And we apply it to the SW data:
+Note that we move to a number of iterations approach to indicate convergence (governed by the `iter` argument) rather than a successive differences approach, due to the non-linear nature of the algorithm's scoring. 
+
+We then apply the `tm.fitness` function to the SW data:
 
 ```{r}
-    fc <- tm.fitness(A)
+    fc <- tm.fitness(A, iter = 50)
 ```
 
-We also calculate the usual Bonacich eigenvector scores for comparison purposes:
+We also calculate the usual Bonacich eigenvector scores using the `svd` function for comparison purposes:
 
 ```{r}
-   eig.p <- eigen(A %*% t(A))
-   eig.g <- eigen(t(A) %*% A)
-   p.s <- eig.p$vector[, 1] * -1
-   g.s <- eig.g$vector[, 1] * -1
+   eig <- svd(A)
+   p.s <- eig$u[, 1] * -1
+   g.s <- eig$v[, 1] * -1
    names(p.s) <- rownames(A)
    names(g.s) <- colnames(A)
 ```
@@ -122,7 +125,7 @@ And we put them in a table. Here are the people:
       arrange(desc(fc))
    kbl(s.tab, format = "pipe", digits = 3,
        align = c("l", "c", "c"),
-       col.names = c("Person", "Bonacich", "Fitness/Complexity")) %>% 
+       col.names = c("Person", "Bonacich", "Fitness")) %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
    column_spec(1, bold = TRUE) |> 
    footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
@@ -139,56 +142,124 @@ And the groups:
       arrange(desc(fc))
    kbl(s.tab, format = "pipe", digits = 3,
        align = c("l", "c", "c"),
-       col.names = c("Group", "Bonacich", "Fitness/Complexity")) %>% 
+       col.names = c("Group", "Bonacich", "Complexity")) %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
    column_spec(1, bold = TRUE) |> 
    footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
 ```
 
-Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While *\{Theresa\}* is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, *\{Evelyn\}* becomes the top person, with *\{Theresa\}* dropping to the sixth spot. In the same way while *\{Nora\}* is ranked sixth by the Bonacich prestige, her standing improves to second in the fitness scoring. 
+Each table sorts persons and groups according to the fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity mode of scoring. While *\{Theresa\}* is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low status people, *\{Evelyn\}* becomes the top person, with *\{Theresa\}* dropping to the sixth spot. In the same way while *\{Nora\}* is ranked sixth by the Bonacich prestige, her standing improves to third in the fitness scoring. Meanwhile *\{Brenda\}* was number three according to the Bonacich score, but her prestige drops to seventh place in the fitness/complexity scoring. 
 
-The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While *\{9/16\}* is the top event by the usual eigenvector scoring, this event has minimal status according to the complexity scoring ending up second from the bottom. Instead, the top even by complexity is \{3/2\} a relatively low-status even according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event *\{2/23\}*, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (*r* =  `r round(cor(g.s, fc$g.s),2)`). This is different from the person ranks, which agree more closely (*r* =  `r round(cor(p.s, fc$p.s),2)`).
+The status of groups changes even more dramatically once complexity is calculated by heavily discounting the status of groups that include lower status people. While *\{9/16\}* is the top event by the usual Bonacich prestige scoring, this event has minimal status according to the complexity scoring, ending up third from the bottom. Instead, the top even by complexity is \{3/2\} a relatively low-status event according to the Bonacich score. In fact, all of the other top events according to the complexity scoring, were ranked minimally by the Bonacich scoring, except for event *\{2/23\}*, which is a low status event on both accountings. This means that the Bonacich prestige and complexity scores for events have a strong negative correlation (*r* =  `r round(cor(g.s, fc$g.s),2)`). This is different from the person ranks, which agree more closely (*r* =  `r round(cor(p.s, fc$p.s),2)`).
 
-```{r}
-   tm.gen.fitness <- function(w, delta = 1, gamma = 1, iter = 1000) {
-      y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
-      z <- t(w)
-      k <- 0
-      while (k < iter) {
-         o.y <- y 
-         x <- (w %*% o.y^-delta)^-(1/delta) #fitness status scores for people
-         x <- x/mean(x) #normalizing new people status scores 
-         y <- (z %*% x^-gamma)^-(1/gamma) #complexity status scores for groups
-         y <- y/mean(y) #normalizing new group status scores 
-         k <- k + 1
-         }
-   return(list(p.s = x, g.s = y, k = k))
-   }
-```
+To help us make sense of the differences between the Bonacich and the fitness/complexity prestige scoring, the table below shows the original SW biadjacency matrix with rows and columns ordered by the degree of each node. This means that highly attended events appear in on the left, and highly active women appear on the top.  
+
 
 ```{r}
-   fc1 <- tm.gen.fitness(A, delta = -1, gamma = -1)
-   fc2 <- tm.gen.fitness(A, delta = -1, gamma = 1)
-   fc3 <- tm.gen.fitness(A, delta = 1, gamma = -1)
-   fc4 <- tm.gen.fitness(A, delta = 2, gamma = 0.5)
+#| label: tbl-sw
+#| tbl-cap: "Southern Women Data Biadjacency Matrix."
+#| echo: false
+    library(kableExtra)
+    A.tab <- A[names(sort(rowSums(A), decreasing = TRUE)), names(sort(colSums(A), decreasing = TRUE))]
+    kbl(A.tab, format = "pipe") %>% 
+    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"), font_size = 11) |> 
+    column_spec(1, bold = TRUE) |> 
+    footnote(symbol = c("Row and Columns Ordered by Degree Centrality."))
 ```
+
+The table gives us some insight as to why event *\{9/16\}* drops so much in the fitness/complexity rankings. While it is the *best* attended event (leftmost in @tbl-sw) this also means that it is attended by a lot of low status women (ones at the bottom of the table). Event *\{3/2\}* on the other hand, while having relatively sparse attendance (only three women) has a membership composed of exclusively hight status persons (ones at the top of the table). Event  *\{2/23\}* gets ranked similarly by the two measures because it has both sparse attendance and the majority (two thirds) of its attendees are low status women. 
+
+@tbl-sw also helps us make sense of the *\{Theresa\}* versus *\{Evelyn\}* contrasts across prestige scores. Both are highly active women, but Evelyn's membership in the top two events according to fitness/complexity *\{3/2, 6/27\}*  puts her towards the top. The same goes for Nora's membership in *\{11/21, 8/3\}*, which improves her standing in the fitness/complexity ranking. 
+
+## An Eigenvector-Based Approach
+@sciarra_etal20 [p. 8-9] describe an eigenvector-based (and thus linear and non-iterative) method to derive values that are close (but not exactly) as the fitness/complexity scores. Their idea is to produce a degree-normalized biadjacency matrix that equals:
+
+$$
+\tilde{\mathbf{A}} = \mathbf{D}_p \mathbf{A} \mathbf{D'}_g
+$$
+
+Where $\mathbf{D}_p$ is the diagonal matrix of people's degrees and $\mathbf{D'}_g$ is a diagonal matrix with each entry $d'_{gg}$ in the diagonal equal to:
+
+$$
+d'_{gg} = \sum_g \frac{A_{pg}}{k_p}
+$$
+
+Where $k_p = \sum_p A_{pg}$ is the degree of each person.
+
+In `R` we can obtain these matrices as follows:
+
+```{r}
+   D.p <- diag(1/rowSums(A))
+   k.g <- colSums(A/(rowSums(A)))
+   D.g <- diag(1/k.g)
+   A.n <- D.p %*% A %*% D.g
+```
+
+Once we have the normalized biadjacency matrix, we compute the normalized Breiger projections:
+
+$$
+\tilde{\mathbf{P}} = \tilde{\mathbf{A}}\tilde{\mathbf{A}}^T
+$$
+
+$$
+\tilde{\mathbf{G}} = \tilde{\mathbf{A}}^T\tilde{\mathbf{A}}
+$$
+
+The linear fitness/complexity scores $\mathbf{x}$ and $\mathbf{y}$ are then obtained as the solution to the following, now familiar, eigenvector problem:
+
+$$
+\lambda \mathbf{x} = \tilde{\mathbf{P}}\mathbf{x}
+$$
+
+$$
+\lambda \mathbf{y} = \tilde{\mathbf{G}}\mathbf{y}
+$$
+
+Which in `R` we obtain as follows:
+
+```{r}
+   P.n <- A.n %*% t(A.n)
+   G.n <- t(A.n) %*% A.n
+   eig.p <- abs(eigen(P.n)$vectors[,1])
+   eig.g <- abs(eigen(G.n)$vectors[,1])
+```
+
+We can then compare the scores for both persons and groups, with the proviso that, to maximize the correlation with their linear approximations, we normalize the fitness scores for people by dividing by the person degrees $k_p$, and the complexity scores for groups by multiplying by the corresponding $d'_{gg}$ score.
+
+Here are the person scores:
 
 ```{r}
 #| echo: false
-#| tbl-cap: "Status Scores for Persons"
+#| label: tbl-fcp
+#| tbl-cap: "Fitness Scores for Persons"
    library(kableExtra)
    library(dplyr)
-   s.tab <- data.frame(fc1 = fc1$p.s/max(fc1$p.s), 
-                        fc2 = fc2$p.s/max(fc2$p.s),
-                        fc3 = fc3$p.s/max(fc3$p.s),
-                        fc4 = fc4$p.s/max(fc4$p.s)
-                        ) |> 
-      arrange(desc(fc1))
-   s.tab
-```
+   nfc.ps <- fc$p.s/rowSums(A)
+   s.tab <- data.frame(fc = nfc.ps/max(nfc.ps), lfc = eig.p/max(eig.p)) |> 
+      arrange(desc(fc))
    kbl(s.tab, format = "pipe", digits = 3,
-       align = c("l", "c", "c", "c", "c"),
-       col.names = c("Person", "Bonacich", "Fitness (C)", "Fitness (R)", "Fitness (RC)")) %>% 
+       align = c("l", "c", "c"),
+       col.names = c("Person", "Fitness", "Linear Fitness")) %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
    column_spec(1, bold = TRUE) |> 
    footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+```
+
+And the group scores:
+
+```{r}
+#| echo: false
+#| label: tbl-fcg
+#| tbl-cap: "Complexity Scores for Groups"
+   library(kableExtra)
+   library(dplyr)
+   nfc.gs <- fc$g.s * k.g
+   s.tab <- data.frame(fc = nfc.gs/max(nfc.gs), lfc = eig.g/max(eig.g)) |> 
+      arrange(desc(fc))
+   kbl(s.tab, format = "pipe", digits = 3,
+       align = c("l", "c", "c"),
+       col.names = c("Person", "Complexity", "Linear Complexity")) %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+   column_spec(1, bold = TRUE) |> 
+   footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+```
