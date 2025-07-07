@@ -1,0 +1,359 @@
+---
+title: "PageRank Prestige Scoring"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+Note that the model of status distribution implied by the Eigenvector Centrality approach just reviewed implies that each actor distributes the same amount of status *independently* of the number of connections they have. Status just replicates indefinitely. Thus, a node with a 100 friends has 100 status units to distribute to each of them and a node with a 10 friends has 10 units. 
+
+This is why the eigenvector idea rewards nodes who are connected to popular others more. Even though everyone begins with a single unit of status, well-connected nodes by degree end up having more of it to distribute. 
+
+## A Degree-Normalized Model of Status 
+
+But what if status propagated in the network proportionately to the number of connections one had? For instance, if someone has 100 friends and they only had so much time or energy, they would only have a fraction of status to distribute to others than a person with 10 friends. 
+
+In that case, the node with a hundred friends would only have 1/100 of status units to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to *discerning* others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately. 
+
+How would we implement this model? First, let's create a variation of the undirected friendship nomination adjacency matrix called the $\mathbf{P}$ matrix. It is defined like this:
+
+$$
+\mathbf{P} = \mathbf{D}_{out}^{-1}\mathbf{A}
+$$
+
+Where $\mathbf{A}$ is our old friend the adjacency matrix, and $\mathbf{D}_{out}^{-1}$ is a matrix containing the *inverse* of each node outdegree along the diagonals and zeroes in every other cell. 
+
+In `R` we can create the $\mathbf{D}_{out}^{-1}$ matrix using the native `diag` function like this (using an undirected version of the Krackhardt high-tech managers friendship network):
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- as_undirected(ht_friends, mode = "collapse")
+   A <- as.matrix(as_adjacency_matrix(g))
+   D.o <- diag(1/rowSums(A))
+```
+
+Recalling that the function `rowSums` gives us the row sums of the adjacency matrix, which is the same as each node's outdegree.
+
+We can check out that the  $\mathbf{D}_{out}^{-1}$ indeed contains the quantities we seek by looking at its first few rows and columns:
+
+```{r}
+   round(D.o[1:10, 1:10], 2)
+```
+
+We can then create the $\mathbf{P}$ matrix corresponding to the undirected version of the Krackhardt friendship network using matrix multiplication like this:
+
+
+```{r}
+   P <- D.o %*% A
+```
+
+Recalling that `%*%` is the `R` matrix multiplication operator.
+
+So the resulting $\mathbf{P}$ is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. 
+
+Here are the first 10 rows and columns of the new matrix:
+
+```{r}
+   round(P[1:10, 1:10], 2)
+```
+
+Note that the entries are now numbers between zero and one and the matrix is *asymmetric*; that is, $p_{ij}$ is not necessarily equal to $p_{ji}$. In fact $p_{ij}$ will only be equal to $p_{ji}$ when $k_i = k_j$ (nodes have the same degree). Each cell in the matrix is thus equal to $1/k_i$ where $k_i$ is the degree of the node in row $i$. 
+
+Moreover the rows of $\mathbf{P}$ sum to one:
+
+```{r}
+   rowSums(P)
+```
+
+Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "outdegree" of each node in the matrix is forced to sum to a fixed number. Substantively this means that we are equalizing the total amount of prestige or status that each node can distribute in the system to a fixed quantity. 
+
+This means that nodes with a lot of out-neighbors will dissipate this quantity by distributing it across a larger number of recipients (hence their corresponding non-zero entries in the rows of $\mathbf{P}$) will be a small number) and nodes with a few out-neighbors will have more to distribute. 
+
+Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columns* of the same matrix do not:
+
+```{r}
+   round(colSums(P), 2)
+```
+
+This means that inequalities in the system will be tied to the *indegree* of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix $\mathbf{P}^T$:
+
+```{r}
+   round(rowSums(t(P)), 2)
+```
+
+This will come in handy in a second.
+
+The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a larger indegree in $\mathbf{P}$. 
+
+Now we can just adapt the the model of status distribution we used for [eigenvector centrality](prestige.qmd) but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$, just like we did for the @bonacich72 status score. 
+
+Here's our old status game function:
+
+```{r}
+   status1 <- function(w) {
+      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+      d <- 1 #initial delta
+      k <- 0 #initializing counter
+      while (d > 1e-10) {
+          o.x <- x #old status scores
+          x <- w %*% o.x #new scores a function of old scores and adjacency matrix
+          x <- x/norm(x, type = "E") #normalizing new status scoress
+          d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
+          k <- k + 1 #incrementing while counter
+      }
+   return(as.vector(x))
+   }
+```
+
+At each step, the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:
+
+```{r}
+   s2 <- status1(t(P))
+   s2 <- s2/max(s2)
+   round(s2, 3)
+```
+
+What if I told you that these numbers are the same as the leading eigenvector of $\mathbf{P}^T$?
+
+```{r}
+   s2 <- abs(eigen(t(P))$vector[, 1])
+   s2 <- s2/max(s2)
+   round(s2, 3) 
+```
+
+And, of course, the (normalized) scores produced by this approach are identical to those computed by the `page_rank` function in `igraph` with "damping factor" (to be explained in a second  ) set to 1.0:
+
+```{r}
+   pr <- page_rank(g, damping = 1, algo = "arpack")$vector
+   round(pr/max(pr), 3)
+```
+
+So the distributional model of status is the same one implemented in the PageRank algorithm!
+
+## PageRank as a Markov Difussion Model
+
+Remember how we said earlier that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on node $i$ and the with probability $p_{ij}$ jumps to $j$, who is one of node $i$'s out-neighbors. The probabilities for each $i$ and $j$ combination are stored in the matrix $\mathbf{P}$. 
+
+So our status game can best be understood as a special case of a **diffusion** game, where what's being diffused through the network is status itself. Let's see how this would work. 
+
+Imagine we want to spread something through the Krackhardt managers friendship network like a rumor or a piece of information. We start with a seed node $i$ and then track "where" the rumor is at each time step in the network (where the location is a person in the network). The rules of the game are the Markov diffusion model we described above. At each time step the rumor sits on some $j$ and it diffuses to one of $j$'s neighbors $k$ with probability $p_{jk}$. Where the rumor has been before that time step does not affect where it goes in the present.
+
+This sequence of transmission events is called a **markov chain**, and when it happens in a graph it is called a **random walk** on the graph. The node at which the rumor sits at a given time $t$ is called the **state** of the markov chain at $t$. For instance, the following function prints out *every* state of the markov chain for some series of steps $q$, given a network transition matrix $\mathbf{P}$ (the `w` argument in the function):
+
+```{r}
+   markov.chain1 <- function(w, seed = 1, q = 100) {
+      state <- 0 #initializing state vector
+      i <- seed #setting seed node
+      for (t in 1:q) {
+         state[t] <- sample(1:ncol(w), 1, prob = w[i, ]) #new state of the chain
+         i <- state[t] #new source node
+      }
+   return(state)
+   }
+```
+
+The function above sets the "seed" node to that given in the argument `seed` (by default, node 1) in line 2. Then, in line 4, it enters the `for` loop to run `q` times (in this case 100 times). In line 6 the `state` vector at `t` is set to a random node $j$ sampled from the $\mathbf{P}$ matrix with probability equal to the entry $p_{ij}$ in the $i^{th}$ row of the matrix. 
+
+For instance when it comes to first node that row looks like:
+
+```{r}
+   round(P[1, ], 2)
+```
+
+Which means that nodes {`r which(P[1, ]!=0)`} (the neighbors of node 1) have an 11% chance each of being sampled in line 6 and the other ones have no chance. Then in line 7 the new source node is set to whatever neighbor of $i$ was sampled in line 6. 
+
+Here's a markov chain state sequence of length 100 from the managers friendship network, starting with node 1 as the seed:
+
+```{r}
+   markov.chain1(P)
+```
+
+We can of course create a longer one by changing the `q` argument while setting the seed node to 5:
+
+```{r}
+   markov.chain1(P, q = 500, seed = 5)
+```
+
+Note that one thing that happens here is that the rumor goes through some nodes more often than others. Another thing that you may be thinking is that the odds that a node will keep repeating itself in this chain has to do with how many neighbors they have since that increases the chances that they will be chosen in the `sample` line of the function. If you think that, you will be right!
+
+One thing we can do with the long vector of numbers above is compute the *probability* that the chain will be in some state or another after a number of steps $q$. To do that, all we have to do is find out the number of times each of the numbers (from one through twenty one) repeats itself, and then divide by the total number of steps. 
+
+In `R` we can do that like this, using `q = 50000`:
+
+```{r}
+   states <- markov.chain1(P, q = 50000, seed = 1)
+   count <- table(states)
+   p <- count/length(states)
+   names(p) <- names(count)
+   round(p, 2)
+```
+
+Line 1 computes the states of the markov chain after 50000 iterations using our `markov.chain1` function. Then line 2 uses the native `R` function `table` as a handy trick to compute how many times each node shows up in the chain stored in the `count` object: 
+
+```{r}
+#| code-line-numbers: false
+   count
+```
+
+Finally, line 4 divides these numbers by the length of the chain to get the probability. 
+
+Note that the numbers stored in the `p` vector are readily interpretable. For instance, the `0.06` in the first spot tells us that if we were to run this chain many times and check where the rumor is at step fifty-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth.  
+
+Like well behaved probabilities, these numbers sum to 1.0:
+
+```{r}
+   sum(p)
+```
+
+We can incorporate these steps in to a new and improved function like thus:
+
+```{r}
+   markov.chain2 <- function(w, seed = 1, q = 100) {
+      state <- 0
+      i <- seed
+      for (t in 1:q) {
+         state[t] <- sample(1:ncol(w), 1, prob = w[i, ])
+         i <- state[t]
+      }
+   count <- table(states)
+   p <- count/length(states)
+   names(p) <- names(count)
+   return(p)
+   }
+```
+
+Which now does everything in one step:
+
+```{r}
+   markov.chain2(P, q = 500)
+```
+
+There is another way to compute these probabilities more directly from the $\mathbf{P}$ matrix. The basic idea is that at any time $t$, the distribution of probabilities across nodes in the network stored in the vector $\mathbf{x}$ is given by:
+
+$$
+\mathbf{x}(t) = \mathbf{P}^T\mathbf{x}(t-1)
+$$
+
+With the initial probability vector given by:
+
+$$
+\mathbf{x}(0) = \mathbf{e}^{(i)}
+$$
+
+Where $e^{(i)}$ is a vector containing all zeros except for the $i^{th}$ spot, where it contains a one, indicating the initial seed node. 
+
+Here's an `R` function that implements this idea:
+
+```{r}
+   markov.chain3 <- function(w, init = 1, steps = 100) {
+      x <- rep(0, nrow(w))
+      x[init] <- 1
+      P.t <- t(w)
+      for (t in 1:steps) {
+         x <- P.t %*% x
+         }
+   x <- as.vector(x)
+   names(x) <- 1:ncol(w)
+   return(x)
+   }
+```
+
+And we can see what it spits out:
+
+```{r}
+   p3 <- markov.chain3(P)
+   round(p3, 2)
+```
+
+Which are the same as our more complicated function above.
+
+Now you may have noticed this already, but these are the same numbers produced by the the PageRank status game!
+
+```{r}
+   names(pr) <- 1:21
+   round(pr, 2)
+```
+
+This gives us another (and perhaps) more intuitive interpretation of what the PageRank prestige ranking is all about. Nodes have more prestige if they are more "central" in a network where something is spreading via a random walk process. Higher ranked nodes will be visited more often by the random walker, less-highly-ranked nodes less. 
+
+Note that if a random walker is just a *web surfer* then it makes sense that a more highly visited page should be more prestigious than a less frequently visited page [@brin_page98].
+
+## PageRank with Damping and Teleportation in Directed Graphs
+
+PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. 
+
+```{r}
+   g <- ht_advice
+   A <- as.matrix(as_adjacency_matrix(g))
+```
+
+A plot of the advice network is shown in @fig-krack. 
+
+```{r}
+#| label: fig-krack
+#| fig-cap: "Krackhardt's managers network"
+#| fig-width: 8
+#| fig-height: 8
+#| echo: false
+   library(ggraph)
+   set.seed(456)
+   p <- ggraph(ht_advice, layout = 'auto')
+   p <- p + geom_edge_parallel(color = gray(0.5), edge_width = 0.25,
+                        arrow = arrow(length = unit(4, 'mm')),
+                        end_cap = circle(6, 'mm'), 
+                        sep = unit(5, 'mm'))    
+   p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
+   p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 6, color = "white")
+   p <- p + theme_graph() 
+   p
+```
+
+We then compute the $\mathbf{P}$ matrix corresponding to this network:
+
+```{r}
+   D.o <- diag(1/rowSums(A))
+   P <- D.o %*% A 
+```
+
+One issue that arises in computing the $\mathbf{P}$ for directed graphs is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in @fig-krack, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. 
+
+To avoid this issue the original designers of the PageRank algorithm [@brin_page98] added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.
+
+How do we do that? Well we need to "fix" the $\mathbf{P}$ matrix to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for **G**oogle):
+
+$$
+   \mathbf{G} = \alpha \mathbf{P} + (1 - \alpha) \mathbf{E}
+$$
+
+Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being "teleported" to.
+
+So, fixing $\alpha = 0.85$ (the standard value chosen by @brin_page98 in their original paper) our $\mathbf{G}$ matrix would be:
+
+```{r}
+   n <- vcount(g)
+   E <- matrix(1/n, n, n)
+   G <- (0.85 * P) + (0.15 * E)
+```
+
+And then we just play our status distribution game on the transpose of $\mathbf{G}$:
+
+```{r}
+   s3 <- round(status1(t(G)), 3)
+   round(s3/max(s3), 3)
+```
+
+Which is the same answer you would get from the `igraph` function `page_rank` by setting the "damping" parameter to 0.85:
+
+```{r}
+   pr <- page_rank(g, damping = 0.85, algo = "arpack")$vector
+   round(pr/max(pr), 3)
+```
+
+We can see therefore that the damping parameter simply controls the extent to which the PageRank ranking is driven by the directed connectivity of the $\mathbf{P}$ matrix, versus a stochastic or random component. 
