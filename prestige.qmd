@@ -143,7 +143,7 @@ Lines 2-4 initialize various quantities, most importantly the initial status vec
 
 Then lines 5-12 implement a little loop of how status is distributed through the network, with the most important piece of code being line 7 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 10^{-10}$) as checked in line 9. 
 
-Note the normalization step on line 8, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **Euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
+Note the normalization step on line 8, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **Euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the Euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
 
 And here's the resulting (row) vector of status scores for each node:
 
@@ -184,11 +184,64 @@ When treated as a structural index of connectivity in a graph (i.e., a centralit
                     c("hover", "condensed", "responsive"))
 ```
 
-Most other measures of status in networks are constructed using similar principles. What changes is the *model* of how status is distributed in the system. That's why scary and non-intuitive stuff about eigenvectors or whatever is misleading.
+Most other measures of status in networks are constructed using similar principles. What changes is the *model assumptions* of how status is distributed in the system. That's why scary and non-intuitive stuff about eigenvectors or whatever is misleading.
 
-Other measures are designed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in **directed graphs**, by for instance, differentiating status derived from outgoing links from that derived from incoming links. 
+Other measures of node status and prestige are designed such that they either change the quantum of status that is distributed through the network by making it dependent on some node characteristic (like degree) or differentiate between different routes of distribution in **directed graphs**, by for instance, differentiating status derived from outgoing links from that derived from incoming links. 
 
 Let's see some examples of these alternative cases.
+
+## Combining Prestige and Similarity
+
+In a neat paper, @alvarez-socorro_etal15 combine ideas of [node similarity analysis](similarity.qmd) with prestige ranking to derive an interesting twist on the usual Eigenvector-based prestige score. 
+
+Their idea is simple and intuitive, linking the "getting status from others" idea we just talked about, but *weighting* those others by their *similarity* to ego. Their point is that linking to others who are not similar to you should give you more status than linking to others that are similar, which is the principle behind such fundamental network theories as Strength of Weak Ties [@granovetter73] and Structural Holes [@burt92].
+
+How do we do it? First, we just need to compute one of the many similarity metrics, to come up with a dissimilarity matrix between nodes. We choose the Jaccard similarity, which can be computed using the following function:
+
+```{r}
+   jaccard.sim <- function(x) {
+      A <- as.matrix(as_adjacency_matrix(x))
+      A.p <- A %*% A 
+      A.q <- A %*% (1 - A) 
+      A.r <- (1 - A) %*% A 
+      return(A.p / (A.p + A.q + A.r))
+      }
+```
+
+The dissimilarity matrix for the Krackhardt managers friendship network is just:
+
+```{r}
+   D <- 1 - jaccard.sim(g)
+```
+
+Then @alvarez-socorro_etal15 create a new matrix `W` which equals the **element wise** product between the adjacency matrix and the distance matrix:
+
+```{r}
+   W <- A * D
+```
+
+And the (dis)similarity weighted status scores are obtained by playing our status game on the `W` matrix:
+
+```{r}
+   s.diss <- status1(W)
+   s.diss <- s.diss/max(s.diss)
+```
+
+And here are the top ten nodes by this dissimilarity weighted prestige measure:
+
+```{r, echo = FALSE}
+   nodes <- 1:vcount(g)
+   eig.dat <- data.frame(Nodes = nodes, Eigen.Cent = s.diss, Deg.Cent = degree(g))
+   eig.dat <- eig.dat[order(eig.dat$Eigen.Cent, decreasing = TRUE), ]
+   kbl(eig.dat[1:10, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Ten Dissimilarity-Weighted Eigenvector Scores.",
+       digits = 3) %>%    
+   kable_styling(bootstrap_options = 
+                    c("hover", "condensed", "responsive"))
+```
+
+Note that while the top two nodes (17 and 11) does not change, taking dissimilarity into account alters the rankings. Node 19 drops from third to fifth place and node 1 from fifth to ninth. 
 
 ## Bonacich Prestige
 
