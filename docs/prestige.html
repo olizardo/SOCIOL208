@@ -518,7 +518,7 @@ div.csl-indent {
 <p><span class="math display">\[
    \mathbf{x} = A\mathbf{x}
 \]</span></p>
-<p>Because <span class="math inline">\(\mathbf{x}\)</span> is an <span class="math inline">\(n \times n\)</span> matrix and <span class="math inline">\(\mathbf{x}\)</span> is <span class="math inline">\(n \times 1\)</span> column vector, the multiplication <span class="math inline">\(A\mathbf{x}\)</span> will return another column vector of dimensions <span class="math inline">\(n \times 1\)</span>, in this case <span class="math inline">\(\mathbf{x}\)</span> itself!</p>
+<p>Because <span class="math inline">\(\mathbf{A}\)</span> is an <span class="math inline">\(n \times n\)</span> matrix and <span class="math inline">\(\mathbf{x}\)</span> is <span class="math inline">\(n \times 1\)</span> column vector, the multiplication <span class="math inline">\(A\mathbf{x}\)</span> will return another column vector of dimensions <span class="math inline">\(n \times 1\)</span>, in this case <span class="math inline">\(\mathbf{x}\)</span> itself!</p>
 <p>Note the problem that this formulation poses: <span class="math inline">\(\mathbf{x}\)</span> appears on both sides of the equation, which means that in order to know the status of any one node we would need to know the status of the others, but calculating the status of the others depends on knowing the status of the focal node, and so on. There’s a chicken and the egg problem here.</p>
 <p>Now, there is an obvious (to the math majors) <em>mathematical solution</em> to this problem, because there’s a class of solvable (under some mild conditions imposed on the matrix <span class="math inline">\(\mathbf{A}\)</span>) linear algebra problems that take the form:</p>
 <p><span class="math display">\[
@@ -539,7 +539,7 @@ div.csl-indent {
 <section id="distributing-status-to-others" class="level2">
 <h2 class="anchored" data-anchor-id="distributing-status-to-others">Distributing Status to Others</h2>
 <p>Let’s start with the simplest model of how people can get their status from the status of others in a network. It is the simplest because it is based on degree.</p>
-<p>Imagine everyone has the same “quantum” of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people “send” the same amount of status to all their alters in the network. At the end of each step, we compute people’s status scores using <a href="#eq-status-sum">Equation&nbsp;1</a>. We stop doing this after the status scores of people stop changing across each iteration.</p>
+<p>Imagine everyone has the same “quantum” of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people “send” the same amount of status to all their alters in the network. Then we repeat, with everyone sending the amount of status they <em>now</em> have after receiving it from others. We repeat this many times. At the end of each step, we compute people’s new status scores using <a href="#eq-status-sum">Equation&nbsp;1</a>. We stop doing this after the status scores of people stop changing across each iteration.</p>
 <p>Let us see a real-life example at work.</p>
 <p>We will use a data set collected by David Krackhardt on the friendships of 21 managers in a high tech company in the West coast (see the description <a href="https://rdrr.io/github/schochastics/networkdata/man/ht_friends.html">here</a>). The data are reported as directed ties (<span class="math inline">\(i\)</span> nominates <span class="math inline">\(j\)</span> as a friend) but we will constrain ties to be undirected:</p>
 <div class="cell">
@@ -562,7 +562,7 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And here’s a simple custom function using a <code>while</code> loop that exemplifies the process of status distribution through the network we talked about earlier:</p>
+<p>And here’s a simple custom function using a <code>while</code> loop that exemplifies the process of status distribution through the network we just talked about:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
 <span id="cb3-2"><a href="#cb3-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w)) <span class="co">#initial status vector set to all ones of length equal to the number of nodes</span></span>
@@ -704,7 +704,7 @@ div.csl-indent {
 <h2 class="anchored" data-anchor-id="combining-prestige-and-similarity">Combining Prestige and Similarity</h2>
 <p>In a neat paper, <span class="citation" data-cites="alvarez-socorro_etal15">Alvarez-Socorro, Herrera-Almarza, and González-Dı́az (<a href="#ref-alvarez-socorro_etal15" role="doc-biblioref">2015</a>)</span> combine ideas of <a href="./similarity.html">node similarity analysis</a> with prestige ranking to derive an interesting twist on the usual Eigenvector-based prestige score.</p>
 <p>Their idea is simple and intuitive, linking the “getting status from others” idea we just talked about, but <em>weighting</em> those others by their <em>similarity</em> to ego. Their point is that linking to others who are not similar to you should give you more status than linking to others that are similar, which is the principle behind such fundamental network theories as Strength of Weak Ties <span class="citation" data-cites="granovetter73">(<a href="#ref-granovetter73" role="doc-biblioref">Granovetter 1973</a>)</span> and Structural Holes <span class="citation" data-cites="burt92">(<a href="#ref-burt92" role="doc-biblioref">Burt 1992</a>)</span>.</p>
-<p>How do we do it? First, we just need to compute one of the many similarity metrics, to come up with a dissimilarity matrix between nodes. We choose the Jaccard similarity, which can be computed using the following function:</p>
+<p>How do we do it? First, we just need to compute one of the <a href="./similarity.html">many similarity metrics</a>, to come up with a dissimilarity matrix between nodes. We choose the Jaccard similarity, which can be computed using the following function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   jaccard.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
 <span id="cb13-2"><a href="#cb13-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
@@ -802,13 +802,13 @@ div.csl-indent {
 <p><span class="math display">\[
 \mathbf{W} = \mathbf{A} \odot (1 - \mathbf{S})
 \]</span></p>
-<p>Where <span class="math inline">\(\mathbf{A}\)</span> is the adjacency matrix and <span class="math inline">\(\mathbf{A}\)</span> is a similarity matrix (making (<span class="math inline">\(1-\mathbf{A}\)</span> a <em>dis</em>similarity matrix)) and <span class="math inline">\(\odot\)</span> is the element-wise matrix multiplication operator.</p>
+<p>Where <span class="math inline">\(\mathbf{A}\)</span> is the adjacency matrix and <span class="math inline">\(\mathbf{S}\)</span> is a similarity matrix (making (<span class="math inline">\(1-\mathbf{S}\)</span> a <em>dis</em>similarity matrix)) and <span class="math inline">\(\odot\)</span> is the element-wise matrix multiplication operator.</p>
 <p>A generalization that accommodates a wider range of dependencies between status and similarity goes like this:</p>
 <p><span class="math display">\[
 \mathbf{W} = \mathbf{A} \odot \left[\mathbf{S}^\delta \odot (1 - \mathbf{S})^\gamma\right]
 \]</span></p>
 <p>With the restriction that <span class="math inline">\(0 \geq \delta \leq 1\)</span> and <span class="math inline">\(0 \geq \gamma \leq 1\)</span>.</p>
-<p>When <span class="math inline">\(\delta = \gamma = 0\)</span>, then <span class="math inline">\(\mathbf{W} = \mathbf{A}\)</span> and we recover the standard Eigenvector scores we computed earlier. When <span class="math inline">\(\delta = 0\)</span> and <span class="math inline">\(\gamma &gt; 0\)</span>, then we recover the dissimilarity-weighted eigenvector scores of <span class="citation" data-cites="alvarez-socorro_etal15">Alvarez-Socorro, Herrera-Almarza, and González-Dı́az (<a href="#ref-alvarez-socorro_etal15" role="doc-biblioref">2015</a>)</span>. When <span class="math inline">\(\delta &gt; 0\)</span> and <span class="math inline">\(\gamma = 0\)</span> then we compute scores that weight the eigenvector scores by similarity rather than dissimilarity.</p>
+<p>When <span class="math inline">\(\delta = \gamma = 0\)</span>, then <span class="math inline">\(\mathbf{W} = \mathbf{A}\)</span> and we recover the standard Eigenvector scores we computed earlier. When <span class="math inline">\(\delta = 0\)</span> and <span class="math inline">\(\gamma &gt; 0\)</span>, then we recover the dissimilarity-weighted eigenvector scores of <span class="citation" data-cites="alvarez-socorro_etal15">Alvarez-Socorro, Herrera-Almarza, and González-Dı́az (<a href="#ref-alvarez-socorro_etal15" role="doc-biblioref">2015</a>)</span>. When <span class="math inline">\(\delta &gt; 0\)</span> and <span class="math inline">\(\gamma = 0\)</span> then we compute scores that weigh the eigenvector scores by similarity rather than dissimilarity.</p>
 <p>Here is a function that packages everything above into the generalized version:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   prestige.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">delta =</span> <span class="dv">0</span>, <span class="at">gamma =</span> <span class="dv">0</span>) {</span>
@@ -819,45 +819,38 @@ div.csl-indent {
 <span id="cb17-6"><a href="#cb17-6"></a>      S <span class="ot">&lt;-</span> A.p <span class="sc">/</span> (A.p <span class="sc">+</span> A.q <span class="sc">+</span> A.r)</span>
 <span id="cb17-7"><a href="#cb17-7"></a>      D <span class="sc">&lt;</span> <span class="sc">-</span> <span class="dv">1</span> <span class="sc">-</span> S</span>
 <span id="cb17-8"><a href="#cb17-8"></a>      W <span class="ot">&lt;-</span> A <span class="sc">*</span> S<span class="sc">^</span>delta <span class="sc">*</span> D<span class="sc">^</span>gamma</span>
-<span id="cb17-9"><a href="#cb17-9"></a>      s <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">eigen</span>(W)<span class="sc">$</span>vectors[, <span class="dv">1</span>])</span>
-<span id="cb17-10"><a href="#cb17-10"></a>      <span class="fu">return</span>(s)</span>
-<span id="cb17-11"><a href="#cb17-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb17-9"><a href="#cb17-9"></a>      <span class="fu">return</span>(<span class="fu">abs</span>(<span class="fu">eigen</span>(W)<span class="sc">$</span>vectors[, <span class="dv">1</span>]))</span>
+<span id="cb17-10"><a href="#cb17-10"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now we can run through the various possibilities.</p>
 <p>Top-ten regular eigenvector:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">prestige.sim</span>(g)</span>
 <span id="cb18-2"><a href="#cb18-2"></a>   <span class="fu">names</span>(s) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb18-3"><a href="#cb18-3"></a>   <span class="fu">sort</span>(s, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-3"><a href="#cb18-3"></a>   <span class="fu">round</span>(<span class="fu">sort</span>(s<span class="sc">/</span><span class="fu">max</span>(s), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       17        11        19         2         5         1        15        12 
-0.4127413 0.3358247 0.2808565 0.2620909 0.2596451 0.2555962 0.2529748 0.2265057 
-        4        10 
-0.2017490 0.1929814 </code></pre>
+<pre><code>   17    11    19     2     5     1    15    12     4    10 
+1.000 0.814 0.680 0.635 0.629 0.619 0.613 0.549 0.489 0.468 </code></pre>
 </div>
 </div>
 <p>Top-ten dissimilarity-weighted eigenvector:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">prestige.sim</span>(g, <span class="at">gamma =</span> <span class="dv">1</span>)</span>
 <span id="cb20-2"><a href="#cb20-2"></a>   <span class="fu">names</span>(s) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">sort</span>(s, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">round</span>(<span class="fu">sort</span>(s<span class="sc">/</span><span class="fu">max</span>(s), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       17        11         5         2        19        12        10        15 
-0.3921011 0.3220518 0.2615886 0.2573014 0.2496802 0.2427622 0.2382115 0.2268953 
-        1         6 
-0.2207428 0.2016397 </code></pre>
+<pre><code>   17    11     5     2    19    12    10    15     1     6 
+1.000 0.821 0.667 0.656 0.637 0.619 0.608 0.579 0.563 0.514 </code></pre>
 </div>
 </div>
 <p>Top-ten similarity-weighted eigenvector:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">prestige.sim</span>(g, <span class="at">delta =</span> <span class="dv">1</span>)</span>
 <span id="cb22-2"><a href="#cb22-2"></a>   <span class="fu">names</span>(s) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
-<span id="cb22-3"><a href="#cb22-3"></a>   <span class="fu">sort</span>(s, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb22-3"><a href="#cb22-3"></a>   <span class="fu">round</span>(<span class="fu">sort</span>(s<span class="sc">/</span><span class="fu">max</span>(s), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       17        11        19         1        15         2         5         4 
-0.4447426 0.3691409 0.3414300 0.3175144 0.2936941 0.2582118 0.2510790 0.2340284 
-       12         3 
-0.1833681 0.1669625 </code></pre>
+<pre><code>   17    11    19     1    15     2     5     4    12     3 
+1.000 0.830 0.768 0.714 0.660 0.581 0.565 0.526 0.412 0.375 </code></pre>
 </div>
 </div>
 <p>Neat!</p>

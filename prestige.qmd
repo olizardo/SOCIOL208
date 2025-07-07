@@ -35,7 +35,7 @@ $$
    \mathbf{x} = A\mathbf{x}
 $$
 
-Because $\mathbf{x}$ is an $n \times n$ matrix and $\mathbf{x}$ is $n \times 1$ column vector, the multiplication $A\mathbf{x}$ will return another column vector of dimensions $n \times 1$, in this case $\mathbf{x}$ itself!
+Because $\mathbf{A}$ is an $n \times n$ matrix and $\mathbf{x}$ is $n \times 1$ column vector, the multiplication $A\mathbf{x}$ will return another column vector of dimensions $n \times 1$, in this case $\mathbf{x}$ itself!
 
 Note the problem that this formulation poses: $\mathbf{x}$ appears on both sides of the equation, which means that in order to know the status of any one node we would need to know the status of the others, but calculating the status of the others depends on knowing the status of the focal node, and so on. There's a chicken and the egg problem here.
 
@@ -67,7 +67,7 @@ A better approach is to see if we can *motivate* the use of measures like the on
 
 Let's start with the simplest model of how people can get their status from the status of others in a network. It is the simplest because it is based on degree. 
 
-Imagine everyone has the same "quantum" of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people "send" the same amount of status to all their alters in the network. At the end of each step, we compute people's status scores using @eq-status-sum. We stop doing this after the status scores of people stop changing across each iteration.
+Imagine everyone has the same "quantum" of status to begin with (this can be stored in a vector containing the same number of length equals to number of actors in the network). Then, at each step, people "send" the same amount of status to all their alters in the network. Then we repeat, with everyone sending the amount of status they *now* have after receiving it from others. We repeat this many times. At the end of each step, we compute people's new status scores using @eq-status-sum. We stop doing this after the status scores of people stop changing across each iteration.
 
 Let us see a real-life example at work. 
 
@@ -103,7 +103,7 @@ We then extract the adjacency matrix corresponding to this network:
    A <- as.matrix(as_adjacency_matrix(g))
 ```
 
-And here's a simple custom function using a `while` loop that exemplifies the process of status distribution through the network we talked about earlier:
+And here's a simple custom function using a `while` loop that exemplifies the process of status distribution through the network we just talked about:
 
 ```{r}
    status1 <- function(w) {
@@ -184,7 +184,7 @@ In a neat paper, @alvarez-socorro_etal15 combine ideas of [node similarity analy
 
 Their idea is simple and intuitive, linking the "getting status from others" idea we just talked about, but *weighting* those others by their *similarity* to ego. Their point is that linking to others who are not similar to you should give you more status than linking to others that are similar, which is the principle behind such fundamental network theories as Strength of Weak Ties [@granovetter73] and Structural Holes [@burt92].
 
-How do we do it? First, we just need to compute one of the many similarity metrics, to come up with a dissimilarity matrix between nodes. We choose the Jaccard similarity, which can be computed using the following function:
+How do we do it? First, we just need to compute one of the [many similarity metrics](similarity.qmd), to come up with a dissimilarity matrix between nodes. We choose the Jaccard similarity, which can be computed using the following function:
 
 ```{r}
    jaccard.sim <- function(x) {
@@ -239,7 +239,7 @@ $$
 \mathbf{W} = \mathbf{A} \odot (1 - \mathbf{S})
 $$
 
-Where $\mathbf{A}$ is the adjacency matrix and $\mathbf{A}$ is a similarity matrix (making ($1-\mathbf{A}$ a *dis*similarity matrix)) and $\odot$ is the element-wise matrix multiplication operator.
+Where $\mathbf{A}$ is the adjacency matrix and $\mathbf{S}$ is a similarity matrix (making ($1-\mathbf{S}$ a *dis*similarity matrix)) and $\odot$ is the element-wise matrix multiplication operator.
 
 A generalization that accommodates a wider range of dependencies between status and similarity goes like this:
 
@@ -249,7 +249,7 @@ $$
 
 With the restriction that $0 \geq \delta \leq 1$ and $0 \geq \gamma \leq 1$.
 
-When $\delta = \gamma = 0$, then  $\mathbf{W} = \mathbf{A}$ and we recover the standard Eigenvector scores we computed earlier. When $\delta = 0$ and $\gamma > 0$, then we recover the dissimilarity-weighted eigenvector scores of @alvarez-socorro_etal15. When $\delta > 0$ and $\gamma = 0$ then we compute scores that weight the eigenvector scores by similarity rather than dissimilarity. 
+When $\delta = \gamma = 0$, then  $\mathbf{W} = \mathbf{A}$ and we recover the standard Eigenvector scores we computed earlier. When $\delta = 0$ and $\gamma > 0$, then we recover the dissimilarity-weighted eigenvector scores of @alvarez-socorro_etal15. When $\delta > 0$ and $\gamma = 0$ then we compute scores that weigh the eigenvector scores by similarity rather than dissimilarity. 
 
 Here is a function that packages everything above into the generalized version:
 
@@ -262,8 +262,7 @@ Here is a function that packages everything above into the generalized version:
       S <- A.p / (A.p + A.q + A.r)
       D < - 1 - S
       W <- A * S^delta * D^gamma
-      s <- abs(eigen(W)$vectors[, 1])
-      return(s)
+      return(abs(eigen(W)$vectors[, 1]))
    }
 ```
 
@@ -274,7 +273,7 @@ Top-ten regular eigenvector:
 ```{r}
    s <- prestige.sim(g)
    names(s) <- 1:vcount(g)
-   sort(s, decreasing = TRUE)[1:10]
+   round(sort(s/max(s), decreasing = TRUE)[1:10], 3)
 ```
 
 Top-ten dissimilarity-weighted eigenvector:
@@ -282,7 +281,7 @@ Top-ten dissimilarity-weighted eigenvector:
 ```{r}
    s <- prestige.sim(g, gamma = 1)
    names(s) <- 1:vcount(g)
-   sort(s, decreasing = TRUE)[1:10]
+   round(sort(s/max(s), decreasing = TRUE)[1:10], 3)
 ```
 
 Top-ten similarity-weighted eigenvector:
@@ -290,7 +289,7 @@ Top-ten similarity-weighted eigenvector:
 ```{r}
    s <- prestige.sim(g, delta = 1)
    names(s) <- 1:vcount(g)
-   sort(s, decreasing = TRUE)[1:10]
+   round(sort(s/max(s), decreasing = TRUE)[1:10], 3)
 ```
 
 Neat!
