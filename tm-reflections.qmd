@@ -1,0 +1,199 @@
+---
+title: "The Method of Reflections and Correspondence Analysis in Two-Mode Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In a highly cited piece, [@hidalgo_hausmann09] (HH) motivated what they saw at the time as a novel approach to assigning meaningful scores to nodes in a two-mode network, using what they called a "reflective" approach. HH's original empirical application was to the two-mode country-by-product networks. Hence, they referred to their approach as a way to extract the "economic complexity" of countries in the world system (and dually the complexity of given products). 
+
+Of course, just as with the [fitness/complexity](tm-fitness.qmd) approach, there is no logical connection between the formal method of iterative finding scores for nodes in two-mode networks and the particular case of economic trade since the approach proposed can be used to analyze any two-mode data matrix. As will be obvious, the HH approach belongs to the [extensive line](tm-prestige.qmd) of approaches to derive prestige scores for nodes in two-mode networks that we have reviewed, which included Bonacich and PageRank-style approaches. 
+
+How does the HH reflective scoring work? Let's define a two-mode network composed of a set of people $P$ and their affiliation relations to a set of groups $G$ can be represented by an affiliation matrix $\mathbf{A}$ of dimensions $|P| \times |G|$ with people along the rows and groups across the columns, where $|P|$ is the cardinality of the people set and $|G|$ is the cardinality of the group set, with cell entries $a_{pg}= 1$ if person $p$ is affiliated with group $g$ and $a_{pg}= 0$ otherwise. 
+
+Given this, the degree-centrality of people is given by:
+
+$$
+    C^R_p(1) = \sum_g a_{pg}
+    \label{eq:R1_p}
+$${#eq-pref0}
+
+And for groups:
+
+$$
+   C^R_g(1) = \sum_p a_{pg}
+  \label{eq:R1_g}
+$${#eq-gref0}
+
+That is, the first-order centrality of people is the row sum of the entries in the affiliation matrix $\mathbf{A}$, and the column sums of the same matrix give the first-order centrality of groups. 
+
+As noted by @hidalgo_hausmann09, the key to the reflective approach to computing the "complexity" of countries and products is the observation that, once we have these first-order quantities, it is possible to compute second-order quantities $C^R(2)$ for both people and groups using the *averaged* first-order centralities of the entities in the other mode they are connected to. 
+
+For people, these are given by:
+
+$$
+    C^R_p(2) = \frac{1}{C^R_p(1)}\sum_g a_{pg}C^R_g(1)
+    \label{eq:R2_p}
+$${#eq-pref1}
+
+And for groups:
+
+$$
+   C^R_g(2) = \frac{1}{C^R_g(1)}\sum_p a_{pg}C^R_p(1)
+    \label{eq:R2_g}
+$${#eq-gref1}
+
+While Equation @eq-pref0 assigns a high value to people who belong to a lot of groups,  @eq-pref1 assigns a high value to people who, on average, belong to large groups (e.g., whenever $a_{pg*= 1$ and $C^R_g(1)$ is a big number). In the same way, while  @eq-gref0 assigns a high value to groups that have lots of members,  @eq-gref1 assigns a high value to groups that, on average, have members who themselves have lots of memberships (e.g., whenever $a_{pg*= 1$ and $C^R_p(1)$ is a big number). 
+
+Of course, we can keep on going and define "third-order" reflections; for the people, these are given by:
+
+$$
+   C^R_p(3) = \frac{1}{C^R_p(1)}\sum_g a_{pg}C^R_g(2)
+   \label{eq:R3_p}
+$${#eq-pref2}
+
+And for groups:
+
+$$
+   C^R_g(3) = \frac{1}{C^R_g(1)}\sum_p a_{pg}C^R_p(2)
+   \label{eq:R3_g}
+$${#eq-gref2}
+
+As we saw, while for people, @eq-pref1 measured the average size of the groups they join, @eq-pref2 assigns a high value to people who, on average, belong to groups who are themselves attended by highly active members (e.g., whenever $a_{pg*= 1$ and $C^R_g(2)$ is a big number). 
+
+In the same way, while @eq-gref1 assigns a high value to groups whose members have lots of memberships, @eq-gref2 assigns a high value to groups that, on average, have members who themselves (also on average) belong to large groups (e.g., $a_{pg*= 1$ and $C^R_p(2)$ is a big number).
+
+Note that for people, the even-numbered reflection $C^R_p(2)$ assigns scores based on a formal feature of the *groups* they belong to (in this case, the group sizes). On the other hand, the odd-numbered reflection $C^R_p(3)$ assigns scores based on a formal feature of the *members of the groups* they belong to (in this case, the average size of the groups they belong to). 
+
+In the same way, for the groups, the even-numbered reflection $C^R_g(2)$ assigns scores based on a formal feature of the *people* who belong to them (in this case, their activity). On the other hand, the odd-numbered reflection $C^R_g(3)$ assigns scores based on a formal feature of the *other groups their members belong to*(in this case, their average group size). 
+
+While these are distinct metrics in principle, in practice, the ordering of the nodes in each mode ends up being identical across even and odd scores after their rank ordering "freezes" past a given number of iterations (proportional to the network size). 
+
+More generally, @hidalgo_hausmann09 show that we can define a series of reflective quantities for people and groups (whose verbal and substantive interpretation becomes more complex as the number of iterations increases). 
+
+For people, these are given by:
+
+$$
+    C^R_p(q) = \frac{1}{C^R_p(1)}\sum_g a_{pg}C^R_g(q-1) 
+   \label{eq:Rq_p}
+$${#eq-prefq}
+
+And for groups:
+
+$$
+   C^R_g(q) = \frac{1}{C^R_g(1)}\sum_p a_{pg}C^R_p(q-1)
+   \label{eq:Rq_g}
+$${#eq-grefq}
+
+@eq-prefq says that the reflective score of a person *p*at iteration *q*is the sum of the reflective scores the groups they belong to at the $q-1$ iteration ($C^R_g(q-1)$) divided by their number of memberships $C^{R}_p(1)$. @eq-grefq says that the $q^{th}$ group reflective score is the sum of the reflective scores of their members at the $q-1$ iteration $C^R_p(q-1)$, divided by the number of group members $C^R_g(1)$.
+
+## Method of Reflections in the Southern Women Data
+
+Let's see how this would work in a real two-mode network. To do that, we load up our trusty *Southern Women* (SW) data:
+
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   g <- southern_women
+   A <- as.matrix(as_biadjacency_matrix(g))
+```
+
+Now, we need a function that does all of the reflections that we just spoke about. Here's one that accomplishes that:
+
+```{r}
+    reflections <- function(x, iter = 20) { #x is a matrix with people as rows and groups as columns iters is number of reflections
+    p <- nrow(x)
+    g <- ncol(x)
+    p.c <- matrix(0, p, iter) #initialize person centralities
+    g.c <- matrix(0, g, iter) #initialize group centralities trajectory matrix
+    rownames(p.c) <- rownames(x)
+    rownames(g.c) <- colnames(x)
+    colnames(p.c) <- paste("Cr_", c(1:iter), sep = "")
+    colnames(g.c) <- paste("Cr_", c(1:iter), sep = "")
+    p.c[, 1] <- rowSums(x) #person degree centrality 
+    g.c[, 1] <- colSums(x) #group degree centrality 
+    k <- 1 #initializing counter
+    while (k < iter) {
+        m <- k + 1
+        for(i in 1:p) {
+            p.c[i, m] <- sum(x[i, ] * g.c[, k]) * (1/p.c[i, 1]) #assign person avg. centrality groups they belong to
+        } #end person loop
+        for(j in 1:g) {
+            g.c[j, m] <- sum(x[, j] * p.c[, k]) * (1/g.c[j, 1]) #assign genre avg. person centrality of people in group
+        } #end group loop
+        k <- k + 1 #increase counter
+    } #end while loop
+    return(list(p.c = p.c, g.c = g.c))
+    } #end function
+```
+
+The function above takes the biadjacency matrix $\mathbf{A}$ as input and returns two objects: 
+
+1. A matrix `p.c` with people as the rows and the as many columns as there are reflections, containing the reflective scores for persons in each column. 
+1. A matrix `g.c` with groups as the rows and the as many columns as there are reflections, containing the reflective scores for groups in each column. 
+
+And let's try it out:
+
+```{r}
+    ref.res <- reflections(A)
+```
+
+Let's check out the person scores at the 18th reflection:
+
+```{r}
+    ref.res$p.c[, 18]
+```
+
+This all look like slightly different versions of the same number! The reason for this is as @hidalgo_hausmann09 note, is that the scores begin to *converge* as the number of reflections increase. To get noticeable differences, we need to *scale* the higher reflection scores using the standard unit normalization:
+
+$$
+C^R =\frac{C^R-}{\sigma(C^R)}
+$${#eq-norm}
+
+Where $\bar{C^R}$ is the mean reflective score and $\sigma(C^R)$ is the standard deviation of the reflective scores. In `R` we can do this using the `scale` function:
+
+```{r}
+    scale(ref.res$p.c[, 18])
+```
+
+Better!
+
+Recall also that the @hidalgo_hausmann09 reflections iterate between odd and even scores. We want only one of those. So let's choose the even columns for persons and groups:
+
+```{r}
+    HH.p <- scale(ref.res$p.c[, seq(2, 20, by = 2)])
+    HH.g <- scale(ref.res$g.c[, seq(2, 20, by = 2)])
+```
+
+And now we can put them in fancy tables, as in @tbl-ref:
+```{r}
+#| echo: false
+#| label: tbl-ref
+#| tbl-cap: "Reflective Scores"
+#| tbl-subcap:
+#|   - "Persons."
+#|   - "Groups." 
+#| layout-nrow: 2
+
+library(kableExtra)
+kbl(HH.p, digits = 2) |> 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
+   column_spec(1, bold = TRUE) |> 
+   footnote(symbol = c("Scores normalized to unit variance.")) 
+
+kbl(HH.g, digits = 2) |> 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
+   column_spec(1, bold = TRUE) |> 
+   footnote(symbol = c("Scores normalized to unit variance.")) 
+
+```
+
+We can see in @tbl-ref that in higher order reflections, the scores have converged to a steady value. 
+
