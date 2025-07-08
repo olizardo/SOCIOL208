@@ -88,7 +88,7 @@ We can also use the weights to draw a weighted graph network plot of people and 
 #|   - "Persons"
 #|   - "Groups"
 #| layout-ncol: 2
-#| echo: false
+
    set.seed(123)
    plot(G.p, 
      vertex.size=8, vertex.frame.color="lightgray", 
@@ -139,53 +139,54 @@ Which is indeed the vertex strength of the event held on 6/27.
 
 ## Visualizing Dual Projections Using the Minimum Spanning Tree
 
-As we just saw projecting two-mode results in two weighted one mode networks. Because there is an edge between two persons (groups) if they share at least one group (person) the resulting graphs tend to be dense featuring high levels of connectivity between nodes as with @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
+As we just saw projecting the original biadjacency matrix using Breiger's [-@breiger74] approach results in two weighted one mode networks. Because there is an edge between two persons (groups) if they share at least one group (person) the resulting graphs tend to be dense featuring high levels of connectivity between nodes as with @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
 
 One approach to simplifying the visual projections of two-mode networks is to calculate the resulting weighted graph's **minimum spanning tree**. For any weighted network, the minimum spanning tree is the graph that connects all nodes using the smallest number of edges that form a tree^[Recall that a tree is a connected graph without any cycles.], which happens to be $N-1$ where $N$ is the number of nodes. 
 
 To do this, we can follow **Kruskal's Algorithm**. It goes like this:
 
-- First, we create an edgelist, containing each of the edge weights of the one-mode projection graph.
-- Then we sort the edgelist by weight in increasing order.
-- Then, we create an undirected empty graph with $N$ nodes:
-- Now, we go down the edgelist adding edges to the empty graph one at a time checking that:
-  - We are not connecting nodes that have already been connected (avoiding **multiedges**)
-  - Additional edges do not create **cycles** (as the resulting graph would be no longer a tree). 
-- We stop when we have the desired number of edges ($N-1$).
+- First, we create an edgelist containing each of the edge weights of the one-mode projection graph.
+- Then we sort the edgelist by weight in increasing order (smallest weights first).
+- Then, we create an undirected empty graph with $N$ nodes.
+- Now, we go down the edgelist adding edges to the empty graph one at a time, at each step checking that:
+  1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
+  1. Additional edges do not create **cycles** (as the resulting graph would be no longer a tree). 
 
-Here's a function that does this:
+We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.
+
+Here's a function that does all of this, taking the weighted projection `igraph` object as input and returning the minimum spanning tree:
 
 ```{r}
    make.mst <- function(x) {
       E <- data.frame(as_edgelist(x), w = E(x)$weight) #creating weighted edge list
       E <- E[order(E$w), ] #ordering by edge weight
-      T <- make_empty_graph(n = vcount(x), directed = FALSE) #creating empty graph
-      V(T)$name <- V(x)$name
+      Tr <- make_empty_graph(n = vcount(x), directed = FALSE) #creating empty graph
+      V(Tr)$name <- V(x)$name
       k <- 1
-      n.e <- ecount(T)
-      n.v <- vcount(T) - 1
+      n.e <- ecount(Tr)
+      n.v <- vcount(Tr) - 1
       while(n.e < n.v) {
          i <- which(V(x)$name == E[k,1])
          j <- which(V(x)$name == E[k,2])
-         if (are_adjacent(T, i, j) == 0) { #checking nodes are not adjacent
-            T <- add_edges(T, c(i,j)) #add edge
-            n.e <- ecount(T) #new edge id
-            if (is_acyclic(T) == 0) { #checking new edge does not add a cycle
-               T <- delete_edges(T, n.e) # delete edge if it adds a cycle
+         if (are_adjacent(Tr, i, j) == 0) { #checking nodes are not adjacent
+            Tr <- add_edges(Tr, c(i,j)) #add edge
+            n.e <- ecount(Tr) #new edge id
+            if (is_acyclic(Tr) == 0) { #checking new edge does not add a cycle
+               Tr <- delete_edges(Tr, n.e) # delete edge if it adds a cycle
                }
             }
-         n.e <- ecount(T)
+         n.e <- ecount(Tr)
          k <- k + 1
          }
-      return(T)
+      return(Tr)
    }
 ```
 
 We can now build the minimum spanning tree graph for each weighted projection:
 
 ```{r}
-   T.p <- make.mst(G.p)
-   T.g <- make.mst(G.g)
+   Tr.p <- make.mst(G.p)
+   Tr.g <- make.mst(G.g)
 ```
 
 And here's a point and line plot the minimum spanning tree for persons and groups in the *Southern Women* data (we use the `layout_as_tree` option in `igraph`):
@@ -200,12 +201,12 @@ And here's a point and line plot the minimum spanning tree for persons and group
 #|   - "Groups"
 #| layout-ncol: 2
 
-   plot(T.p, 
+   plot(Tr.p, 
      vertex.size=8, vertex.frame.color="lightgray", 
      vertex.label.dist=2, layout=layout_as_tree,
      vertex.label.cex = 1.5, edge.color = "lightgray",
      edge.width = 3)
-   plot(T.g, 
+   plot(Tr.g, 
      vertex.size=8, vertex.frame.color="lightgray", 
      vertex.label.dist=2, layout=layout_as_tree,
      vertex.label.cex = 1.5, edge.color = "lightgray",
