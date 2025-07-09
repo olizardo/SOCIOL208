@@ -115,21 +115,21 @@ Now, we need a function that does all of the reflections that we just spoke abou
     g.c <- matrix(0, g, iter) #initialize group centralities trajectory matrix
     rownames(p.c) <- rownames(x)
     rownames(g.c) <- colnames(x)
-    colnames(p.c) <- paste("Cr_", c(1:iter), sep = "")
-    colnames(g.c) <- paste("Cr_", c(1:iter), sep = "")
+    colnames(p.c) <- paste("Ref_", c(1:iter), sep = "")
+    colnames(g.c) <- paste("Ref_", c(1:iter), sep = "")
     p.c[, 1] <- rowSums(x) #person degree centrality 
     g.c[, 1] <- colSums(x) #group degree centrality 
     k <- 1 #initializing counter
     while (k < iter) {
         m <- k + 1
         for(i in 1:p) {
-            p.c[i, m] <- sum(x[i, ] * g.c[, k]) * (1/p.c[i, 1]) #assign person avg. centrality groups they belong to
-        } #end person loop
+            p.c[i, m] <- sum(x[i, ] * g.c[, k]) * (1/p.c[i, 1]) #assign person average centrality of groups they belong to
+            } #end person loop
         for(j in 1:g) {
-            g.c[j, m] <- sum(x[, j] * p.c[, k]) * (1/g.c[j, 1]) #assign genre avg. person centrality of people in group
-        } #end group loop
+            g.c[j, m] <- sum(x[, j] * p.c[, k]) * (1/g.c[j, 1]) #assign group average centrality of people in the group
+            } #end group loop
         k <- k + 1 #increase counter
-    } #end while loop
+        } #end while loop
     return(list(p.c = p.c, g.c = g.c))
     } #end function
 ```
@@ -151,13 +151,13 @@ Let's check out the person scores at the 18th reflection:
     ref.res$p.c[, 18]
 ```
 
-This all look like slightly different versions of the same number! The reason for this is as @hidalgo_hausmann09 note, is that the scores begin to *converge* as the number of reflections increase. To get noticeable differences, we need to *scale* the higher reflection scores using the standard unit normalization:
+This all look like slightly different versions of the same number! The reason for this is as @hidalgo_hausmann09 note, is that the scores begin to *converge* as the number of reflections increase. To get noticeable differences, we need to *scale* the higher reflection scores using the standard normalization:
 
 $$
-\tilde{C}^R =\frac{C^R-\hat{C}^R}{\sigma_{C^R}}
+\tilde{C}^R =\frac{C^R-\bar{C}^R}{\sigma_{C^R}}
 $${#eq-norm}
 
-Where $\bar{C^R}$ is the mean reflective score and $\sigma_{C^R})$ is the standard deviation of the reflective scores. 
+Where $\bar{C}^R$ is the mean reflective score and $\sigma_{C^R}$ is the standard deviation of the reflective scores. The resulting scores will have a mean of zero and variance of 1.0.
 
 In `R` we can do this using the native `scale` function:
 
@@ -185,12 +185,12 @@ And now we can put them in fancy tables, as in @tbl-ref:
 #| layout-nrow: 2
 
 library(kableExtra)
-kbl(HH.p, digits = 2) |> 
+kbl(HH.p[order(HH.p[,10], decreasing = TRUE), ], digits = 2) |> 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
    column_spec(1, bold = TRUE) |> 
    footnote(symbol = c("Scores normalized to unit variance.")) 
 
-kbl(HH.g, digits = 2) |> 
+kbl(HH.g[order(HH.g[,10], decreasing = TRUE), ], digits = 2) |> 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
    column_spec(1, bold = TRUE) |> 
    footnote(symbol = c("Scores normalized to unit variance.")) 
