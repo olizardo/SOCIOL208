@@ -280,3 +280,46 @@ Now we can plot the persons and groups in their reflective score trajectory acro
         )
     p
 ```
+
+As @fig-refs-1 shows, *\{Doroty\}* begins pretty high on the list according ot the second reflection (the average size of the groups she belongs to is big) but loses that advantage as we move to further reflections, end up closer to the bottom of the middle. Meanwhile, *\{Charlotte, Brenda\}* begin with pretty low scores on the second reflection, but end up at the top by the 20th. As @fig-refs-2, there's less volatility across reflections in the group ranks, but there is still some non-trivial reshuffling by the end. 
+
+## The Method of Reflections as Correspondence Analysis
+
+As @vandam_etal21 show, it turns out that the equilibrium scores computed by the method of reflections are none other than our old friend **Correspondence Analysis**! Let's see how this works. 
+
+If you recall [from the CA for two-mode networks lecture notes](tm-ca.qmd), in a two-mode network the first dimension of the CA scores (for persons) are equivalent to the second eigenvector of a matrix $\mathbf{W}$ which is obtained from the information in the biadjacency matrix $\mathbf{A}$ like this:
+
+
+```{r}
+    W.p <- diag(1/rowSums(A)) %*% A %*% diag(1/colSums(A)) %*% t(A)
+```
+
+And we get the (real part of the) second eigenvector for the matrix like this:
+
+```{r}
+    ca.p <- Re(eigen(W.p)$vectors[, 2])
+    ca.p
+```
+
+For groups, the relevant CA matrix `W.g` is:
+
+```{r}
+    W.g <- diag(1/colSums(A)) %*% t(A) %*% diag(1/rowSums(A)) %*% A
+```
+
+And we get the second eigenvector of *that* matrix:
+
+
+```{r}
+    ca.g <- Re(eigen(W.p)$vectors[, 2])
+    ca.g
+```
+
+And we can see that these scores are perfectly correlated with the equilibrium reflection scores:
+
+```{r}
+    abs(round(cor(ca.p, HH.p[, 10]), 2))
+
+    abs(round(cor(ca.g, HH.p[, 10]), 2))
+```
+
