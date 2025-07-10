@@ -568,37 +568,31 @@ div.csl-indent {
 <span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> southern_women</span>
 <span id="cb1-4"><a href="#cb1-4"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(g))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Now, we need a function that does all of the reflections that we just spoke about. Here’s one that accomplishes that:</p>
+<p>Now, we need a function that does all of the reflections that we just spoke about. Here’s one that accomplishes that, which is slight modification of the <code>tm.status</code> function from the <a href="./tm-prestige.html">two-mode prestige lecture notes</a>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>    reflections <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">iter =</span> <span class="dv">20</span>) { <span class="co">#x is a matrix with people as rows and groups as columns iters is number of reflections</span></span>
-<span id="cb2-2"><a href="#cb2-2"></a>    p <span class="ot">&lt;-</span> <span class="fu">nrow</span>(x)</span>
-<span id="cb2-3"><a href="#cb2-3"></a>    g <span class="ot">&lt;-</span> <span class="fu">ncol</span>(x)</span>
-<span id="cb2-4"><a href="#cb2-4"></a>    p.c <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, p, iter) <span class="co">#initialize person centralities</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a>    g.c <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, g, iter) <span class="co">#initialize group centralities trajectory matrix</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a>    <span class="fu">rownames</span>(p.c) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(x)</span>
-<span id="cb2-7"><a href="#cb2-7"></a>    <span class="fu">rownames</span>(g.c) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(x)</span>
-<span id="cb2-8"><a href="#cb2-8"></a>    <span class="fu">colnames</span>(p.c) <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"Ref_"</span>, <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span>iter), <span class="at">sep =</span> <span class="st">""</span>)</span>
-<span id="cb2-9"><a href="#cb2-9"></a>    <span class="fu">colnames</span>(g.c) <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"Ref_"</span>, <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span>iter), <span class="at">sep =</span> <span class="st">""</span>)</span>
-<span id="cb2-10"><a href="#cb2-10"></a>    p.c[, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(x) <span class="co">#person degree centrality </span></span>
-<span id="cb2-11"><a href="#cb2-11"></a>    g.c[, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">colSums</span>(x) <span class="co">#group degree centrality </span></span>
-<span id="cb2-12"><a href="#cb2-12"></a>    k <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing counter</span></span>
-<span id="cb2-13"><a href="#cb2-13"></a>    <span class="cf">while</span> (k <span class="sc">&lt;</span> iter) {</span>
-<span id="cb2-14"><a href="#cb2-14"></a>        m <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb2-15"><a href="#cb2-15"></a>        <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>p) {</span>
-<span id="cb2-16"><a href="#cb2-16"></a>            p.c[i, m] <span class="ot">&lt;-</span> <span class="fu">sum</span>(x[i, ] <span class="sc">*</span> g.c[, k]) <span class="sc">*</span> (<span class="dv">1</span><span class="sc">/</span>p.c[i, <span class="dv">1</span>]) <span class="co">#assign person average centrality of groups they belong to</span></span>
-<span id="cb2-17"><a href="#cb2-17"></a>            } <span class="co">#end person loop</span></span>
-<span id="cb2-18"><a href="#cb2-18"></a>        <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>g) {</span>
-<span id="cb2-19"><a href="#cb2-19"></a>            g.c[j, m] <span class="ot">&lt;-</span> <span class="fu">sum</span>(x[, j] <span class="sc">*</span> p.c[, k]) <span class="sc">*</span> (<span class="dv">1</span><span class="sc">/</span>g.c[j, <span class="dv">1</span>]) <span class="co">#assign group average centrality of people in the group</span></span>
-<span id="cb2-20"><a href="#cb2-20"></a>            } <span class="co">#end group loop</span></span>
-<span id="cb2-21"><a href="#cb2-21"></a>        k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#increase counter</span></span>
-<span id="cb2-22"><a href="#cb2-22"></a>        } <span class="co">#end while loop</span></span>
-<span id="cb2-23"><a href="#cb2-23"></a>    <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.c =</span> p.c, <span class="at">g.c =</span> g.c))</span>
-<span id="cb2-24"><a href="#cb2-24"></a>    } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-2"><a href="#cb2-2"></a>    z <span class="ot">&lt;-</span> <span class="fu">t</span>(x)</span>
+<span id="cb2-3"><a href="#cb2-3"></a>    p.c <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(x), iter) <span class="co">#initialize person centralities</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>    g.c <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">ncol</span>(x), iter) <span class="co">#initialize group centralities trajectory matrix</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a>    <span class="fu">rownames</span>(p.c) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(x)</span>
+<span id="cb2-6"><a href="#cb2-6"></a>    <span class="fu">rownames</span>(g.c) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(x)</span>
+<span id="cb2-7"><a href="#cb2-7"></a>    <span class="fu">colnames</span>(p.c) <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"Ref_"</span>, <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span>iter), <span class="at">sep =</span> <span class="st">""</span>)</span>
+<span id="cb2-8"><a href="#cb2-8"></a>    <span class="fu">colnames</span>(g.c) <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"Ref_"</span>, <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span>iter), <span class="at">sep =</span> <span class="st">""</span>)</span>
+<span id="cb2-9"><a href="#cb2-9"></a>    p.c[, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(x) <span class="co">#person degree centrality </span></span>
+<span id="cb2-10"><a href="#cb2-10"></a>    g.c[, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">colSums</span>(x) <span class="co">#group degree centrality </span></span>
+<span id="cb2-11"><a href="#cb2-11"></a>    k <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing counter</span></span>
+<span id="cb2-12"><a href="#cb2-12"></a>    <span class="cf">while</span> (k <span class="sc">&lt;</span> iter) {</span>
+<span id="cb2-13"><a href="#cb2-13"></a>        p.c[, k <span class="sc">+</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> (x <span class="sc">%*%</span> g.c[, k]) <span class="sc">*</span> p.c[, <span class="dv">1</span>]<span class="sc">^-</span><span class="dv">1</span> <span class="co">#assign person average centrality of groups they belong to</span></span>
+<span id="cb2-14"><a href="#cb2-14"></a>        g.c[, k <span class="sc">+</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> (z <span class="sc">%*%</span> p.c[, k]) <span class="sc">*</span> g.c[, <span class="dv">1</span>]<span class="sc">^-</span><span class="dv">1</span> <span class="co">#assign group average centrality of people in the group</span></span>
+<span id="cb2-15"><a href="#cb2-15"></a>        k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#increase counter</span></span>
+<span id="cb2-16"><a href="#cb2-16"></a>        } <span class="co">#end while loop</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a>    <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.c =</span> p.c, <span class="at">g.c =</span> g.c))</span>
+<span id="cb2-18"><a href="#cb2-18"></a>    } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The function above takes the biadjacency matrix <span class="math inline">\(\mathbf{A}\)</span> as input and returns two objects:</p>
 <ol type="1">
-<li>A matrix <code>p.c</code> with people as the rows and the as many columns as there are reflections, containing the reflective scores for persons in each column.</li>
-<li>A matrix <code>g.c</code> with groups as the rows and the as many columns as there are reflections, containing the reflective scores for groups in each column.</li>
+<li>A matrix <code>p.c</code> with people as the rows and the as many columns as there are reflections, containing the reflective scores at each iteration for persons in each column.</li>
+<li>A matrix <code>g.c</code> with groups as the rows and the as many columns as there are reflections, containing the reflective scores at each iteration for groups in each column.</li>
 </ol>
 <p>And let’s try it out:</p>
 <div class="cell">

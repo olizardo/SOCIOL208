@@ -107,14 +107,13 @@ Let's see how this would work in a real two-mode network. To do that, we load up
    A <- as.matrix(as_biadjacency_matrix(g))
 ```
 
-Now, we need a function that does all of the reflections that we just spoke about. Here's one that accomplishes that:
+Now, we need a function that does all of the reflections that we just spoke about. Here's one that accomplishes that, which is slight modification of the `tm.status` function from the [two-mode prestige lecture notes](tm-prestige.qmd), to store the values of the prestige score of each node at each iteration in a matrix:
 
 ```{r}
     reflections <- function(x, iter = 20) { #x is a matrix with people as rows and groups as columns iters is number of reflections
-    p <- nrow(x)
-    g <- ncol(x)
-    p.c <- matrix(0, p, iter) #initialize person centralities
-    g.c <- matrix(0, g, iter) #initialize group centralities trajectory matrix
+    z <- t(x)
+    p.c <- matrix(0, nrow(x), iter) #initialize person centralities
+    g.c <- matrix(0, ncol(x), iter) #initialize group centralities trajectory matrix
     rownames(p.c) <- rownames(x)
     rownames(g.c) <- colnames(x)
     colnames(p.c) <- paste("Ref_", c(1:iter), sep = "")
@@ -123,13 +122,8 @@ Now, we need a function that does all of the reflections that we just spoke abou
     g.c[, 1] <- colSums(x) #group degree centrality 
     k <- 1 #initializing counter
     while (k < iter) {
-        m <- k + 1
-        for(i in 1:p) {
-            p.c[i, m] <- sum(x[i, ] * g.c[, k]) * (1/p.c[i, 1]) #assign person average centrality of groups they belong to
-            } #end person loop
-        for(j in 1:g) {
-            g.c[j, m] <- sum(x[, j] * p.c[, k]) * (1/g.c[j, 1]) #assign group average centrality of people in the group
-            } #end group loop
+        p.c[, k + 1] <- (x %*% g.c[, k]) * p.c[, 1]^-1 #assign person average centrality of groups they belong to
+        g.c[, k + 1] <- (z %*% p.c[, k]) * g.c[, 1]^-1 #assign group average centrality of people in the group
         k <- k + 1 #increase counter
         } #end while loop
     return(list(p.c = p.c, g.c = g.c))
@@ -138,8 +132,8 @@ Now, we need a function that does all of the reflections that we just spoke abou
 
 The function above takes the biadjacency matrix $\mathbf{A}$ as input and returns two objects: 
 
-1. A matrix `p.c` with people as the rows and the as many columns as there are reflections, containing the reflective scores for persons in each column. 
-1. A matrix `g.c` with groups as the rows and the as many columns as there are reflections, containing the reflective scores for groups in each column. 
+1. A matrix `p.c` with people as the rows and the as many columns as there are reflections, containing the reflective scores at each iteration for persons in each column. 
+1. A matrix `g.c` with groups as the rows and the as many columns as there are reflections, containing the reflective scores at each iteration for groups in each column. 
 
 And let's try it out:
 
