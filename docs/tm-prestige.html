@@ -490,8 +490,8 @@ div.csl-indent {
   <li><a href="#two-mode-pagerank" id="toc-two-mode-pagerank" class="nav-link" data-scroll-target="#two-mode-pagerank">Two-Mode PageRank</a>
   <ul class="collapse">
   <li><a href="#the-eigenvector-approach-for-two-mode-pagerank" id="toc-the-eigenvector-approach-for-two-mode-pagerank" class="nav-link" data-scroll-target="#the-eigenvector-approach-for-two-mode-pagerank">The Eigenvector Approach for Two-Mode PageRank</a></li>
-  <li><a href="#double-normalized-two-mode-pagerank" id="toc-double-normalized-two-mode-pagerank" class="nav-link" data-scroll-target="#double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</a></li>
   </ul></li>
+  <li><a href="#double-normalized-two-mode-pagerank" id="toc-double-normalized-two-mode-pagerank" class="nav-link" data-scroll-target="#double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/tm-prestige.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -1083,15 +1083,17 @@ FLORA     0.250</code></pre>
 </div>
 <p>Which gives us the same solutions as before.</p>
 </section>
-<section id="double-normalized-two-mode-pagerank" class="level3">
-<h3 class="anchored" data-anchor-id="double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</h3>
+</section>
+<section id="double-normalized-two-mode-pagerank" class="level2">
+<h2 class="anchored" data-anchor-id="double-normalized-two-mode-pagerank">Double Normalized Two-Mode PageRank</h2>
 <p>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person’s centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</p>
 <p>However, the PageRank centrality rankings can still be affected by the sheer <em>number</em> of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events.</p>
 <p>To do that, it would be useful to come up with versions of <code>P.n</code> and <code>G.n</code> that normalize (for persons) by the exclusivity of the groups they attend <em>and</em> by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members <em>and</em> by their number of members they go to, so as not to give an advantage to well-attended events.</p>
-<p>In the case of <code>P.n</code> we can do that by pre-multiplying this matrix, which already adjusts for group size by <code>D.p</code> which is the diagonal matrix containing each person’s number of memberships:</p>
+<p>For people we can proceed as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> P.n</span>
-<span id="cb57-2"><a href="#cb57-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1"></a>   P.n2 <span class="ot">&lt;-</span> D.p <span class="sc">%*%</span> A <span class="sc">%*%</span> D.g</span>
+<span id="cb57-2"><a href="#cb57-2"></a>   <span class="fu">rownames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb57-3"><a href="#cb57-3"></a>   <span class="fu">colnames</span>(P.n2) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Let’s see what’s inside the new <code>P.n2</code> matrix:</p>
 <div class="cell">
@@ -1160,14 +1162,20 @@ FLORA     0.00</code></pre>
 </div>
 </div>
 <p>Note that while in the original <code>P.n</code> matrix Evelyn has way more centrality points to distribute than Charlotte (a ratio of 2.32), this discrepancy is much smaller in the new <code>P.n2</code> double-normalized matrix (a ratio of 1.16).</p>
-<p>Now to compute our double-normalized PageRank status scores, we just play the status game on this new matrix and its transpose:</p>
+<p>We can now the same normalization for groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   tm.bgrm <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n2, <span class="fu">t</span>(P.n2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   G.n2 <span class="ot">&lt;-</span> D.g <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> D.p</span>
+<span id="cb64-2"><a href="#cb64-2"></a>   <span class="fu">rownames</span>(G.n2) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb64-3"><a href="#cb64-3"></a>   <span class="fu">colnames</span>(G.n2) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now to compute our double-normalized PageRank status scores, we just play the status game on these degree-normalized matrices:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   tm.bgrm <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n2, G.n2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Which implements the “BGRM” algorithm of <span class="citation" data-cites="rui_etal07">Rui et al. (<a href="#ref-rui_etal07" role="doc-biblioref">2007, 589</a>, eq. 8)</span>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
 <p>Here are the resulting scores for the people:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb66-1"><a href="#cb66-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>           [,1]
 EVELYN    0.081
@@ -1192,7 +1200,7 @@ FLORA     1.000</code></pre>
 </div>
 <p>And for the groups:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb68-1"><a href="#cb68-1"></a>   <span class="fu">round</span>(tm.bgrm<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.bgrm<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       [,1]
 6/27  0.032
@@ -1212,18 +1220,86 @@ FLORA     1.000</code></pre>
 </div>
 </div>
 <p>We can see that the most highly ranked women are now Olivia and Flora (in contrast to Evelyn, Theresa, and Nora in the standard PageRank scores), who used to be toward the bottom when using the traditional Bonacich prestige or PageRank scoring. In the same way, the top event is now the one held on 2/23, which wasn’t particularly distinguished using the other ranking algorithms.</p>
-<p>A summary of the three ranking models goes as follows:</p>
+<p><span class="citation" data-cites="he_etal16">He et al. (<a href="#ref-he_etal16" role="doc-biblioref">2016</a>)</span> provide a small twist on the double-normalized approach. They suggest that rather than normalizing the adjacency by the inverse of the degrees of each node, we should use the <em>square root</em> of the degrees. They call their apporach “Birank”.</p>
+<p>Here’s how it works. First, we create our new <span class="math inline">\(\mathbf{P}\)</span> matrix for people:</p>
 <div class="cell">
-<div class="cell-output-display">
+<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1"></a>   P.n3 <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">rowSums</span>(A))) <span class="sc">%*%</span> A <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">colSums</span>(A)))</span>
+<span id="cb70-2"><a href="#cb70-2"></a>   <span class="fu">rownames</span>(P.n3) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb70-3"><a href="#cb70-3"></a>   <span class="fu">colnames</span>(P.n3) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And another for the groups:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1"></a>   G.n3 <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">colSums</span>(A))) <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">rowSums</span>(A)))</span>
+<span id="cb71-2"><a href="#cb71-2"></a>   <span class="fu">rownames</span>(G.n3) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb71-3"><a href="#cb71-3"></a>   <span class="fu">colnames</span>(G.n3) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now we run our status game on these matrices:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb72-1"><a href="#cb72-1"></a>   tm.birank <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n3, G.n3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And here are the resulting scores for people:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1"></a>   <span class="fu">round</span>(tm.birank<span class="sc">$</span>p.s<span class="sc">/</span><span class="fu">max</span>(tm.birank<span class="sc">$</span>p.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           [,1]
+EVELYN    1.000
+LAURA     0.935
+THERESA   1.000
+BRENDA    0.935
+CHARLOTTE 0.707
+FRANCES   0.707
+ELEANOR   0.707
+PEARL     0.612
+RUTH      0.707
+VERNE     0.707
+MYRNA     0.707
+KATHERINE 0.866
+SYLVIA    0.935
+NORA      1.000
+HELEN     0.791
+DOROTHY   0.500
+OLIVIA    0.500
+FLORA     0.500</code></pre>
+</div>
+</div>
+<p>And for the groups:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1"></a>   <span class="fu">round</span>(tm.birank<span class="sc">$</span>g.s<span class="sc">/</span><span class="fu">max</span>(tm.birank<span class="sc">$</span>g.s), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>       [,1]
+6/27  0.463
+3/2   0.463
+4/12  0.655
+9/26  0.535
+2/25  0.756
+5/19  0.756
+3/15  0.845
+9/16  1.000
+4/8   0.926
+6/10  0.598
+2/23  0.535
+4/7   0.655
+11/21 0.463
+8/3   0.463</code></pre>
+</div>
+</div>
+<p>A summary of the four prestige ranking models for two-mode networks goes as follows:</p>
+<div id="tbl-tmranks" class="cell tbl-parent quarto-layout-panel anchored">
+<div class="panel-caption table-caption">
+<p>Table&nbsp;1: Prestige Scores for the Southern Women Data According to Four Algorithms</p>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div id="tbl-tmranks-1" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-tmranks" style="flex-basis: 50.0%;justify-content: center;">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
-<caption>Person Prestige Scores Ordered by Degree</caption>
+<caption>(a) Persons </caption>
  <thead>
   <tr>
    <th style="text-align:left;">   </th>
    <th style="text-align:center;"> hits </th>
    <th style="text-align:center;"> pr </th>
    <th style="text-align:center;"> bgrm </th>
+   <th style="text-align:center;"> birank </th>
    <th style="text-align:center;"> k </th>
   </tr>
  </thead>
@@ -1233,6 +1309,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.903 </td>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 0.081 </td>
+   <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 8 </td>
   </tr>
   <tr>
@@ -1240,6 +1317,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 0.081 </td>
+   <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 8 </td>
   </tr>
   <tr>
@@ -1247,6 +1325,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.712 </td>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 0.407 </td>
+   <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 8 </td>
   </tr>
   <tr>
@@ -1254,6 +1333,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.834 </td>
    <td style="text-align:center;"> 0.875 </td>
    <td style="text-align:center;"> 0.061 </td>
+   <td style="text-align:center;"> 0.935 </td>
    <td style="text-align:center;"> 7 </td>
   </tr>
   <tr>
@@ -1261,6 +1341,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.845 </td>
    <td style="text-align:center;"> 0.875 </td>
    <td style="text-align:center;"> 0.059 </td>
+   <td style="text-align:center;"> 0.935 </td>
    <td style="text-align:center;"> 7 </td>
   </tr>
   <tr>
@@ -1268,6 +1349,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.748 </td>
    <td style="text-align:center;"> 0.875 </td>
    <td style="text-align:center;"> 0.212 </td>
+   <td style="text-align:center;"> 0.935 </td>
    <td style="text-align:center;"> 7 </td>
   </tr>
   <tr>
@@ -1275,6 +1357,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.594 </td>
    <td style="text-align:center;"> 0.750 </td>
    <td style="text-align:center;"> 0.235 </td>
+   <td style="text-align:center;"> 0.866 </td>
    <td style="text-align:center;"> 6 </td>
   </tr>
   <tr>
@@ -1282,6 +1365,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.542 </td>
    <td style="text-align:center;"> 0.625 </td>
    <td style="text-align:center;"> 0.471 </td>
+   <td style="text-align:center;"> 0.791 </td>
    <td style="text-align:center;"> 5 </td>
   </tr>
   <tr>
@@ -1289,6 +1373,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.454 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.055 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1296,6 +1381,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.564 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.050 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1303,6 +1389,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.616 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.057 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1310,6 +1397,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.637 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.100 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1317,6 +1405,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.589 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.141 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1324,6 +1413,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.504 </td>
    <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 0.188 </td>
+   <td style="text-align:center;"> 0.707 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1331,6 +1421,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.486 </td>
    <td style="text-align:center;"> 0.375 </td>
    <td style="text-align:center;"> 0.116 </td>
+   <td style="text-align:center;"> 0.612 </td>
    <td style="text-align:center;"> 3 </td>
   </tr>
   <tr>
@@ -1338,6 +1429,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.355 </td>
    <td style="text-align:center;"> 0.250 </td>
    <td style="text-align:center;"> 0.145 </td>
+   <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 2 </td>
   </tr>
   <tr>
@@ -1345,6 +1437,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.188 </td>
    <td style="text-align:center;"> 0.250 </td>
    <td style="text-align:center;"> 1.000 </td>
+   <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 2 </td>
   </tr>
   <tr>
@@ -1352,22 +1445,24 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.188 </td>
    <td style="text-align:center;"> 0.250 </td>
    <td style="text-align:center;"> 1.000 </td>
+   <td style="text-align:center;"> 0.500 </td>
    <td style="text-align:center;"> 2 </td>
   </tr>
 </tbody>
 </table>
 
 </div>
-<div class="cell-output-display">
+<div id="tbl-tmranks-2" class="quarto-layout-cell quarto-layout-cell-subref anchored" data-ref-parent="tbl-tmranks" style="flex-basis: 50.0%;justify-content: center;">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
-<caption>Group Prestige Scores Ordered by Degree</caption>
+<caption>(b) Groups </caption>
  <thead>
   <tr>
    <th style="text-align:left;">   </th>
    <th style="text-align:center;"> hits </th>
    <th style="text-align:center;"> pr </th>
    <th style="text-align:center;"> bgrm </th>
+   <th style="text-align:center;"> birank </th>
    <th style="text-align:center;"> k </th>
   </tr>
  </thead>
@@ -1377,6 +1472,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 0.111 </td>
+   <td style="text-align:center;"> 1.000 </td>
    <td style="text-align:center;"> 14 </td>
   </tr>
   <tr>
@@ -1384,6 +1480,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.749 </td>
    <td style="text-align:center;"> 0.857 </td>
    <td style="text-align:center;"> 0.396 </td>
+   <td style="text-align:center;"> 0.926 </td>
    <td style="text-align:center;"> 12 </td>
   </tr>
   <tr>
@@ -1391,6 +1488,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.757 </td>
    <td style="text-align:center;"> 0.714 </td>
    <td style="text-align:center;"> 0.102 </td>
+   <td style="text-align:center;"> 0.845 </td>
    <td style="text-align:center;"> 10 </td>
   </tr>
   <tr>
@@ -1398,6 +1496,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.635 </td>
    <td style="text-align:center;"> 0.571 </td>
    <td style="text-align:center;"> 0.045 </td>
+   <td style="text-align:center;"> 0.756 </td>
    <td style="text-align:center;"> 8 </td>
   </tr>
   <tr>
@@ -1405,6 +1504,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.647 </td>
    <td style="text-align:center;"> 0.571 </td>
    <td style="text-align:center;"> 0.067 </td>
+   <td style="text-align:center;"> 0.756 </td>
    <td style="text-align:center;"> 8 </td>
   </tr>
   <tr>
@@ -1412,6 +1512,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.499 </td>
    <td style="text-align:center;"> 0.429 </td>
    <td style="text-align:center;"> 0.037 </td>
+   <td style="text-align:center;"> 0.655 </td>
    <td style="text-align:center;"> 6 </td>
   </tr>
   <tr>
@@ -1419,6 +1520,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.400 </td>
    <td style="text-align:center;"> 0.429 </td>
    <td style="text-align:center;"> 0.173 </td>
+   <td style="text-align:center;"> 0.655 </td>
    <td style="text-align:center;"> 6 </td>
   </tr>
   <tr>
@@ -1426,6 +1528,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.336 </td>
    <td style="text-align:center;"> 0.357 </td>
    <td style="text-align:center;"> 0.183 </td>
+   <td style="text-align:center;"> 0.598 </td>
    <td style="text-align:center;"> 5 </td>
   </tr>
   <tr>
@@ -1433,6 +1536,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.347 </td>
    <td style="text-align:center;"> 0.286 </td>
    <td style="text-align:center;"> 0.037 </td>
+   <td style="text-align:center;"> 0.535 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1440,6 +1544,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.177 </td>
    <td style="text-align:center;"> 0.286 </td>
    <td style="text-align:center;"> 1.000 </td>
+   <td style="text-align:center;"> 0.535 </td>
    <td style="text-align:center;"> 4 </td>
   </tr>
   <tr>
@@ -1447,6 +1552,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.280 </td>
    <td style="text-align:center;"> 0.214 </td>
    <td style="text-align:center;"> 0.032 </td>
+   <td style="text-align:center;"> 0.463 </td>
    <td style="text-align:center;"> 3 </td>
   </tr>
   <tr>
@@ -1454,6 +1560,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.297 </td>
    <td style="text-align:center;"> 0.214 </td>
    <td style="text-align:center;"> 0.034 </td>
+   <td style="text-align:center;"> 0.463 </td>
    <td style="text-align:center;"> 3 </td>
   </tr>
   <tr>
@@ -1461,6 +1568,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.223 </td>
    <td style="text-align:center;"> 0.214 </td>
    <td style="text-align:center;"> 0.140 </td>
+   <td style="text-align:center;"> 0.463 </td>
    <td style="text-align:center;"> 3 </td>
   </tr>
   <tr>
@@ -1468,6 +1576,7 @@ FLORA     1.000</code></pre>
    <td style="text-align:center;"> 0.223 </td>
    <td style="text-align:center;"> 0.214 </td>
    <td style="text-align:center;"> 0.140 </td>
+   <td style="text-align:center;"> 0.463 </td>
    <td style="text-align:center;"> 3 </td>
   </tr>
 </tbody>
@@ -1475,10 +1584,10 @@ FLORA     1.000</code></pre>
 
 </div>
 </div>
+</div>
 
 
 
-</section>
 </section>
 
 
@@ -1494,6 +1603,9 @@ Deng, Hongbo, Michael R Lyu, and Irwin King. 2009. <span>“A Generalized Co-Hit
 </div>
 <div id="ref-faust97" class="csl-entry" role="doc-biblioentry">
 Faust, Katherine. 1997. <span>“Centrality in Affiliation Networks.”</span> <em>Social Networks</em> 19 (2): 157–91.
+</div>
+<div id="ref-he_etal16" class="csl-entry" role="doc-biblioentry">
+He, Xiangnan, Ming Gao, Min-Yen Kan, and Dingxian Wang. 2016. <span>“Birank: Towards Ranking on Bipartite Graphs.”</span> <em>IEEE Transactions on Knowledge and Data Engineering</em> 29 (1): 57–71.
 </div>
 <div id="ref-liao_etal14" class="csl-entry" role="doc-biblioentry">
 Liao, Hao, Rui Xiao, Giulio Cimini, and Matúš Medo. 2014. <span>“Network-Driven Reputation in Online Scientific Communities.”</span> <em>PLoS One</em> 9 (12): e112022.

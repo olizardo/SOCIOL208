@@ -336,7 +336,7 @@ Another approach is to compute the leading eigenvector of the PageRank normalize
 
 Which gives us the same solutions as before. 
 
-### Double Normalized Two-Mode PageRank
+## Double Normalized Two-Mode PageRank
 
 Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person's centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).
 
@@ -344,11 +344,12 @@ However, the PageRank centrality rankings can still be affected by the sheer *nu
 
 To do that, it would be useful to come up with versions of `P.n` and `G.n` that normalize (for persons) by the exclusivity of the groups they attend *and* by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members *and* by their number of members they go to, so as not to give an advantage to well-attended events.
 
-In the case of `P.n` we can do that by pre-multiplying this matrix, which already adjusts for group size by `D.p` which is the diagonal matrix containing each person's number of memberships:
+For people we can proceed as follows:
 
 ```{r}
-   P.n2 <- D.p %*% P.n
+   P.n2 <- D.p %*% A %*% D.g
    rownames(P.n2) <- rownames(A)
+   colnames(P.n2) <- colnames(A)
 ```
 
 Let's see what's inside the new `P.n2` matrix:
@@ -368,10 +369,19 @@ This is easy to see if we compare the row sums of the two matrices, which give u
 
 Note that while in the original `P.n` matrix Evelyn has way more centrality points to distribute than Charlotte (a ratio of `r round(rowSums(P.n)[1]/rowSums(P.n)[5], 2)`), this discrepancy is much smaller in the new `P.n2` double-normalized matrix (a ratio of `r round(rowSums(P.n2)[1]/rowSums(P.n2)[5], 2)`). 
 
-Now to compute our double-normalized PageRank status scores, we just play the status game on this new matrix and its transpose:
+We can now the same normalization for groups:
 
 ```{r}
-   tm.bgrm <- tm.status(P.n2, t(P.n2))
+   G.n2 <- D.g %*% t(A) %*% D.p
+   rownames(G.n2) <- colnames(A)
+   colnames(G.n2) <- rownames(A)
+```
+
+
+Now to compute our double-normalized PageRank status scores, we just play the status game on these degree-normalized matrices:
+
+```{r}
+   tm.bgrm <- tm.status(P.n2, G.n2)
 ```
 Which implements the "BGRM" algorithm of @rui_etal07 [589, eq. 8].^[The acronym stands for "Bipartite Graph Reinforcement Model."] 
 
@@ -389,18 +399,63 @@ And for the groups:
 
 We can see that the most highly ranked women are now Olivia and Flora (in contrast to Evelyn, Theresa, and Nora in the standard PageRank scores), who used to be toward the bottom when using the traditional Bonacich prestige or PageRank scoring. In the same way, the top event is now the one held on 2/23, which wasn't particularly distinguished using the other ranking algorithms. 
 
-A summary of the three ranking models goes as follows:
+@he_etal16 provide a small twist on the double-normalized approach. They suggest that rather than normalizing the adjacency by the inverse of the degrees of each node, we should use the *square root* of the degrees. They call their apporach "Birank". 
+
+Here's how it works. First, we create our new $\mathbf{P}$ matrix for people:
+
+```{r}
+   P.n3 <- diag(1/sqrt(rowSums(A))) %*% A %*% diag(1/sqrt(colSums(A)))
+   rownames(P.n3) <- rownames(A)
+   colnames(P.n3) <- colnames(A)
+```
+
+And another for the groups:
+
+```{r}
+   G.n3 <- diag(1/sqrt(colSums(A))) %*% t(A) %*% diag(1/sqrt(rowSums(A)))
+   rownames(G.n3) <- colnames(A)
+   colnames(G.n3) <- rownames(A)
+```
+
+And now we run our status game on these matrices:
+
+```{r}
+   tm.birank <- tm.status(P.n3, G.n3)
+```
+
+And here are the resulting scores for people:
+
+```{r}
+   round(tm.birank$p.s/max(tm.birank$p.s), 3)
+```
+
+And for the groups:
+
+```{r}
+   round(tm.birank$g.s/max(tm.birank$g.s), 3)
+```
+
+A summary of the four prestige ranking models for two-mode networks goes as follows:
 
 ```{r}
 #| echo: false
+#| label: tbl-tmranks
+#| tbl-cap: "Prestige Scores for the Southern Women Data According to Four Algorithms"
+#| tbl-subcap: 
+#|   - "Persons"
+#|   - "Groups"
+#| layout-ncol: 2
+
    p.tab <- data.frame(hits = round(tm.hits$p.s/max(tm.hits$p.s), 3), 
                        pr = round(tm.pr$p.s/max(tm.pr$p.s), 3), 
                        bgrm = round(tm.bgrm$p.s/max(tm.bgrm$p.s), 3),
+                       birank = round(tm.birank$p.s/max(tm.birank$p.s), 3),
                        k = rowSums(A))
    p.tab <- p.tab[order(p.tab$k, decreasing = TRUE), ]
    g.tab <- data.frame(hits = round(tm.hits$g.s/max(tm.hits$g.s), 3), 
                        pr = round(tm.pr$g.s/max(tm.pr$g.s), 3), 
                        bgrm = round(tm.bgrm$g.s/max(tm.bgrm$g.s), 3),
+                       birank = round(tm.birank$g.s/max(tm.birank$g.s), 3),
                        k = colSums(A))
    g.tab <- g.tab[order(g.tab$k, decreasing = TRUE), ]
    library(kableExtra)
@@ -412,5 +467,5 @@ A summary of the three ranking models goes as follows:
        format = "html", align = "c",
        caption = "Group Prestige Scores Ordered by Degree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
       column_spec(1, bold = TRUE)
-```
+``` 
 
