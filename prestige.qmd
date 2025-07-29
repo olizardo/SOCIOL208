@@ -374,6 +374,51 @@ And voila:
                     c("hover", "condensed", "responsive"))
 ```
 
+Of course, there's *yet* another way of thinking about the link between the Katz and eigenvector centralities. Consider the matrix $\mathbf{W}$ defined as:
+
+$$
+\mathbf{W} = \alpha \mathbf{A}
+$$
+
+In `R` we obtain this matrix as follows:
+
+```{r}
+   alpha <- 1/eigen(A)$values[1] - 1e-10
+   W <- alpha * A
+```
+
+As you may already suspect, the Katz centrality scores are nothing but the scores we would obtain if we play our `status1` game on this matrix!
+
+Let's see for ourselves:
+
+```{r}
+   s.katz <- status1(W)
+   round(s.katz/max(s.katz), 3)
+```
+
+Indeed! Note that in terms of our status game, this means that rather than having "one" status point to distribute to others, each node is now assigned a *fraction* of a status point, with this fraction being equivalent to (you guessed it!) $\alpha$. Everything else works the same; at each round each node receives the sum of $\alpha$ points from their neighbors and delivers the same sum (according to their degree) to them. 
+
+Note that because $\alpha$ is a number that is less than one, status "dissipates" the longer it has to travel to get distributed to others because multiplying a number that is less than one by itself results in a smaller number (e.g., 0.25 X 0.25 = `r round(0.25^2, 3)`). 
+
+Thus, every node distributes $\alpha^2$ status points to nodes that are two-steps away, $\alpha^3$ status points to nodes three-steps away, and so forth up to $\alpha^k$ where $k$ is the length of the longest path linking two nodes in the network. This is consistent with the idea that in the Katz accounting, longer chains count for less in determining prestige in the system.  
+
+This also means that the eigenvector centrality scores are equivalent to the dominant eigenvector of the "perturbed" adjacency matrix $\mathbf{W}$, where the perturbation involves multiplying the original adjacency matrix $\mathbf{A}$ by $\alpha$ to turn it into $\mathbf{W} = \alpha \mathbf{A}$, as long as we maintain the restriction that $\alpha$ has to be smaller (even by a teeny-tiny amount) than the reciprocal of the first eigenvalue of the adjacency matrix [@vigna16]. 
+
+In eigenvector decomposition formulese:
+
+$$
+\lambda \mathbf{s} = \mathbf{W} \mathbf{s}
+$${#eq-katz2}
+
+We can check this eigenvector equivalence as follows:
+
+```{r}
+   s.katz <- abs(eigen(W)$vector[, 1])
+   round(s.katz/max(s.katz), 3)
+```
+
+It all comes together!
+
 ## Bonacich Prestige in Directed Graphs
 
 In a classic paper, Philip @bonacich72 noted the above connection between different ways people conceptualized status and prestige in networks and the leading eigenvector of the adjacency matrix. He then noted that we can extend similar ideas to the directed case.
