@@ -868,11 +868,11 @@ div.csl-indent {
 <p><span class="math display">\[
 \mathbf{S} = (\mathbf{I} - \alpha A)^{-1}
 \]</span></p>
-<p>Here’s a function that computes this matrix setting <span class="math inline">\(\alpha\)</span> to a number that is <em>almost</em> equal to the first eigenvalue of the adjacency matrix (e.g., that number minus a very teeny-tiny number: <span class="math inline">\(10^{-10}\)</span>):</p>
+<p>Here’s a function that computes this matrix setting <span class="math inline">\(\alpha\)</span> to a number that is <em>almost</em> equal to the reciprocal of the first eigenvalue of the adjacency matrix (e.g., that number minus a very teeny-tiny number: <span class="math inline">\(10^{-10}\)</span>):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
 <span id="cb24-2"><a href="#cb24-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
-<span id="cb24-3"><a href="#cb24-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#first eigenvalue of adjacency matrix minus a tiny number</span></span>
+<span id="cb24-3"><a href="#cb24-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#reciprocal of first eigenvalue of adjacency matrix minus a tiny number</span></span>
 <span id="cb24-4"><a href="#cb24-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> w) <span class="co">#katz formula</span></span>
 <span id="cb24-5"><a href="#cb24-5"></a>      <span class="fu">return</span>(S)</span>
 <span id="cb24-6"><a href="#cb24-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -902,11 +902,11 @@ div.csl-indent {
 <p>In the vertex similarity lecture, we treated the dyadic entries in this matrix as a pairwise similarity score. However, nothing is stopping us from computing the <em>row</em> (or column) <em>sums</em> of this matrix to obtain a node-level score. This score is larger for nodes that are able to reach other nodes (and themselves) via more paths in the network, with shorter paths counting for more than longer paths.</p>
 <p>Thus, the row sums of the Katz-similarity matrix, can be used to obtain the <strong>Katz centrality</strong> of each node:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   k <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   s.katz <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The big reveal is that normalized ranks of the Katz centrality scores are equivalent (up to rounding error) to the eigenvector centrality scores!</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">round</span>(k<span class="sc">/</span><span class="fu">max</span>(k), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">round</span>(s.katz<span class="sc">/</span><span class="fu">max</span>(s.katz), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.619 0.635 0.446 0.489 0.629 0.430 0.205 0.380 0.444 0.468 0.814 0.549
 [13] 0.162 0.401 0.613 0.360 1.000 0.247 0.680 0.360 0.392</code></pre>
@@ -922,7 +922,7 @@ div.csl-indent {
 <p><span id="eq-katz"><span class="math display">\[
 \mathbf{s} = \left[(\mathbf{I} - \alpha A)^{-1}\right]\mathbf{1}
 \tag{2}\]</span></span></p>
-<p>Where <span class="math inline">\(\mathbf{1}\)</span> is a column vector full of ones, because multiplying a matrix times the all ones vector produces the row sums of that matrix <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016</a>)</span>.</p>
+<p>Where <span class="math inline">\(\mathbf{1}\)</span> is a column vector full of ones, because post-multiplying a matrix times the all ones column vector produces the row sums of that matrix <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016</a>)</span>.</p>
 <p>Here’s a wrapper function around the <code>katz.sim</code> function that implements this approach to computing the centrality scores using <a href="#eq-katz">Equation&nbsp;2</a>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   katz.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
