@@ -32,17 +32,17 @@ Where $a_{ij} = 1$ if $i$ is adjacent to $j$ in the network. Note that this form
 In matrix notation, if $\mathbf{x}$ is a column vector of status scores then:
 
 $$
-   \mathbf{x} = A\mathbf{x}
+   \mathbf{x} = \mathbf{A} \mathbf{x}
 $$
 
-Because $\mathbf{A}$ is an $n \times n$ matrix and $\mathbf{x}$ is $n \times 1$ column vector, the multiplication $A\mathbf{x}$ will return another column vector of dimensions $n \times 1$, in this case $\mathbf{x}$ itself!
+Because $\mathbf{A}$ is an $n \times n$ matrix and $\mathbf{x}$ is $n \times 1$ column vector, the (matrix) multiplication of $\mathbf{A} times the vector \mathbf{x}$ will return another column vector of dimensions $n \times 1$, in this case $\mathbf{x}$ itself!
 
 Note the problem that this formulation poses: $\mathbf{x}$ appears on both sides of the equation, which means that in order to know the status of any one node we would need to know the status of the others, but calculating the status of the others depends on knowing the status of the focal node, and so on. There's a chicken and the egg problem here.
 
 Now, there is an obvious (to the math majors) *mathematical solution* to this problem, because there's a class of solvable (under some mild conditions imposed on the matrix $\mathbf{A}$) linear algebra problems that take the form:
 
 $$
-   \lambda\mathbf{x} = A\mathbf{x}
+   \lambda\mathbf{x} =  \mathbf{A} \mathbf{x}
 $$
 
 Where $\lambda$ is just a plain old number (a scalar). Once again conditional of the aforementioned mild conditions being met, we can iteratively search for a value $\lambda$, fix it, then fill up the $\mathbf{x}$ vector with another set of values, fix those, search for a new $\lambda$, and continue until we have values of $\lambda$ and $\mathbf{x}$ that make the above equality true. 
@@ -439,7 +439,7 @@ Let's see for ourselves:
    round(s.katz/max(s.katz), 3)
 ```
 
-Indeed! Note that in terms of our status game, this means that rather than having "one" status point to distribute to others, each node is now assigned a *fraction* of a status point, with this fraction being equivalent to (you guessed it!) $\alpha$. Everything else works the same; at each round each node receives the sum of $\alpha$ points from their neighbors and delivers the same sum (according to their degree) to them. 
+Indeed! Note that in terms of our status game, this means that rather than having "one" status point to distribute to others, each node is now assigned a *fraction* of a status point, with this fraction being equivalent to (you guessed it!) $\alpha$. Everything else works the same way; at each round each node receives the sum of $\alpha$ points from their neighbors and delivers the same sum (according to their degree) to them. 
 
 Note that because $\alpha$ is a number that is less than one, status "dissipates" the longer it has to travel to get distributed to others because multiplying a number that is less than one by itself results in a smaller number (e.g., 0.25 X 0.25 = `r round(0.25^2, 3)`). 
 
@@ -465,13 +465,13 @@ It all comes together!
 ## Generalizing Katz: Beta Centrality
 In another neat (and also hugely cited) paper, @bonacich87 recognized these linkages between the eigenvector and Katz approaches and proposed a more general way to assign prestige scores in networks which he referred to as **Beta Centrality**. 
 
-The basic idea is that the $\alpha$ parameter in @eq-katz above has a more general interpretation and can be assigned values other than something close to the reciprocal of the largest eigenvalue of the adjacency matrix (which makes it the same as the regular eigenvector score and thus redundant). So we substitute it with a free parameter $\beta$, and rewrite the Katz equation as follows:
+The basic idea is that the $\alpha$ parameter in @eq-katz above has a more general interpretation and can be assigned values other than something close to the reciprocal of the largest eigenvalue of the adjacency matrix (which makes it the same as the regular eigenvector score and thus redundant). So we substitute it with a free parameter $\beta$, and rewrite @eq-katz as follows:
 
 $$
 \mathbf{s} = [(\mathbf{I} - \beta \mathbf{A})^{-1}\mathbf{A}]\mathbf{1}
 $${#eq-bonacich}
 
-With the restriction: $-\frac{1}{\lambda_1} > \beta < \frac{1}{\lambda_1}$, where $\lambda_1$ is the dominant eigenvalue of the adjacency matrix. 
+With the restriction: $-\frac{1}{\lambda_1} > \beta < \frac{1}{\lambda_1}$, where $\lambda_1$ is the dominant eigenvalue of the adjacency matrix. Note that when $\beta = 0$ the above equation reduces to $\mathbf{s} = (\mathbf{I} -\mathbf{A})\mathbf{1}$ which is just each node's degree centrality.
 
 Here's a function to compute the Beta Centrality according to @eq-bonacich:
 
@@ -486,7 +486,7 @@ Here's a function to compute the Beta Centrality according to @eq-bonacich:
          beta <- (alpha * -1) + 1e-10
          }
       s <- (solve(I - beta * w) %*% w) %*% matrix(1, nrow(w), 1) #beta centrality formula
-      s <- (s-min(s))/(max(s) - min(s))
+      s <- (s-min(s))/(max(s) - min(s)) #normalizing to min zero and max one
       return(s)
    }
 ```
@@ -514,7 +514,7 @@ And now let's see different rankings of nodes based on different values of $\bet
                     c("hover", "condensed", "responsive"))
 ```
 
-Note that when $\beta = 0$, the rankings produced by Beta Centrality are the same as those given by the degree of each node (the score is the same as for nodes of the same degree). It deviates from degree when different values of $\beta$ are used. 
+As expected, when $\beta = 0$, the rankings produced by Beta Centrality are the same as those given by the degree of each node (the score is the same as for nodes of the same degree). It deviates from degree when different values of $\beta$ are used. 
 
 For positive values close to the reciprocal of the first eigenvalue (e.g., $\beta = 0.1$) then the rankings are the same as those obtained from the usual eigenvector score. However, as $\beta$ gets closer to zero (e.g., $\beta = 0.02$) the rankings get closer to the degree based ordering. This means that values of $\beta$ closer to to $\frac{1}{\lambda_1}$ reward more distant connections, while values of $\beta$ closer to zero reward the more local connections in determining centrality. 
 
@@ -522,10 +522,12 @@ For positive values close to the reciprocal of the first eigenvalue (e.g., $\bet
 
 But why would we ever want the $\beta$ parameter to be negative?
 
+Consider @fig-toy. According to the usual eigenvector centrality principle, we should expect node 1 to have the highest eigenvector score, as it is connected to well-connected others. 
+
 ```{r}
 #| label: fig-toy
-#| fig-height: 10
-#| fig-width: 10
+#| fig-height: 8
+#| fig-width: 8
 #| fig-cap: "A toy network."
 #| echo: false
    g1 <- make_star(4, mode = "undirected") 
@@ -547,21 +549,23 @@ But why would we ever want the $\beta$ parameter to be negative?
    g1 <- simplify(g1)
    set.seed(1234)
    plot(g1, vertex.size=12, vertex.frame.color="lightgray",
-         vertex.label.cex = 1.75, edge.color = "lightgray",
+         vertex.label.cex = 1.1, edge.color = "lightgray",
          edge.width = 3, vertex.color = c(1, rep(2, 3), rep(1, 12)))
 ```
 
-Consider @fig-toy. According to the usual eigenvector centrality principle, we should expect node 1 to have the highest eigenvector score, as it is connected to well-connected others. This is precisely what the Beta Centrality scoring with a positive $\beta$ parameter tells us:
+This is precisely what the Beta Centrality scoring with a positive $\beta$ parameter tells us:
 
 ```{r}
    round(beta.cent(as_adjacency_matrix(g1), beta = 0.35), 3)
 ```
 
-However, imagine instead that the colors in @fig-toy stands for "sellers" (tan nodes) and "buyers" (blue nodes). Accordingly, node 1 is trying to get nodes 2, 3, and 4 (in light blue) to *buy* something from them (like a house). However, each of the lightblue nodes have *other* prospective sellers (four each). 
+However, imagine instead that the colors in @fig-toy stands for "sellers" (tan nodes) and "buyers" (blue nodes). Accordingly, node 1 is trying to get nodes 2, 3, and 4 (in light blue) to *buy* something from them (like a house). However, each of the light blue nodes have *other* prospective sellers (four each). 
 
 This means that being connected to well-connected others in this case puts node 1 at a *disadvantage*. Meanwhile, the blue nodes, by being connected to others who are *not* well-connected are at an *advantage*, because they can play the different prospective sellers against one another. 
 
-@bonacich87 argues that in these kinds of **negatively connected networks** (where a transaction in one relationship *precludes* a transaction in another, like when you can only buy a house from *one* seller and buying a house from that seller precludes you from buy a house from another one; note, that this also works for *non-concurrent* dating) eigenvector centrality should work in the opposite direction, penalizing nodes connected to well-connected others and rewarding those who are connected to poorly connected others (like the blue nodes in @fig-toy). This is precisely what the Beta Centrality with a negative $\beta$ parameter does:
+@bonacich87 argues that in these kinds of **negatively connected networks** eigenvector centrality should work in the opposite direction, penalizing nodes connected to well-connected others and rewarding those who are connected to poorly connected others (like the blue nodes in @fig-toy).^[Negative connected networks are ones where a transaction in one relationship *precludes* a transaction in another, like when you can only buy a house from *one* seller and buying a house from that seller precludes you from buy a house from another one; note, that this also works for *monogamous* dating.] 
+
+This is precisely what the Beta Centrality with a negative $\beta$ parameter does:
 
 ```{r}
    beta.cent(as_adjacency_matrix(g1), beta = -0.35)
