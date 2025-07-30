@@ -426,11 +426,11 @@ The basic idea is that the $\alpha$ parameter in @eq-katz above has a more gener
 
 $$
 \mathbf{s} = [(\mathbf{I} - \beta \mathbf{A})^{-1}\mathbf{A}]\mathbf{1}
-$$
+$${#eq-bonacich}
 
 With the restriction: $-\frac{1}{\lambda_1} > \beta < \frac{1}{\lambda_1}$, where $\lambda_1$ is the dominant eigenvalue of the adjacency matrix. 
 
-Here's a function to compute the Beta centrality:
+Here's a function to compute the Beta Centrality according to @eq-bonacich:
 
 ```{r}
    beta.cent <- function(w, beta) {
@@ -443,11 +443,11 @@ Here's a function to compute the Beta centrality:
          beta <- (alpha * -1) + 1e-10
          }
       s <- (solve(I - beta * w) %*% w) %*% matrix(1, nrow(w), 1) #beta centrality formula
-      return(s/max(s))
+      return(s)
    }
 ```
 
-This function takes the adjacency matrix (`w`) as input and returns the vector of Beta centrality scores (`s`) as output normalized by the maximum. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
+This function takes the adjacency matrix (`w`) as input and returns the vector of Beta Centrality scores (`s`) as output. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
 
 And now let's see different rankings of nodes based on different values of $\beta$:
 
@@ -470,9 +470,58 @@ And now let's see different rankings of nodes based on different values of $\bet
                     c("hover", "condensed", "responsive"))
 ```
 
-Note that when $\beta = 0$, the rankings produced by Beta centrality are the same as those given by the degree of each node (the score is the same for nodes of the same degree). It deviates from degree when different values of $\beta$ are used. 
+Note that when $\beta = 0$, the rankings produced by Beta Centrality are the same as those given by the degree of each node (the score is the same as that node's degree). It deviates from degree when different values of $\beta$ are used. 
 
-For positive values close to the reciprocal of the first eigenvalue (e.g., $\beta = 0.1$) then the rankings are the same as those obtained from the usual eigenvector score. However, as $\beta$ gets closer to zero (e.g., $\beta = 0.02$) the rankings get closer to the degree based ordering. 
+For positive values close to the reciprocal of the first eigenvalue (e.g., $\beta = 0.1$) then the rankings are the same as those obtained from the usual eigenvector score. However, as $\beta$ gets closer to zero (e.g., $\beta = 0.02$) the rankings get closer to the degree based ordering. This means that values of $\beta$ closer to to $\frac{1}{\lambda_1}$ reward more distant connections, while values of $\beta$ closer to zero reward the more local connections in determining centrality. 
+
+But why would we ever want the $\beta$ parameter to be negative?
+
+```{r}
+#| label: fig-toy
+#| fig-height: 10
+#| fig-width: 10
+#| fig-cap: "A toy network."
+#| echo: false
+   g1 <- make_star(4, mode = "undirected") 
+   g1 <- add_vertices(g1, 4)
+   g1 <- g1 + edge(2,5)
+   g1 <- g1 + edge(2,6)
+   g1 <- g1 + edge(2,7)
+   g1 <- g1 + edge(2,8)
+   g1 <- add_vertices(g1, 4)
+   g1 <- g1 + edge(3,9)
+   g1 <- g1 + edge(3,10)
+   g1 <- g1 + edge(3,11)
+   g1 <- g1 + edge(3,12)
+   g1 <- add_vertices(g1, 4)
+   g1 <- g1 + edge(4,13)
+   g1 <- g1 + edge(4,14)
+   g1 <- g1 + edge(4,15)
+   g1 <- g1 + edge(4,16)
+   g1 <- simplify(g1)
+   set.seed(1234)
+   plot(g1, vertex.size=12, vertex.frame.color="lightgray",
+         vertex.label.cex = 1.75, edge.color = "lightgray",
+         edge.width = 3, vertex.color = c(1, rep(2, 3), rep(1, 12)))
+```
+
+Consider the @fig-toy. According to the usual eigenvector centrality principle, we should expect node 1 to have the highest eigenvector score, as it is connected to well-connected others. This is precisely what the Beta Centrality scoring tells us:
+
+```{r}
+   round(beta.cent(as_adjacency_matrix(g1), beta = 0.35), 1)
+```
+
+However, imagine instead that the colors in @fig-toy stands for "sellers" (tan nodes) and "buyers" (blue nodes). Accordingly, node 1 is trying to get nodes 2, 3, and 4 (in light blue) to *buy* something from them (like a house). However, each of the lightblue nodes have *other* prospective sellers (four each). 
+
+This means that being connected to well-connected others in this case puts node 1 at a *disadvantage*. Meanwhile, the blue nodes, by being connected to others who are *not* well-connected are at an advantage, because they can play the different prospective sellers against one another. 
+
+@bonacich87 argues that in these kinds of **negatively connected networks** eigenvector centrality should work in the opposite direction, penalizing nodes connected to well-connected others and rewarding those who are connected to poorly connected others (like the blue nodes in @fig-toy). This is precisely what the Beta Centrality with a negative $\beta$ parameter does:
+
+```{r}
+   beta.cent(as_adjacency_matrix(g1), beta = -0.35)
+```
+
+Note that with a negative $\beta$ parameter, the blue nodes, who are connected to others who don't have many other options are now the most central!
 
 ## Bonacich Prestige in Directed Graphs
 
