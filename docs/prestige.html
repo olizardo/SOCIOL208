@@ -485,6 +485,7 @@ div.csl-indent {
   <li><a href="#distributing-status-to-others" id="toc-distributing-status-to-others" class="nav-link" data-scroll-target="#distributing-status-to-others">Distributing Status to Others</a></li>
   <li><a href="#combining-prestige-and-similarity" id="toc-combining-prestige-and-similarity" class="nav-link" data-scroll-target="#combining-prestige-and-similarity">Combining Prestige and Similarity</a></li>
   <li><a href="#connection-between-eigenvector-centrality-and-the-katz-similarity" id="toc-connection-between-eigenvector-centrality-and-the-katz-similarity" class="nav-link" data-scroll-target="#connection-between-eigenvector-centrality-and-the-katz-similarity">Connection Between Eigenvector Centrality and the Katz Similarity</a></li>
+  <li><a href="#generalizing-katz-beta-centrality" id="toc-generalizing-katz-beta-centrality" class="nav-link" data-scroll-target="#generalizing-katz-beta-centrality">Generalizing Katz: Beta Centrality</a></li>
   <li><a href="#bonacich-prestige-in-directed-graphs" id="toc-bonacich-prestige-in-directed-graphs" class="nav-link" data-scroll-target="#bonacich-prestige-in-directed-graphs">Bonacich Prestige in Directed Graphs</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/prestige.qmd" class="toc-action">View source</a></p></div></div></nav>
@@ -868,7 +869,7 @@ div.csl-indent {
 <p><span class="math display">\[
 \mathbf{S} = (\mathbf{I} - \alpha \mathbf{A})^{-1}
 \]</span></p>
-<p>Here’s a function that computes this matrix setting <span class="math inline">\(\alpha\)</span> to a number that is <em>almost</em> equal to the reciprocal of the first eigenvalue of the adjacency matrix (e.g., that number minus a very teeny-tiny number: <span class="math inline">\(10^{-10}\)</span>):</p>
+<p>And here’s the function to compute the Katz similarity matrix we introduced there:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
 <span id="cb24-2"><a href="#cb24-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
@@ -898,7 +899,7 @@ div.csl-indent {
 [6,] 36490866 38466725</code></pre>
 </div>
 </div>
-<p>Recall that these (giant) numbers are the <em>expected number of paths</em> of <em>all</em> lengths between every pair of managers in the network (with diagonals indicating the expected number of <em>cycles</em> of all lengths that start and end in the same manager) with longer paths discounted by <span class="math inline">\(\alpha\)</span> which in this case equals 0.112.</p>
+<p>Recall from the <a href="./similarity.html">vertex similarity lecture</a> that these (giant) numbers are the <em>expected number of paths</em> of <em>all</em> lengths between every pair of managers in the network (with diagonals indicating the expected number of <em>cycles</em> of all lengths that start and end in the same manager) with longer paths discounted by <span class="math inline">\(\alpha\)</span> which in this case equals 0.112.</p>
 <p>In the vertex similarity lecture, we treated the dyadic entries in this matrix as a pairwise similarity score. However, nothing is stopping us from computing the <em>row</em> (or column) <em>sums</em> of this matrix to obtain a node-level score. This score is larger for nodes that are able to reach other nodes (and themselves) via more paths in the network, with shorter paths counting for more than longer paths.</p>
 <p>Thus, the row sums of the Katz-similarity matrix, can be used to obtain the <strong>Katz centrality</strong> of each node:</p>
 <div class="cell">
@@ -1048,6 +1049,161 @@ div.csl-indent {
 </div>
 <p>It all comes together!</p>
 </section>
+<section id="generalizing-katz-beta-centrality" class="level2">
+<h2 class="anchored" data-anchor-id="generalizing-katz-beta-centrality">Generalizing Katz: Beta Centrality</h2>
+<p>In another neat (and also hugely cited) paper, <span class="citation" data-cites="bonacich87">Bonacich (<a href="#ref-bonacich87" role="doc-biblioref">1987</a>)</span> recognized these linkages between the eigenvector and Katz approaches and proposed a more general way to assign prestige scores in networks which he referred to as <strong>Beta Centrality</strong>.</p>
+<p>The basic idea is that the <span class="math inline">\(\alpha\)</span> parameter in <a href="#eq-katz">Equation&nbsp;2</a> above has a more general interpretation and can be assigned values other than something close to the reciprocal of the largest eigenvalue of the adjacency matrix (which makes it the same as the regular eigenvector score and thus redundant). So we substitute it with a free parameter <span class="math inline">\(\beta\)</span>, and rewrite the Katz equation as follows:</p>
+<p><span class="math display">\[
+\mathbf{s} = [(\mathbf{I} - \beta \mathbf{A})^{-1}\mathbf{A}]\mathbf{1}
+\]</span></p>
+<p>With the restriction: <span class="math inline">\(-\frac{1}{\lambda_1} &gt; \beta &lt; \frac{1}{\lambda_1}\)</span>, where <span class="math inline">\(\lambda_1\)</span> is the dominant eigenvalue of the adjacency matrix.</p>
+<p>Here’s a function to compute the Beta centrality:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   beta.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(w, beta) {</span>
+<span id="cb39-2"><a href="#cb39-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
+<span id="cb39-3"><a href="#cb39-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="co">#beta limit</span></span>
+<span id="cb39-4"><a href="#cb39-4"></a>      <span class="cf">if</span> (beta <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> beta <span class="sc">&gt;</span> alpha) {</span>
+<span id="cb39-5"><a href="#cb39-5"></a>         beta <span class="ot">&lt;-</span> alpha <span class="sc">-</span> <span class="fl">1e-10</span></span>
+<span id="cb39-6"><a href="#cb39-6"></a>         }</span>
+<span id="cb39-7"><a href="#cb39-7"></a>      <span class="cf">if</span> (beta <span class="sc">&lt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> beta <span class="sc">&lt;</span> (alpha<span class="sc">*-</span><span class="dv">1</span>)) {</span>
+<span id="cb39-8"><a href="#cb39-8"></a>         beta <span class="ot">&lt;-</span> (alpha <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span> <span class="fl">1e-10</span></span>
+<span id="cb39-9"><a href="#cb39-9"></a>         }</span>
+<span id="cb39-10"><a href="#cb39-10"></a>      s <span class="ot">&lt;-</span> (<span class="fu">solve</span>(I <span class="sc">-</span> beta <span class="sc">*</span> w) <span class="sc">%*%</span> w) <span class="sc">%*%</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w), <span class="dv">1</span>) <span class="co">#beta centrality formula</span></span>
+<span id="cb39-11"><a href="#cb39-11"></a>      <span class="fu">return</span>(s<span class="sc">/</span><span class="fu">max</span>(s))</span>
+<span id="cb39-12"><a href="#cb39-12"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now let’s see different rankings of nodes based on different values of <span class="math inline">\(\beta\)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   r1 <span class="ot">&lt;-</span> <span class="fu">beta.cent</span>(A, <span class="at">beta =</span> <span class="fl">0.1</span>)</span>
+<span id="cb40-2"><a href="#cb40-2"></a>   r2 <span class="ot">&lt;-</span> <span class="fu">beta.cent</span>(A, <span class="at">beta =</span> <span class="fl">0.02</span>)</span>
+<span id="cb40-3"><a href="#cb40-3"></a>   r3 <span class="ot">&lt;-</span> <span class="fu">beta.cent</span>(A, <span class="at">beta =</span> <span class="dv">0</span>)</span>
+<span id="cb40-4"><a href="#cb40-4"></a>   r4 <span class="ot">&lt;-</span> <span class="fu">beta.cent</span>(A, <span class="at">beta =</span> <span class="sc">-</span><span class="fl">0.02</span>)</span>
+<span id="cb40-5"><a href="#cb40-5"></a>   r5 <span class="ot">&lt;-</span> <span class="fu">beta.cent</span>(A, <span class="at">beta =</span> <span class="sc">-</span><span class="fl">0.1</span>)</span>
+<span id="cb40-6"><a href="#cb40-6"></a>   nodes <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g)</span>
+<span id="cb40-7"><a href="#cb40-7"></a>   eig.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">Nodes =</span> nodes, <span class="at">r1 =</span> r1, <span class="at">r2 =</span> r2, <span class="at">r3 =</span> r3, <span class="at">r4 =</span> r4, <span class="at">r5 =</span> r5,  </span>
+<span id="cb40-8"><a href="#cb40-8"></a>                         <span class="at">Deg =</span> <span class="fu">degree</span>(g))</span>
+<span id="cb40-9"><a href="#cb40-9"></a>   eig.dat <span class="ot">&lt;-</span> eig.dat[<span class="fu">order</span>(eig.dat<span class="sc">$</span>Deg, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ]</span>
+<span id="cb40-10"><a href="#cb40-10"></a>   <span class="fu">kbl</span>(eig.dat[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, ], </span>
+<span id="cb40-11"><a href="#cb40-11"></a>       <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb40-12"><a href="#cb40-12"></a>       <span class="at">caption =</span> <span class="st">"Top Ten Katz Centrality Scores."</span>,</span>
+<span id="cb40-13"><a href="#cb40-13"></a>       <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Nodes"</span>, <span class="st">"Beta = 0.1"</span>, <span class="st">"Beta = 0.02"</span>, <span class="st">"Beta = 0"</span>,</span>
+<span id="cb40-14"><a href="#cb40-14"></a>                                 <span class="st">"Beta = -0.02"</span>, <span class="st">"Beta = -0.1"</span>, <span class="st">"Degree"</span>)) <span class="sc">%&gt;%</span>    </span>
+<span id="cb40-15"><a href="#cb40-15"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> </span>
+<span id="cb40-16"><a href="#cb40-16"></a>                    <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>Top Ten Katz Centrality Scores.</caption>
+ <thead>
+  <tr>
+   <th style="text-align:center;"> Nodes </th>
+   <th style="text-align:center;"> Beta = 0.1 </th>
+   <th style="text-align:center;"> Beta = 0.02 </th>
+   <th style="text-align:center;"> Beta = 0 </th>
+   <th style="text-align:center;"> Beta = -0.02 </th>
+   <th style="text-align:center;"> Beta = -0.1 </th>
+   <th style="text-align:center;"> Degree </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:center;"> 17 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 18 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 11 </td>
+   <td style="text-align:center;"> 0.81 </td>
+   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.77 </td>
+   <td style="text-align:center;"> 0.76 </td>
+   <td style="text-align:center;"> 14 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 2 </td>
+   <td style="text-align:center;"> 0.63 </td>
+   <td style="text-align:center;"> 0.57 </td>
+   <td style="text-align:center;"> 0.56 </td>
+   <td style="text-align:center;"> 0.54 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 10 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 5 </td>
+   <td style="text-align:center;"> 0.62 </td>
+   <td style="text-align:center;"> 0.57 </td>
+   <td style="text-align:center;"> 0.56 </td>
+   <td style="text-align:center;"> 0.54 </td>
+   <td style="text-align:center;"> 0.45 </td>
+   <td style="text-align:center;"> 10 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 19 </td>
+   <td style="text-align:center;"> 0.67 </td>
+   <td style="text-align:center;"> 0.58 </td>
+   <td style="text-align:center;"> 0.56 </td>
+   <td style="text-align:center;"> 0.53 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 10 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 1 </td>
+   <td style="text-align:center;"> 0.61 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.50 </td>
+   <td style="text-align:center;"> 0.48 </td>
+   <td style="text-align:center;"> 0.39 </td>
+   <td style="text-align:center;"> 9 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 15 </td>
+   <td style="text-align:center;"> 0.60 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.50 </td>
+   <td style="text-align:center;"> 0.48 </td>
+   <td style="text-align:center;"> 0.38 </td>
+   <td style="text-align:center;"> 9 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 10 </td>
+   <td style="text-align:center;"> 0.47 </td>
+   <td style="text-align:center;"> 0.45 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 8 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 12 </td>
+   <td style="text-align:center;"> 0.54 </td>
+   <td style="text-align:center;"> 0.47 </td>
+   <td style="text-align:center;"> 0.44 </td>
+   <td style="text-align:center;"> 0.42 </td>
+   <td style="text-align:center;"> 0.31 </td>
+   <td style="text-align:center;"> 8 </td>
+  </tr>
+  <tr>
+   <td style="text-align:center;"> 4 </td>
+   <td style="text-align:center;"> 0.48 </td>
+   <td style="text-align:center;"> 0.41 </td>
+   <td style="text-align:center;"> 0.39 </td>
+   <td style="text-align:center;"> 0.37 </td>
+   <td style="text-align:center;"> 0.29 </td>
+   <td style="text-align:center;"> 7 </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<p>Note that when <span class="math inline">\(\beta = 0\)</span>, the rankings produced by Beta centrality are the same as those given by the degree of each node (the score is the same for nodes of the same degree). It deviates from degree when different values of <span class="math inline">\(\beta\)</span> are used.</p>
+<p>For positive values close to the reciprocal of the first eigenvalue (e.g., <span class="math inline">\(\beta = 0.1\)</span>) then the rankings are the same as those obtained from the usual eigenvector score. However, as <span class="math inline">\(\beta\)</span> gets closer to zero (e.g., <span class="math inline">\(\beta = 0.02\)</span>) the rankings get closer to the degree based ordering.</p>
+</section>
 <section id="bonacich-prestige-in-directed-graphs" class="level2">
 <h2 class="anchored" data-anchor-id="bonacich-prestige-in-directed-graphs">Bonacich Prestige in Directed Graphs</h2>
 <p>In a classic paper, Philip <span class="citation" data-cites="bonacich72">Bonacich (<a href="#ref-bonacich72" role="doc-biblioref">1972</a>)</span> noted the above connection between different ways people conceptualized status and prestige in networks and the leading eigenvector of the adjacency matrix. He then noted that we can extend similar ideas to the directed case.</p>
@@ -1056,11 +1212,11 @@ div.csl-indent {
 <p>Recall that in transposing the matrix of a directed graph, we change it from being a <em>from/to</em> matrix (nodes in the rows send ties to nodes in the columns) to a <em>to/from</em> matrix: Nodes in the rows <em>receive</em> ties from nodes in the columns. So we want to play our status game in this matrix, because we want to rank nodes according to their receipt of ties from high-status others.</p>
 <p>Let’s see a real-life example, this time using the <em>directed</em> version of the Krackhardt friendship nomination network among the high-tech managers:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   g <span class="ot">&lt;-</span> ht_friends</span>
-<span id="cb39-2"><a href="#cb39-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb39-3"><a href="#cb39-3"></a>   s <span class="ot">&lt;-</span> <span class="fu">status1</span>(<span class="fu">t</span>(A))</span>
-<span id="cb39-4"><a href="#cb39-4"></a>   s <span class="ot">&lt;-</span> s<span class="sc">/</span><span class="fu">max</span>(s)</span>
-<span id="cb39-5"><a href="#cb39-5"></a>   <span class="fu">round</span>(s, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   g <span class="ot">&lt;-</span> ht_friends</span>
+<span id="cb41-2"><a href="#cb41-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb41-3"><a href="#cb41-3"></a>   s <span class="ot">&lt;-</span> <span class="fu">status1</span>(<span class="fu">t</span>(A))</span>
+<span id="cb41-4"><a href="#cb41-4"></a>   s <span class="ot">&lt;-</span> s<span class="sc">/</span><span class="fu">max</span>(s)</span>
+<span id="cb41-5"><a href="#cb41-5"></a>   <span class="fu">round</span>(s, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.922 1.000 0.379 0.639 0.396 0.190 0.240 0.531 0.411 0.117 0.413 0.769
 [13] 0.082 0.428 0.368 0.450 0.592 0.440 0.425 0.225 0.583</code></pre>
@@ -1068,7 +1224,7 @@ div.csl-indent {
 </div>
 <p>Which are the same scores we would have gotten using the <code>eigen_centrality</code> function in <code>igraph</code> with the argument <code>directed</code> set to <code>TRUE</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   <span class="fu">round</span>(<span class="fu">eigen_centrality</span>(g, <span class="at">directed =</span> <span class="cn">TRUE</span>)<span class="sc">$</span>vector, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   <span class="fu">round</span>(<span class="fu">eigen_centrality</span>(g, <span class="at">directed =</span> <span class="cn">TRUE</span>)<span class="sc">$</span>vector, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.922 1.000 0.379 0.639 0.396 0.190 0.240 0.531 0.411 0.117 0.413 0.769
 [13] 0.082 0.428 0.368 0.450 0.592 0.440 0.425 0.225 0.583</code></pre>
@@ -1157,6 +1313,9 @@ Alvarez-Socorro, AJ, GC Herrera-Almarza, and LA González-Dı́az. 2015. <span>�
 </div>
 <div id="ref-bonacich72" class="csl-entry" role="doc-biblioentry">
 Bonacich, Phillip. 1972. <span>“Factoring and Weighting Approaches to Status Scores and Clique Identification.”</span> <em>Journal of Mathematical Sociology</em> 2 (1): 113–20.
+</div>
+<div id="ref-bonacich87" class="csl-entry" role="doc-biblioentry">
+———. 1987. <span>“Power and Centrality: A Family of Measures.”</span> <em>American Journal of Sociology</em> 92 (5): 1170–82.
 </div>
 <div id="ref-burt92" class="csl-entry" role="doc-biblioentry">
 Burt, Ronald S. 1992. <em>Structural Holes</em>. Harvard University Press.

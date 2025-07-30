@@ -304,7 +304,7 @@ $$
 \mathbf{S} = (\mathbf{I} - \alpha \mathbf{A})^{-1}
 $$
 
-Here's a function that computes this matrix setting $\alpha$ to a number that is *almost* equal to the reciprocal of the first eigenvalue of the adjacency matrix (e.g., that number minus a very teeny-tiny number: $10^{-10}$):
+And here's the function to compute the Katz similarity matrix we introduced there:
 
 ```{r}
    katz.sim <- function(w) {
@@ -322,7 +322,7 @@ Let's now compute the Katz similarity matrix for the Krackhardt managers in the 
    head(S[1:10, 1:10])
 ```
 
-Recall that these (giant) numbers are the *expected number of paths* of *all* lengths between every pair of managers in the network (with diagonals indicating the expected number of *cycles* of all lengths that start and end in the same manager) with longer paths discounted by $\alpha$ which in this case equals `r round((1/eigen(A)$values[1] - 1e-10), 3)`.
+Recall from the [vertex similarity lecture](similarity.qmd) that these (giant) numbers are the *expected number of paths* of *all* lengths between every pair of managers in the network (with diagonals indicating the expected number of *cycles* of all lengths that start and end in the same manager) with longer paths discounted by $\alpha$ which in this case equals `r round((1/eigen(A)$values[1] - 1e-10), 3)`.
 
 In the vertex similarity lecture, we treated the dyadic entries in this matrix as a pairwise similarity score. However, nothing is stopping us from computing the *row* (or column) *sums* of this matrix to obtain a node-level score. This score is larger for nodes that are able to reach other nodes (and themselves) via more paths in the network, with shorter paths counting for more than longer paths. 
 
@@ -418,6 +418,61 @@ We can check this eigenvector equivalence as follows:
 ```
 
 It all comes together!
+
+## Generalizing Katz: Beta Centrality
+In another neat (and also hugely cited) paper, @bonacich87 recognized these linkages between the eigenvector and Katz approaches and proposed a more general way to assign prestige scores in networks which he referred to as **Beta Centrality**. 
+
+The basic idea is that the $\alpha$ parameter in @eq-katz above has a more general interpretation and can be assigned values other than something close to the reciprocal of the largest eigenvalue of the adjacency matrix (which makes it the same as the regular eigenvector score and thus redundant). So we substitute it with a free parameter $\beta$, and rewrite the Katz equation as follows:
+
+$$
+\mathbf{s} = [(\mathbf{I} - \beta \mathbf{A})^{-1}\mathbf{A}]\mathbf{1}
+$$
+
+With the restriction: $-\frac{1}{\lambda_1} > \beta < \frac{1}{\lambda_1}$, where $\lambda_1$ is the dominant eigenvalue of the adjacency matrix. 
+
+Here's a function to compute the Beta centrality:
+
+```{r}
+   beta.cent <- function(w, beta) {
+      I <- diag(nrow(w)) #creating identity matrix
+      alpha <- 1/eigen(w)$values[1] #beta limit
+      if (beta > 0 & beta > alpha) {
+         beta <- alpha - 1e-10
+         }
+      if (beta < 0 & beta < (alpha*-1)) {
+         beta <- (alpha * -1) + 1e-10
+         }
+      s <- (solve(I - beta * w) %*% w) %*% matrix(1, nrow(w), 1) #beta centrality formula
+      return(s/max(s))
+   }
+```
+
+This function takes the adjacency matrix (`w`) as input and returns the vector of Beta centrality scores (`s`) as output normalized by the maximum. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
+
+And now let's see different rankings of nodes based on different values of $\beta$:
+
+```{r}
+   r1 <- beta.cent(A, beta = 0.1)
+   r2 <- beta.cent(A, beta = 0.02)
+   r3 <- beta.cent(A, beta = 0)
+   r4 <- beta.cent(A, beta = -0.02)
+   r5 <- beta.cent(A, beta = -0.1)
+   nodes <- 1:vcount(g)
+   eig.dat <- data.frame(Nodes = nodes, r1 = r1, r2 = r2, r3 = r3, r4 = r4, r5 = r5,  
+                         Deg = degree(g))
+   eig.dat <- eig.dat[order(eig.dat$Deg, decreasing = TRUE), ]
+   kbl(eig.dat[1:10, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Ten Katz Centrality Scores.",
+       digits = 2, col.names = c("Nodes", "Beta = 0.1", "Beta = 0.02", "Beta = 0",
+                                 "Beta = -0.02", "Beta = -0.1", "Degree")) %>%    
+   kable_styling(bootstrap_options = 
+                    c("hover", "condensed", "responsive"))
+```
+
+Note that when $\beta = 0$, the rankings produced by Beta centrality are the same as those given by the degree of each node (the score is the same for nodes of the same degree). It deviates from degree when different values of $\beta$ are used. 
+
+For positive values close to the reciprocal of the first eigenvalue (e.g., $\beta = 0.1$) then the rankings are the same as those obtained from the usual eigenvector score. However, as $\beta$ gets closer to zero (e.g., $\beta = 0.02$) the rankings get closer to the degree based ordering. 
 
 ## Bonacich Prestige in Directed Graphs
 

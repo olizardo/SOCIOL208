@@ -256,6 +256,8 @@ We can package all that we said before into a handy function that takes a graph 
 In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):
 
 ```{r}
+#| fig-height: 10
+#| fig-width: 10
    g.flint <- movie_267
    g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
    D <- dist(1- vertex.sim(g.flint)$C)
@@ -270,7 +272,7 @@ We can then extract our blocks just like we did with the Euclidean distance hier
    blocks
 ```
 
-This analysis now puts $\{Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma\}$ in the second block of equivalent actors (shown as the right-most cluster of actors in the dendrogram). 
+This analysis now puts $\{$$Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma$\}$ in the second block of equivalent actors (shown as the right-most cluster of actors in the dendrogram). 
 
 ## Generalized Similarities
 
@@ -345,6 +347,8 @@ Let's try it out in the *Flintstones* graph using $\alpha = 0.95$:
 We can transform the generalized similarities to distances and plot:
 
 ```{r}
+#| fig-height: 10
+#| fig-width: 10
    D <- dist(1- S)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
    plot(h.res)
@@ -421,7 +425,7 @@ $$
 \mathbf{S} = \sum_{k=1}^{\infty} \alpha^k \mathbf{A}^k
 $$
 
-Which would theoretically count the paths of *all possible lengths* between two nodes while discounting the contribution of the longer paths in proportion to their length (as $k$ gets bigger, with $\alpha$ a number between zero and one, $\alpha^k$ gets smaller and smaller).
+Which would theoretically count the *all* the paths of *all possible lengths* between two nodes while discounting the contribution of the longer paths in proportion to their length (as $k$ gets bigger, with $\alpha$ a number between zero and one, $\alpha^k$ gets smaller and smaller).
 
 Linear algebra hocus-pocus (non-technical explainer [here](https://olizardo.github.io/networks-textbook/lesson-sna-status.html#a-mathy-interlude)) turns the above infinite sum into the more tractable:
 
@@ -431,18 +435,22 @@ $$
 
 Where $\mathbf{I}$ is the **identity matrix** (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the **matrix inverse** operation (most matrices are invertible, unless they are weird).
 
-A function to compute the **Katz similarity** between all node pairs is:
+A function to compute the **Katz similarity** between all node pairs looks like:
 
 ```{r}
-   katz.sim <- function(A, min.alpha = 0.05) {
-      I <- diag(nrow(A)) #creating identity matrix
-      alpha <- runif(1, min = min.alpha, max = 1/eigen(A)$values[1])
-      S <- solve(I - alpha * A) 
+   katz.sim <- function(w) {
+      I <- diag(nrow(w)) #creating identity matrix
+      alpha <- 1/eigen(w)$values[1] - 1e-10 #reciprocal of first eigenvalue of adjacency matrix minus a tiny number
+      S <- solve(I - alpha * w) 
       return(S)
    }
 ```
 
-For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose $\alpha$ to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Hence we just pick a random value in that interval in line 3 (set the seed to get reproducible answers). Line 4 computes the actual Katz similarity using the native `R` function `solve` to find the relevant matrix inverse.^[See [here](https://cran.r-project.org/web/packages/matlib/vignettes/inv-ex1.html) for an explainer of the matrix inverse in general and its computation in `R`.] 
+This function takes the network's adjacency matrix (`w`) as input and returns the **Katz similarity matrix** (`S`) as output. 
+
+For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose $\alpha$ to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Here we just pick the reciprocal of the largest (first) eigenvalue minus a very small number ($10^{-10}$). 
+
+Line 4 computes the actual Katz similarity using the native `R` function `solve` to find the relevant matrix inverse.^[See [here](https://cran.r-project.org/web/packages/matlib/vignettes/inv-ex1.html) for an explainer of the matrix inverse in general and its computation in `R`.] 
 
 In the *Flintstones* network the Katz similarity looks like:
 
@@ -451,6 +459,27 @@ In the *Flintstones* network the Katz similarity looks like:
    S <- katz.sim(A)
    round(S[1:10, 1:10], 2)
 ```
+
+Which are pretty big numbers! Which makes sense, since these are estimates of *all* the paths of *any* length between every pair of nodes in the network. We can get more tractable figures by normalizing the matrix by its maximum:
+
+```{r}
+   S <- S/max(S)
+   round(S[1:10, 1:10], 2)
+```
+
+Which looks better. As we would expect, Fred is very similar to Barney and Betty. We can then do the standard hierarchical clustering to see how this similarity measure groups nodes:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+   blocks  <- cutree(h.res, k = 6)
+   blocks
+```
+
+The Katz similarity (correctly) assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block. 
 
 ### Degree-Weighted Katz Similarity (AKA Leicht-Holme-Newman)
 
@@ -495,6 +524,8 @@ Here we can see that Barney and Fred are actually not that similar to one anothe
 Because the LHN similarities have negative and positive values, they already define a distance between nodes in the graph, like the correlation distance. So if we wanted to find blocks of actors using this similarity criterion, all we need to do is:
 
 ```{r}
+#| fig-height: 10
+#| fig-width: 10
    D <- dist(S)
    h.res <- hclust(D, method = "ward.D2")
    plot(h.res)
@@ -506,7 +537,7 @@ It seems like this approach is geared towards finding smaller, more fine-grained
 
 ## Appendix
 
-A more general version of the function to compute `SimRank` looks like this [partly based on @fouss_etal16, pp. 84, algorithm 2.4]:
+A more general (and shorter) version of the function to compute `SimRank` looks like this [partly based on @fouss_etal16, pp. 84, algorithm 2.4]:
 
 ```{r}
    SimRank <- function(A, sigma = 0.0001, alpha = 0.8) {
