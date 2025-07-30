@@ -178,6 +178,49 @@ Other measures of node status and prestige are designed such that they either ch
 
 Let's see some examples of these alternative cases.
 
+## Bonacich Prestige in Directed Graphs
+
+In a classic paper, Philip @bonacich72 noted the above connection between different ways people conceptualized status and prestige in networks and the leading eigenvector of the adjacency matrix. He then noted that we can extend similar ideas to the directed case.
+
+Here, people get status from *receiving* nominations from high status others (i.e., those who receive a lot of nominations), whose partners also get status from receiving a lot of nominations from high status others, and so forth.
+
+This means that in a directed system of relations, status distribution operates primarily via the **indegree** of each node, so that if $\mathbf{A}$ is the asymmetric adjacency matrix corresponding to the directed graph, then if we play our status game on the *transpose* of this matrix $\mathbf{A}^T$ we will get the scores we seek [@fouss_etal16, p. 204]. 
+
+Recall that in transposing the matrix of a directed graph, we change it from being a *from/to* matrix (nodes in the rows send ties to nodes in the columns) to a *to/from* matrix: Nodes in the rows *receive* ties from nodes in the columns. So we want to play our status game in this matrix, because we want to rank nodes according to their receipt of ties from high-status others. 
+
+Let's see a real-life example, this time using the *directed* version of the Krackhardt friendship nomination network among the high-tech managers:
+
+```{r}
+   g.d <- ht_friends
+   A.d <- as.matrix(as_adjacency_matrix(g.d))
+   s <- status1(t(A.d))
+   s <- s/max(s)
+   round(s, 3)
+```
+
+Which are the same scores we would have gotten using the `eigen_centrality` function in `igraph` with the argument `directed` set to `TRUE`:
+
+```{r}
+   round(eigen_centrality(g.d, directed = TRUE)$vector, 3)
+```
+
+And, like before, we can treat these scores as centrality measures and rank the nodes in the graph according to them. 
+
+Here are the top ten nodes:
+
+```{r}
+#| echo: false
+   nodes <- 1:vcount(g.d)
+   eig.cent <- round(s, 3)
+   eig.dat <- data.frame(Nodes = nodes, Eigen.Cent = eig.cent, In.Deg.Cent = degree(g.d, mode = "in"))
+   eig.dat <- eig.dat[order(eig.dat$Eigen.Cent, decreasing = TRUE), ]
+   kbl(eig.dat[1:10, ], 
+       format = "html", align = "c", row.names = FALSE,
+       caption = "Top Ten Eigenvector Scores for a Directed Graph.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+While the top indegree centrality node (2) also gets the top Eigenvector Centrality scores, we see many cases of nodes with equal indegree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* incoming connections you have. 
+
 ## Combining Prestige and Similarity
 
 In a neat paper, @alvarez-socorro_etal15 combine ideas of [node similarity analysis](similarity.qmd) with prestige ranking to derive an interesting twist on the usual Eigenvector-based prestige score. 
@@ -443,11 +486,12 @@ Here's a function to compute the Beta Centrality according to @eq-bonacich:
          beta <- (alpha * -1) + 1e-10
          }
       s <- (solve(I - beta * w) %*% w) %*% matrix(1, nrow(w), 1) #beta centrality formula
+      s <- (s-min(s))/(max(s) - min(s))
       return(s)
    }
 ```
 
-This function takes the adjacency matrix (`w`) as input and returns the vector of Beta Centrality scores (`s`) as output. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
+This function takes the adjacency matrix (`w`) as input and returns the vector of Beta Centrality scores (`s`) as output normalized to fall in the zero to one interval. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
 
 And now let's see different rankings of nodes based on different values of $\beta$:
 
@@ -470,9 +514,11 @@ And now let's see different rankings of nodes based on different values of $\bet
                     c("hover", "condensed", "responsive"))
 ```
 
-Note that when $\beta = 0$, the rankings produced by Beta Centrality are the same as those given by the degree of each node (the score is the same as that node's degree). It deviates from degree when different values of $\beta$ are used. 
+Note that when $\beta = 0$, the rankings produced by Beta Centrality are the same as those given by the degree of each node (the score is the same as for nodes of the same degree). It deviates from degree when different values of $\beta$ are used. 
 
 For positive values close to the reciprocal of the first eigenvalue (e.g., $\beta = 0.1$) then the rankings are the same as those obtained from the usual eigenvector score. However, as $\beta$ gets closer to zero (e.g., $\beta = 0.02$) the rankings get closer to the degree based ordering. This means that values of $\beta$ closer to to $\frac{1}{\lambda_1}$ reward more distant connections, while values of $\beta$ closer to zero reward the more local connections in determining centrality. 
+
+### Beta Centrality in Negatively Connected Networks
 
 But why would we ever want the $\beta$ parameter to be negative?
 
@@ -505,63 +551,35 @@ But why would we ever want the $\beta$ parameter to be negative?
          edge.width = 3, vertex.color = c(1, rep(2, 3), rep(1, 12)))
 ```
 
-Consider the @fig-toy. According to the usual eigenvector centrality principle, we should expect node 1 to have the highest eigenvector score, as it is connected to well-connected others. This is precisely what the Beta Centrality scoring tells us:
+Consider @fig-toy. According to the usual eigenvector centrality principle, we should expect node 1 to have the highest eigenvector score, as it is connected to well-connected others. This is precisely what the Beta Centrality scoring with a positive $\beta$ parameter tells us:
 
 ```{r}
-   round(beta.cent(as_adjacency_matrix(g1), beta = 0.35), 1)
+   round(beta.cent(as_adjacency_matrix(g1), beta = 0.35), 3)
 ```
 
 However, imagine instead that the colors in @fig-toy stands for "sellers" (tan nodes) and "buyers" (blue nodes). Accordingly, node 1 is trying to get nodes 2, 3, and 4 (in light blue) to *buy* something from them (like a house). However, each of the lightblue nodes have *other* prospective sellers (four each). 
 
-This means that being connected to well-connected others in this case puts node 1 at a *disadvantage*. Meanwhile, the blue nodes, by being connected to others who are *not* well-connected are at an advantage, because they can play the different prospective sellers against one another. 
+This means that being connected to well-connected others in this case puts node 1 at a *disadvantage*. Meanwhile, the blue nodes, by being connected to others who are *not* well-connected are at an *advantage*, because they can play the different prospective sellers against one another. 
 
-@bonacich87 argues that in these kinds of **negatively connected networks** eigenvector centrality should work in the opposite direction, penalizing nodes connected to well-connected others and rewarding those who are connected to poorly connected others (like the blue nodes in @fig-toy). This is precisely what the Beta Centrality with a negative $\beta$ parameter does:
+@bonacich87 argues that in these kinds of **negatively connected networks** (where a transaction in one relationship *precludes* a transaction in another, like when you can only buy a house from *one* seller and buying a house from that seller precludes you from buy a house from another one; note, that this also works for *non-concurrent* dating) eigenvector centrality should work in the opposite direction, penalizing nodes connected to well-connected others and rewarding those who are connected to poorly connected others (like the blue nodes in @fig-toy). This is precisely what the Beta Centrality with a negative $\beta$ parameter does:
 
 ```{r}
    beta.cent(as_adjacency_matrix(g1), beta = -0.35)
 ```
 
-Note that with a negative $\beta$ parameter, the blue nodes, who are connected to others who don't have many other options are now the most central!
+As expected, in the Beta Centrality scoring with a negative $\beta$ parameter, the blue nodes, who are connected to others who don't have many other options are now the most central and node 1 who is connected to the blue nodes with many options is now the least central!
 
-## Bonacich Prestige in Directed Graphs
+### Beta Centrality with igraph
 
-In a classic paper, Philip @bonacich72 noted the above connection between different ways people conceptualized status and prestige in networks and the leading eigenvector of the adjacency matrix. He then noted that we can extend similar ideas to the directed case.
-
-Here, people get status from *receiving* nominations from high status others (i.e., those who receive a lot of nominations), whose partners also get status from receiving a lot of nominations from high status others, and so forth.
-
-This means that in a directed system of relations, status distribution operates primarily via the **indegree** of each node, so that if $\mathbf{A}$ is the asymmetric adjacency matrix corresponding to the directed graph, then if we play our status game on the *transpose* of this matrix $\mathbf{A}^T$ we will get the scores we seek [@fouss_etal16, p. 204]. 
-
-Recall that in transposing the matrix of a directed graph, we change it from being a *from/to* matrix (nodes in the rows send ties to nodes in the columns) to a *to/from* matrix: Nodes in the rows *receive* ties from nodes in the columns. So we want to play our status game in this matrix, because we want to rank nodes according to their receipt of ties from high-status others. 
-
-Let's see a real-life example, this time using the *directed* version of the Krackhardt friendship nomination network among the high-tech managers:
+Of course, `igraph` has a dedicated function called `power_centrality` that does everything that we did earlier with our custom function. You just have to specify the `exponent` argument, which is the value of $\beta$ above:
 
 ```{r}
-   g <- ht_friends
-   A <- as.matrix(as_adjacency_matrix(g))
-   s <- status1(t(A))
-   s <- s/max(s)
-   round(s, 3)
+   b <- power_centrality(g1, exponent = 0.35) #positive beta
+   b <- (b-min(b))/(max(b) - min(b)) #normalizing scores
+   round(b, 3)
+   b <- power_centrality(g1, exponent = -0.35) #negative beta
+   b <- (b-min(b))/(max(b) - min(b)) #normalizing scores
+   round(b, 3)
 ```
 
-Which are the same scores we would have gotten using the `eigen_centrality` function in `igraph` with the argument `directed` set to `TRUE`:
-
-```{r}
-   round(eigen_centrality(g, directed = TRUE)$vector, 3)
-```
-
-And, like before, we can treat these scores as centrality measures and rank the nodes in the graph according to them. 
-
-Here are the top ten nodes:
-
-```{r}
-#| echo: false
-   nodes <- 1:vcount(g)
-   eig.cent <- round(s, 3)
-   eig.dat <- data.frame(Nodes = nodes, Eigen.Cent = eig.cent, In.Deg.Cent = degree(g, mode = "in"))
-   eig.dat <- eig.dat[order(eig.dat$Eigen.Cent, decreasing = TRUE), ]
-   kbl(eig.dat[1:10, ], 
-       format = "html", align = "c", row.names = FALSE,
-       caption = "Top Ten Eigenvector Scores for a Directed Graph.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
-```
-
-While the top indegree centrality node (2) also gets the top Eigenvector Centrality scores, we see many cases of nodes with equal indegree centrality that get substantively different Eigenvector scores. So *who* you are connected matters in addition to *how many* incoming connections you have. 
+Which are the same scores we just calculated. 
