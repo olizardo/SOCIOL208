@@ -578,26 +578,24 @@ div.csl-indent {
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
 <span id="cb3-2"><a href="#cb3-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w)) <span class="co">#initial status vector set to all ones of length equal to the number of nodes</span></span>
 <span id="cb3-3"><a href="#cb3-3"></a>      d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initial delta</span></span>
-<span id="cb3-4"><a href="#cb3-4"></a>      k <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing counter</span></span>
-<span id="cb3-5"><a href="#cb3-5"></a>      <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
-<span id="cb3-6"><a href="#cb3-6"></a>          o.x <span class="ot">&lt;-</span> x <span class="co">#old status scores</span></span>
-<span id="cb3-7"><a href="#cb3-7"></a>          x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co">#new scores a function of old scores and adjacency matrix</span></span>
-<span id="cb3-8"><a href="#cb3-8"></a>          x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scoress</span></span>
-<span id="cb3-9"><a href="#cb3-9"></a>          d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co">#delta between new and old scores</span></span>
-<span id="cb3-10"><a href="#cb3-10"></a>          k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#incrementing while counter</span></span>
-<span id="cb3-11"><a href="#cb3-11"></a>      }</span>
-<span id="cb3-12"><a href="#cb3-12"></a>   <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
-<span id="cb3-13"><a href="#cb3-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-4"><a href="#cb3-4"></a>      <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb3-5"><a href="#cb3-5"></a>            o.x <span class="ot">&lt;-</span> x <span class="co">#old status scores</span></span>
+<span id="cb3-6"><a href="#cb3-6"></a>            x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co">#new scores a function of old scores and adjacency matrix</span></span>
+<span id="cb3-7"><a href="#cb3-7"></a>            x <span class="ot">&lt;-</span> x<span class="sc">/</span><span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co">#normalizing new status scoress</span></span>
+<span id="cb3-8"><a href="#cb3-8"></a>            d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co">#delta between new and old scores</span></span>
+<span id="cb3-9"><a href="#cb3-9"></a>         }  <span class="co">#end while loop</span></span>
+<span id="cb3-10"><a href="#cb3-10"></a>      <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
+<span id="cb3-11"><a href="#cb3-11"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Lines 2-4 initialize various quantities, most importantly the initial status vector for each node to just a series of ones:</p>
+<p>Lines 2 and 3 initialize various quantities, most importantly the initial status vector for each node to just a series of ones:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(A))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</code></pre>
 </div>
 </div>
-<p>Then lines 5-12 implement a little looping algorithm of how status is distributed through the network, with the most important piece of code being line 7 where the <em>current</em> status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible (<span class="math inline">\(\delta &lt; 10^{-10}\)</span>) as checked in line 9.</p>
-<p>Note the normalization step on line 8, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum “diverging”). In base <code>R</code>, the <code>type = "E"</code> normalization implements the <strong>Euclidean vector norm</strong> (also sometimes confusingly called the <strong>Frobenieus norm</strong>), by which we divide each value of the status scores by after each update.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>Then lines 4-9 implement a little looping algorithm of how status is distributed through the network, with the most important piece of code being line 6 where the <em>current</em> status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible (<span class="math inline">\(\delta &lt; 10^{-10}\)</span>) as checked in line 8.</p>
+<p>Note the normalization step on line 7, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum “diverging”). In base <code>R</code>, the <code>type = "E"</code> normalization implements the <strong>Euclidean vector norm</strong> (also sometimes confusingly called the <strong>Frobenieus norm</strong>), by which we divide each value of the status scores by after each update.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>And here’s the resulting (row) vector of status scores for each node:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   s <span class="ot">&lt;-</span> <span class="fu">status1</span>(A)</span>
@@ -1158,7 +1156,7 @@ div.csl-indent {
 <p><span id="eq-bonacich"><span class="math display">\[
 \mathbf{s} = [(\mathbf{I} - \beta \mathbf{A})^{-1}\mathbf{A}]\mathbf{1}
 \tag{4}\]</span></span></p>
-<p>With the restriction: <span class="math inline">\(-\frac{1}{\lambda_1} &gt; \beta &lt; \frac{1}{\lambda_1}\)</span>, where <span class="math inline">\(\lambda_1\)</span> is the dominant eigenvalue of the adjacency matrix. Note that when <span class="math inline">\(\beta = 0\)</span> the above equation reduces to <span class="math inline">\(\mathbf{s} = [\mathbf{I} -\mathbf{A}]\mathbf{1}\)</span> which is just each node’s degree centrality.</p>
+<p>With the restriction: <span class="math inline">\(-\frac{1}{\lambda_1} &gt; \beta &lt; \frac{1}{\lambda_1}\)</span>, where <span class="math inline">\(\lambda_1\)</span> is the dominant eigenvalue of the adjacency matrix. Note that when <span class="math inline">\(\beta = 0\)</span> the above equation reduces to <span class="math inline">\(\mathbf{s} = (\mathbf{I} -\mathbf{A})\mathbf{1}\)</span> which is just each node’s degree centrality.</p>
 <p>Here’s a function to compute the Beta Centrality according to <a href="#eq-bonacich">Equation&nbsp;4</a>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   beta.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(w, beta) {</span>
