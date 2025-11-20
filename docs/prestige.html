@@ -972,7 +972,7 @@ div.csl-indent {
 <p>And here’s the function to compute the Katz similarity matrix we introduced there:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb28-2"><a href="#cb28-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
+<span id="cb28-2"><a href="#cb28-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating N X N identity matrix</span></span>
 <span id="cb28-3"><a href="#cb28-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#reciprocal of first eigenvalue of adjacency matrix minus a tiny number</span></span>
 <span id="cb28-4"><a href="#cb28-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> w) <span class="co">#katz formula</span></span>
 <span id="cb28-5"><a href="#cb28-5"></a>      <span class="fu">return</span>(S)</span>
@@ -1005,7 +1005,7 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   s.katz <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(S)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The big reveal is that normalized ranks of the Katz centrality scores are equivalent (up to rounding error) to the eigenvector centrality scores!</p>
+<p>The big reveal is that normalized (by the maximum) Katz centrality scores are equivalent (up to rounding error) to the eigenvector centrality scores!</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   <span class="fu">round</span>(s.katz<span class="sc">/</span><span class="fu">max</span>(s.katz), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1027,10 +1027,11 @@ div.csl-indent {
 <p>Here’s a wrapper function around the <code>katz.sim</code> function that implements this approach to computing the centrality scores using <a href="#eq-katz">Equation&nbsp;2</a>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   katz.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb36-2"><a href="#cb36-2"></a>      s <span class="ot">&lt;-</span>  <span class="fu">katz.sim</span>(w) <span class="sc">%*%</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w), <span class="dv">1</span>)</span>
-<span id="cb36-3"><a href="#cb36-3"></a>      <span class="fu">names</span>(s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w)</span>
-<span id="cb36-4"><a href="#cb36-4"></a>      <span class="fu">return</span>(s<span class="sc">/</span><span class="fu">max</span>(s))</span>
-<span id="cb36-5"><a href="#cb36-5"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb36-2"><a href="#cb36-2"></a>      ones <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w), <span class="dv">1</span>) <span class="co"># all ones column vector of length N</span></span>
+<span id="cb36-3"><a href="#cb36-3"></a>      s <span class="ot">&lt;-</span>  <span class="fu">katz.sim</span>(w) <span class="sc">%*%</span> ones</span>
+<span id="cb36-4"><a href="#cb36-4"></a>      <span class="fu">names</span>(s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w)</span>
+<span id="cb36-5"><a href="#cb36-5"></a>      <span class="fu">return</span>(s<span class="sc">/</span><span class="fu">max</span>(s))</span>
+<span id="cb36-6"><a href="#cb36-6"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And voila:</p>
 <div class="cell">
@@ -1042,8 +1043,7 @@ div.csl-indent {
 <span id="cb37-6"><a href="#cb37-6"></a>       <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
 <span id="cb37-7"><a href="#cb37-7"></a>       <span class="at">caption =</span> <span class="st">"Top Ten Katz Centrality Scores."</span>,</span>
 <span id="cb37-8"><a href="#cb37-8"></a>       <span class="at">digits =</span> <span class="dv">3</span>) <span class="sc">%&gt;%</span>    </span>
-<span id="cb37-9"><a href="#cb37-9"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> </span>
-<span id="cb37-10"><a href="#cb37-10"></a>                    <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb37-9"><a href="#cb37-9"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">

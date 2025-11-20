@@ -349,7 +349,7 @@ And here's the function to compute the Katz similarity matrix we introduced ther
 
 ```{r}
    katz.sim <- function(w) {
-      I <- diag(nrow(w)) #creating identity matrix
+      I <- diag(nrow(w)) #creating N X N identity matrix
       alpha <- 1/eigen(w)$values[1] - 1e-10 #reciprocal of first eigenvalue of adjacency matrix minus a tiny number
       S <- solve(I - alpha * w) #katz formula
       return(S)
@@ -373,7 +373,7 @@ Thus, the row sums of the Katz-similarity matrix, can be used to obtain the **Ka
    s.katz <- rowSums(S)
 ```
 
-The big reveal is that normalized ranks of the Katz centrality scores are equivalent (up to rounding error) to the eigenvector centrality scores!
+The big reveal is that normalized (by the maximum) Katz centrality scores are equivalent (up to rounding error) to the eigenvector centrality scores!
 
 ```{r}
    round(s.katz/max(s.katz), 3)
@@ -394,7 +394,8 @@ Here's a wrapper function around the `katz.sim` function that implements this ap
 
 ```{r}
    katz.cent <- function(w) {
-      s <-  katz.sim(w) %*% matrix(1, nrow(w), 1)
+      ones <- matrix(1, nrow(w), 1) # all ones column vector of length N
+      s <-  katz.sim(w) %*% ones
       names(s) <- rownames(w)
       return(s/max(s))
       }
@@ -411,8 +412,7 @@ And voila:
        format = "html", align = "c", row.names = FALSE,
        caption = "Top Ten Katz Centrality Scores.",
        digits = 3) %>%    
-   kable_styling(bootstrap_options = 
-                    c("hover", "condensed", "responsive"))
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
 Of course, there's *yet* another way of thinking about the link between the Katz and eigenvector centralities. Consider the matrix $\mathbf{W}$ defined as:
