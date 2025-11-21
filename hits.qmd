@@ -294,37 +294,32 @@ The reason for this is that, as @fouss_etal04 explain, these numbers have a stra
 
 ## HITS as Principal Components Analysis
 
-@saerens_fouss05 argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA). 
+@saerens_fouss05 argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA). In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which in the this case is the network's adjacency matrix). Technically we could also just argue that PCA is just HITS on a **centered adjacency matrix**, as we will see right now.
 
-In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which in the this case is the network's adjacency matrix). Technically we could also just argue that PCA is just HITS on a **centered adjacency matrix**, as we will see in just a bit. 
+Let's see how this works. First, let's create a *centered* version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the *column mean* (the average score of all individuals on that variable) from each individual's score.^[Note that the column mean of the adjacency matrix will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}/n$), which is kind of a normalized degree centrality score, except the usual normalization is to divide by $n-1$ (so as to have a maximum of 1.0) as we saw in our discussion of [centrality](centrality.qmd).] 
 
-Let's see how this works. First, let's create a *centered* version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the column mean (the average score of all individuals on that variable) from each individual's score. 
-
-So to get the centered network adjacency matrix, we first need to compute the corresponding **column means** of the matrix. Note that this will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}/n$), which is kind of a normalized degree centrality score, except the usual normalization is to divide by $n-1$ (so as to have a maximum of 1.0) as we saw in our discussion of [centrality](centrality.qmd).
-
-First, let's compute the column means vector, using the native `R` function `colMeans` which takes a matrix as input and returns a vector of column means:
+To do our centering, we can use the native `R` function `apply` with the second argument set to `2` which means "apply this function to the columns of the matrix" (setting the argument to `1` would apply it to the rows):
 
 ```{r}
-   cm <- colMeans(A)
-   round(cm, 2)
+   A.c <- apply(A, 2, function(x) {x - mean(x)})
 ```
 
-Now that we have this vector of column means, all we need to do is subtract it from each column of the adjacency matrix, to create the centered adjacency matrix.
+As you can see, the function we `apply` to each column of the adjacency matrix `A` just takes each column vector and subtracts the mean of the same vector (`x - mean(x)`).
 
-```{r}
-   A.c <- t(t(A) - cm)
-```
-
-Note that to subtract the column mean vector from each column of the adjacency matrix we first transpose it, do the subtraction, and "untranspose" back to the original (by taking the transpose of the transpose). We can use the `colMeans` function to check that the column means of the centered adjacency matrix are indeed zero:
+We can use the `colMeans` function to check that the column means of the centered adjacency matrix are indeed zero:
 
 ```{r}
    round(colMeans(A.c), 2)
 ```
 
-Now all we need to do is play our HITS status game on the centered adjacency matrix:
+Now that we have our centered adjacency matrix, all we need to do is play our HITS status game on it:
 
 ```{r}
    hits.res <- status2(A.c)
+   h2 <- hits.res$h
+   a2 <- hits.res$a
+   names(h2) <- 1:21
+   names(a2) <- 1:21
 ```
 
 We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:
@@ -340,55 +335,88 @@ We then use the function below to normalize each status score to be within the m
 
 The first thing the function does (line 2) is subtract the minimum value from the vector (which becomes zero), in line 3 we divided by the maximum (which becomes one), and in line 4 we subtract the mean from each value.
 
-The following code applies the normalization to the results from our status game on the centered adjacency matrix:
-
-```{r}
-   h2 <- round(norm.v(hits.res$h), 3)
-   a2 <- round(norm.v(hits.res$a), 3)
-   names(h2) <- 1:21
-   names(a2) <- 1:21
-```
-
 And the resulting normalized hub and authority scores for each node in the Krackhardt managers advice network are:
 
 ```{r}
-   round(h2, 3)
-   round(a2, 3)
+   round(norm.v(h2), 3)
+   round(norm.v(a2), 3)
 ```
 
-@saerens_fouss05 show that these are the same scores we would obtain from a simple PCA of the regular old adjacency matrix. To see this, let's do a PCA of the adjacency matrix. 
+@saerens_fouss05 show that these are the same scores we would obtain from a simple PCA of the regular old adjacency matrix. To see this, we can do a simple PCA of the adjacency matrix, recalling that in the standard multivariate analysis context, PCA is the [eigenvector decomposition](eigen.qmd) of the **covariance matrix** between variables in the usual rectangular cases by variables dataset. 
 
-Recall that in the standard multivariate analysis context, PCA is a simple eigenvector decomposition of the **covariance matrix** between variables in the usual rectangular cases by variables dataset. 
-
-In the case of the adjacency matrix, we proceed in the same way, computing the covariance matrix of the columns of the adjacency matrix (e.g., the covariance between the indegrees of each pair of nodes). 
-
-We can use the native `R` function `cov` for this purpose:
+In the case of the adjacency matrix, we proceed in the same way. First, we need to compute the covariance matrix of the columns of the adjacency matrix (e.g., the covariance between the indegrees of each pair of nodes). We can use the native `R` function `cov` for this purpose:
 
 ```{r}
    C <- cov(A)
    round(C[1:10, 1:10], 3)
 ```
 
-Now that we have that, all we need to do is extract the leading eigenvector of this matrix. We can do that by playing our usual status game on it!
+Recall that the covariance between two vectors $x$ and $y$ is just the sum of the values in the vector composed by multiplying the first vector (minus its mean) from the second vector (minus its mean) divided by the length of the vector minus one. 
+
+In the network adjacency matrix case, the vectors in questions are the *columns* of the adjacency matrix for each individual, recording each of the incoming ties to that person. So if $\mathbf{a}_{\bullet i}$ is the column vector recording the in-neighbors of $i$ and $\mathbf{a}_{\bullet j}$ is the column vector recording the in-neighbors of $j$, the covariance between nodes $i$ and $j$ is given by:
+
+$$
+\begin{equation}
+cov(i,j) = \frac{\sum_{k=1}^N [(\mathbf{a}_{\bullet i} - \mathbf{\bar{a}}_{\bullet i})(\mathbf{a}_{\bullet j} - \mathbf{\bar{a}}_{\bullet j})]_k}{N-1}
+\end{equation}
+$$
+
+Where $\mathbf{\bar{a}_{\bullet i}}$ indicates the mean of the entries in vector $\mathbf{a_{\bullet i}}$.
+
+In `R`, the entry for the covariance between persons 1 and 2 in the Krackchardt manager's network can be obtained like this:
 
 ```{r}
-   pca.a <- status1(C)
+   i <- A[, 1] #vector for person 1
+   j <- A[, 2] #vector for person 2
+   cov.ij <- sum((i - mean(i)) * (j - mean(j)) * (1/(length(i) - 1)))
+   round(cov.ij, 3)
 ```
 
-These scores should be equivalent to the normalized authority scores we computed earlier (becuse they are based on the indegree). Now to compute the hub scores from the PCA analysis, all we need to do is add up the authority score of each node that a given node points to:
+Which is the same number we see in cells $c_{1,2}$ and $c_{2, 1}$ of the covariance matrix above.
+
+Now that we have the covariance matrix `C`, all we need to do is extract the leading eigenvector of this matrix. We can do that by playing our usual status game on it!
 
 ```{r}
-   pca.h <- as.vector(A %*% pca.a)
+   cov.a <- status1(C)
+```
+
+These scores should be equivalent to the normalized authority scores we computed earlier (becuse they are based on the indegree). Now to compute the hub scores from the PCA analysis, all we need to do is add up the authority score of each node that a given node points to. We can do this by post-multyplying the adjacency matrix times the PCA score vector:
+
+```{r}
+   cov.h <- as.vector(A %*% cov.a)
 ```
 
 And now, for the big reveal:
 
 ```{r}
+   names(cov.h) <- 1:21
+   names(cov.a) <- 1:21
+   round(norm.v(cov.h), 3)
+   round(norm.v(cov.a), 3)
+```
+
+Which are indeed the same scores we obtained earlier when we played the HITS status game on the centered adjacency matrix!
+
+Of course, we could have also obtained the same scores by using one of the standard canned functions for obtaining the PCA scores for the rows (individuals) and columns (variables) of a standard data matrix, like the `PCA` function in the package `FactoMineR`.^[https://cran.r-project.org/web/packages/FactoMineR/] 
+
+The difference is that rather than a cases by variables matrix, we just feed it the usual adjacency matrix:
+
+```{r}
+   library(FactoMineR)
+   pca.res <- PCA(A, graph = FALSE, scale.unit = FALSE)
+   pca.h <- pca.res$ind$coord[, 1]
+   pca.a <- pca.res$var$coord[, 1]
+   names(pca.a) <- 1:21
+```
+
+The `PCA` function returns results in a `list` object that we called `pca.res`. One matrix in that list contains the hub (row) scores ("individual coordinates" in `FactoMineR` lingo) stored in the  `pca.res$ind$coord` object and the other contains the authority (column) scores for the same nodes ("variable coordinates" in `FactoMineR` lingo) stored in the `pca.res$var$coord` object. We set the argument `scale.unit` to `FALSE` so that the columns of the matrix are *not* transformed to have unit variance (the usual transformation for standard variables).
+
+We can see that these scores are the same we estimated earlier:
+
+```{r}
    round(norm.v(pca.h), 3)
    round(norm.v(pca.a), 3)
 ```
-
-Which are indeed the same scores we obtained earlier when we played our status game on the centered adjacency matrix!
 
 We will see one way to interpret these PCA scores below.
 
@@ -407,7 +435,7 @@ Here's what happens:
 
 OK, so that's weird. All that we get is a vector with the same number repeated twenty one times (in this case, the number of nodes in the graph). What's going on?
 
-Recall from the previous that the [status game](prestige.qmd) computes the [**leading eigenvector** of the matrix](eigen.qmd) we play the game on, and spits that vector out as our status scores for that matrix. The leading eigenvector is that associated with the largest eigenvalue (if the matrix contains one).
+Recall from the previous that the [status game](prestige.qmd) computes the **leading eigenvector** of the matrix we play the game on, and spits that vector out as our status scores for that matrix. The leading eigenvector is that associated with the largest eigenvalue (if the matrix contains one).
 
 So all that this is telling us is that the first eigenvector of the un-transposed versions of the SALSA hub and authority matrices is pretty useless because it assigns everyone the same status score.
 
@@ -452,25 +480,18 @@ And now we play our status game on these matrices:
    names(a3) <- 1:21
 ```
 
-We then use the same function we used for the PCA scores to normalize each status score to be within the minus one to plus one interval and have mean zero:
-
-```{r}
-   h3 <- norm.v(h3)
-   a3 <- norm.v(a3)
-```
-
 And the resulting scores are:
 
 ```{r}
-   round(h3, 3)
-   round(a3, 3)
+   round(norm.v(h3), 3)
+   round(norm.v(a3), 3)
 ```
 
 Now, these scores don't seem useless. They are different across each node; and like the PCA scores we obtained earlier, some are positive and some are negative. 
 
-@fouss_etal04 show that these are the same scores you would obtain from a correspondence analysis (CA) of the original affiliation matrix. 
+@fouss_etal04 show that these are the same scores you would obtain from a Correspondence Analysis (CA) of the original adjacency matrix. 
 
-Let's check that out in our case. We can use the `CA` function in the package `FactoMineR`^[[https://cran.r-project.org/web/packages/FactoMineR/index.html](https://cran.r-project.org/web/packages/FactoMineR/index.html)] to compute the correspondence analysis of any matrix in `R`, including a network adjacency matrix:
+Let’s see if that is true in our case. We can use the `CA` function in the package `FactoMineR`^[https://cran.r-project.org/web/packages/FactoMineR/] to compute the Correspondence Analysis scores for any matrix in `R`, including a network adjacency matrix:
 
 ```{r}
    library(FactoMineR)
@@ -480,7 +501,7 @@ Let's check that out in our case. We can use the `CA` function in the package `F
    names(ca.a) <- 1:21
 ```
 
-In line 2 we store the `CA` results in the object `ca.res`. We then grab the `CA` scores associated with the columns of the adjacency matrix and put them in the object `ca.h` in line 3 and the scores associated with the rows of the adjacency matrix and put them in the object `ca.a` inline 4.
+In line 2 we store the CA results in the object`ca.res`. We then grab the CA scores associated with the rows of the adjacency matrix and put them in the object `ca.h` in line 3 and the scores associated with the columns of the adjacency matrix and put them in the object `ca.a` inline 4.
 
 Now for the big reveal:
 
