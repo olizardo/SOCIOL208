@@ -1,0 +1,213 @@
+---
+title: "Prestige in Multilayer Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+It is possible to extend the prestige and status we considered in earlier lessons (e.g., Bonacich Eigenvector, PageRank, HITS and others) to the case of **multilayer networks**.^[Multilayer networks include **multiplex networks**, where multiple relations (e.g., friendship, advice, co-working) are measured over the same group of actors at one point in time, or **temporal networks** (which each relation being one of the layers), where the same relation (e.g., friendship) is measured over the same group of actors at multiple temporally ordered "snapshots" (which serve as the layers).]
+
+## A "Supermatrix" Approach
+
+How would this work? Here we follow the approach outlined by @taylor_etal21. The basic idea is to create a "supermatrix" that simultaneously encodes the pairwise relations of each node in each layer and the dependency relations between the same nodes across layers (e.g., in a temporal network the same nodes are only connected in immediately adjacent layers; in multiplex networks they are connected across all layers). 
+
+The "supermatrix" $\mathbf{S}$ is defined as follows:
+
+$$
+\mathbf{S} = \mathbf{C} + \alpha(\tilde{\mathbf{A}} \otimes \mathbf{I})
+$${#eq-super}
+
+Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \geq \alpha \leq \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). 
+
+The $\otimes$ symbol in @eq-super refers to the **kroenbercker product** between the $\tilde{\mathbf{A}}$ and  $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of $\mathbf{I}$ matrix multiplied by the value each cell of $\tilde{\mathbf{A}}$).^[[https://en.wikipedia.org/wiki/Kronecker_product](https://en.wikipedia.org/wiki/Kronecker_product)]
+
+## Krackhardt Managers Multilayer Network Example
+
+Let's see how this would work in real data. We first load the Krackchardt Manager's data from the `networkdata` package. Recall that this data records three types of ties between 21 high-tech managers: Friendship, Advice, and who reports to whom. We store each in a separate adjacency matrix:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   A1 <- t(as.matrix(as_adjacency_matrix(ht_friends)))
+   A2 <- t(as.matrix(as_adjacency_matrix(ht_advice)))
+   A3 <- t(as.matrix(as_adjacency_matrix(ht_reports)))
+```
+
+We then create the block diagonal matrix $\mathbf{C}$, using the function `bdiag` from the package `Matrix`
+
+
+```{r}
+    # install.packages("Matrix")
+    library(Matrix)
+    C <- bdiag(A1, A2, A3)
+```
+
+Note that by using the transpose of the original adjacency matrices to create the diagonal blocks of the $\mathbf{C}$ matrix, we are specifying that we want to compute the multilayer Eigenvector centrality.^[To compute the other prestige scores (e.g., PageRank or HITS) we would feed different matrices here (e.g., the row-normalized adjacency matrix or the common-neighbors matrix).]
+
+We now need to create the interlayer dependency matrix $\tilde{\mathbf{A}}$. We use the simplest assumption, which is that all the layers mutually depend on one another equally, which means that $\tilde{\mathbf{A}}$ is the all ones matrix with diagonals set to zero:
+
+```{r}
+    A <- matrix(1, 3, 3)
+    diag(A) <- 0
+    rownames(A) <- c("f", "a", "r")
+    colnames(A) <- c("f", "a", "r")
+    A
+```
+
+Finally, we create $\mathbf{I}$:
+
+```{r}
+    I <- diag(1, nrow(A1), nrow(A1))
+```
+
+We are now ready to create the $\mathbf{S}$ matrix with $\alpha = 1.5$, using the base `R` function `kronecker` to compute the kronecker product between $\tilde{\mathbf{A}}$ and $\mathbf{I}$:
+
+```{r}
+    S <- C + (1.5 * kronecker(A, I))
+```
+
+And now, all we need to do is run our old status distribution game on the $\mathbf{S}$ matrix!
+
+```{r}
+   status1 <- function(w) {
+      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+      d <- 1 #initial delta
+      while (d > 1e-10) {
+            o.x <- x #old status scores
+            x <- w %*% o.x #new scores a function of old scores and adjacency matrix
+            x <- x/norm(x, type = "E") #normalizing new status scores
+            d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
+         }  #end while loop
+      return(as.vector(x))
+      }
+    ml.eig <- status1(S)
+```
+
+The result will be a vector of length $N \times L$ (in our case, $21 \times 3 = 63$) containing the prestige scores for each network layer. 
+
+We can arrange the long vector into an $N \times L$ rectangular martrix:
+
+```{r}
+    ml.eig <- matrix(ml.eig, 21, 3)
+    rownames(ml.eig) <- 1:21
+    colnames(ml.eig) <- c("f", "a", "r")
+    round(ml.eig, 3)
+```
+
+Each column of the matrix is a network layer (friendship, advice, and reports to) and each row is an individual. The entries in the matrix is the (unnormalized) status score of individual $i$ on layer $l$. 
+
+To see who is the most important person in each layer, we can normalize by dividing by the column maximum:
+
+```{r}
+    round(apply(ml.eig, 2, function(x) {x/max(x)}), 3)
+```
+
+We can see that manager 2 is indeed the top person across all three layers. 
+
+We could also do the same thing to figure out which *layer* is the most important, but this time we sum the columns and normalize:
+
+```{r}
+    s.layer <- colSums(ml.eig)
+    round(s.layer/max(s.layer), 3)
+```
+
+Which tell us that the advice layer is definitely the most important, and the "reports to" layer the least important in determining status across layers. 
+
+We can check out the sensitivity of our results to the strength of the dependency between layers:
+
+```{r}
+    res1 <- status1(S <- C + (0.05 * kronecker(A, I))) #weak dependency
+    res2 <- status1(S <- C + (10 * kronecker(A, I))) #moderate dependency
+    res3 <- status1(S <- C + (1000 * kronecker(A, I))) #strong dependency
+```
+
+```{r, echo = FALSE}
+    dat.f <- data.frame(s = c(res1[1:21]/max(res1[1:21]), res2[1:21]/max(res2[1:21]), res3[1:21]/max(res3[1:21])), alpha = c(rep("0.05", 21), rep("10", 21), rep("1000", 21)), node = c(1:21, 1:21, 1:21))
+    dat.f$alpha <- as.factor(dat.f$alpha)
+
+    dat.a <- data.frame(s = c(res1[22:42]/max(res1[22:42]), res2[22:42]/max(res2[22:42]), res3[22:42]/max(res3[22:42])), alpha = c(rep("0.05", 21), rep("10", 21), rep("1000", 21)), node = c(1:21, 1:21, 1:21))
+    dat.a$alpha <- as.factor(dat.a$alpha)
+
+    dat.r <- data.frame(s = c(res1[43:63]/max(res1[43:63]), res2[43:63]/max(res2[43:63]), res3[43:63]/max(res3[43:63])), alpha = c(rep("0.05", 21), rep("10", 21), rep("1000", 21)), node = c(1:21, 1:21, 1:21))
+    dat.r$alpha <- as.factor(dat.r$alpha)
+```
+
+```{r, echo = FALSE}
+    library(ggplot2)
+    p <- ggplot(dat.f, aes(x = as.factor(node), y = s, color = alpha, group = alpha))
+    p <- p + geom_point(size = 3)
+    p <- p + theme_minimal()
+    p <- p + theme(axis.title  = element_blank(),
+              axis.text = element_text(size = 14),
+              legend.title = element_blank(),
+              legend.position = "bottom"
+              )
+    p + ggtitle("Friendship Layer")
+
+    p <- ggplot(dat.a, aes(x = as.factor(node), y = s, color = alpha, group = alpha))
+    p <- p + geom_point(size = 3)
+    p <- p + theme_minimal()
+    p <- p + theme(axis.title  = element_blank(),
+              axis.text = element_text(size = 14),
+              legend.title = element_blank(),
+              legend.position = "bottom"
+              )
+    p + ggtitle("Advice Layer")
+
+
+    p <- ggplot(dat.r, aes(x = as.factor(node), y = s, color = alpha, group = alpha))
+    p <- p + geom_point(size = 3)
+    p <- p + theme_minimal()
+    p <- p + theme(axis.title  = element_blank(),
+              axis.text = element_text(size = 14),
+              legend.title = element_blank(),
+              legend.position = "bottom"
+              )
+    p + ggtitle("Reports to Layer")
+```
+
+
+
+## Changing Interlayer Dependency Assumptions
+
+As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that says that advice depends on friendship (people go to friends for advice), but that friendship does not depend on advice. The theory also says that the "reports to" depends on neither friendship nor advice (being exogenously determined), but that who you report to affects who you seek for advice. 
+
+To encode these hypotheses into the status calculation we create a new matrix:
+
+
+```{r}
+    A <- matrix(0, 3, 3)
+    rownames(A) <- c("f", "a", "r")
+    colnames(A) <- c("f", "a", "r")
+    A["f", "a"] <- 1
+    A["r", "a"] <- 1
+    A
+```
+
+We now create a new $\mathbf{S}$ matrix and compute the status scores:
+
+```{r}
+    S <- C + (1.5 * kronecker(A, I))
+    ml.eig <- status1(S)
+    ml.eig <- matrix(ml.eig, 21, 3)
+    rownames(ml.eig) <- 1:21
+    colnames(ml.eig) <- c("f", "a", "r")
+    round(apply(ml.eig, 2, function(x) {x/max(x)}), 3)
+```
+
+Note that this new set of assumptions about interlayer dependencies change our results. While node 2 is still the highest status in the friendship and advice layers, node 7 is now the highest status in the reports to layer. 
+
+```{r}
+    S <- C + (1000 * kronecker(A, I))
+    ml.eig <- status1(S)
+    ml.eig <- matrix(ml.eig, 21, 3)
+    rownames(ml.eig) <- 1:21
+    colnames(ml.eig) <- c("f", "a", "r")
+    round(apply(ml.eig, 2, function(x) {x/max(x)}), 3)
+```
