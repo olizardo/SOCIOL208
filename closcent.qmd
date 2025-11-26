@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-The **closeness centrality** is defined as the inverse of the sum of the *lengths* of shortest paths from each node to every other node. That means that to compute it, we first need to calculate the **geodesic distance matrix**. This is matrix in which each entry $g_{ij}$ records the length of the shortest path(s) between row node $i$ and column node $j$. Then, we sum the rows (or columns) of this symmetric matrix and then we obtain the inverse to get the closeness of each node:
+The **closeness centrality** of a node in a graph is defined as the inverse of the sum of the *lengths* of shortest paths from each node to every other node. That means that to compute it, we first need to calculate the **geodesic distance matrix**. This is matrix in which each entry $g_{ij}$ records the length of the shortest path(s) between row node $i$ and column node $j$. Then, we sum the rows (or columns) of this symmetric matrix and then we obtain the inverse to get the closeness of each node:
 
 $$
 C^{CLO}_i = \left[\sum_{j \neq i}g_{ij}\right]^{-1}
@@ -36,11 +36,11 @@ Then we compute the closeness of each node like this:
 Of course, we could have just used the available function in `igraph` and computed the closeness centrality directly from the graph object using the function `closeness`:
 
 ```{r}
-   close2 <- round(closeness(g), 3)
+   close2 <- round(closeness(g), 4)
    close2
 ```
 
-Once we have the closeness centrality values, we are interested in who are the top nodes. The following code creates a table with the top five:
+Once we have the closeness centrality values, we are naturally interested in who are the top nodes. The following code creates a table with the top five:
 
 ```{r}
    library(kableExtra)
@@ -63,7 +63,6 @@ C^{NCLO}_i = \left[
    \frac{\sum_{j \neq i}g_{ij}}{N-1}\right]^{-1}
 $$
 
-
 Where $N$ is the number of nodes in the network. The normalized closeness is just the inverse of the *average* distance of node $i$ to the other nodes in the network.
 
 In `R` this is just:
@@ -73,7 +72,7 @@ In `R` this is just:
    round(close3, 3)
 ```
 
-Which is the same thing as using the `igraph` function with the argument `normalized` set to `TRUE`:
+Which gives us the same result as using the `igraph` function with the argument `normalized` set to `TRUE`:
 
 ```{r}
    round(closeness(g, normalized = TRUE), 3)
@@ -131,10 +130,10 @@ This is better but introduces a problem. The directed graph is not **strongly co
    rowSums(S)
 ```
 
-Adding infinity to a number just returns infinity so all the rows with at least one "Inf" in the distance matrix get an Inf for the row sum. In this case that's all of them. A bummer.
+Adding infinity to a number just returns infinity so all the rows with at least one `Inf` in the distance matrix get an `Inf` for the row sum. In this case that's all of them. A bummer.
 
 ### Harmonic Centrality
-But dont' worry there's a [patch](https://olizardo.github.io/networks-textbook/lesson-sna-closeness.html#houston-we-have-a-problem). It is called the **harmonic centrality** [@rochat09].^[@agneessens_etal17 call the harmonic centrality "reciprocal closeness"] This is a variation on the closeness centrality that works whether you are working with connected or disconnected graphs (or in the case of directed graphs regardless of whether the graph is strongly or weakly connected), and therefore regardless of whether the geodesic distance matrix contains Infs.^[Some people [@boldi_vigna14] claim that the harmonic centrality is the *only* centrality measure that could be called by that name from a purely axiomatic mathematical approach, but that's a different story.]  
+But dont' worry there's a patch. It is called the **harmonic centrality** [@rochat09].^[@agneessens_etal17 call the harmonic centrality "reciprocal closeness"] This is a variation on the closeness centrality that works whether you are working with connected or disconnected graphs (or in the case of directed graphs regardless of whether the graph is strongly or weakly connected), and therefore regardless of whether the geodesic distance matrix contains `Inf`s.^[Some people [@boldi_vigna14] claim that the harmonic centrality is the *only* centrality measure that could be called by that name from a purely axiomatic mathematical approach, but that's a different story.]  
 
 The main difference between the harmonic and regular closeness centrality is that instead of calculating the inverse of the sum of the distances for each node, we calculate the *sum of the inverses*:
 
@@ -147,7 +146,6 @@ And the normalized version:
 $$
 C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 $$
-
 
 In `R` we can do this as follows. First, let's compute the inverse of the entries of the geodesic distance matrix:
 
@@ -162,7 +160,7 @@ Note that in this matrix of inverse distances, the closest (adjacent) nodes get 
 
 Also note that the reachability relation expressed in this matrix is asymmetric: So node 4 and reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want. 
 
-Once we have this matrix of inverse distances, we can then we can compute the normalized harmonic centrality the same way as regular closeness by adding up the row scores for each node and dividing by the number of nodes minus one (to get the average):
+Once we have this matrix of inverse distances, we can then we can compute the normalized harmonic centrality the same way as regular closeness by adding up the row scores for each node and dividing by the number of nodes minus one:
 
 ```{r}
    d.harm <- rowSums(S)
@@ -171,7 +169,7 @@ Once we have this matrix of inverse distances, we can then we can compute the no
    d.harm
 ```
 
-We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here's a plot of the network highlighting the highest harmonic (closeness) centrality node. 
+We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here's a plot of the network highlighting the highest harmonic centrality node. 
 
 ```{r}
 #| fig-cap: "Women lawyers advice network with highest closeness centrality node in red"
