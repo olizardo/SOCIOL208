@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-Recall that the key conceptual distinction between closeness and betweenness according to @freeman79 is that between (pun intended) the capacity to reach others quickly (e.g., via the shortest paths) and the capacity to *intermediate* among those same paths. High betweenness nodes control the flow of information in the network between other nodes.
+Recall that, according to @freeman79, the key conceptual distinction between [closeness](closcent.qmd) and betweenness is between (pun intended) the capacity to reach others quickly (e.g., via the shortest paths) and the capacity to *intermediate* among those same paths. High betweenness nodes control the flow of information in the network between other nodes that flows via shortest.
 
 Let us begin by defining some basic concepts on which betweenness centrality measures are built.
 
@@ -26,6 +26,8 @@ $$ {#eq-pair}
 Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* number of shortest paths that start and end with nodes $i$ and $j$ and the numerator of the fraction ($\sigma_{i(k)j}$) is the subset of those paths that include node $k$ as an **inner node**.^[As @brandes08 [p. 137] notes, when $i = j$, then $\sigma_{ij} = 1$ and when $k \in \{i, j\}$, then $\sigma_{i(k)j} = 0$.]
 
 As @freeman79 notes, because the above equation is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
+
+## Computing Betweenness
 
 The **betweenness centrality** of a node $k$ is then defined as the *sum of the dependencies* that *every pair* of nodes in the graph has on that node:
 
@@ -44,9 +46,6 @@ The betweenness of a node $k$ and in turn be expressed in terms of the last equa
 $$
 C^{BET}_k = \sum_i \delta_{ik}
 $$ {#eq-bet2} -->
-
-
-## Computing Betweenness
 
 Let's see an example of how to calculate betweenness centrality using real data. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -84,7 +83,7 @@ First we need to figure out the denominator of @eq-pair (the number of shortest 
     ap$vpaths
 ```
 
-The function has three arguments: The graph (`g`), the `from` node (the starting node in the path count) and the `to` node (the end node in the path count). In an undirected graph you get the same result for a pair of nodes regardless of which you you put on the `from` or `to` slots.  
+The function has three arguments: The graph (`g`), the `from` node (the starting node in the path count) and the `to` node (the end node in the path count). In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.  
 
 The `all_shortest_paths` function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called `vpaths`, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The `length` of this list is the number of shortest paths between the young man at the diner and the pedestrian:
 
@@ -98,9 +97,9 @@ We can see that the list is of length eight, indicating that there are eight tot
     distances(g, v = "Young Man", to = "Pedestrian")
 ```
 
-Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network---meaning that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).
+Which provides us with the relevant entry in the **geodesic distance matrix**, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).
 
-So the denominator for equation @eq-pair is the length of `ap$vpaths`:
+So the denominator for equation @eq-pair is the length of the `ap$vpaths` list object (the number of elements in the list):
 
 
 ```{r}
@@ -111,12 +110,11 @@ The numerator of @eq-pair is the subset of these paths containing Vincent. We ca
 
 
 ```{r}
-    num <- sapply(ap$vpaths, function(x) {"Vincent" %in% names(x)})
-    num <- sum(num)
+    num <- sum(sapply(ap$vpaths, function(x) {"Vincent" %in% names(x)}))
     num
 ```
 
-The statement inside the function just checks whether the character string "Vincent" is present in the named vector of node labels in each path stored in `vpaths`. The sum of the (one/zero or logical TRUE/FALSE) entries of this vector is the number of times Vincent is in a path linking The Pedestrian and The Young Man. 
+The function argument just checks whether the character string "Vincent" is present in the named vector of node labels in each path stored in `vpaths`. The sum of the (one/zero or logical TRUE/FALSE) entries of this vector is the number of times Vincent is in a path linking The Pedestrian and The Young Man. 
 
 And the pair dependency of the young man and the pedestrian on Vincent is just:
 
@@ -127,7 +125,7 @@ And the pair dependency of the young man and the pedestrian on Vincent is just:
 
 Which says that Vicent lies on `r round(pd, 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
 
-As noted, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:
+As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:
 
 
 ```{r}
@@ -159,7 +157,7 @@ Which is the same result we would have gotten had we used the `betweenness` func
     betweenness(g, v = "Vincent")
 ```
 
-We can of course use the same `igraph` function to (efficiently, using Brandes's [-@brandes01] algorithm) compute the betweenness centrality of each node in the graph as store it in a vector of length $N$:
+We can of course use the same `igraph` function to---efficiently, using Brandes's [-@brandes01] algorithm---compute the betweenness centrality of each node in the graph stored in a vector of length $N$:
 
 
 ```{r}
