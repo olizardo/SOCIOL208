@@ -143,9 +143,6 @@ div.csl-indent {
   }
 }</script>
 
-<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
-<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
-
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
@@ -534,22 +531,22 @@ div.csl-indent {
 <p>Let us begin by defining some basic concepts on which betweenness centrality measures are built.</p>
 <section id="pairwise-dependency-and-betweenness" class="level3">
 <h3 class="anchored" data-anchor-id="pairwise-dependency-and-betweenness">Pairwise Dependency and Betweenness</h3>
-<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> of any two nodes in the graph <span class="math inline">\(\{i, j\}\)</span> on any third node <span class="math inline">\(k\)</span> as follows:</p>
+<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">Brandes 2001, 166</a>)</span> of any two nodes in the graph <span class="math inline">\(\{i, j\}\)</span> on any third node <span class="math inline">\(k\)</span> as follows:</p>
 <p><span id="eq-pair"><span class="math display">\[
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{1}\]</span></span></p>
 <p>Where the denominator of the fraction (<span class="math inline">\(\sigma_{ij}\)</span>) is a count of the <em>total</em> number of shortest paths that start and end with nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and the numerator of the fraction (<span class="math inline">\(\sigma_{i(k)j}\)</span>) is the subset of those paths that include node <span class="math inline">\(k\)</span> as an <strong>inner node</strong>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
-<p>As <span class="citation" data-cites="freeman79">Freeman (<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span> notes, because <a href="#eq-pair">Equation&nbsp;1</a> is a ratio it can range from zero to one with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a <em>probability</em>, namely the probability that if you send something starting from <span class="math inline">\(i\)</span> in order for it to get to <span class="math inline">\(j\)</span> it has to go <em>through</em> <span class="math inline">\(k\)</span>. This probability is 1.0 if <span class="math inline">\(k\)</span> stands in <em>every</em> shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and zero if <span class="math inline">\(k\)</span> does not lie in <em>any</em> of the shortest paths linking <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p>
+<p>Because <a href="#eq-pair">Equation&nbsp;1</a> is a ratio it can range from zero to one with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a <em>probability</em>, namely the probability that if you send something starting from <span class="math inline">\(i\)</span> in order for it to get to <span class="math inline">\(j\)</span> it has to go <em>through</em> <span class="math inline">\(k\)</span>. This probability is 1.0 if <span class="math inline">\(k\)</span> stands in <em>every</em> shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and zero if <span class="math inline">\(k\)</span> does not lie in <em>any</em> of the shortest paths linking <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p>
 <p>We can also defined the <strong>one-sided dependency</strong> of any one node <span class="math inline">\(i\)</span> on any other node <span class="math inline">\(k\)</span> in the graph as the sum of the pairwise dependencies on <span class="math inline">\(k\)</span> that involve <span class="math inline">\(i\)</span> and every node <span class="math inline">\(j\)</span>: <span id="eq-one"><span class="math display">\[
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 \tag{2}\]</span></span></p>
-</section>
-<section id="computing-betweenness" class="level2">
-<h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
 <p>The <strong>betweenness centrality</strong> of a node <span class="math inline">\(k\)</span> is then defined as the <em>sum of the dependencies</em> that <em>every pair</em> of nodes in the graph has on that node:</p>
 <p><span id="eq-bet1"><span class="math display">\[
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{3}\]</span></span></p>
+</section>
+<section id="computing-betweenness" class="level2">
+<h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
 <p>Let’s see an example of how to calculate betweenness centrality using real data. We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -573,14 +570,40 @@ C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 [37] "Young Woman"     "Zed"            </code></pre>
 </div>
 </div>
+<p>To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the <em>length</em> of the shortest path between every pair of nodes. As we saw in our discussion of <a href="./closcent.html">closeness</a>, this is stored in the <strong>geodesic distance matrix</strong> of the graph <span class="math inline">\(\mathbf{G}\)</span>. In <code>igraph</code> we can obtain that using the <code>distances</code> function:</p>
 <div class="cell">
-
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    G <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
+<span id="cb3-2"><a href="#cb3-2"></a>    G[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            0     2     1          2           2            2         2
+Buddy            2     0     2          2           2            2         3
+Butch            1     2     0          1           2            1         1
+Capt Koons       2     2     1          0           2            2         2
+Ed Sullivan      2     2     2          2           0            2         3
+English Dave     2     2     1          2           2            0         2
+Esmeralda        2     3     1          2           3            2         0
+Fabienne         1     3     1          2           3            2         2
+Fourth Man       2     2     2          2           2            2         3
+Gawker #2        2     3     1          2           3            2         2
+             Fabienne Fourth Man Gawker #2
+Brett               1          2         2
+Buddy               3          2         3
+Butch               1          2         1
+Capt Koons          2          2         2
+Ed Sullivan         3          2         3
+English Dave        2          2         2
+Esmeralda           2          3         2
+Fabienne            0          2         2
+Fourth Man          2          0         3
+Gawker #2           2          3         0</code></pre>
 </div>
-<p>Let’s say we wanted to figure out the pair dependency between The pair of nodes “Young Man” (at the diner) and “The Pedestrian” (who appears when Butch encounters Marsellus on the street) on Vincent (e.g., the proportion of shortest paths between the young man and the pedestrian that include Vincent as an intermediary).</p>
-<p>First we need to figure out the denominator of <a href="#eq-pair">Equation&nbsp;1</a> (the number of shortest paths between the young man and the pedestrian). We can do this using the <code>igraph</code> function <code>all_shortest_paths</code>:</p>
+</div>
+<p>Next we need to know the <em>number</em> of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In <code>igraph</code> we can use the <code>all_shortest_paths</code> function to figure out this information.</p>
+<p>For instance, let’s say we wanted to find the number of shortest paths between the pair of nodes “Young Man” (at the diner) and “The Pedestrian” (who appears when Butch encounters Marsellus on the street). To do that we can just type:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    ap <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> <span class="st">"Pedestrian"</span>, <span class="at">to =</span> <span class="st">"Young Man"</span>)</span>
-<span id="cb3-2"><a href="#cb3-2"></a>    ap<span class="sc">$</span>vpaths</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    ap <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> <span class="st">"Pedestrian"</span>, <span class="at">to =</span> <span class="st">"Young Man"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2"></a>    ap<span class="sc">$</span>vpaths</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
 + 5/38 vertices, named, from 9e7cc7a:
@@ -615,177 +638,100 @@ C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 [1] Pedestrian Marsellus  Vincent    Pumpkin    Young Man </code></pre>
 </div>
 </div>
-<p>The function has three arguments: The graph (<code>g</code>), the <code>from</code> node (the starting node in the path count) and the <code>to</code> node (the end node in the path count). In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the <code>from</code> or <code>to</code> slots.</p>
-<p>The <code>all_shortest_paths</code> function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called <code>vpaths</code>, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The <code>length</code> of this list is the number of shortest paths between the young man at the diner and the pedestrian:</p>
+<p>The <code>all_shortest_paths</code> function has three arguments: The graph <code>g</code>, the <code>from</code> node (the starting node in the path count) and the <code>to</code> node (the end node in the path count).<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>The function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called <code>vpaths</code>, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The <code>length</code> of this list is the number of shortest paths between the young man at the diner and the pedestrian:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    <span class="fu">length</span>(ap<span class="sc">$</span>vpaths)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>    <span class="fu">length</span>(ap<span class="sc">$</span>vpaths)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 8</code></pre>
 </div>
 </div>
-<p>We can see that the list is of length eight, indicating that there are eight total shortest paths between the pedestrian and the young man. If we wanted to verify the <em>length of the shortest path</em> between these two nodes, we would use the <code>distances</code> function with the following arguments:</p>
+<p>We can see that the list is of length eight, indicating that there are eight total shortest paths between the pedestrian and the young man.</p>
+<p>If we wanted to verify the <em>length of the shortest path</em> between these two nodes, we could just type:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>    <span class="fu">distances</span>(g, <span class="at">v =</span> <span class="st">"Young Man"</span>, <span class="at">to =</span> <span class="st">"Pedestrian"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>    G[<span class="st">"Young Man"</span>, <span class="st">"Pedestrian"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 4</code></pre>
+</div>
+</div>
+<p>Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).</p>
+<p>Note that we could have gotten the same information using the <code>distances</code> function in <code>igraph</code> specifying the <code>v</code> and <code>to</code> nodes:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    <span class="fu">distances</span>(g, <span class="at">v =</span> <span class="st">"Young Man"</span>, <span class="at">to =</span> <span class="st">"Pedestrian"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>          Pedestrian
 Young Man          4</code></pre>
 </div>
 </div>
-<p>Which provides us with the relevant entry in the <strong>geodesic distance matrix</strong>, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).</p>
-<p>So the denominator for equation <a href="#eq-pair">Equation&nbsp;1</a> is the length of the <code>ap$vpaths</code> list object (the number of elements in the list):</p>
+<p>Now, to create the <strong>shortest paths matrix</strong> for the graph <span class="math inline">\(\mathbf{S}\)</span>, we can just loop through each pair and record the length of the shortest paths for non-adjancent nodes:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>    den <span class="ot">&lt;-</span> <span class="fu">length</span>(ap<span class="sc">$</span>vpaths)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>The numerator of <a href="#eq-pair">Equation&nbsp;1</a> is the subset of these paths containing Vincent. We can obtain those using the <code>sapply</code> function in <code>R</code> applied to the list of shortest paths:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>    num <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">sapply</span>(ap<span class="sc">$</span>vpaths, <span class="cf">function</span>(x) {<span class="st">"Vincent"</span> <span class="sc">%in%</span> <span class="fu">names</span>(x)}))</span>
-<span id="cb10-2"><a href="#cb10-2"></a>    num</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>    n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<span id="cb13-2"><a href="#cb13-2"></a>    A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb13-3"><a href="#cb13-3"></a>    S <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n) <span class="co">#intializing shortest paths matrix</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a>    <span class="fu">diag</span>(S) <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#setting diagonals to zero (Brandes, 2008, p. 137)</span></span>
+<span id="cb13-5"><a href="#cb13-5"></a>    <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
+<span id="cb13-6"><a href="#cb13-6"></a>    <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
+<span id="cb13-7"><a href="#cb13-7"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb13-8"><a href="#cb13-8"></a>        <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb13-9"><a href="#cb13-9"></a>            <span class="cf">if</span> (A[i,j] <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> i <span class="sc">&lt;</span> j) { <span class="co">#restrict to non-adjancent nodes in upper triangle</span></span>
+<span id="cb13-10"><a href="#cb13-10"></a>                S[i,j] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> i, <span class="at">to =</span> j)<span class="sc">$</span>vpaths)</span>
+<span id="cb13-11"><a href="#cb13-11"></a>                }</span>
+<span id="cb13-12"><a href="#cb13-12"></a>            }</span>
+<span id="cb13-13"><a href="#cb13-13"></a>        }</span>
+<span id="cb13-14"><a href="#cb13-14"></a>    S[<span class="fu">lower.tri</span>(S)] <span class="ot">&lt;-</span> <span class="fu">t</span>(S)[<span class="fu">lower.tri</span>(S)] <span class="co">#copying upper triangle into lower triangle</span></span>
+<span id="cb13-15"><a href="#cb13-15"></a>    S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 4</code></pre>
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            1     1     0          2           1            3         1
+Buddy            1     1     2          2           2            2         2
+Butch            0     2     1          0           2            0         0
+Capt Koons       2     2     0          1           2            3         1
+Ed Sullivan      1     2     2          2           1            2         2
+English Dave     3     2     0          3           2            1         1
+Esmeralda        1     2     0          1           2            1         1
+Fabienne         0     4     0          1           4            1         1
+Fourth Man       2     1     2          1           1            1         2
+Gawker #2        2     4     0          1           4            2         1
+             Fabienne Fourth Man Gawker #2
+Brett               0          2         2
+Buddy               4          1         4
+Butch               0          2         0
+Capt Koons          1          1         1
+Ed Sullivan         4          1         4
+English Dave        1          1         2
+Esmeralda           1          2         1
+Fabienne            1          1         1
+Fourth Man          1          1         4
+Gawker #2           1          4         1</code></pre>
 </div>
 </div>
-<p>The function argument just checks whether the character string “Vincent” is present in the named vector of node labels in each path stored in <code>vpaths</code>. The sum of the (one/zero or logical TRUE/FALSE) entries of this vector is the number of times Vincent is in a path linking The Pedestrian and The Young Man.</p>
-<p>And the pair dependency of the young man and the pedestrian on Vincent is just:</p>
+<p>Once we have this information, we have all we need to compute the various quantities defined earlier.</p>
+<p>For instance, <span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span class="math display">\[
+g_{ij} = g_{ik} + g_{kj}
+\]</span></p>
+<p>If the above equality obtains, then the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> (the numerator of <a href="#eq-pair">Equation&nbsp;1</a>) is simply <span class="math inline">\(s_{ik} \times s_{kj}\)</span>, namely the product of the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span>, meaning that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> will be just:</p>
+<p><span class="math display">\[
+\delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
+\]</span></p>
+<p>This also means that if the above equality does <em>not</em> obtain and <span class="math inline">\(g_{ij} &lt; g_{ik} + g_{kj}\)</span>, then we know for sure that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> is zero (<span class="math inline">\(k\)</span> does not lie on any shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
+<p>Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the <span class="math inline">\(\mathbf{G}\)</span> and <span class="math inline">\(\mathbf{S}\)</span> matrices:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>    pd <span class="ot">&lt;-</span> num<span class="sc">/</span>den</span>
-<span id="cb12-2"><a href="#cb12-2"></a>    <span class="fu">round</span>(pd, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>    pair.dep <span class="ot">&lt;-</span> <span class="cf">function</span>(a, b, c) {</span>
+<span id="cb15-2"><a href="#cb15-2"></a>        pd <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a>        <span class="cf">if</span> (G[a, b] <span class="sc">==</span> G[a, c] <span class="sc">+</span> G[c, b]) {</span>
+<span id="cb15-4"><a href="#cb15-4"></a>            pd <span class="ot">&lt;-</span> (S[a, c] <span class="sc">*</span> S[c, b])<span class="sc">/</span>S[a, b]</span>
+<span id="cb15-5"><a href="#cb15-5"></a>            }</span>
+<span id="cb15-6"><a href="#cb15-6"></a>        <span class="fu">return</span>(pd)</span>
+<span id="cb15-7"><a href="#cb15-7"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Testing it out to compute the pair dependency of the young man and the pedestrian on Vincent:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>    <span class="fu">pair.dep</span>(<span class="st">"Pedestrian"</span>, <span class="st">"Young Man"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.5</code></pre>
 </div>
 </div>
 <p>Which says that Vicent lies on 50% of the paths between the The Young Man and The Pedestrian (four out of eight).</p>
-<p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>    bet.vincent <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb14-2"><a href="#cb14-2"></a>    v <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Vincent"</span>)</span>
-<span id="cb14-3"><a href="#cb14-3"></a>    node.vec <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(g))[<span class="sc">-</span>v]</span>
-<span id="cb14-4"><a href="#cb14-4"></a>    <span class="cf">for</span> (i <span class="cf">in</span> node.vec) {</span>
-<span id="cb14-5"><a href="#cb14-5"></a>        <span class="cf">for</span> (j <span class="cf">in</span> node.vec) {</span>
-<span id="cb14-6"><a href="#cb14-6"></a>            <span class="cf">if</span> (i <span class="sc">&lt;</span> j <span class="sc">&amp;</span> <span class="fu">are_adjacent</span>(g, i, j) <span class="sc">==</span> <span class="cn">FALSE</span>) {</span>
-<span id="cb14-7"><a href="#cb14-7"></a>                p <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> i, <span class="at">to =</span> j)<span class="sc">$</span>vpaths <span class="co">#all shortest paths from i to j</span></span>
-<span id="cb14-8"><a href="#cb14-8"></a>                bet.vincent <span class="ot">&lt;-</span> bet.vincent <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">sapply</span>(p, <span class="cf">function</span>(x) {v <span class="sc">%in%</span> x}))<span class="sc">/</span><span class="fu">length</span>(p) <span class="co">#paths that involve Vincent divided by total</span></span>
-<span id="cb14-9"><a href="#cb14-9"></a>                }</span>
-<span id="cb14-10"><a href="#cb14-10"></a>            }</span>
-<span id="cb14-11"><a href="#cb14-11"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>The first lines initializes Vincent’s betweenness at zero. Then we store the position of Vincent in the node id vector in line 2 using the base <code>R</code> function <code>which</code>, and then create a vector of node ids in line 3 that excludes Vincent. We then loop through all the remaining node ids (making sure we only deal with starting and end nodes that are not adjacent) in lines 4-11, adding the dependencies of each considered pair on Vincent to his running score in line 8.</p>
-<p>The result is:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>    bet.vincent</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 301</code></pre>
-</div>
-</div>
-<p>Which is the same result we would have gotten had we used the <code>betweenness</code> function in <code>igraph</code> specifying that we want the answer just for the Vincent node:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>    <span class="fu">betweenness</span>(g, <span class="at">v =</span> <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Vincent 
-    301 </code></pre>
-</div>
-</div>
-<p>We can also tweak the above code to write a function that computes the one-sided dependency of one node on any other node:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>    one.sided <span class="ot">&lt;-</span> <span class="cf">function</span>(w, a, b) {</span>
-<span id="cb19-2"><a href="#cb19-2"></a>        delta.ik <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing one-sided dependence score</span></span>
-<span id="cb19-3"><a href="#cb19-3"></a>        v.i <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(w)<span class="sc">$</span>name <span class="sc">==</span> a)</span>
-<span id="cb19-4"><a href="#cb19-4"></a>        v.k <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(w)<span class="sc">$</span>name <span class="sc">==</span> b)</span>
-<span id="cb19-5"><a href="#cb19-5"></a>        <span class="cf">for</span> (v.j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(w)) {</span>
-<span id="cb19-6"><a href="#cb19-6"></a>            <span class="cf">if</span> (<span class="fu">are_adjacent</span>(w, v.i, v.j) <span class="sc">==</span> <span class="cn">FALSE</span> <span class="sc">&amp;</span> v.i <span class="sc">!=</span> v.j <span class="sc">&amp;</span> v.j <span class="sc">!=</span> v.k <span class="sc">&amp;</span> v.i <span class="sc">!=</span> v.k) {</span>
-<span id="cb19-7"><a href="#cb19-7"></a>                p <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(w, <span class="at">from =</span> v.i, <span class="at">to =</span> v.j)<span class="sc">$</span>vpaths <span class="co">#all shortest paths from i to j</span></span>
-<span id="cb19-8"><a href="#cb19-8"></a>                delta.ik <span class="ot">&lt;-</span> delta.ik <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">sapply</span>(p, <span class="cf">function</span>(x) {v.k <span class="sc">%in%</span> x}))<span class="sc">/</span><span class="fu">length</span>(p) <span class="co">#paths that involve k divided by total</span></span>
-<span id="cb19-9"><a href="#cb19-9"></a>                }</span>
-<span id="cb19-10"><a href="#cb19-10"></a>            }</span>
-<span id="cb19-11"><a href="#cb19-11"></a>        <span class="fu">return</span>(delta.ik)</span>
-<span id="cb19-12"><a href="#cb19-12"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>The function takes the graph, and the names of the dependent and the intermediary nodes as arguments and returns the dependence of <span class="math inline">\(i\)</span> on <span class="math inline">\(k\)</span> to reach other nodes.</p>
-<p>So if we wanted to find out the one-sided dependence of the Pedestrian on Vincent, we could just type:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>    <span class="fu">one.sided</span>(g, <span class="st">"Pedestrian"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 9</code></pre>
-</div>
-</div>
-<p>Which is the sum of the pair dependencies that involve the Pedestrian as a starting node and Vincent as an inner node.</p>
-<p>Note that while the Pedestrian is highly dependent on Vincent to reach others, the reverse is not the case:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>    <span class="fu">one.sided</span>(g, <span class="st">"Vincent"</span>, <span class="st">"Pedestrian"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 0</code></pre>
-</div>
-</div>
-<p>As the Pedestrian stands on none of the paths that link Vincent to other nodes in the graph.</p>
-<p>We can of course use the same <code>igraph</code> function to—efficiently, using Brandes’s <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">2001</a>)</span> algorithm—compute the betweenness centrality of each node in the graph stored in a vector of length <span class="math inline">\(N\)</span>:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>    pulp.bet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don’t appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.</p>
-<p>Using the information stored in the <code>pulp.bet</code> vector of betweenness centralities for each node, we can create a top ten table of betweenness for the <em>Pulp Fiction</em> network.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>    <span class="fu">library</span>(kableExtra)</span>
-<span id="cb25-2"><a href="#cb25-2"></a>    top.<span class="fl">10.</span>bet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
-<span id="cb25-3"><a href="#cb25-3"></a>    <span class="fu">kbl</span>(<span class="fu">round</span>(top.<span class="fl">10.</span>bet, <span class="dv">2</span>), <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb25-4"><a href="#cb25-4"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Betweenness"</span>),</span>
-<span id="cb25-5"><a href="#cb25-5"></a>        <span class="at">caption =</span> <span class="st">"Top Five Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb25-6"><a href="#cb25-6"></a>    <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-
-<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
-<caption>Top Five Betweenness Characters in Pulp Fiction Network.</caption>
- <thead>
-  <tr>
-   <th style="text-align:left;"> Character </th>
-   <th style="text-align:left;"> Betweenness </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:left;"> Vincent </td>
-   <td style="text-align:left;"> 301.00 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Butch </td>
-   <td style="text-align:left;"> 248.33 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Jules </td>
-   <td style="text-align:left;"> 114.17 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Maynard </td>
-   <td style="text-align:left;"> 70.00 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Honey Bunny </td>
-   <td style="text-align:left;"> 49.50 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Pumpkin </td>
-   <td style="text-align:left;"> 49.50 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Sportscaster #1 </td>
-   <td style="text-align:left;"> 36.00 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Mia </td>
-   <td style="text-align:left;"> 33.50 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Marsellus </td>
-   <td style="text-align:left;"> 26.67 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Brett </td>
-   <td style="text-align:left;"> 2.67 </td>
-  </tr>
-</tbody>
-</table>
-
-</div>
-</div>
-<p>Unsurprisingly, the three main characters in the story are also the highest in betweenness, with the already considered Vincent at the top of the list (that makes sense since Vincent intermediates between Butch and the rest of the story as he sadly found out in the <a href="https://www.youtube.com/watch?v=fm9VPN1r4Hk">toilet</a>). Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a big drop in the bottom five of the top ten.</p>
 
 
 
@@ -806,6 +752,7 @@ Freeman, Linton C. 1979. <span>“Centrality in Social Networks Conceptual Clari
 
 <ol>
 <li id="fn1"><p>As <span class="citation" data-cites="brandes08">Brandes (<a href="#ref-brandes08" role="doc-biblioref">2008, 137</a>)</span> notes, when <span class="math inline">\(i = j\)</span>, then <span class="math inline">\(\sigma_{ij} = 1\)</span> and when <span class="math inline">\(k \in \{i, j\}\)</span>, then <span class="math inline">\(\sigma_{i(k)j} = 0\)</span>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the <code>from</code> or <code>to</code> slots.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

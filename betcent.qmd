@@ -17,7 +17,7 @@ Let us begin by defining some basic concepts on which betweenness centrality mea
 
 ### Pairwise Dependency and Betweenness
 
-We can define the **pair dependency** $\delta_{i(k)j}$ of any two nodes in the graph $\{i, j\}$ on any third node $k$ as follows:
+We can define the **pair dependency** $\delta_{i(k)j}$ [@brandes01, p. 166] of any two nodes in the graph $\{i, j\}$ on any third node $k$ as follows:
 
 $$
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
@@ -25,20 +25,20 @@ $$ {#eq-pair}
 
 Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* number of shortest paths that start and end with nodes $i$ and $j$ and the numerator of the fraction ($\sigma_{i(k)j}$) is the subset of those paths that include node $k$ as an **inner node**.^[As @brandes08 [p. 137] notes, when $i = j$, then $\sigma_{ij} = 1$ and when $k \in \{i, j\}$, then $\sigma_{i(k)j} = 0$.]
 
-As @freeman79 notes, because @eq-pair is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
+Because @eq-pair is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
 
 We can also defined the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ and every node $j$:
 $$
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 $$ {#eq-one}
 
-## Computing Betweenness
-
 The **betweenness centrality** of a node $k$ is then defined as the *sum of the dependencies* that *every pair* of nodes in the graph has on that node:
 
 $$
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 $$ {#eq-bet1}
+
+## Computing Betweenness
 
 Let's see an example of how to calculate betweenness centrality using real data. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -53,156 +53,129 @@ Let's see an example of how to calculate betweenness centrality using real data.
     V(g)$name
 ```
 
-```{r, echo = FALSE}
-    # n <- vcount(g)
-    # S <- as.matrix(as_adjacency_matrix(g))
-    # rownames(S) <- V(g)$name
-    # colnames(S) <- V(g)$name
-    # for (i in 1:n) {
-    #     for (j in 1:n) {
-    #         if (S[i,j] == 0) {
-    #             S[i,j] <- length(all_shortest_paths(g, from = i, to = j)$vpaths)
-    #             }
-    #         }
-    #     }
+To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the *length* of the shortest path between every pair of nodes. As we saw in our discussion of [closeness](closcent.qmd), this is stored in the **geodesic distance matrix** of the graph $\mathbf{G}$. In `igraph` we can obtain that using the `distances` function:
+
+```{r}
+    G <- distances(g)
+    G[1:10, 1:10]
 ```
 
-Let's say we wanted to figure out the pair dependency between The pair of nodes "Young Man" (at the diner) and "The Pedestrian" (who appears when Butch encounters Marsellus on the street) on Vincent (e.g., the proportion of shortest paths between the young man and the pedestrian that include Vincent as an intermediary). 
+Next we need to know the *number* of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In `igraph` we can use the `all_shortest_paths` function to figure out this information. 
 
-First we need to figure out the denominator of @eq-pair (the number of shortest paths between the young man and the pedestrian). We can do this using the `igraph` function `all_shortest_paths`:
+For instance, let's say we wanted to find the number of shortest paths between the pair of nodes "Young Man" (at the diner) and "The Pedestrian" (who appears when Butch encounters Marsellus on the street). To do that we can just type:
 
 ```{r}
     ap <- all_shortest_paths(g, from = "Pedestrian", to = "Young Man")
     ap$vpaths
 ```
 
-The function has three arguments: The graph (`g`), the `from` node (the starting node in the path count) and the `to` node (the end node in the path count). In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.  
+The `all_shortest_paths` function has three arguments: The graph `g`, the `from` node (the starting node in the path count) and the `to` node (the end node in the path count).^[In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.] 
 
-The `all_shortest_paths` function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called `vpaths`, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The `length` of this list is the number of shortest paths between the young man at the diner and the pedestrian:
+The function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called `vpaths`, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The `length` of this list is the number of shortest paths between the young man at the diner and the pedestrian:
 
 ```{r}
     length(ap$vpaths)
 ```
 
-We can see that the list is of length eight, indicating that there are eight total shortest paths between the pedestrian and the young man. If we wanted to verify the *length of the shortest path* between these two nodes, we would use the `distances` function with the following arguments:
+We can see that the list is of length eight, indicating that there are eight total shortest paths between the pedestrian and the young man.
+
+If we wanted to verify the *length of the shortest path* between these two nodes, we could just type:
+
+```{r}
+    G["Young Man", "Pedestrian"]
+```
+
+Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).
+
+Note that we could have gotten the same information using the `distances` function in `igraph` specifying the `v` and `to` nodes:
 
 ```{r}
     distances(g, v = "Young Man", to = "Pedestrian")
 ```
 
-Which provides us with the relevant entry in the **geodesic distance matrix**, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).
-
-So the denominator for equation @eq-pair is the length of the `ap$vpaths` list object (the number of elements in the list):
-
+Now, to create the **shortest paths matrix** for the graph $\mathbf{S}$, we can just loop through each pair and record the length of the shortest paths for non-adjancent nodes:
 
 ```{r}
-    den <- length(ap$vpaths)
-```
-
-The numerator of @eq-pair is the subset of these paths containing Vincent. We can obtain those using the `sapply` function in `R` applied to the list of shortest paths:
-
-
-```{r}
-    num <- sum(sapply(ap$vpaths, function(x) {"Vincent" %in% names(x)}))
-    num
-```
-
-The function argument just checks whether the character string "Vincent" is present in the named vector of node labels in each path stored in `vpaths`. The sum of the (one/zero or logical TRUE/FALSE) entries of this vector is the number of times Vincent is in a path linking The Pedestrian and The Young Man. 
-
-And the pair dependency of the young man and the pedestrian on Vincent is just:
-
-```{r}
-    pd <- num/den
-    round(pd, 3)
-```
-
-Which says that Vicent lies on `r round(pd, 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
-
-As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:
-
-
-```{r}
-    bet.vincent <- 0
-    v <- which(V(g)$name == "Vincent")
-    node.vec <- c(1:vcount(g))[-v]
-    for (i in node.vec) {
-        for (j in node.vec) {
-            if (i < j & are_adjacent(g, i, j) == FALSE) {
-                p <- all_shortest_paths(g, from = i, to = j)$vpaths #all shortest paths from i to j
-                bet.vincent <- bet.vincent + sum(sapply(p, function(x) {v %in% x}))/length(p) #paths that involve Vincent divided by total
+    n <- vcount(g)
+    A <- as.matrix(as_adjacency_matrix(g))
+    S <- matrix(1, n, n) #intializing shortest paths matrix
+    diag(S) <- 0 #setting diagonals to zero (Brandes, 2008, p. 137)
+    rownames(S) <- V(g)$name
+    colnames(S) <- V(g)$name
+    for (i in 1:n) {
+        for (j in 1:n) {
+            if (A[i,j] == 0 & i < j) { #restrict to non-adjancent nodes in upper triangle
+                S[i,j] <- length(all_shortest_paths(g, from = i, to = j)$vpaths)
                 }
             }
         }
+    S[lower.tri(S)] <- t(S)[lower.tri(S)] #copying upper triangle into lower triangle
+    S[1:10, 1:10]
 ```
 
-The first lines initializes Vincent's betweenness at zero. Then we store the position of Vincent in the node id vector in line 2 using the base `R` function `which`, and then create a vector of node ids in line 3 that excludes Vincent. We then loop through all the remaining node ids (making sure we only deal with starting and end nodes that are not adjacent) in lines 4-11, adding the dependencies of each considered pair on Vincent to his running score in line 8. 
+Once we have this information, we have all we need to compute the various quantities defined earlier. 
 
-The result is:
+For instance, @brandes01 [p. 166] shows that we can take advantage of the fact that a node $k$ can only lie on a shortest path between $i$ and $j$ if the sum of the geodesic distances between $i$ and $k$ and between $k$ and $j$ is equal to the geodesic distance between $i$ and $j$:
+$$
+g_{ij} = g_{ik} + g_{kj}
+$$
+
+If the above equality obtains, then the number of shortest paths between $i$ and $j$ (the numerator of @eq-pair) is simply $s_{ik} \times s_{kj}$, namely the product of the number of shortest paths between $i$ and $k$ and between $k$ and $j$, meaning that the pair dependency of $i$ and $j$ on $k$ will be just:
+
+$$
+\delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
+$$
+
+This also means that if the above equality does *not* obtain and $g_{ij} < g_{ik} + g_{kj}$, then we know for sure that the pair dependency of $i$ and $j$ on $k$ is zero ($k$ does not lie on any shortest path between $i$ and $j$). 
+
+Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices:
 
 ```{r}
-    bet.vincent
-```
-
-Which is the same result we would have gotten had we used the `betweenness` function in `igraph` specifying that we want the answer just for the Vincent node:
-
-
-```{r}
-    betweenness(g, v = "Vincent")
-```
-
-We can also tweak the above code to write a function that computes the one-sided dependency of one node on any other node:
-
-```{r}
-    one.sided <- function(w, a, b) {
-        delta.ik <- 0 #initializing one-sided dependence score
-        v.i <- which(V(w)$name == a)
-        v.k <- which(V(w)$name == b)
-        for (v.j in 1:vcount(w)) {
-            if (are_adjacent(w, v.i, v.j) == FALSE & v.i != v.j & v.j != v.k & v.i != v.k) {
-                p <- all_shortest_paths(w, from = v.i, to = v.j)$vpaths #all shortest paths from i to j
-                delta.ik <- delta.ik + sum(sapply(p, function(x) {v.k %in% x}))/length(p) #paths that involve k divided by total
-                }
+    pair.dep <- function(a, b, c) {
+        pd <- 0
+        if (G[a, b] == G[a, c] + G[c, b]) {
+            pd <- (S[a, c] * S[c, b])/S[a, b]
             }
-        return(delta.ik)
+        return(pd)
         }
 ```
 
-The function takes the graph, and the names of the dependent and the intermediary nodes as arguments and returns the dependence of $i$ on $k$ to reach other nodes. 
-
-So if we wanted to find out the one-sided dependence of the Pedestrian on Vincent, we could just type:
+Testing it out to compute the pair dependency of the young man and the pedestrian on Vincent:
 
 ```{r}
-    one.sided(g, "Pedestrian", "Vincent")
+    pair.dep("Pedestrian", "Young Man", "Vincent")
 ```
 
-Which is the sum of the pair dependencies that involve the Pedestrian as a starting node and Vincent as an inner node.
-
-Note that while the Pedestrian is highly dependent on Vincent to reach others, the reverse is not the case:
-
-```{r}
-    one.sided(g, "Vincent", "Pedestrian")
-```
-
-As the Pedestrian stands on none of the paths that link Vincent to other nodes in the graph. 
-
-We can of course use the same `igraph` function to---efficiently, using Brandes's [-@brandes01] algorithm---compute the betweenness centrality of each node in the graph stored in a vector of length $N$:
+Which says that Vicent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vincent"), 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
 
 
 ```{r}
-    pulp.bet <- betweenness(g)
+    pair.dep2 <- function(a, b, c) {
+        p <- all_shortest_paths(g, from = a, to = b)$vpaths #all shortest paths from i to j
+        return(sum(sapply(p, function(x) {c %in% names(x)}))/length(p)) #paths that involve Vincent divided by total
+        }             
 ```
-
-We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don't appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.
-
-Using the information stored in the `pulp.bet` vector of betweenness centralities for each node, we can create a top ten table of betweenness for the *Pulp Fiction* network.
 
 ```{r}
-    library(kableExtra)
-    top.10.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
-    kbl(round(top.10.bet, 2), format = "pipe", align = c("l", "c"),
-        col.names = c("Character", "Betweenness"),
-        caption = "Top Five Betweenness Characters in Pulp Fiction Network.") |> 
-    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+    pair.dep("Esmeralda", "Young Man", "Jules")
 ```
 
-Unsurprisingly, the three main characters in the story are also the highest in betweenness, with the already considered Vincent at the top of the list (that makes sense since Vincent intermediates between Butch and the rest of the story as he sadly found out in the [toilet](https://www.youtube.com/watch?v=fm9VPN1r4Hk)). Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a big drop in the bottom five of the top ten. 
+
+As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
+
+```{r}
+    bet.cent <- function(v) {
+        bc <- 0
+        k <- which(V(g)$name == v)
+        node.vec <- c(1:vcount(g))[-k]
+        for (i in node.vec) {
+            for (j in node.vec) {
+                if (i < j & are_adjacent(g, i, j) == FALSE) {
+                    bc <- bc + pair.dep(i, j, k)
+                }
+            }
+        }
+    return(bc)
+    }
+    bet.cent("Vincent")
+```
