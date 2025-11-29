@@ -126,17 +126,14 @@ $$
 \delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
 $$
 
-This also means that if the above equality does *not* obtain and $g_{ij} < g_{ik} + g_{kj}$, then we know for sure that the pair dependency of $i$ and $j$ on $k$ is zero ($k$ does not lie on any shortest path between $i$ and $j$). 
+This also means that if the above equality does *not* obtain and $g_{ij} \neq g_{ik} + g_{kj}$, then we know for sure that the pair dependency of $i$ and $j$ on $k$ is zero ($k$ does not lie on any shortest path between $i$ and $j$). 
 
 Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices:
 
 ```{r}
     pair.dep <- function(a, b, c) {
-        pd <- 0
-        if (G[a, b] == G[a, c] + G[c, b]) {
-            pd <- (S[a, c] * S[c, b])/S[a, b]
-            }
-        return(pd)
+        if (G[a, b] == G[a, c] + G[c, b]) {return((S[a, c] * S[c, b])/S[a, b])}
+        else {return(0)}
         }
 ```
 
@@ -148,16 +145,14 @@ Testing it out to compute the pair dependency of the young man and the pedestria
 
 Which says that Vicent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vincent"), 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
 
-As noted in @eq-one, the *one-sided dependencies* of a node $i$ on another node $j$ is just the sum of these pairwise dependencies involving $i$ and $k$ across every node $j$. We can get these using a simple wrapper function oer `pair.dep`:
+As noted in @eq-one, the *one-sided dependency* of a node $i$ on another node $k$ is just the sum of the pairwise dependencies involving $i$ as a source and $k$ as an intermediary across every destination node $j$. We can get these using a simple wrapper function over the `pair.dep` function:
 
 ```{r}
     one.sided <- function(a, c) {
         od <- 0
         i <- which(V(g)$name == a)
         k <- which(V(g)$name == c)
-        for (j in 1:n) {
-            if (i != j & k != j) {od <- od + pair.dep(i, j, k)}
-            }
+        for (j in c(1:vcount(g))[-c(i, k)]) {od <- od + pair.dep(i, j, k)}
         return(od)
         }
 ```
@@ -167,6 +162,16 @@ So the one-sided dependence of the young man on Vincent is:
 ```{r}
     one.sided("Young Man", "Vincent")
 ```
+
+Which is the sum of the pair dependencies that involve the young man as a starting node and Vincent as an inner node.
+
+Note that while the young man is highly dependent on Vincent to reach others, the reverse is not the case:
+
+```{r}
+    one.sided("Vincent", "Young Man")
+```
+
+As the young man stands on none of the paths that link Vincent to other nodes in the graph. 
 
 As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
 
