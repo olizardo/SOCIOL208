@@ -27,7 +27,7 @@ Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* 
 
 Because @eq-pair is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
 
-We can also defined the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ and every node $j$:
+We can also defined the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ across every other node $j$:
 $$
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 $$ {#eq-one}
@@ -103,8 +103,8 @@ Now, to create the **shortest paths matrix** for the graph $\mathbf{S}$, we can 
     rownames(S) <- V(g)$name
     colnames(S) <- V(g)$name
     for (i in 1:n) {
-        for (j in 1:n) {
-            if (A[i,j] == 0 & i < j) { #restrict to non-adjancent nodes in upper triangle
+        for (j in i:n) { #looping through upper triangle
+            if (A[i,j] == 0) { #restrict to non-adjancent nodes 
                 S[i,j] <- length(all_shortest_paths(g, from = i, to = j)$vpaths)
                 }
             }
@@ -160,22 +160,31 @@ Which says that Vicent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vin
     pair.dep("Esmeralda", "Young Man", "Jules")
 ```
 
-
 As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
 
 ```{r}
     bet.cent <- function(v) {
+        n <- vcount(g)
         bc <- 0
         k <- which(V(g)$name == v)
-        node.vec <- c(1:vcount(g))[-k]
-        for (i in node.vec) {
-            for (j in node.vec) {
-                if (i < j & are_adjacent(g, i, j) == FALSE) {
-                    bc <- bc + pair.dep(i, j, k)
-                }
+        for (i in 1:n) {
+            for (j in i:n) {
+                if (i != k & j != k & A[i, j] == 0) {bc <- bc + pair.dep(i, j, k)}
             }
         }
     return(bc)
     }
+```
+
+And now to find Vicent's betweenness:
+
+```{r}
     bet.cent("Vincent")
+```
+
+Which is the same result we would have gotten had we used the `betweenness` function in `igraph` specifying that we want the answer just for the Vincent node:
+
+
+```{r}
+    betweenness(g, v = "Vincent")
 ```
