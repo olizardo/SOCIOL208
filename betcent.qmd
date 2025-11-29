@@ -17,7 +17,7 @@ Let us begin by defining some basic concepts on which betweenness centrality mea
 
 ### Pairwise Dependency and Betweenness
 
-We can define the **pair dependency** $\delta_{i(k)j}$ of a pair of nodes $\{i, j\}$ on another node $k$ as follows:
+We can define the **pair dependency** $\delta_{i(k)j}$ of any two nodes in the graph $\{i, j\}$ on any third node $k$ as follows:
 
 $$
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
@@ -25,7 +25,12 @@ $$ {#eq-pair}
 
 Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* number of shortest paths that start and end with nodes $i$ and $j$ and the numerator of the fraction ($\sigma_{i(k)j}$) is the subset of those paths that include node $k$ as an **inner node**.^[As @brandes08 [p. 137] notes, when $i = j$, then $\sigma_{ij} = 1$ and when $k \in \{i, j\}$, then $\sigma_{i(k)j} = 0$.]
 
-As @freeman79 notes, because the above equation is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
+As @freeman79 notes, because @eq-pair is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
+
+We can also defined the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ and every node $j$:
+$$
+\delta_{i|k} = \sum_j \delta_{i(k)j}
+$$ {#eq-one}
 
 ## Computing Betweenness
 
@@ -34,18 +39,6 @@ The **betweenness centrality** of a node $k$ is then defined as the *sum of the 
 $$
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 $$ {#eq-bet1}
-
-<!-- Interestingly, @brandes01 shows that the dependence of a node $i$ on another node $k$ can also be expressed as the ratio of the number of shortest paths between $i$ and $k$ divided by the number of shortest paths between $k$ and other nodes $j$ where $j$ is a neighbor of $k$ multiplied by the dependence of $k$ and $j$ plus one, summed over all of $k$'s neighbors $j$.
-
-$$
-\delta_{ik}\sum_j = \frac{\sigma_{ik}}{\sigma_{kj}} (\delta_{kj} + 1)
-$$ {#eq-brandes}
-
-The betweenness of a node $k$ and in turn be expressed in terms of the last equation as folows:
-
-$$
-C^{BET}_k = \sum_i \delta_{ik}
-$$ {#eq-bet2} -->
 
 Let's see an example of how to calculate betweenness centrality using real data. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -156,6 +149,41 @@ Which is the same result we would have gotten had we used the `betweenness` func
 ```{r}
     betweenness(g, v = "Vincent")
 ```
+
+We can also tweak the above code to write a function that computes the one-sided dependency of one node on any other node:
+
+```{r}
+    one.sided <- function(w, a, b) {
+        delta.ik <- 0 #initializing one-sided dependence score
+        v.i <- which(V(w)$name == a)
+        v.k <- which(V(w)$name == b)
+        for (v.j in 1:vcount(w)) {
+            if (are_adjacent(w, v.i, v.j) == FALSE & v.i != v.j & v.j != v.k & v.i != v.k) {
+                p <- all_shortest_paths(w, from = v.i, to = v.j)$vpaths #all shortest paths from i to j
+                delta.ik <- delta.ik + sum(sapply(p, function(x) {v.k %in% x}))/length(p) #paths that involve k divided by total
+                }
+            }
+        return(delta.ik)
+        }
+```
+
+The function takes the graph, and the names of the dependent and the intermediary nodes as arguments and returns the dependence of $i$ on $k$ to reach other nodes. 
+
+So if we wanted to find out the one-sided dependence of the Pedestrian on Vincent, we could just type:
+
+```{r}
+    one.sided(g, "Pedestrian", "Vincent")
+```
+
+Which is the sum of the pair dependencies that involve the Pedestrian as a starting node and Vincent as an inner node.
+
+Note that while the Pedestrian is highly dependent on Vincent to reach others, the reverse is not the case:
+
+```{r}
+    one.sided(g, "Vincent", "Pedestrian")
+```
+
+As the Pedestrian stands on none of the paths that link Vincent to other nodes in the graph. 
 
 We can of course use the same `igraph` function to---efficiently, using Brandes's [-@brandes01] algorithm---compute the betweenness centrality of each node in the graph stored in a vector of length $N$:
 

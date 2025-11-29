@@ -534,30 +534,22 @@ div.csl-indent {
 <p>Let us begin by defining some basic concepts on which betweenness centrality measures are built.</p>
 <section id="pairwise-dependency-and-betweenness" class="level3">
 <h3 class="anchored" data-anchor-id="pairwise-dependency-and-betweenness">Pairwise Dependency and Betweenness</h3>
-<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> of a pair of nodes <span class="math inline">\(\{i, j\}\)</span> on another node <span class="math inline">\(k\)</span> as follows:</p>
+<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> of any two nodes in the graph <span class="math inline">\(\{i, j\}\)</span> on any third node <span class="math inline">\(k\)</span> as follows:</p>
 <p><span id="eq-pair"><span class="math display">\[
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{1}\]</span></span></p>
 <p>Where the denominator of the fraction (<span class="math inline">\(\sigma_{ij}\)</span>) is a count of the <em>total</em> number of shortest paths that start and end with nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and the numerator of the fraction (<span class="math inline">\(\sigma_{i(k)j}\)</span>) is the subset of those paths that include node <span class="math inline">\(k\)</span> as an <strong>inner node</strong>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
-<p>As <span class="citation" data-cites="freeman79">Freeman (<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span> notes, because the above equation is a ratio it can range from zero to one with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a <em>probability</em>, namely the probability that if you send something starting from <span class="math inline">\(i\)</span> in order for it to get to <span class="math inline">\(j\)</span> it has to go <em>through</em> <span class="math inline">\(k\)</span>. This probability is 1.0 if <span class="math inline">\(k\)</span> stands in <em>every</em> shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and zero if <span class="math inline">\(k\)</span> does not lie in <em>any</em> of the shortest paths linking <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p>
+<p>As <span class="citation" data-cites="freeman79">Freeman (<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span> notes, because <a href="#eq-pair">Equation&nbsp;1</a> is a ratio it can range from zero to one with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a <em>probability</em>, namely the probability that if you send something starting from <span class="math inline">\(i\)</span> in order for it to get to <span class="math inline">\(j\)</span> it has to go <em>through</em> <span class="math inline">\(k\)</span>. This probability is 1.0 if <span class="math inline">\(k\)</span> stands in <em>every</em> shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and zero if <span class="math inline">\(k\)</span> does not lie in <em>any</em> of the shortest paths linking <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p>
+<p>We can also defined the <strong>one-sided dependency</strong> of any one node <span class="math inline">\(i\)</span> on any other node <span class="math inline">\(k\)</span> in the graph as the sum of the pairwise dependencies on <span class="math inline">\(k\)</span> that involve <span class="math inline">\(i\)</span> and every node <span class="math inline">\(j\)</span>: <span id="eq-one"><span class="math display">\[
+\delta_{i|k} = \sum_j \delta_{i(k)j}
+\tag{2}\]</span></span></p>
 </section>
 <section id="computing-betweenness" class="level2">
 <h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
 <p>The <strong>betweenness centrality</strong> of a node <span class="math inline">\(k\)</span> is then defined as the <em>sum of the dependencies</em> that <em>every pair</em> of nodes in the graph has on that node:</p>
 <p><span id="eq-bet1"><span class="math display">\[
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
-\tag{2}\]</span></span></p>
-<!-- Interestingly, @brandes01 shows that the dependence of a node $i$ on another node $k$ can also be expressed as the ratio of the number of shortest paths between $i$ and $k$ divided by the number of shortest paths between $k$ and other nodes $j$ where $j$ is a neighbor of $k$ multiplied by the dependence of $k$ and $j$ plus one, summed over all of $k$'s neighbors $j$.
-
-$$
-\delta_{ik}\sum_j = \frac{\sigma_{ik}}{\sigma_{kj}} (\delta_{kj} + 1)
-$$ {#eq-brandes}
-
-The betweenness of a node $k$ and in turn be expressed in terms of the last equation as folows:
-
-$$
-C^{BET}_k = \sum_i \delta_{ik}
-$$ {#eq-bet2} -->
+\tag{3}\]</span></span></p>
 <p>Let’s see an example of how to calculate betweenness centrality using real data. We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -662,7 +654,7 @@ Young Man          4</code></pre>
 </div>
 </div>
 <p>Which says that Vicent lies on 50% of the paths between the The Young Man and The Pedestrian (four out of eight).</p>
-<p>As noted in <a href="#eq-bet1">Equation&nbsp;2</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:</p>
+<p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) as follows:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>    bet.vincent <span class="ot">&lt;-</span> <span class="dv">0</span></span>
 <span id="cb14-2"><a href="#cb14-2"></a>    v <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Vincent"</span>)</span>
@@ -692,19 +684,51 @@ Young Man          4</code></pre>
     301 </code></pre>
 </div>
 </div>
+<p>We can also tweak the above code to write a function that computes the one-sided dependency of one node on any other node:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>    one.sided <span class="ot">&lt;-</span> <span class="cf">function</span>(w, a, b) {</span>
+<span id="cb19-2"><a href="#cb19-2"></a>        delta.ik <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing one-sided dependence score</span></span>
+<span id="cb19-3"><a href="#cb19-3"></a>        v.i <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(w)<span class="sc">$</span>name <span class="sc">==</span> a)</span>
+<span id="cb19-4"><a href="#cb19-4"></a>        v.k <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(w)<span class="sc">$</span>name <span class="sc">==</span> b)</span>
+<span id="cb19-5"><a href="#cb19-5"></a>        <span class="cf">for</span> (v.j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(w)) {</span>
+<span id="cb19-6"><a href="#cb19-6"></a>            <span class="cf">if</span> (<span class="fu">are_adjacent</span>(w, v.i, v.j) <span class="sc">==</span> <span class="cn">FALSE</span> <span class="sc">&amp;</span> v.i <span class="sc">!=</span> v.j <span class="sc">&amp;</span> v.j <span class="sc">!=</span> v.k <span class="sc">&amp;</span> v.i <span class="sc">!=</span> v.k) {</span>
+<span id="cb19-7"><a href="#cb19-7"></a>                p <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(w, <span class="at">from =</span> v.i, <span class="at">to =</span> v.j)<span class="sc">$</span>vpaths <span class="co">#all shortest paths from i to j</span></span>
+<span id="cb19-8"><a href="#cb19-8"></a>                delta.ik <span class="ot">&lt;-</span> delta.ik <span class="sc">+</span> <span class="fu">sum</span>(<span class="fu">sapply</span>(p, <span class="cf">function</span>(x) {v.k <span class="sc">%in%</span> x}))<span class="sc">/</span><span class="fu">length</span>(p) <span class="co">#paths that involve k divided by total</span></span>
+<span id="cb19-9"><a href="#cb19-9"></a>                }</span>
+<span id="cb19-10"><a href="#cb19-10"></a>            }</span>
+<span id="cb19-11"><a href="#cb19-11"></a>        <span class="fu">return</span>(delta.ik)</span>
+<span id="cb19-12"><a href="#cb19-12"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function takes the graph, and the names of the dependent and the intermediary nodes as arguments and returns the dependence of <span class="math inline">\(i\)</span> on <span class="math inline">\(k\)</span> to reach other nodes.</p>
+<p>So if we wanted to find out the one-sided dependence of the Pedestrian on Vincent, we could just type:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>    <span class="fu">one.sided</span>(g, <span class="st">"Pedestrian"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 9</code></pre>
+</div>
+</div>
+<p>Which is the sum of the pair dependencies that involve the Pedestrian as a starting node and Vincent as an inner node.</p>
+<p>Note that while the Pedestrian is highly dependent on Vincent to reach others, the reverse is not the case:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>    <span class="fu">one.sided</span>(g, <span class="st">"Vincent"</span>, <span class="st">"Pedestrian"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+<p>As the Pedestrian stands on none of the paths that link Vincent to other nodes in the graph.</p>
 <p>We can of course use the same <code>igraph</code> function to—efficiently, using Brandes’s <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">2001</a>)</span> algorithm—compute the betweenness centrality of each node in the graph stored in a vector of length <span class="math inline">\(N\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>    pulp.bet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>    pulp.bet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don’t appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.</p>
 <p>Using the information stored in the <code>pulp.bet</code> vector of betweenness centralities for each node, we can create a top ten table of betweenness for the <em>Pulp Fiction</em> network.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>    <span class="fu">library</span>(kableExtra)</span>
-<span id="cb20-2"><a href="#cb20-2"></a>    top.<span class="fl">10.</span>bet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
-<span id="cb20-3"><a href="#cb20-3"></a>    <span class="fu">kbl</span>(<span class="fu">round</span>(top.<span class="fl">10.</span>bet, <span class="dv">2</span>), <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb20-4"><a href="#cb20-4"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Betweenness"</span>),</span>
-<span id="cb20-5"><a href="#cb20-5"></a>        <span class="at">caption =</span> <span class="st">"Top Five Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb20-6"><a href="#cb20-6"></a>    <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>    <span class="fu">library</span>(kableExtra)</span>
+<span id="cb25-2"><a href="#cb25-2"></a>    top.<span class="fl">10.</span>bet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb25-3"><a href="#cb25-3"></a>    <span class="fu">kbl</span>(<span class="fu">round</span>(top.<span class="fl">10.</span>bet, <span class="dv">2</span>), <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb25-4"><a href="#cb25-4"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Betweenness"</span>),</span>
+<span id="cb25-5"><a href="#cb25-5"></a>        <span class="at">caption =</span> <span class="st">"Top Five Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb25-6"><a href="#cb25-6"></a>    <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
