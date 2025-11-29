@@ -143,6 +143,9 @@ div.csl-indent {
   }
 }</script>
 
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
@@ -503,7 +506,11 @@ div.csl-indent {
    
   <ul>
   <li><a href="#pairwise-dependency-and-betweenness" id="toc-pairwise-dependency-and-betweenness" class="nav-link active" data-scroll-target="#pairwise-dependency-and-betweenness">Pairwise Dependency and Betweenness</a></li>
+  <li><a href="#betweenness-geodesic-distance-and-shortest-paths" id="toc-betweenness-geodesic-distance-and-shortest-paths" class="nav-link" data-scroll-target="#betweenness-geodesic-distance-and-shortest-paths">Betweenness, Geodesic Distance and Shortest Paths</a></li>
+  <li><a href="#computing-pairwise-dependencies" id="toc-computing-pairwise-dependencies" class="nav-link" data-scroll-target="#computing-pairwise-dependencies">Computing Pairwise Dependencies</a></li>
+  <li><a href="#computing-one-sided-dependencies" id="toc-computing-one-sided-dependencies" class="nav-link" data-scroll-target="#computing-one-sided-dependencies">Computing One-Sided Dependencies</a></li>
   <li><a href="#computing-betweenness" id="toc-computing-betweenness" class="nav-link" data-scroll-target="#computing-betweenness">Computing Betweenness</a></li>
+  <li><a href="#computing-normalized-betweenness" id="toc-computing-normalized-betweenness" class="nav-link" data-scroll-target="#computing-normalized-betweenness">Computing Normalized Betweenness</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/betcent.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -545,8 +552,8 @@ div.csl-indent {
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{3}\]</span></span></p>
 </section>
-<section id="computing-betweenness" class="level2">
-<h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
+<section id="betweenness-geodesic-distance-and-shortest-paths" class="level2">
+<h2 class="anchored" data-anchor-id="betweenness-geodesic-distance-and-shortest-paths">Betweenness, Geodesic Distance and Shortest Paths</h2>
 <p>Let’s see an example of how to calculate betweenness centrality using real data. We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -706,6 +713,9 @@ Gawker #2           1          4         1</code></pre>
 </div>
 </div>
 <p>Once we have this information, we have all we need to compute the various quantities defined earlier.</p>
+</section>
+<section id="computing-pairwise-dependencies" class="level2">
+<h2 class="anchored" data-anchor-id="computing-pairwise-dependencies">Computing Pairwise Dependencies</h2>
 <p>For instance, <span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span class="math display">\[
 g_{ij} = g_{ik} + g_{kj}
 \]</span></p>
@@ -729,6 +739,9 @@ g_{ij} = g_{ik} + g_{kj}
 </div>
 </div>
 <p>Which says that Vicent lies on 50% of the paths between the The Young Man and The Pedestrian (four out of eight).</p>
+</section>
+<section id="computing-one-sided-dependencies" class="level2">
+<h2 class="anchored" data-anchor-id="computing-one-sided-dependencies">Computing One-Sided Dependencies</h2>
 <p>As noted in <a href="#eq-one">Equation&nbsp;2</a>, the <em>one-sided dependency</em> of a node <span class="math inline">\(i\)</span> on another node <span class="math inline">\(k\)</span> is just the sum of the pairwise dependencies involving <span class="math inline">\(i\)</span> as a source and <span class="math inline">\(k\)</span> as an intermediary across every destination node <span class="math inline">\(j\)</span>. We can get these using a simple wrapper function over the <code>pair.dep</code> function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>    one.sided <span class="ot">&lt;-</span> <span class="cf">function</span>(a, c) {</span>
@@ -755,6 +768,9 @@ g_{ij} = g_{ik} + g_{kj}
 </div>
 </div>
 <p>As the young man stands on none of the paths that link Vincent to other nodes in the graph.</p>
+</section>
+<section id="computing-betweenness" class="level2">
+<h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
 <p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>    bet.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
@@ -782,6 +798,109 @@ g_{ij} = g_{ik} + g_{kj}
 <div class="cell-output cell-output-stdout">
 <pre><code>Vincent 
     301 </code></pre>
+</div>
+</div>
+<p>We can of course use the same <code>igraph</code> function to—efficiently, using Brandes’s <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">2001</a>)</span> algorithm—compute the betweenness centrality of each node in the graph stored in a vector of length <span class="math inline">\(N\)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>    pulp.bet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don’t appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.</p>
+<p>Using the information stored in the <code>pulp.bet</code> vector of betweenness centralities for each node, we can create a top ten table of betweenness for the <em>Pulp Fiction</em> network.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>    <span class="fu">library</span>(kableExtra)</span>
+<span id="cb29-2"><a href="#cb29-2"></a>    top.<span class="fl">10.</span>bet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb29-3"><a href="#cb29-3"></a>    <span class="fu">kbl</span>(<span class="fu">round</span>(top.<span class="fl">10.</span>bet, <span class="dv">2</span>), <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb29-4"><a href="#cb29-4"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Betweenness"</span>),</span>
+<span id="cb29-5"><a href="#cb29-5"></a>        <span class="at">caption =</span> <span class="st">"Top Five Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb29-6"><a href="#cb29-6"></a>    <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>Top Five Betweenness Characters in Pulp Fiction Network.</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Character </th>
+   <th style="text-align:left;"> Betweenness </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Vincent </td>
+   <td style="text-align:left;"> 301.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Butch </td>
+   <td style="text-align:left;"> 248.33 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Jules </td>
+   <td style="text-align:left;"> 114.17 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Maynard </td>
+   <td style="text-align:left;"> 70.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Honey Bunny </td>
+   <td style="text-align:left;"> 49.50 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Pumpkin </td>
+   <td style="text-align:left;"> 49.50 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Sportscaster #1 </td>
+   <td style="text-align:left;"> 36.00 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Mia </td>
+   <td style="text-align:left;"> 33.50 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Marsellus </td>
+   <td style="text-align:left;"> 26.67 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Brett </td>
+   <td style="text-align:left;"> 2.67 </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<p>Unsurprisingly, the three main characters in the story are also the highest in betweenness, with the already considered Vincent at the top of the list (that makes sense since Vincent intermediates between Butch and the rest of the story as he sadly found out in the <a href="https://www.youtube.com/watch?v=fm9VPN1r4Hk">toilet</a>). Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a big drop in the bottom five of the top ten.</p>
+</section>
+<section id="computing-normalized-betweenness" class="level2">
+<h2 class="anchored" data-anchor-id="computing-normalized-betweenness">Computing Normalized Betweenness</h2>
+<p>The <code>betweenness</code> function in <code>igraph</code> uses Freeman’s <span class="citation" data-cites="freeman79">(<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span> normalization for the betweenness centrality, which is equal to:</p>
+<p><span id="eq-nbet"><span class="math display">\[
+C^{NB}_k = = \frac{2\left[\sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}\right]}{(n-1)(n-2)}
+\tag{4}\]</span></span></p>
+<p>Where the denominator of the fraction, <span class="math inline">\((n-1)(n-2)\)</span>, is equal to (two times) the betweenness a node would have if it was the center of a <strong>star graph</strong> of the same order as the observed network.</p>
+<p>So for the <em>Pulp Fiction</em> network the normalized betweenness is equal to:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>    n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<span id="cb30-2"><a href="#cb30-2"></a>    pulp.nbet <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>pulp.bet)<span class="sc">/</span>((n<span class="dv">-1</span>)<span class="sc">*</span>(n<span class="dv">-2</span>))</span>
+<span id="cb30-3"><a href="#cb30-3"></a>    top.<span class="fl">10.</span>nbet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.nbet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb30-4"><a href="#cb30-4"></a>    <span class="fu">round</span>(top.<span class="fl">10.</span>nbet, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        Vincent           Butch           Jules         Maynard     Honey Bunny 
+         0.4520          0.3729          0.1714          0.1051          0.0743 
+        Pumpkin Sportscaster #1             Mia       Marsellus           Brett 
+         0.0743          0.0541          0.0503          0.0400          0.0040 </code></pre>
+</div>
+</div>
+<p>Which are the same scores we would obtain using the <code>igraph</code> function with the argument <code>normalized</code> set to <code>TRUE</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>    pulp.nbet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(g, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb32-2"><a href="#cb32-2"></a>    top.<span class="fl">10.</span>nbet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.nbet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
+<span id="cb32-3"><a href="#cb32-3"></a>    <span class="fu">round</span>(top.<span class="fl">10.</span>nbet, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        Vincent           Butch           Jules         Maynard     Honey Bunny 
+         0.4520          0.3729          0.1714          0.1051          0.0743 
+        Pumpkin Sportscaster #1             Mia       Marsellus           Brett 
+         0.0743          0.0541          0.0503          0.0400          0.0040 </code></pre>
 </div>
 </div>
 

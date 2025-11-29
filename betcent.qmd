@@ -38,7 +38,7 @@ $$
 C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 $$ {#eq-bet1}
 
-## Computing Betweenness
+## Betweenness, Geodesic Distance and Shortest Paths
 
 Let's see an example of how to calculate betweenness centrality using real data. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -115,6 +115,8 @@ Now, to create the **shortest paths matrix** for the graph $\mathbf{S}$, we can 
 
 Once we have this information, we have all we need to compute the various quantities defined earlier. 
 
+## Computing Pairwise Dependencies
+
 For instance, @brandes01 [p. 166] shows that we can take advantage of the fact that a node $k$ can only lie on a shortest path between $i$ and $j$ if the sum of the geodesic distances between $i$ and $k$ and between $k$ and $j$ is equal to the geodesic distance between $i$ and $j$:
 $$
 g_{ij} = g_{ik} + g_{kj}
@@ -145,6 +147,8 @@ Testing it out to compute the pair dependency of the young man and the pedestria
 
 Which says that Vicent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vincent"), 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
 
+## Computing One-Sided Dependencies
+
 As noted in @eq-one, the *one-sided dependency* of a node $i$ on another node $k$ is just the sum of the pairwise dependencies involving $i$ as a source and $k$ as an intermediary across every destination node $j$. We can get these using a simple wrapper function over the `pair.dep` function:
 
 ```{r}
@@ -173,6 +177,8 @@ Note that while the young man is highly dependent on Vincent to reach others, th
 
 As the young man stands on none of the paths that link Vincent to other nodes in the graph. 
 
+## Computing Betweenness
+
 As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
 
 ```{r}
@@ -200,4 +206,55 @@ Which is the same result we would have gotten had we used the `betweenness` func
 
 ```{r}
     betweenness(g, v = "Vincent")
+```
+
+We can of course use the same `igraph` function to---efficiently, using Brandes's [-@brandes01] algorithm---compute the betweenness centrality of each node in the graph stored in a vector of length $N$:
+
+
+```{r}
+    pulp.bet <- betweenness(g)
+```
+
+We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don't appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.
+
+Using the information stored in the `pulp.bet` vector of betweenness centralities for each node, we can create a top ten table of betweenness for the *Pulp Fiction* network.
+
+```{r}
+    library(kableExtra)
+    top.10.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
+    kbl(round(top.10.bet, 2), format = "pipe", align = c("l", "c"),
+        col.names = c("Character", "Betweenness"),
+        caption = "Top Ten Betweenness Characters in Pulp Fiction Network.") |> 
+    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Unsurprisingly, the three main characters in the story are also the highest in betweenness, with the already considered Vincent at the top of the list (that makes sense since Vincent intermediates between Butch and the rest of the story as he sadly found out in the [toilet](https://www.youtube.com/watch?v=fm9VPN1r4Hk)). Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a big drop in the bottom five of the top ten. 
+
+
+## Computing Normalized Betweenness
+
+The `betweenness` function in `igraph` uses Freeman's [-@freeman79] normalization for the betweenness centrality, which is equal to:
+
+$$
+C^{NB}_k = = \frac{2\left[\sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}\right]}{(n-1)(n-2)}
+$$ {#eq-nbet}
+
+Where the denominator of the fraction, $(n-1)(n-2)$, is equal to (two times) the betweenness a node would have if it was the center of a **star graph** of the same order as the observed network. 
+
+So for the *Pulp Fiction* network the normalized betweenness is equal to:
+
+
+```{r}
+    n <- vcount(g)
+    pulp.nbet <- (2*pulp.bet)/((n-1)*(n-2))
+    top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
+    round(top.10.nbet, 4)
+```
+
+Which are the same scores we would obtain using the `igraph` function with the argument `normalized` set to `TRUE`:
+
+```{r}
+    pulp.nbet <- betweenness(g, normalized = TRUE)
+    top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
+    round(top.10.nbet, 4)
 ```
