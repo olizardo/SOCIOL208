@@ -17,7 +17,7 @@ Let us begin by defining some basic concepts on which betweenness centrality mea
 
 ### Pairwise Dependency and Betweenness
 
-We can define the **pair dependency** $\delta_{i(k)j}$ [@brandes01, p. 166] of any two nodes in the graph $\{i, j\}$ on any third node $k$ as follows:
+We can define the **pair dependency** $\delta_{i(k)j}$ [@brandes01, p. 166] of any two nodes $\{i, j\}$ on any third node $k$ in the graph as follows:
 
 $$
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
@@ -27,7 +27,7 @@ Where the denominator of the fraction ($\sigma_{ij}$) is a count of the *total* 
 
 Because @eq-pair is a ratio it can range from zero to one  with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a *probability*, namely the probability that if you send something starting from $i$ in order for it to get to $j$ it has to go *through* $k$. This probability is 1.0 if $k$ stands in *every* shortest path between $i$ and $j$ and zero if $k$ does not lie in *any* of the shortest paths linking $i$ and $j$.
 
-We can also defined the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ across every other node $j$:
+We can also define the **one-sided dependency** of any one node $i$ on any other node $k$ in the graph as the sum of the pairwise dependencies on $k$ that involve $i$ across every other node $j$:
 $$
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 $$ {#eq-one}
@@ -53,7 +53,7 @@ Let's see an example of how to calculate betweenness centrality using real data.
     V(g)$name
 ```
 
-To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the *length* of the shortest path between every pair of nodes. As we saw in our discussion of [closeness](closcent.qmd), this is stored in the **geodesic distance matrix** of the graph $\mathbf{G}$. In `igraph` we can obtain that using the `distances` function:
+To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the *length* of the shortest path between every pair of nodes. As we saw in our discussion of [closeness](closcent.qmd), this is stored in the **geodesic distance matrix** ($\mathbf{G}$) of dimensions $N \times N$. In `igraph` we can calculate the entries for $\mathbf{G}$ using the `distances` function:
 
 ```{r}
     G <- distances(g)
@@ -93,7 +93,7 @@ Note that we could have gotten the same information using the `distances` functi
     distances(g, v = "Young Man", to = "Pedestrian")
 ```
 
-Now, to create the **shortest paths matrix** for the graph $\mathbf{S}$, we can just loop through each pair and record the length of the shortest paths for non-adjancent nodes:
+Now, to populate the entries of the **shortest paths matrix** ($\mathbf{S}$), we can just loop through each pair of (non-adjacent) nodes in the graph and record the length of the `vpaths` object obtained when we run the `all_shortest_paths` function on those nodes:
 
 ```{r}
     n <- vcount(g)
@@ -113,22 +113,24 @@ Now, to create the **shortest paths matrix** for the graph $\mathbf{S}$, we can 
     S[1:10, 1:10]
 ```
 
-Once we have this information, we have all we need to compute the various quantities defined earlier. 
+Once we have the information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices, we have all we need to compute the various quantities defined earlier. 
 
 ## Computing Pairwise Dependencies
 
-For instance, @brandes01 [p. 166] shows that we can take advantage of the fact that a node $k$ can only lie on a shortest path between $i$ and $j$ if the sum of the geodesic distances between $i$ and $k$ and between $k$ and $j$ is equal to the geodesic distance between $i$ and $j$:
+@brandes01 [p. 166] shows that we can take advantage of the fact that a node $k$ can only lie on a shortest path between $i$ and $j$ if the sum of the geodesic distances between $i$ and $k$ and between $k$ and $j$ is equal to the geodesic distance between $i$ and $j$:
 $$
 g_{ij} = g_{ik} + g_{kj}
 $$
 
-If the above equality obtains, then the number of shortest paths between $i$ and $j$ (the numerator of @eq-pair) is simply $s_{ik} \times s_{kj}$, namely the product of the number of shortest paths between $i$ and $k$ and between $k$ and $j$, meaning that the pair dependency of $i$ and $j$ on $k$ will be just:
+If the above equality obtains, then the number of shortest paths between $i$ and $j$ that involve $k$ as an inner node (the numerator of @eq-pair) is simply $s_{ik} \times s_{kj}$. This means that the pair dependency of $i$ and $j$ on $k$ will be just:
 
 $$
 \delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
 $$
 
-This also means that if the above equality does *not* obtain and $g_{ij} \neq g_{ik} + g_{kj}$, then we know for sure that the pair dependency of $i$ and $j$ on $k$ is zero ($k$ does not lie on any shortest path between $i$ and $j$). 
+Where $s_{ij}$ is the corresponding entry for $i$ and $j$ in the $\mathbf{S}$ matrix (the total number of shortest paths between $i$ and $j$). 
+
+This also means that if the above equality does *not* obtain and $g_{ij} < g_{ik} + g_{kj}$, then we know for sure that the pair dependency of $i$ and $j$ on $k$ is zero ($k$ does not lie on any shortest path between $i$ and $j$). 
 
 Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices:
 
@@ -139,7 +141,9 @@ Using this approach, we can write a simple function to compute the pair dependen
         }
 ```
 
-Testing it out to compute the pair dependency of the young man and the pedestrian on Vincent:
+This function computes the pair dependency of the nodes entered as values of the `a` and `b` arguments on the node entered as the value of the `c` argument. 
+
+We can test it out to compute the pair dependency of the young man and the pedestrian on Vincent:
 
 ```{r}
     pair.dep("Pedestrian", "Young Man", "Vincent")
@@ -179,7 +183,7 @@ As the young man stands on none of the paths that link Vincent to other nodes in
 
 ## Computing Betweenness
 
-As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
+As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that quantity (not very efficiently) for any node in the graph using the following wrapper function:
 
 ```{r}
     bet.cent <- function(c) {
@@ -258,3 +262,46 @@ Which are the same scores we would obtain using the `igraph` function with the a
     top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
     round(top.10.nbet, 4)
 ```
+
+## Betwenness in Directed Graphs
+
+In contrast to closeness, there is no problem computing betweenness in the directed case. The reason is that if the graph is not strongly connected, and therefore there exists a pair of nodes $i$ and $j$ with no directed path from $i$ to $j$ (e.g., $g_{ij}=\infty$), then we just set $\sigma_{ij} = 0$ in @eq-bet1.
+
+Let us examine betweenness centrality in the directed young women lawyers advice network:
+
+```{r}
+    g <- law_advice
+    women <- which(V(g)$gender == 2) #selecting women
+    wg <- subgraph(g, women)
+    young <- which(V(wg)$age < 40) #selecting women under forty
+    wg <- subgraph(wg, young)
+    V(wg)$name <- 1:vcount(wg) #naming nodes
+    w.bet <- betweenness(wg)
+    round(w.bet, 3)
+```
+
+Here we see that node 3 is the highest in betweenness, pictured in red in @fig-yw. For comparison, the node with the highest *closeness* centrality is pictured in blue in the same figure.
+
+```{r}
+#| label: fig-yw
+#| echo: false
+#| fig-cap: "Women lawyers advice network with highest closeness centrality node in blue and highest betweenness centrality node in red"
+    library(ggraph)
+    d.harm = harmonic_centrality(wg)
+    col <- rep("tan2", vcount(wg)) #creating node color vector
+    col[which(w.bet == max(w.bet))] <- "red" #changing color of max bet. centrality node to red
+    col[which(d.harm == max(d.harm))] <- "blue" #changing color of max clos. centrality node to blue
+        p <- ggraph(wg, layout = 'auto')
+        p <- p + geom_edge_parallel(color = "steelblue", edge_width = 0.5,
+                                    arrow = arrow(length = unit(2.5, 'mm')),
+                                    end_cap = circle(4, 'mm'), 
+                                    sep = unit(3, 'mm'))
+        p <- p + geom_node_point(aes(x = x, y = y), size = 10, color = col) 
+        p <- p + geom_node_text(aes(label = V(wg)$name), size = 5, color = "white")
+        p <- p + theme_graph() 
+        p
+```
+
+This result makes sense. Node 3 intermediates all  the connections linking the tightly knit group of nodes on the left side (6, 10, 11, 12) with the rest of the network. Also if nodes 5 and 7 need to pass something along to the rest, they have to use 3 at least half time. Node 4 also needs 3 to reach 6. 
+
+This result nicely illustrates the difference between closeness and betweenness. 

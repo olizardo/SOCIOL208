@@ -511,6 +511,7 @@ div.csl-indent {
   <li><a href="#computing-one-sided-dependencies" id="toc-computing-one-sided-dependencies" class="nav-link" data-scroll-target="#computing-one-sided-dependencies">Computing One-Sided Dependencies</a></li>
   <li><a href="#computing-betweenness" id="toc-computing-betweenness" class="nav-link" data-scroll-target="#computing-betweenness">Computing Betweenness</a></li>
   <li><a href="#computing-normalized-betweenness" id="toc-computing-normalized-betweenness" class="nav-link" data-scroll-target="#computing-normalized-betweenness">Computing Normalized Betweenness</a></li>
+  <li><a href="#betwenness-in-directed-graphs" id="toc-betwenness-in-directed-graphs" class="nav-link" data-scroll-target="#betwenness-in-directed-graphs">Betwenness in Directed Graphs</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/betcent.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -538,13 +539,13 @@ div.csl-indent {
 <p>Let us begin by defining some basic concepts on which betweenness centrality measures are built.</p>
 <section id="pairwise-dependency-and-betweenness" class="level3">
 <h3 class="anchored" data-anchor-id="pairwise-dependency-and-betweenness">Pairwise Dependency and Betweenness</h3>
-<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">Brandes 2001, 166</a>)</span> of any two nodes in the graph <span class="math inline">\(\{i, j\}\)</span> on any third node <span class="math inline">\(k\)</span> as follows:</p>
+<p>We can define the <strong>pair dependency</strong> <span class="math inline">\(\delta_{i(k)j}\)</span> <span class="citation" data-cites="brandes01">(<a href="#ref-brandes01" role="doc-biblioref">Brandes 2001, 166</a>)</span> of any two nodes <span class="math inline">\(\{i, j\}\)</span> on any third node <span class="math inline">\(k\)</span> in the graph as follows:</p>
 <p><span id="eq-pair"><span class="math display">\[
 \delta_{i(k)j}= \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{1}\]</span></span></p>
 <p>Where the denominator of the fraction (<span class="math inline">\(\sigma_{ij}\)</span>) is a count of the <em>total</em> number of shortest paths that start and end with nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and the numerator of the fraction (<span class="math inline">\(\sigma_{i(k)j}\)</span>) is the subset of those paths that include node <span class="math inline">\(k\)</span> as an <strong>inner node</strong>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>Because <a href="#eq-pair">Equation&nbsp;1</a> is a ratio it can range from zero to one with everything in between. As such the pair dependency of a pair of nodes relative to a third has an intuitive interpretation as a <em>probability</em>, namely the probability that if you send something starting from <span class="math inline">\(i\)</span> in order for it to get to <span class="math inline">\(j\)</span> it has to go <em>through</em> <span class="math inline">\(k\)</span>. This probability is 1.0 if <span class="math inline">\(k\)</span> stands in <em>every</em> shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> and zero if <span class="math inline">\(k\)</span> does not lie in <em>any</em> of the shortest paths linking <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p>
-<p>We can also defined the <strong>one-sided dependency</strong> of any one node <span class="math inline">\(i\)</span> on any other node <span class="math inline">\(k\)</span> in the graph as the sum of the pairwise dependencies on <span class="math inline">\(k\)</span> that involve <span class="math inline">\(i\)</span> across every other node <span class="math inline">\(j\)</span>: <span id="eq-one"><span class="math display">\[
+<p>We can also define the <strong>one-sided dependency</strong> of any one node <span class="math inline">\(i\)</span> on any other node <span class="math inline">\(k\)</span> in the graph as the sum of the pairwise dependencies on <span class="math inline">\(k\)</span> that involve <span class="math inline">\(i\)</span> across every other node <span class="math inline">\(j\)</span>: <span id="eq-one"><span class="math display">\[
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 \tag{2}\]</span></span></p>
 <p>The <strong>betweenness centrality</strong> of a node <span class="math inline">\(k\)</span> is then defined as the <em>sum of the dependencies</em> that <em>every pair</em> of nodes in the graph has on that node:</p>
@@ -577,7 +578,7 @@ C^{BET}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 [37] "Young Woman"     "Zed"            </code></pre>
 </div>
 </div>
-<p>To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the <em>length</em> of the shortest path between every pair of nodes. As we saw in our discussion of <a href="./closcent.html">closeness</a>, this is stored in the <strong>geodesic distance matrix</strong> of the graph <span class="math inline">\(\mathbf{G}\)</span>. In <code>igraph</code> we can obtain that using the <code>distances</code> function:</p>
+<p>To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the <em>length</em> of the shortest path between every pair of nodes. As we saw in our discussion of <a href="./closcent.html">closeness</a>, this is stored in the <strong>geodesic distance matrix</strong> (<span class="math inline">\(\mathbf{G}\)</span>) of dimensions <span class="math inline">\(N \times N\)</span>. In <code>igraph</code> we can calculate the entries for <span class="math inline">\(\mathbf{G}\)</span> using the <code>distances</code> function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    G <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
 <span id="cb3-2"><a href="#cb3-2"></a>    G[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -670,7 +671,7 @@ Gawker #2           2          3         0</code></pre>
 Young Man          4</code></pre>
 </div>
 </div>
-<p>Now, to create the <strong>shortest paths matrix</strong> for the graph <span class="math inline">\(\mathbf{S}\)</span>, we can just loop through each pair and record the length of the shortest paths for non-adjancent nodes:</p>
+<p>Now, to populate the entries of the <strong>shortest paths matrix</strong> (<span class="math inline">\(\mathbf{S}\)</span>), we can just loop through each pair of (non-adjacent) nodes in the graph and record the length of the <code>vpaths</code> object obtained when we run the <code>all_shortest_paths</code> function on those nodes:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>    n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
 <span id="cb13-2"><a href="#cb13-2"></a>    A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
@@ -712,18 +713,19 @@ Fourth Man          1          1         4
 Gawker #2           1          4         1</code></pre>
 </div>
 </div>
-<p>Once we have this information, we have all we need to compute the various quantities defined earlier.</p>
+<p>Once we have the information stored in the <span class="math inline">\(\mathbf{G}\)</span> and <span class="math inline">\(\mathbf{S}\)</span> matrices, we have all we need to compute the various quantities defined earlier.</p>
 </section>
 <section id="computing-pairwise-dependencies" class="level2">
 <h2 class="anchored" data-anchor-id="computing-pairwise-dependencies">Computing Pairwise Dependencies</h2>
-<p>For instance, <span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span class="math display">\[
+<p><span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span class="math display">\[
 g_{ij} = g_{ik} + g_{kj}
 \]</span></p>
-<p>If the above equality obtains, then the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> (the numerator of <a href="#eq-pair">Equation&nbsp;1</a>) is simply <span class="math inline">\(s_{ik} \times s_{kj}\)</span>, namely the product of the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span>, meaning that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> will be just:</p>
+<p>If the above equality obtains, then the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> that involve <span class="math inline">\(k\)</span> as an inner node (the numerator of <a href="#eq-pair">Equation&nbsp;1</a>) is simply <span class="math inline">\(s_{ik} \times s_{kj}\)</span>. This means that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> will be just:</p>
 <p><span class="math display">\[
 \delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
 \]</span></p>
-<p>This also means that if the above equality does <em>not</em> obtain and <span class="math inline">\(g_{ij} \neq g_{ik} + g_{kj}\)</span>, then we know for sure that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> is zero (<span class="math inline">\(k\)</span> does not lie on any shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
+<p>Where <span class="math inline">\(s_{ij}\)</span> is the corresponding entry for <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> in the <span class="math inline">\(\mathbf{S}\)</span> matrix (the total number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
+<p>This also means that if the above equality does <em>not</em> obtain and <span class="math inline">\(g_{ij} &lt; g_{ik} + g_{kj}\)</span>, then we know for sure that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> is zero (<span class="math inline">\(k\)</span> does not lie on any shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
 <p>Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the <span class="math inline">\(\mathbf{G}\)</span> and <span class="math inline">\(\mathbf{S}\)</span> matrices:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>    pair.dep <span class="ot">&lt;-</span> <span class="cf">function</span>(a, b, c) {</span>
@@ -731,7 +733,8 @@ g_{ij} = g_{ik} + g_{kj}
 <span id="cb15-3"><a href="#cb15-3"></a>        <span class="cf">else</span> {<span class="fu">return</span>(<span class="dv">0</span>)}</span>
 <span id="cb15-4"><a href="#cb15-4"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Testing it out to compute the pair dependency of the young man and the pedestrian on Vincent:</p>
+<p>This function computes the pair dependency of the nodes entered as values of the <code>a</code> and <code>b</code> arguments on the node entered as the value of the <code>c</code> argument.</p>
+<p>We can test it out to compute the pair dependency of the young man and the pedestrian on Vincent:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>    <span class="fu">pair.dep</span>(<span class="st">"Pedestrian"</span>, <span class="st">"Young Man"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -771,7 +774,7 @@ g_{ij} = g_{ik} + g_{kj}
 </section>
 <section id="computing-betweenness" class="level2">
 <h2 class="anchored" data-anchor-id="computing-betweenness">Computing Betweenness</h2>
-<p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:</p>
+<p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that quantity (not very efficiently) for any node in the graph using the following wrapper function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>    bet.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
 <span id="cb23-2"><a href="#cb23-2"></a>        n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
@@ -811,12 +814,12 @@ g_{ij} = g_{ik} + g_{kj}
 <span id="cb29-2"><a href="#cb29-2"></a>    top.<span class="fl">10.</span>bet <span class="ot">&lt;-</span> <span class="fu">sort</span>(pulp.bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span>
 <span id="cb29-3"><a href="#cb29-3"></a>    <span class="fu">kbl</span>(<span class="fu">round</span>(top.<span class="fl">10.</span>bet, <span class="dv">2</span>), <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
 <span id="cb29-4"><a href="#cb29-4"></a>        <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Betweenness"</span>),</span>
-<span id="cb29-5"><a href="#cb29-5"></a>        <span class="at">caption =</span> <span class="st">"Top Five Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb29-5"><a href="#cb29-5"></a>        <span class="at">caption =</span> <span class="st">"Top Ten Betweenness Characters in Pulp Fiction Network."</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb29-6"><a href="#cb29-6"></a>    <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
-<caption>Top Five Betweenness Characters in Pulp Fiction Network.</caption>
+<caption>Top Ten Betweenness Characters in Pulp Fiction Network.</caption>
  <thead>
   <tr>
    <th style="text-align:left;"> Character </th>
@@ -903,6 +906,40 @@ C^{NB}_k = = \frac{2\left[\sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}\right]}{
          0.0743          0.0541          0.0503          0.0400          0.0040 </code></pre>
 </div>
 </div>
+</section>
+<section id="betwenness-in-directed-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="betwenness-in-directed-graphs">Betwenness in Directed Graphs</h2>
+<p>In contrast to closeness, there is no problem computing betweenness in the directed case. The reason is that if the graph is not strongly connected, and therefore there exists a pair of nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> with no directed path from <span class="math inline">\(i\)</span> to <span class="math inline">\(j\)</span> (e.g., <span class="math inline">\(g_{ij}=\infty\)</span>), then we just set <span class="math inline">\(\sigma_{ij} = 0\)</span> in <a href="#eq-bet1">Equation&nbsp;3</a>.</p>
+<p>Let us examine betweenness centrality in the directed young women lawyers advice network:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
+<span id="cb34-2"><a href="#cb34-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
+<span id="cb34-3"><a href="#cb34-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
+<span id="cb34-4"><a href="#cb34-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
+<span id="cb34-5"><a href="#cb34-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
+<span id="cb34-6"><a href="#cb34-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span>
+<span id="cb34-7"><a href="#cb34-7"></a>    w.bet <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(wg)</span>
+<span id="cb34-8"><a href="#cb34-8"></a>    <span class="fu">round</span>(w.bet, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     1      2      3      4      5      6      7      8      9     10     11 
+ 0.000  3.000 16.333 11.000  7.000  0.000  0.000  5.000  0.000  0.333  1.000 
+    12 
+ 0.333 </code></pre>
+</div>
+</div>
+<p>Here we see that node 3 is the highest in betweenness, pictured in red in <a href="#fig-yw">Figure&nbsp;1</a>. For comparison, the node with the highest <em>closeness</em> centrality is pictured in blue in the same figure.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-yw" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="betcent_files/figure-html/fig-yw-1.png" class="img-fluid figure-img" width="672"></p>
+<p></p><figcaption class="figure-caption">Figure&nbsp;1: Women lawyers advice network with highest closeness centrality node in blue and highest betweenness centrality node in red</figcaption><p></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This result makes sense. Node 3 intermediates all the connections linking the tightly knit group of nodes on the left side (6, 10, 11, 12) with the rest of the network. Also if nodes 5 and 7 need to pass something along to the rest, they have to use 3 at least half time. Node 4 also needs 3 to reach 6.</p>
+<p>This result nicely illustrates the difference between closeness and betweenness.</p>
 
 
 
