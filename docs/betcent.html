@@ -732,24 +732,31 @@ g_{ij} = g_{ik} + g_{kj}
 </div>
 </div>
 <p>Which says that Vicent lies on 50% of the paths between the The Young Man and The Pedestrian (four out of eight).</p>
+<p>As noted in <a href="#eq-one">Equation&nbsp;2</a>, the <em>one-sided dependencies</em> of a node <span class="math inline">\(i\)</span> on another node <span class="math inline">\(j\)</span> is just the sum of these pairwise dependencies involving <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> across every node <span class="math inline">\(j\)</span>. We can get these using a simple wrapper function oer <code>pair.dep</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>    pair.dep2 <span class="ot">&lt;-</span> <span class="cf">function</span>(a, b, c) {</span>
-<span id="cb18-2"><a href="#cb18-2"></a>        p <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> a, <span class="at">to =</span> b)<span class="sc">$</span>vpaths <span class="co">#all shortest paths from i to j</span></span>
-<span id="cb18-3"><a href="#cb18-3"></a>        <span class="fu">return</span>(<span class="fu">sum</span>(<span class="fu">sapply</span>(p, <span class="cf">function</span>(x) {c <span class="sc">%in%</span> <span class="fu">names</span>(x)}))<span class="sc">/</span><span class="fu">length</span>(p)) <span class="co">#paths that involve Vincent divided by total</span></span>
-<span id="cb18-4"><a href="#cb18-4"></a>        }             </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>    one.sided <span class="ot">&lt;-</span> <span class="cf">function</span>(a, c) {</span>
+<span id="cb18-2"><a href="#cb18-2"></a>        od <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb18-3"><a href="#cb18-3"></a>        i <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> a)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>        k <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> c)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>        <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb18-6"><a href="#cb18-6"></a>            <span class="cf">if</span> (i <span class="sc">!=</span> j <span class="sc">&amp;</span> k <span class="sc">!=</span> j) {od <span class="ot">&lt;-</span> od <span class="sc">+</span> <span class="fu">pair.dep</span>(i, j, k)}</span>
+<span id="cb18-7"><a href="#cb18-7"></a>            }</span>
+<span id="cb18-8"><a href="#cb18-8"></a>        <span class="fu">return</span>(od)</span>
+<span id="cb18-9"><a href="#cb18-9"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>So the one-sided dependence of the young man on Vincent is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>    <span class="fu">pair.dep</span>(<span class="st">"Esmeralda"</span>, <span class="st">"Young Man"</span>, <span class="st">"Jules"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>    <span class="fu">one.sided</span>(<span class="st">"Young Man"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.5</code></pre>
+<pre><code>[1] 19</code></pre>
 </div>
 </div>
 <p>As noted in <a href="#eq-bet1">Equation&nbsp;3</a>, Vincent’s <em>betweenness</em> is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>    bet.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(v) {</span>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>    bet.cent <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
 <span id="cb21-2"><a href="#cb21-2"></a>        n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
 <span id="cb21-3"><a href="#cb21-3"></a>        bc <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-4"><a href="#cb21-4"></a>        k <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> v)</span>
+<span id="cb21-4"><a href="#cb21-4"></a>        k <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> c)</span>
 <span id="cb21-5"><a href="#cb21-5"></a>        <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
 <span id="cb21-6"><a href="#cb21-6"></a>            <span class="cf">for</span> (j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
 <span id="cb21-7"><a href="#cb21-7"></a>                <span class="cf">if</span> (i <span class="sc">!=</span> k <span class="sc">&amp;</span> j <span class="sc">!=</span> k <span class="sc">&amp;</span> A[i, j] <span class="sc">==</span> <span class="dv">0</span>) {bc <span class="ot">&lt;-</span> bc <span class="sc">+</span> <span class="fu">pair.dep</span>(i, j, k)}</span>

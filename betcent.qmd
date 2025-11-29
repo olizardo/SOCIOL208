@@ -148,25 +148,33 @@ Testing it out to compute the pair dependency of the young man and the pedestria
 
 Which says that Vicent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vincent"), 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
 
+As noted in @eq-one, the *one-sided dependencies* of a node $i$ on another node $j$ is just the sum of these pairwise dependencies involving $i$ and $k$ across every node $j$. We can get these using a simple wrapper function oer `pair.dep`:
 
 ```{r}
-    pair.dep2 <- function(a, b, c) {
-        p <- all_shortest_paths(g, from = a, to = b)$vpaths #all shortest paths from i to j
-        return(sum(sapply(p, function(x) {c %in% names(x)}))/length(p)) #paths that involve Vincent divided by total
-        }             
+    one.sided <- function(a, c) {
+        od <- 0
+        i <- which(V(g)$name == a)
+        k <- which(V(g)$name == c)
+        for (j in 1:n) {
+            if (i != j & k != j) {od <- od + pair.dep(i, j, k)}
+            }
+        return(od)
+        }
 ```
 
+So the one-sided dependence of the young man on Vincent is:
+
 ```{r}
-    pair.dep("Esmeralda", "Young Man", "Jules")
+    one.sided("Young Man", "Vincent")
 ```
 
 As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that (not very efficiently) using the following wrapper function:
 
 ```{r}
-    bet.cent <- function(v) {
+    bet.cent <- function(c) {
         n <- vcount(g)
         bc <- 0
-        k <- which(V(g)$name == v)
+        k <- which(V(g)$name == c)
         for (i in 1:n) {
             for (j in i:n) {
                 if (i != k & j != k & A[i, j] == 0) {bc <- bc + pair.dep(i, j, k)}
