@@ -20,15 +20,25 @@ $$
 Let's see how this works. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   g <- movie_559
+    library(networkdata)
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0
+```
+
+Let us extract the geodesic distance matrix of the graph using the `distances` function in `igraph`:
+
+```{r}
+   G <- distances(g) #geodesic distance matrix
+   G[1:10, 1:10]
 ```
 
 Then we compute the closeness of each node like this:
 
 ```{r}
-   G <- distances(g) #geodesic distance matrix
    close1 <- rowSums(G)^-1 #inverse of the row sums of G
    round(close1, 4)
 ```
@@ -76,6 +86,50 @@ Which gives us the same result as using the `igraph` function with the argument 
 ```{r}
    close3 <- closeness(g, normalized = TRUE)
    round(close3, 4)
+```
+
+## Computing the Geodesic Distance Matrix
+
+As noted by @fouss_etal16 [p. 56, Algorithm 1.2] the geodesic distance matrix returned by the `distances` function in `igraph` can be computed by a relatively simple algorithm, a version of which goes like this.
+
+First we define a "cost matrix" $\mathbf{C}$ with entries $c_{ij} = 1$ if nodes $i$ and $j$ are adjacent in the graph and $g_{ij} = \infty$ if they are not (if $i = j$ then $c_{ij} = 0$):
+
+
+```{r}
+   C <- 1/as.matrix(as_adjacency_matrix((g))) #cost matrix
+   diag(C) <- 0
+   C[1:10, 1:10]
+```
+
+Now, we loop through each node pair in the graph $i$, $j$, substituting the entries in the $\mathbf{C}$ matrix with the following expression at each iteration $k$:
+
+$$
+c^{(k)}_{ij} = min\left[c^{(k-1)}_{ij}, \left(c^{(k-1)}_{ik} + c^{(k-1)}_{kj}\right)\right]
+$$
+
+We stop once none of the entries in $\mathbf{C}$ are equal to `Inf` (in the case of a connected undirected graph).
+
+Here's a little `R` program that implements this idea:
+
+```{r}
+   n <- nrow(C)
+   while (sum(C[upper.tri(C)]) == Inf) {
+      for(i in 1:n) {
+         for (j in i:n) { #looping through upper triangle
+            for (k in 1:n) {
+               C[i,j] <- min(C[i,j], (C[i, k] + C[k, j]))
+               }
+            }
+         }
+      }
+   C[lower.tri(C)] <- t(C)[lower.tri(C)] #copying upper triangle into lower triangle
+```
+
+And as we can see the entries in `C` are the same as those returned by `distances`:
+
+```{r}
+   C[1:10, 1:10]
+   distances(g)[1:10, 1:10]
 ```
 
 ## Closeness Centrality in Directed Graphs
@@ -285,3 +339,6 @@ When we set $\delta=\infty$ the generalized harmonic centrality is the same as t
    round(g.harm(wg, d = Inf), 3)
    round(degree(wg, normalized = TRUE), 3)
 ```
+
+## Computing the Geodesic Distance Matrix
+

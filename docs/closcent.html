@@ -511,11 +511,13 @@ div.csl-indent {
    
   <ul>
   <li><a href="#normalized-closeness" id="toc-normalized-closeness" class="nav-link active" data-scroll-target="#normalized-closeness">Normalized Closeness</a></li>
+  <li><a href="#computing-the-geodesic-distance-matrix" id="toc-computing-the-geodesic-distance-matrix" class="nav-link" data-scroll-target="#computing-the-geodesic-distance-matrix">Computing the Geodesic Distance Matrix</a></li>
   <li><a href="#closeness-centrality-in-directed-graphs" id="toc-closeness-centrality-in-directed-graphs" class="nav-link" data-scroll-target="#closeness-centrality-in-directed-graphs">Closeness Centrality in Directed Graphs</a>
   <ul class="collapse">
   <li><a href="#harmonic-centrality" id="toc-harmonic-centrality" class="nav-link" data-scroll-target="#harmonic-centrality">Harmonic Centrality</a></li>
   </ul></li>
   <li><a href="#generalized-harmonic-centrality" id="toc-generalized-harmonic-centrality" class="nav-link" data-scroll-target="#generalized-harmonic-centrality">Generalized Harmonic Centrality</a></li>
+  <li><a href="#computing-the-geodesic-distance-matrix-1" id="toc-computing-the-geodesic-distance-matrix-1" class="nav-link" data-scroll-target="#computing-the-geodesic-distance-matrix-1">Computing the Geodesic Distance Matrix</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/closcent.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -545,66 +547,98 @@ C^{CLO}_i = \left[\sum_{j \neq i}g_{ij}\right]^{-1}
 \]</span></p>
 <p>Let’s see how this works. We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
-<span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> movie_559</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
+<span id="cb1-2"><a href="#cb1-2"></a>    <span class="fu">library</span>(igraph)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>    <span class="fu">library</span>(stringr) <span class="co">#using stringr to change names from all caps to title case</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>    g <span class="ot">&lt;-</span> movie_559</span>
+<span id="cb1-5"><a href="#cb1-5"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
+<span id="cb1-6"><a href="#cb1-6"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a>    <span class="fu">E</span>(g)<span class="sc">$</span>weight <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#setting edge weights to 1.0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let us extract the geodesic distance matrix of the graph using the <code>distances</code> function in <code>igraph</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(g) <span class="co">#geodesic distance matrix</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a>   G[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            0     2     1          2           2            2         2
+Buddy            2     0     2          2           2            2         3
+Butch            1     2     0          1           2            1         1
+Capt Koons       2     2     1          0           2            2         2
+Ed Sullivan      2     2     2          2           0            2         3
+English Dave     2     2     1          2           2            0         2
+Esmeralda        2     3     1          2           3            2         0
+Fabienne         1     3     1          2           3            2         2
+Fourth Man       2     2     2          2           2            2         3
+Gawker #2        2     3     1          2           3            2         2
+             Fabienne Fourth Man Gawker #2
+Brett               1          2         2
+Buddy               3          2         3
+Butch               1          2         1
+Capt Koons          2          2         2
+Ed Sullivan         3          2         3
+English Dave        2          2         2
+Esmeralda           2          3         2
+Fabienne            0          2         2
+Fourth Man          2          0         3
+Gawker #2           2          3         0</code></pre>
+</div>
 </div>
 <p>Then we compute the closeness of each node like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(g) <span class="co">#geodesic distance matrix</span></span>
-<span id="cb2-2"><a href="#cb2-2"></a>   close1 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(G)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#inverse of the row sums of G</span></span>
-<span id="cb2-3"><a href="#cb2-3"></a>   <span class="fu">round</span>(close1, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   close1 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(G)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#inverse of the row sums of G</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">round</span>(close1, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
-         0.0125          0.0108          0.0143          0.0125          0.0108 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
-         0.0105          0.0070          0.0096          0.0104          0.0097 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
-         0.0114          0.0093          0.0093          0.0132          0.0093 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
-         0.0111          0.0104          0.0103          0.0098          0.0115 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
-         0.0125          0.0111          0.0097          0.0097          0.0114 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
-         0.0105          0.0125          0.0096          0.0057          0.0073 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
-         0.0056          0.0139          0.0083          0.0105          0.0125 
-      YOUNG MAN     YOUNG WOMAN             ZED 
-         0.0083          0.0083          0.0073 </code></pre>
+<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
+         0.0137          0.0115          0.0167          0.0133          0.0115 
+   English Dave       Esmeralda        Fabienne      Fourth Man       Gawker #2 
+         0.0132          0.0104          0.0122          0.0116          0.0106 
+    Honey Bunny          Jimmie            Jody           Jules           Lance 
+         0.0130          0.0118          0.0118          0.0164          0.0118 
+        Manager       Marsellus          Marvin         Maynard             Mia 
+         0.0125          0.0143          0.0135          0.0109          0.0145 
+         Mother          Patron      Pedestrian        Preacher         Pumpkin 
+         0.0133          0.0125          0.0106          0.0116          0.0130 
+         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
+         0.0118          0.0135          0.0106          0.0077          0.0079 
+       The Wolf         Vincent        Waitress         Winston           Woman 
+         0.0118          0.0192          0.0091          0.0118          0.0133 
+      Young Man     Young Woman             Zed 
+         0.0091          0.0091          0.0079 </code></pre>
 </div>
 </div>
 <p>Of course, we could have just used the available function in <code>igraph</code> and computed the closeness centrality directly from the graph object using the function <code>closeness</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">closeness</span>(g)</span>
-<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">round</span>(close2, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">closeness</span>(g)</span>
+<span id="cb6-2"><a href="#cb6-2"></a>   <span class="fu">round</span>(close2, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
-         0.0125          0.0108          0.0143          0.0125          0.0108 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
-         0.0105          0.0070          0.0096          0.0104          0.0097 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
-         0.0114          0.0093          0.0093          0.0132          0.0093 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
-         0.0111          0.0104          0.0103          0.0098          0.0115 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
-         0.0125          0.0111          0.0097          0.0097          0.0114 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
-         0.0105          0.0125          0.0096          0.0057          0.0073 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
-         0.0056          0.0139          0.0083          0.0105          0.0125 
-      YOUNG MAN     YOUNG WOMAN             ZED 
-         0.0083          0.0083          0.0073 </code></pre>
+<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
+         0.0137          0.0115          0.0167          0.0133          0.0115 
+   English Dave       Esmeralda        Fabienne      Fourth Man       Gawker #2 
+         0.0132          0.0104          0.0122          0.0116          0.0106 
+    Honey Bunny          Jimmie            Jody           Jules           Lance 
+         0.0130          0.0118          0.0118          0.0164          0.0118 
+        Manager       Marsellus          Marvin         Maynard             Mia 
+         0.0125          0.0143          0.0135          0.0109          0.0145 
+         Mother          Patron      Pedestrian        Preacher         Pumpkin 
+         0.0133          0.0125          0.0106          0.0116          0.0130 
+         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
+         0.0118          0.0135          0.0106          0.0077          0.0079 
+       The Wolf         Vincent        Waitress         Winston           Woman 
+         0.0118          0.0192          0.0091          0.0118          0.0133 
+      Young Man     Young Woman             Zed 
+         0.0091          0.0091          0.0079 </code></pre>
 </div>
 </div>
 <p>Once we have the closeness centrality values, we are naturally interested in who are the top nodes. The following code creates a table listing the top ten:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb6-2"><a href="#cb6-2"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">sort</span>(close2, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb6-3"><a href="#cb6-3"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(close2[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>])</span>
-<span id="cb6-4"><a href="#cb6-4"></a>   <span class="fu">kbl</span>(close2, <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb6-5"><a href="#cb6-5"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Closeness"</span>), <span class="at">digits =</span> <span class="dv">4</span>,</span>
-<span id="cb6-6"><a href="#cb6-6"></a>       <span class="at">caption =</span> <span class="st">"Top Ten Closeness Characters in Pulp Fiction Network."</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb6-7"><a href="#cb6-7"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb8-2"><a href="#cb8-2"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">sort</span>(close2, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>   close2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(close2[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>])</span>
+<span id="cb8-4"><a href="#cb8-4"></a>   <span class="fu">kbl</span>(close2, <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb8-5"><a href="#cb8-5"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"Character"</span>, <span class="st">"Closeness"</span>), <span class="at">digits =</span> <span class="dv">4</span>,</span>
+<span id="cb8-6"><a href="#cb8-6"></a>       <span class="at">caption =</span> <span class="st">"Top Ten Closeness Characters in Pulp Fiction Network."</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb8-7"><a href="#cb8-7"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -617,44 +651,44 @@ C^{CLO}_i = \left[\sum_{j \neq i}g_{ij}\right]^{-1}
  </thead>
 <tbody>
   <tr>
-   <td style="text-align:left;"> BUTCH </td>
+   <td style="text-align:left;"> Vincent </td>
+   <td style="text-align:left;"> 0.0192 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Butch </td>
+   <td style="text-align:left;"> 0.0167 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Jules </td>
+   <td style="text-align:left;"> 0.0164 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Mia </td>
+   <td style="text-align:left;"> 0.0145 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Marsellus </td>
    <td style="text-align:left;"> 0.0143 </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> VINCENT </td>
-   <td style="text-align:left;"> 0.0139 </td>
+   <td style="text-align:left;"> Brett </td>
+   <td style="text-align:left;"> 0.0137 </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> JULES </td>
-   <td style="text-align:left;"> 0.0132 </td>
+   <td style="text-align:left;"> Marvin </td>
+   <td style="text-align:left;"> 0.0135 </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> BRETT </td>
-   <td style="text-align:left;"> 0.0125 </td>
+   <td style="text-align:left;"> Roger </td>
+   <td style="text-align:left;"> 0.0135 </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> CAPT KOONS </td>
-   <td style="text-align:left;"> 0.0125 </td>
+   <td style="text-align:left;"> Capt Koons </td>
+   <td style="text-align:left;"> 0.0133 </td>
   </tr>
   <tr>
-   <td style="text-align:left;"> MOTHER </td>
-   <td style="text-align:left;"> 0.0125 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> ROGER </td>
-   <td style="text-align:left;"> 0.0125 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> WOMAN </td>
-   <td style="text-align:left;"> 0.0125 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> MIA </td>
-   <td style="text-align:left;"> 0.0115 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> HONEY BUNNY </td>
-   <td style="text-align:left;"> 0.0114 </td>
+   <td style="text-align:left;"> Mother </td>
+   <td style="text-align:left;"> 0.0133 </td>
   </tr>
 </tbody>
 </table>
@@ -671,48 +705,154 @@ C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 <p>Where <span class="math inline">\(N\)</span> is the number of nodes in the network. The normalized closeness is just the inverse of the <em>average</em> distance of node <span class="math inline">\(i\)</span> to the other nodes in the network.</p>
 <p>In <code>R</code> this is just:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   close3 <span class="ot">&lt;-</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)<span class="sc">/</span>(<span class="fu">rowSums</span>(G))</span>
-<span id="cb7-2"><a href="#cb7-2"></a>   <span class="fu">round</span>(close3, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   close3 <span class="ot">&lt;-</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)<span class="sc">/</span>(<span class="fu">rowSums</span>(G))</span>
+<span id="cb9-2"><a href="#cb9-2"></a>   <span class="fu">round</span>(close3, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
-         0.4625          0.3978          0.5286          0.4625          0.3978 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
-         0.3895          0.2606          0.3558          0.3854          0.3592 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
-         0.4205          0.3458          0.3426          0.4868          0.3426 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
-         0.4111          0.3854          0.3814          0.3627          0.4253 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
-         0.4625          0.4111          0.3592          0.3592          0.4205 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
-         0.3895          0.4625          0.3558          0.2102          0.2701 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
-         0.2067          0.5139          0.3083          0.3895          0.4625 
-      YOUNG MAN     YOUNG WOMAN             ZED 
-         0.3083          0.3083          0.2701 </code></pre>
+<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
+         0.5068          0.4253          0.6167          0.4933          0.4253 
+   English Dave       Esmeralda        Fabienne      Fourth Man       Gawker #2 
+         0.4868          0.3854          0.4512          0.4302          0.3936 
+    Honey Bunny          Jimmie            Jody           Jules           Lance 
+         0.4805          0.4353          0.4353          0.6066          0.4353 
+        Manager       Marsellus          Marvin         Maynard             Mia 
+         0.4625          0.5286          0.5000          0.4022          0.5362 
+         Mother          Patron      Pedestrian        Preacher         Pumpkin 
+         0.4933          0.4625          0.3936          0.4302          0.4805 
+         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
+         0.4353          0.5000          0.3936          0.2846          0.2913 
+       The Wolf         Vincent        Waitress         Winston           Woman 
+         0.4353          0.7115          0.3364          0.4353          0.4933 
+      Young Man     Young Woman             Zed 
+         0.3364          0.3364          0.2913 </code></pre>
 </div>
 </div>
 <p>Which gives us the same result as using the <code>igraph</code> function with the argument <code>normalized</code> set to <code>TRUE</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   close3 <span class="ot">&lt;-</span> <span class="fu">closeness</span>(g, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb9-2"><a href="#cb9-2"></a>   <span class="fu">round</span>(close3, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   close3 <span class="ot">&lt;-</span> <span class="fu">closeness</span>(g, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-2"><a href="#cb11-2"></a>   <span class="fu">round</span>(close3, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
-         0.4625          0.3978          0.5286          0.4625          0.3978 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
-         0.3895          0.2606          0.3558          0.3854          0.3592 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
-         0.4205          0.3458          0.3426          0.4868          0.3426 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
-         0.4111          0.3854          0.3814          0.3627          0.4253 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
-         0.4625          0.4111          0.3592          0.3592          0.4205 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
-         0.3895          0.4625          0.3558          0.2102          0.2701 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
-         0.2067          0.5139          0.3083          0.3895          0.4625 
-      YOUNG MAN     YOUNG WOMAN             ZED 
-         0.3083          0.3083          0.2701 </code></pre>
+<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
+         0.5068          0.4253          0.6167          0.4933          0.4253 
+   English Dave       Esmeralda        Fabienne      Fourth Man       Gawker #2 
+         0.4868          0.3854          0.4512          0.4302          0.3936 
+    Honey Bunny          Jimmie            Jody           Jules           Lance 
+         0.4805          0.4353          0.4353          0.6066          0.4353 
+        Manager       Marsellus          Marvin         Maynard             Mia 
+         0.4625          0.5286          0.5000          0.4022          0.5362 
+         Mother          Patron      Pedestrian        Preacher         Pumpkin 
+         0.4933          0.4625          0.3936          0.4302          0.4805 
+         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
+         0.4353          0.5000          0.3936          0.2846          0.2913 
+       The Wolf         Vincent        Waitress         Winston           Woman 
+         0.4353          0.7115          0.3364          0.4353          0.4933 
+      Young Man     Young Woman             Zed 
+         0.3364          0.3364          0.2913 </code></pre>
+</div>
+</div>
+</section>
+<section id="computing-the-geodesic-distance-matrix" class="level2">
+<h2 class="anchored" data-anchor-id="computing-the-geodesic-distance-matrix">Computing the Geodesic Distance Matrix</h2>
+<p>As noted by <span class="citation" data-cites="fouss_etal16">Fouss, Saerens, and Shimbo (<a href="#ref-fouss_etal16" role="doc-biblioref">2016, 56</a>, Algorithm 1.2)</span> the geodesic distance matrix returned by the <code>distances</code> function in <code>igraph</code> can be computed by a relatively simple algorithm, a version of which goes like this.</p>
+<p>First we define a “cost matrix” <span class="math inline">\(\mathbf{C}\)</span> with entries <span class="math inline">\(c_{ij} = 1\)</span> if nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> are adjacent in the graph and <span class="math inline">\(g_{ij} = \infty\)</span> if they are not (if <span class="math inline">\(i = j\)</span> then <span class="math inline">\(c_{ij} = 0\)</span>):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   C <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>((g))) <span class="co">#cost matrix</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>   <span class="fu">diag</span>(C) <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a>   C[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            0   Inf     1        Inf         Inf          Inf       Inf
+Buddy          Inf     0   Inf        Inf         Inf          Inf       Inf
+Butch            1   Inf     0          1         Inf            1         1
+Capt Koons     Inf   Inf     1          0         Inf          Inf       Inf
+Ed Sullivan    Inf   Inf   Inf        Inf           0          Inf       Inf
+English Dave   Inf   Inf     1        Inf         Inf            0       Inf
+Esmeralda      Inf   Inf     1        Inf         Inf          Inf         0
+Fabienne         1   Inf     1        Inf         Inf          Inf       Inf
+Fourth Man     Inf   Inf   Inf        Inf         Inf          Inf       Inf
+Gawker #2      Inf   Inf     1        Inf         Inf          Inf       Inf
+             Fabienne Fourth Man Gawker #2
+Brett               1        Inf       Inf
+Buddy             Inf        Inf       Inf
+Butch               1        Inf         1
+Capt Koons        Inf        Inf       Inf
+Ed Sullivan       Inf        Inf       Inf
+English Dave      Inf        Inf       Inf
+Esmeralda         Inf        Inf       Inf
+Fabienne            0        Inf       Inf
+Fourth Man        Inf          0       Inf
+Gawker #2         Inf        Inf         0</code></pre>
+</div>
+</div>
+<p>Now, we loop through each node pair in the graph <span class="math inline">\(i\)</span>, <span class="math inline">\(j\)</span>, substituting the entries in the <span class="math inline">\(\mathbf{C}\)</span> matrix with the following expression at each iteration <span class="math inline">\(k\)</span>:</p>
+<p><span class="math display">\[
+c^{(k)}_{ij} = min\left[c^{(k-1)}_{ij}, \left(c^{(k-1)}_{ik} + c^{(k-1)}_{kj}\right)\right]
+\]</span></p>
+<p>We stop once none of the entries in <span class="math inline">\(\mathbf{C}\)</span> are equal to <code>Inf</code> (in the case of a connected undirected graph).</p>
+<p>Here’s a little <code>R</code> program that implements this idea:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(C)</span>
+<span id="cb15-2"><a href="#cb15-2"></a>   <span class="cf">while</span> (<span class="fu">sum</span>(C[<span class="fu">upper.tri</span>(C)]) <span class="sc">==</span> <span class="cn">Inf</span>) {</span>
+<span id="cb15-3"><a href="#cb15-3"></a>      <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb15-4"><a href="#cb15-4"></a>         <span class="cf">for</span> (j <span class="cf">in</span> i<span class="sc">:</span>n) { <span class="co">#looping through upper triangle</span></span>
+<span id="cb15-5"><a href="#cb15-5"></a>            <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb15-6"><a href="#cb15-6"></a>               C[i,j] <span class="ot">&lt;-</span> <span class="fu">min</span>(C[i,j], (C[i, k] <span class="sc">+</span> C[k, j]))</span>
+<span id="cb15-7"><a href="#cb15-7"></a>               }</span>
+<span id="cb15-8"><a href="#cb15-8"></a>            }</span>
+<span id="cb15-9"><a href="#cb15-9"></a>         }</span>
+<span id="cb15-10"><a href="#cb15-10"></a>      }</span>
+<span id="cb15-11"><a href="#cb15-11"></a>   C[<span class="fu">lower.tri</span>(C)] <span class="ot">&lt;-</span> <span class="fu">t</span>(C)[<span class="fu">lower.tri</span>(C)] <span class="co">#copying upper triangle into lower triangle</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And as we can see the entries in <code>C</code> are the same as those returned by <code>distances</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   C[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            0     2     1          2           2            2         2
+Buddy            2     0     2          2           2            2         3
+Butch            1     2     0          1           2            1         1
+Capt Koons       2     2     1          0           2            2         2
+Ed Sullivan      2     2     2          2           0            2         4
+English Dave     2     2     1          2           2            0         2
+Esmeralda        2     3     1          2           4            2         0
+Fabienne         1     3     1          2           3            2         2
+Fourth Man       2     2     2          2           2            2         3
+Gawker #2        2     3     1          2           3            2         2
+             Fabienne Fourth Man Gawker #2
+Brett               1          2         2
+Buddy               3          2         3
+Butch               1          2         1
+Capt Koons          2          2         2
+Ed Sullivan         3          2         3
+English Dave        2          2         2
+Esmeralda           2          3         2
+Fabienne            0          2         2
+Fourth Man          2          0         3
+Gawker #2           2          3         0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="fu">distances</span>(g)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
+Brett            0     2     1          2           2            2         2
+Buddy            2     0     2          2           2            2         3
+Butch            1     2     0          1           2            1         1
+Capt Koons       2     2     1          0           2            2         2
+Ed Sullivan      2     2     2          2           0            2         3
+English Dave     2     2     1          2           2            0         2
+Esmeralda        2     3     1          2           3            2         0
+Fabienne         1     3     1          2           3            2         2
+Fourth Man       2     2     2          2           2            2         3
+Gawker #2        2     3     1          2           3            2         2
+             Fabienne Fourth Man Gawker #2
+Brett               1          2         2
+Buddy               3          2         3
+Butch               1          2         1
+Capt Koons          2          2         2
+Ed Sullivan         3          2         3
+English Dave        2          2         2
+Esmeralda           2          3         2
+Fabienne            0          2         2
+Fourth Man          2          0         3
+Gawker #2           2          3         0</code></pre>
 </div>
 </div>
 </section>
@@ -720,30 +860,30 @@ C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 <h2 class="anchored" data-anchor-id="closeness-centrality-in-directed-graphs">Closeness Centrality in Directed Graphs</h2>
 <p>What about closeness centrality for a directed network? Let us see how this works using a <strong>subgraph</strong> of the <span class="citation" data-cites="lazega01">Lazega (<a href="#ref-lazega01" role="doc-biblioref">2001</a>)</span> <code>law_advice</code> network, this time selecting just women under the age of forty:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
-<span id="cb11-2"><a href="#cb11-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
-<span id="cb11-3"><a href="#cb11-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
-<span id="cb11-4"><a href="#cb11-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
-<span id="cb11-5"><a href="#cb11-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
-<span id="cb11-6"><a href="#cb11-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
+<span id="cb20-2"><a href="#cb20-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
+<span id="cb20-3"><a href="#cb20-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
+<span id="cb20-4"><a href="#cb20-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
+<span id="cb20-5"><a href="#cb20-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
+<span id="cb20-6"><a href="#cb20-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This network is small enough that a plot could be informative about its structure. Let us plot it using the package <code>ggraph</code>, a visualization package that follows the same principles as the <code>ggplot</code> grammar of graphics but for network graphs (see <a href="https://exts.ggplot2.tidyverse.org/ggraph.html">here</a>).</p>
 <div class="cell" data-fig-cap-location="margin">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   <span class="co">#install.packages("ggraph")</span></span>
-<span id="cb12-2"><a href="#cb12-2"></a>   <span class="fu">library</span>(ggraph)</span>
-<span id="cb12-3"><a href="#cb12-3"></a>    p <span class="ot">&lt;-</span> <span class="fu">ggraph</span>(wg, <span class="at">layout =</span> <span class="st">'auto'</span>)</span>
-<span id="cb12-4"><a href="#cb12-4"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_edge_parallel</span>(<span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">edge_width =</span> <span class="fl">0.5</span>,</span>
-<span id="cb12-5"><a href="#cb12-5"></a>                                <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">2.5</span>, <span class="st">'mm'</span>)),</span>
-<span id="cb12-6"><a href="#cb12-6"></a>                                <span class="at">end_cap =</span> <span class="fu">circle</span>(<span class="dv">4</span>, <span class="st">'mm'</span>), </span>
-<span id="cb12-7"><a href="#cb12-7"></a>                                <span class="at">sep =</span> <span class="fu">unit</span>(<span class="dv">3</span>, <span class="st">'mm'</span>))</span>
-<span id="cb12-8"><a href="#cb12-8"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> <span class="st">"tan2"</span>) </span>
-<span id="cb12-9"><a href="#cb12-9"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
-<span id="cb12-10"><a href="#cb12-10"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_graph</span>() </span>
-<span id="cb12-11"><a href="#cb12-11"></a>    p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   <span class="co">#install.packages("ggraph")</span></span>
+<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">library</span>(ggraph)</span>
+<span id="cb21-3"><a href="#cb21-3"></a>    p <span class="ot">&lt;-</span> <span class="fu">ggraph</span>(wg, <span class="at">layout =</span> <span class="st">'auto'</span>)</span>
+<span id="cb21-4"><a href="#cb21-4"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_edge_parallel</span>(<span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">edge_width =</span> <span class="fl">0.5</span>,</span>
+<span id="cb21-5"><a href="#cb21-5"></a>                                <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">2.5</span>, <span class="st">'mm'</span>)),</span>
+<span id="cb21-6"><a href="#cb21-6"></a>                                <span class="at">end_cap =</span> <span class="fu">circle</span>(<span class="dv">4</span>, <span class="st">'mm'</span>), </span>
+<span id="cb21-7"><a href="#cb21-7"></a>                                <span class="at">sep =</span> <span class="fu">unit</span>(<span class="dv">3</span>, <span class="st">'mm'</span>))</span>
+<span id="cb21-8"><a href="#cb21-8"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> <span class="st">"tan2"</span>) </span>
+<span id="cb21-9"><a href="#cb21-9"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
+<span id="cb21-10"><a href="#cb21-10"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_graph</span>() </span>
+<span id="cb21-11"><a href="#cb21-11"></a>    p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Women lawyers advice network</figcaption><p></p>
 </figure>
 </div>
@@ -751,8 +891,8 @@ C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 </div>
 <p>Now a question we might ask is who has the greatest closeness centrality in this advice network. We could proceed as usual and compute the geodesic distances between actors:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg)</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg)</span>
+<span id="cb22-2"><a href="#cb22-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   1 2 3 4 5 6 7 8 9 10 11 12
 1  0 1 2 1 3 3 4 2 2  3  3  3
@@ -772,8 +912,8 @@ C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 <p>Note that this is not quite right. In <code>igraph</code> the default settings of the distance function treats the graph as undirected even though it is actually directed. So it doesn’t use the strict <strong>directed paths</strong>, but it just treats them all as <strong>semi-paths</strong> ignoring direction. That is why, for instance, it counts node 1 as being “adjacent” to node 4 even though there is only one incoming link from 4 to 1 and why the whole matrix is symmetric, when we know from just eyeballing the network that there is a lot of asymmetry in terms of who can reach who via directed paths.</p>
 <p>To get the actual directed distance matrix, we need to specify the “mode” option, asking whether we want in or out paths. Here, we follow convention and select the out-paths:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
-<span id="cb15-2"><a href="#cb15-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   1 2   3   4   5   6   7   8   9  10  11  12
 1  0 1 Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf
@@ -792,8 +932,8 @@ C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 </div>
 <p>This is better but introduces a problem. The directed graph is not <strong>strongly connected</strong>, so it means that some nodes cannot reach other ones via a directed path of <em>any</em> length. That means that the <strong>geodesic distances</strong> from a node to an unreachable node is coded as “infinite” (<code>Inf</code>). The problem with infinity is that it gets in the way of calculating sums of distances, a requirement for the closeness centrality.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
-<span id="cb17-2"><a href="#cb17-2"></a>   <span class="fu">rowSums</span>(G)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
+<span id="cb26-2"><a href="#cb26-2"></a>   <span class="fu">rowSums</span>(G)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  1   2   3   4   5   6   7   8   9  10  11  12 
 Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf </code></pre>
@@ -813,9 +953,9 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 \]</span></p>
 <p>In <code>R</code> we can do this as follows. First, let’s compute the inverse of the entries of the geodesic distance matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   inv.G <span class="ot">=</span> G<span class="sc">^-</span><span class="dv">1</span></span>
-<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">diag</span>(inv.G) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#setting diagonals to zero</span></span>
-<span id="cb19-3"><a href="#cb19-3"></a>   <span class="fu">round</span>(inv.G, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   inv.G <span class="ot">=</span> G<span class="sc">^-</span><span class="dv">1</span></span>
+<span id="cb28-2"><a href="#cb28-2"></a>   <span class="fu">diag</span>(inv.G) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#setting diagonals to zero</span></span>
+<span id="cb28-3"><a href="#cb28-3"></a>   <span class="fu">round</span>(inv.G, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       1     2   3     4 5   6 7   8     9 10 11  12
 1  0.000 1.000 0.0 0.000 0 0.0 0 0.0 0.000  0  0 0.0
@@ -836,8 +976,8 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 <p>Also note that the reachability relation expressed in this matrix is asymmetric: So node 4 can reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want.</p>
 <p>Once we have this matrix of inverse distances, we can then we can compute the normalized harmonic centrality the same way as regular closeness by adding up the row scores for each node and dividing by the number of nodes minus one:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(inv.G)<span class="sc">/</span>(<span class="fu">vcount</span>(wg) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(inv.G)<span class="sc">/</span>(<span class="fu">vcount</span>(wg) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb30-2"><a href="#cb30-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 0.0909 0.0909 0.2727 0.3182 0.5303 0.1970 0.3409 0.2273 0.2273 0.4242 0.4242 
@@ -847,15 +987,15 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 </div>
 <p>We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here’s a plot of the network highlighting the highest harmonic centrality node.</p>
 <div class="cell" data-fig-cap-location="margin">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"tan2"</span>, <span class="fu">vcount</span>(wg)) <span class="co">#creating node color vector</span></span>
-<span id="cb23-2"><a href="#cb23-2"></a>   col[<span class="fu">which</span>(close4 <span class="sc">==</span> <span class="fu">max</span>(close4))] <span class="ot">&lt;-</span> <span class="st">"red"</span> <span class="co">#changing color of max centrality node to red</span></span>
-<span id="cb23-3"><a href="#cb23-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> col)</span>
-<span id="cb23-4"><a href="#cb23-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
-<span id="cb23-5"><a href="#cb23-5"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"tan2"</span>, <span class="fu">vcount</span>(wg)) <span class="co">#creating node color vector</span></span>
+<span id="cb32-2"><a href="#cb32-2"></a>   col[<span class="fu">which</span>(close4 <span class="sc">==</span> <span class="fu">max</span>(close4))] <span class="ot">&lt;-</span> <span class="st">"red"</span> <span class="co">#changing color of max centrality node to red</span></span>
+<span id="cb32-3"><a href="#cb32-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> col)</span>
+<span id="cb32-4"><a href="#cb32-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
+<span id="cb32-5"><a href="#cb32-5"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Women lawyers advice network with highest closeness centrality node in red</figcaption><p></p>
 </figure>
 </div>
@@ -863,8 +1003,8 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 </div>
 <p>Of course, <code>igraph</code> has a built in function to calculate the harmonic centrality called (you guessed it) <code>harmonic_centrality</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb24-2"><a href="#cb24-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb33-2"><a href="#cb33-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 0.0909 0.0909 0.2727 0.3182 0.5303 0.1970 0.3409 0.2273 0.2273 0.4242 0.4242 
@@ -893,23 +1033,23 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <p>Let us see a real-world example of the generalized harmonic centrality in action:</p>
 <p>First, we create a custom function to compute the generalized harmonic centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   g.harm <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d) {</span>
-<span id="cb26-2"><a href="#cb26-2"></a>      <span class="fu">library</span>(igraph)</span>
-<span id="cb26-3"><a href="#cb26-3"></a>      w <span class="ot">&lt;-</span> <span class="fu">distances</span>(x) <span class="co">#get distances from graph object</span></span>
-<span id="cb26-4"><a href="#cb26-4"></a>      w <span class="ot">&lt;-</span> (w<span class="sc">^</span>d)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#matrix of generalized inverse distances</span></span>
-<span id="cb26-5"><a href="#cb26-5"></a>      <span class="fu">diag</span>(w) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#set diagonals to zero</span></span>
-<span id="cb26-6"><a href="#cb26-6"></a>      h <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w)<span class="sc">/</span>(<span class="fu">vcount</span>(x) <span class="sc">-</span> <span class="dv">1</span>) <span class="co">#summing and averaging</span></span>
-<span id="cb26-7"><a href="#cb26-7"></a>      <span class="fu">return</span>(h)</span>
-<span id="cb26-8"><a href="#cb26-8"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   g.harm <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d) {</span>
+<span id="cb35-2"><a href="#cb35-2"></a>      <span class="fu">library</span>(igraph)</span>
+<span id="cb35-3"><a href="#cb35-3"></a>      w <span class="ot">&lt;-</span> <span class="fu">distances</span>(x) <span class="co">#get distances from graph object</span></span>
+<span id="cb35-4"><a href="#cb35-4"></a>      w <span class="ot">&lt;-</span> (w<span class="sc">^</span>d)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#matrix of generalized inverse distances</span></span>
+<span id="cb35-5"><a href="#cb35-5"></a>      <span class="fu">diag</span>(w) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#set diagonals to zero</span></span>
+<span id="cb35-6"><a href="#cb35-6"></a>      h <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w)<span class="sc">/</span>(<span class="fu">vcount</span>(x) <span class="sc">-</span> <span class="dv">1</span>) <span class="co">#summing and averaging</span></span>
+<span id="cb35-7"><a href="#cb35-7"></a>      <span class="fu">return</span>(h)</span>
+<span id="cb35-8"><a href="#cb35-8"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Second, we compute three versions of the harmonic centrality, with <span class="math inline">\(\delta = 5\)</span>, <span class="math inline">\(\delta = 0.05\)</span>, and <span class="math inline">\(\delta = -5\)</span>, using the full (unrestricted by age) subgraph of the <code>law_advice</code> network composed of the women lawyers at the firm, with relations constrained to be undirected:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(law_advice)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>)</span>
-<span id="cb27-2"><a href="#cb27-2"></a>   wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(law_advice, women)</span>
-<span id="cb27-3"><a href="#cb27-3"></a>   wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg)</span>
-<span id="cb27-4"><a href="#cb27-4"></a>   close5 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">5</span>)</span>
-<span id="cb27-5"><a href="#cb27-5"></a>   close6 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="fl">0.05</span>)</span>
-<span id="cb27-6"><a href="#cb27-6"></a>   far1 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="sc">-</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(law_advice)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>)</span>
+<span id="cb36-2"><a href="#cb36-2"></a>   wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(law_advice, women)</span>
+<span id="cb36-3"><a href="#cb36-3"></a>   wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg)</span>
+<span id="cb36-4"><a href="#cb36-4"></a>   close5 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">5</span>)</span>
+<span id="cb36-5"><a href="#cb36-5"></a>   close6 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="fl">0.05</span>)</span>
+<span id="cb36-6"><a href="#cb36-6"></a>   far1 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="sc">-</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <ul>
 <li><p>The first version of the harmonic centrality in line 5, with a positive value of <span class="math inline">\(\delta\)</span> above zero, will compute centrality scores emphasizing <em>direct</em> (one-step) connections, thus coming closer to <strong>degree</strong>.</p></li>
@@ -920,7 +1060,7 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Full women lawyers advice network</figcaption><p></p>
 </figure>
 </div>
@@ -935,12 +1075,12 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <p>As we said earlier, both regular harmonic centrality and degree are special cases of the generalized measure. We can check this by setting <span class="math inline">\(\delta\)</span> to either one or infinity.</p>
 <p>When we set <span class="math inline">\(\delta=1\)</span> the generalized harmonic centrality is the same as the normalized harmonic centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">1</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">1</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.598 0.534 0.706 0.598 0.657 0.627 0.426 0.539 0.696 0.647 0.667 0.407
 [13] 0.588 0.520 0.583 0.603 0.559 0.544</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   <span class="fu">round</span>(<span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   <span class="fu">round</span>(<span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.598 0.534 0.706 0.598 0.657 0.627 0.426 0.539 0.696 0.647 0.667 0.407
 [13] 0.588 0.520 0.583 0.603 0.559 0.544</code></pre>
@@ -948,29 +1088,35 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 </div>
 <p>When we set <span class="math inline">\(\delta=\infty\)</span> the generalized harmonic centrality is the same as the normalized degree centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="cn">Inf</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="cn">Inf</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.235 0.176 0.471 0.235 0.353 0.294 0.059 0.176 0.412 0.353 0.412 0.059
 [13] 0.235 0.176 0.235 0.353 0.235 0.235</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   <span class="fu">round</span>(<span class="fu">degree</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1"></a>   <span class="fu">round</span>(<span class="fu">degree</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.235 0.176 0.471 0.235 0.353 0.294 0.059 0.176 0.412 0.353 0.412 0.059
 [13] 0.235 0.176 0.235 0.353 0.235 0.235</code></pre>
 </div>
 </div>
+</section>
+<section id="computing-the-geodesic-distance-matrix-1" class="level2">
+
 
 
 
 </section>
 
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">Computing the Geodesic Distance Matrix</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-agneessens_etal17" class="csl-entry" role="doc-biblioentry">
 Agneessens, Filip, Stephen P Borgatti, and Martin G Everett. 2017. <span>“Geodesic Based Centrality: Unifying the Local and the Global.”</span> <em>Social Networks</em> 49: 12–26.
 </div>
 <div id="ref-boldi_vigna14" class="csl-entry" role="doc-biblioentry">
 Boldi, Paolo, and Sebastiano Vigna. 2014. <span>“Axioms for Centrality.”</span> <em>Internet Mathematics</em> 10 (3-4): 222–62.
+</div>
+<div id="ref-fouss_etal16" class="csl-entry" role="doc-biblioentry">
+Fouss, François, Marco Saerens, and Masashi Shimbo. 2016. <em>Algorithms and Models for Network Data and Link Analysis</em>. Cambridge University Press.
 </div>
 <div id="ref-lazega01" class="csl-entry" role="doc-biblioentry">
 Lazega, Emmanuel. 2001. <em>The Collegial Phenomenon: The Social Mechanisms of Cooperation Among Peers in a Corporate Law Partnership</em>. Oxford University Press.
