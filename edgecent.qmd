@@ -10,3 +10,155 @@ format:
    html:
       code-line-numbers: true
 ---
+
+## Edge Degree
+
+```{r}
+    library(networkdata)
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0
+```
+
+## Edge Closeness
+
+@brohl_lehnertz22 define the closeness of an edge as a function of the closeness of the two nodes incident to it. An edge $e_{jk}$ linking vertex $v_j$ to $v_k$ has high closeness whenever vertices $v_j$ and $v_k$ also have high closeness. m
+
+More specifically, the closeness centrality of an edge is proportional to the ratio of the product of the closeness of the two nodes incident to it divided by their sum:
+
+$$
+C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
+$$ {#eq-eclos}
+
+Note that the equation normalizes the ratio of the product to the sum of the vertex closeness centralities by the number of edges minus one.  
+
+To compute edge closeness in a real network, we can use the same approach to data wrangling we used to [compute the degree correlation](basic.qmd). The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the closeness centralities of the two nodes in the edge, and the closeness centrality of the edge calculated according to the above equation.
+
+In the *Pulp Fiction* network this looks like:
+
+```{r}
+   library(dplyr)
+   g.el <- as_edgelist(g) #transforming graph to edgelist
+   c <- round(closeness(g), 3)  #closeness centrality vector
+   c.dat <- data.frame(name1 = names(c), name2 = names(c), c)
+   el.temp <- data.frame(name2 = g.el[, 2]) %>% 
+      left_join(c.dat, by = "name2") %>% 
+      dplyr::select(c("name2", "c")) %>% 
+      rename(c2 = c) 
+   c.el <- data.frame(name1 = g.el[, 1]) %>% 
+      left_join(c.dat, by = "name1") %>% 
+      dplyr::select(c("name1", "c")) %>% 
+      rename(c1 = c) %>% 
+      cbind(el.temp) %>% 
+      mutate(e.clos = round((ecount(g)-1)*(c1*c2)/(c+c2), 3))
+head(c.el)
+```
+
+To create a table of the top five closeness centrality edges, we just order the data frame by the last column and table it:
+
+```{r}
+   library(kableExtra)
+   c.el <- c.el[order(c.el$e.clos, decreasing = TRUE), ] %>% 
+      dplyr::select(c("name1", "name2", "e.clos"))
+
+   kbl(c.el[1:5, ], format = "pipe", align = c("l", "l", "c"),
+       col.names = c("i", "j", "Edge Clos."), row.names = FALSE,
+       caption = "Edges Sorted by Closeness in the Pulp Fiction Network") %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Interestingly, the top closeness edges tend to bring somewhat strange bedfellows together, characters that themselves don't spend much time together in the film (e.g., the Butch/Vincent interaction is relatively brief and somewhat embarrassing for Vincent) but who themselves can reach other character clusters in the film via relatively short paths.
+
+## Edge Betweenness
+
+Edge betweenness is defined in similar fashion as node betweenness:
+
+$$
+\sum_{i \neq j} \frac{\sigma_{i(e)j}}{\sigma_{ij}}
+$$
+
+Where $\sigma_{i(e)j}$ is a count of the number of shortest paths between *i* and *j* that feature edge *e* as an intermediary link. This tells us that the betweenness of an edge *e* is the sum of the ratios of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph *i* and *j* divided by the total number of shortest paths linking each pair of nodes. 
+
+Like before, the edge betweenness with respect to a specific pair of nodes in the graph is a probability: Namely, that if you send something--using a shortest path--from any node *i* to any other node *j* it has to go through edge *e*. The resulting edge betweenness scores is the sum of these probabilities across every possible pair of nodes for each edge in the graph. 
+
+For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an **undirected** graph. We use the `igraph` function `as.undirected` for that:
+
+```{r}
+    g <- law_advice
+    women <- which(V(g)$gender == 2) #selecting women
+    wg <- subgraph(g, women)
+    young <- which(V(wg)$age < 40) #selecting women under forty
+    wg <- subgraph(wg, young)
+    V(wg)$name <- 1:vcount(wg) #naming nodes
+    wg <- as.undirected(wg, mode = "collapse")
+```
+
+The "collapse" value in the "mode" argument tells `as.undirected` to link every connected dyad in the original directed graph using an undirected edge. It does that by removing the directional arrow of the single directed links and collapsing (hence the name) all the bi-directional links into a single undirected one.  
+
+The resulting undirected graph looks like this:
+
+```{r}
+#| echo: false
+    library(ggraph)
+    p <- ggraph(wg, layout = 'auto')
+    l <- as.matrix(p$data[, 1:2])
+    p <- p + geom_edge_link(color = "steelblue", width = 0.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+Looking at this point and line plot of the women lawyers advice network, which edge do you think has the top betweenness? 
+
+Well no need to figure that out via eyeballing! We can just use the `igraph` function `edge_betweenness`:
+
+```{r}
+   w.ebet <- edge_betweenness(wg)
+```
+
+The `edge_betweenness` function takes the `igraph` graph object as input and produces a vector of edge betweenness values of the same length as the number of edges in the graph, which happens to be `r ecount(wg)` in this case.
+
+Using this information, we can then create a table of the top ten edges ordered by betweenness:
+
+```{r}
+   edges <- as_edgelist(wg) #creating an edgelist
+   etab <- data.frame(edges, bet = round(w.ebet, 2)) #adding bet. scores to edgelist
+   etab <- etab[order(etab$bet, decreasing = TRUE), ] #ordering by bet.
+   kbl(etab[1:10, ], format = "pipe", align = c("l", "l", "c"),
+       col.names = c("i", "j", "Edge Bet."), row.names = FALSE,
+       caption = "Edges Sorted by Betweenness in the Women Lawyers Advice Network") %>% 
+   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+```
+
+Not surprisingly, the top edges are the ones linking nodes 3 and 4 and nodes 5 and 8. 
+
+### Disconnecting a Graph Via Bridge Removal
+
+High betweenness edges are likely to function as **bridges** being the only point of indirect connectivity between most nodes in the social structure. That means that an easy way to disconnect a connected graph is to remove the bridges [@girvan_newman02].
+
+In `igraph` we can produce an **edge deleted subgraph** of an original graph using the "minus" operator, along with the `edge` function like this:
+
+```{r}
+   del.g <- wg - edge("3|4")
+   del.g <- del.g - edge("5|8")
+```
+
+The first line creates a new graph object (a subgraph) which equals the original graph minus the edge linking nodes 3 and 4. The second line takes this last subgraph and further deletes the edge linking nodes 5 and 8. 
+
+The resulting subgraph, minus the top two high-betweenness edges, looks like:
+
+```{r}
+#| echo: false
+    p <- ggraph(del.g, layout = l)
+    p <- p + geom_edge_link(color = "steelblue", width = 0.5) 
+    p <- p + geom_node_point(aes(x = x, y = y), size = 8, color = "tan2") 
+    p <- p + geom_node_text(aes(label = 1:vcount(wg)), size = 4, color = "white")
+    p <- p + theme_graph() 
+    p
+```
+
+Which is indeed disconnected!

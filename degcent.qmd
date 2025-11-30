@@ -93,54 +93,6 @@ So if we wanted to figure out the correlation between some vertex attribute and 
 
 Which tells us that at least in this case, younger partners are more sought after as sources of advice than older partners. 
 
-## Edge Closeness
-
-@brohl_lehnertz22 define the closeness of an edge as a function of the closeness of the two nodes incident to it. An edge $e_{jk}$ linking vertex $v_j$ to $v_k$ has high closeness whenever vertices $v_j$ and $v_k$ also have high closeness. 
-
-More specifically, the closeness centrality of an edge is proportional to the ratio of the product of the closeness of the two nodes incident to it divided by their sum:
-
-$$
-C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
-$$
-
-Note that the equation normalizes the ratio of the product to the sum of the vertex closeness centralities by the number of edges minus one.  
-
-To compute edge closeness in a real network, we can use the same approach to data wrangling we used to [compute the degree correlation](basic.qmd). The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the closeness centralities of the two nodes in the edge, and the closeness centrality of the edge calculated according to the above equation.
-
-In the *Pulp Fiction* network this looks like:
-
-```{r}
-   library(dplyr)
-   g.el <- as_edgelist(g) #transforming graph to edgelist
-   c <- round(closeness(g), 3)  #closeness centrality vector
-   c.dat <- data.frame(name1 = names(c), name2 = names(c), c)
-   el.temp <- data.frame(name2 = g.el[, 2]) %>% 
-      left_join(c.dat, by = "name2") %>% 
-      dplyr::select(c("name2", "c")) %>% 
-      rename(c2 = c) 
-   c.el <- data.frame(name1 = g.el[, 1]) %>% 
-      left_join(c.dat, by = "name1") %>% 
-      dplyr::select(c("name1", "c")) %>% 
-      rename(c1 = c) %>% 
-      cbind(el.temp) %>% 
-      mutate(e.clos = round((ecount(g)-1)*(c1*c2)/(c+c2), 3))
-head(c.el)
-```
-
-To create a table of the top five closeness centrality edges, we just order the data frame by the last column and table it:
-
-```{r}
-   library(kableExtra)
-   c.el <- c.el[order(c.el$e.clos, decreasing = TRUE), ] %>% 
-      dplyr::select(c("name1", "name2", "e.clos"))
-
-   kbl(c.el[1:5, ], format = "pipe", align = c("l", "l", "c"),
-       col.names = c("i", "j", "Edge Clos."), row.names = FALSE,
-       caption = "Edges Sorted by Closeness in the Pulp Fiction Network") %>% 
-   kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
-```
-
-Interestingly, the top closeness edges tend to bring somewhat strange bedfellows together, characters that themselves don't spend much time together in the film (e.g., the Butch/Vincent interaction is relatively brief and somewhat embarrassing for Vincent) but who themselves can reach other character clusters in the film via relatively short paths.
 
 
 
