@@ -93,7 +93,7 @@ $$
 m_{ij} = 1 + \sum^N_{j \neq k}p_{ik}m_{k,j}
 $$
 
-With the proviso that $m_{ii}$ is always equal to zero. What this tells us is that the average first passage time between any two nodes in the graph $i$ and $j$, is given by one plus the product probability that something can transition from a sender node $i$ to an intermediary node $k$---given by $p_{ik}$---and $m_{kj}$ which is the average first passage time from that intermediary node $k$ to the destination node $j$. 
+With the proviso that $m_{ii}$ is always equal to zero. What this tells us is that the average first passage time between any two nodes in the graph $i$ and $j$, is given by one plus the product of the probability that something can transition from a sender node $i$ to an intermediary node $k$---given by $p_{ik}$---and $m_{kj}$ which is the average first passage time from that intermediary node $k$ to the destination node $j$. 
 
 Note that since we need to know $m_{kj}$ to get $m_{ij}$, then this opens up a chicken or the egg problem that we can solve through iteration like we did for the status scores in the [prestige](prestige.qmd) lesson. That is, we first start with a null value for all the entries of the $\mathbf{M}$ matrix (e.g., $m_{ij} = 0$ for all $i$ and $j$), compute an initial round of $m_{ij}$ estimates for all pairs of nodes $i$ and $j$ using the equation above, recompute $m_{ij}$ using those new values, rinse, repeat, and stop after we don't get any changes between successive versions of the $\mathbf{M}$ matrix. 
 
@@ -113,7 +113,7 @@ A function that implement this idea goes like this:
       for (i in nodes) { #loop through every node
          for (j in nodes[-i]) { #loop through every node except i
             m[i,j] <- 1
-            for (k in nodes[-j]) { #loop through every node except i and j
+            for (k in nodes[-c(i,j)]) { #loop through every node except i and j
                m[i,j] <- m[i,j] + (w[i,k]*old.m[k,j]) #update M matrix values
                }
             }
@@ -133,7 +133,7 @@ And the result is:
    round(first.pass3(P), 1)[1:10, 1:10]
 ```
 
-Which are values pretty close to the ones we obtained by averaging earlier. 
+Which are values pretty close to the ones we obtained by averaging earlier, but which are closer to the right answer. 
 
 ## Using the Laplacian Matrix
 
@@ -160,31 +160,39 @@ Despite the terrible name, $\mathbf{L}^+$ is easy to compute:
 
 ```{r}
    E <- matrix(1/nrow(A), nrow(A), nrow(A))
-   L.plus <- solve(L - E) + E
+   L.plus <- solve(L + E) - E
 ```
 
-As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell. 
+As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell ($\frac{1}{n}$). 
 
-Now, the average first passage time between every pair of nodes in the network, contained in the matrix $\mathbf{M}$ is given by:
+The average first passage time between every pair of nodes in the network $m_{ij}$, contained in the matrix $\mathbf{M}$, expressed in terms of the entries of $\mathbf{L}^+$, is given by [@fouss_etal16, p. 158]:
 
 $$
-\mathbf{M} = vol(A)(\mathbf{e}\mathbf{L}^+_{diag})^T - vol(A)\mathbf{L}^+ + (\mathbf{L}^+\mathbf{d})\mathbf{e}^T -\mathbf{e}(\mathbf{d}^T\mathbf{L}^+)
+m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
+$$ {#eq-firstpass}
+
+Where $d_k$ is the degree of node $k$.
+
+Expressing @eq-firstpass in matrix form:
+
+$$
+\mathbf{M} = \left[vol(A)\mathbf{e}(\mathbf{L}^+_{diag})^T - vol(A)\mathbf{L}^+\right] + \left[\mathbf{L}^+\mathbf{d})\mathbf{e}^T -\mathbf{e}(\mathbf{d}^T\mathbf{L}^+\right]
 $$
 
-Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to $\mathbf{L}^+$, while $vol(A) = \sum_{ij} a_{ij}$ is just the sum of the non-zero entries in the adjacency matrix, $\mathbf{e}$ is a column vector of ones with as many rows as the number of nodes in the graph, $\mathbf{d}$ is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, and $\mathbf{L}^+_{diag}$ is a vector containing the diagonal entries of $\mathbf{L}^+$ at each position. 
+Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to $\mathbf{L}^+$, while $\mathbf{e}$ is a column vector of ones with as many rows as the number of nodes in the graph, $\mathbf{d}$ is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, $vol(A) = \sum_{i} d_{i}$ is just the sum of the non-zero entries in the adjacency matrix, and $\mathbf{L}^+_{diag}$ is a vector containing the diagonal entries of $\mathbf{L}^+$ at each position. 
 
 The following `R` code constructs $\mathbf{M}$ step by step:
 
 ```{r}
-   e <- matrix(1, nrow(A), 1)
-   d <- rowSums(A)
-   M <- sum(A) * t(e %*% diag(L.plus))
-   M <- M - (sum(A) * L.plus)
+   e <- matrix(1, nrow(A), 1) #column vector of all ones
+   d <- rowSums(A) #degree vector of A
+   vol.A <- sum(d) #volume of A
+   M <- vol.A * (e %*% t(diag(L.plus)))
+   M <- M - (vol.A * L.plus)
    M <- M + (L.plus %*% d) %*% t(e)
    M <- M - (e %*% (t(d) %*% L.plus))
    rownames(M) <- 1:nrow(A)
    colnames(M) <- 1:nrow(A)
-   M <- t(M)
 ```
 
 And now for the big reveal:
@@ -193,7 +201,9 @@ And now for the big reveal:
    round(M, 1)[1:10, 1:10]
 ```
 
-Which shows entries pretty close in value to the ones we obtained by iteration and averaging. 
+Which shows entries pretty close in value to the ones we obtained by iteration and averaging, but which are *precisely* the answer we were looking for.
+
+The interpretation of the entries of the $\mathbf{M}$ matrix is also straightforward. For instance, if we start a message from node 2, we should expect it to take an average of $m_{2, 6} =$ `r round(M[2,6], 1)` steps to get to node 6 by following random walks in the network.
 
 ## The Average Commute Distance
 
@@ -214,14 +224,19 @@ So the Average Commute Distance is just the entries of $\mathbf{M}$ on the upper
 
 Note that the entries in this matrix are symmetric (it takes as long for something to go from to you to me and back to you as from me to you and back to me). They thus function as a **similarity metric** between nodes; the lower the average commute distance, the closer or more similar the two nodes are. 
 
-Of course, there's also math to compute $\mathbf{N}$ directly from $\mathbf{L}^+$ using the same ingredients we used before. It goes like this:
+Of course, there's also math to compute $\mathbf{N}$ directly from the entries of $\mathbf{L}^+$ using the same ingredients we used before. It goes like this:
 
 $$
-\mathbf{N} = (\mathbf{L}^+_{diag}\mathbf{e}^T + \mathbf{e}\mathbf{L}^+_{diag} - 2\mathbf{L}^+)vol(A)
+n_{ij} = vol(A) \left(l^+_{ii} + l^+_{jj} + 2l^+_{ij}\right)
 $$
 
-Which is actually a much less monstrous and simpler expression than before. 
+Which in (more complicated) matrix form looks like:
 
+$$
+\mathbf{N} = vol(A)\left[\mathbf{L}^+_{diag}\mathbf{e}^T + \mathbf{e}\mathbf{L}^+_{diag} - 2\mathbf{L}^+\right]
+$$
+
+But which is actually a much less monstrous and simpler expression than before. 
 
 The following `R` code constructs $\mathbf{N}$ step by step:
 
@@ -229,11 +244,13 @@ The following `R` code constructs $\mathbf{N}$ step by step:
    N <- diag(L.plus) %*% t(e)
    N <- N + (e %*% diag(L.plus))
    N <- N - (2 * L.plus)
-   N <- N * sum(A)
+   N <- vol.A * N
    round(N, 1)[1:10, 1:10]
 ```
 
 Which as you can see, gives us the results we seek. 
+
+The interpretation of the entries of the $\mathbf{N}$ matrix is also straightforward. For instance, if a message starts at node 4, it would take an average of `r round(N[4, 9], 1)` steps for it to get to node 9 and then back to the original node 4 by following a random walk in the network governed by the node-to-node probabilities stored in the transition matrix $\mathbf{P}$. 
 
 Interestingly, we can obtain the average commute time distance between any pair nodes yet another way. For instance from the above matrix, we know the average commute time distances between nodes 3 and 8 is `r round(N[3, 8], 2)`. 
 
