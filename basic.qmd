@@ -10,9 +10,10 @@ format:
    html:
       code-line-numbers: true
 ---
+
 ## Loading Data
 
-Here we will analyze a small network and computer some basic statistics of interest. The first thing we need to do is get some data! For this purpose, we will use the package `networkdata` (available [here](https://schochastics.github.io/networkdata/)). To install the package, use the following code:
+Here we will analyze a small network and compute some basic statistics of interest. The first thing we need to do is get some data! For this purpose, we will use the package `networkdata` (available [here](https://schochastics.github.io/networkdata/)). To install the package, use the following code:
 
 ```{r}
    #install.packages("remotes") 
@@ -36,8 +37,13 @@ We will pick one of the movies for this analysis, namely, *Pulp Fiction*. This i
 
 ```{r}
    #install.packages("igraph") 
-   library(igraph)
-   g <- movie_559
+   #install.packages("stringr") 
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559 #assigning Pulp Fiction igraph network object
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0   g <- movie_559
 ```
 
 ## Number of Nodes and Edges
@@ -74,22 +80,23 @@ This tells us that there are 102 edges (connected dyads) in the network. Some of
 
 ## Graph Density
 
-Once we have the number of edges and nodes, we can calculate the most basic derived statistic in a network, which is the **density**. Since the movie network is an **undirected** graph, the density is given by:
+Once we have the number of edges and nodes, we can calculate the most basic derived statistic in a network, which is the **density** ($d(G)$). Since the movie network is an **undirected** graph, the density is given by:
 
 $$
-   \frac{2m}{n(n-1)}
-$$
+ d(G) = \frac{2m}{n(n-1)}
+$$ {#eq-dens}
 
 Where $m$ is the number of edges and $n$ is the number of nodes, or in our case:
 
 ```{r}
-   (2 * 102) / (38 * (38 - 1))
+    d <- (2 * 102) / (38 * (38 - 1))
+    round(d, 3)
 ```
 
 Of course, igraph has a dedicated function called `edge_density` to compute the density too, which takes the igraph object as input:
 
 ```{r}
-   edge_density(g)
+   round(edge_density(g), 3)
 ```
 
 ## Degree
@@ -100,17 +107,73 @@ The next set of graph metrics are based on the **degree** of the graph. We can l
    degree(g)
 ```
 
-The `degree` function takes the igraph network object as input and returns a plain old `R` **named vector** as output with the names being the `names` attribute of vertices in the network object. 
+The `degree` function takes the igraph network object as input and returns a plain old `R` **named vector** ($\mathbf{d}$) as output with the names being the `names` attribute of vertices in the network object. 
 
 Usually we are interested in who are the "top nodes" in the network by degree (a kind of **centrality**). To figure that out, all we need to do is sort the degree set (to generate the graph's **degree sequence**) and list the top entries:
 
 ```{r}
    d <- degree(g)
    d.sort <- sort(d, decreasing = TRUE)
-   d.sort[1:8]
+   d.sort
 ```
 
-Line 1 stores the degrees in an object "d", line 2 creates a "sorted" version of the same object (from bigger to smaller) and line 3 shows the first eight entries of the sorted degree sequence.
+Line 1 stores the degrees in an object "d", line 2 creates a "sorted" version of the same object (from bigger to smaller) and line 3 shows the elements of the sorted degree sequence.
+
+We can also compute the degrees directly from the graph's **adjacency matrix** ($\mathbf{A}$). This is a matrix listing the nodes in the rows and columns and containing entries that equal one if the row node and the column node are adjacent in the graph and zero otherwise.
+
+In `R` we can use the `igraph` we can obtain such a matrix from the graph object `g` by using the function `as_adjacency_matrix` (coerced to a regular matrix object in `R` using the `as.matrix` wraparound):
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+```
+
+The row *or* column sums (in the undirected graph case) give us the degree vector:
+
+```{r}
+   d <- rowSums(A)
+   names(d) <- V(g)$name #naming vector
+   d
+```
+
+```{r}
+   d <- colSums(A)
+   names(d) <- V(g)$name #naming vector
+   d
+```
+
+The degrees can also be expressed in "matrix form" as the (matrix) product of the adjacency matrix times the **all ones column vector** ($\mathbf{e}$) of dimensions $N \times 1$ ($N$ rows and one column) where $N$ is the number of nodes in the graph (the number of rows of $\mathbf{A}$):
+
+$$
+\mathbf{d} = \mathbf{A}\mathbf{e}
+$$ {#eq-degcol}
+
+In `R` we use the operator `%*%` to indicate matrix multiplication (after all a column vector is just a matrix with one column):
+
+```{r}
+   e <- matrix(1, nrow(A), 1) #defining the all ones column vector
+   d <- A %*% e
+   rownames(d) <- V(g)$name #naming vector
+   d
+```
+
+Note that the matrix operation above returns $\mathbf{d}$ as a column vector. If we wanted a **row vector**, we would instead compute:
+
+$$
+\mathbf{d} = \mathbf{e}^T\mathbf{A}
+$$ {#eq-degrow}
+
+Where $\mathbf{e}^T$ is the **matrix tranpose** of the row vector $\mathbf{e}$ (e.g., a row vector of dimensions $1 \times N$).
+
+Which in `R` can be obtained as follows, using the base function `t` for the matrix transpose:
+
+```{r}
+   e <- matrix(1, nrow(A), 1) #defining the all ones column vector
+   d <- t(e) %*% A
+   colnames(d) <- V(g)$name #naming vector
+   d
+```
+
+## Degree-Based Graph Statistics
 
 Because the degree vector "d" is just a regular old vector we can use native `R` mathematical operations to figure out things like the **sum**, **maximum**, **minimum**, and **average degree** of the graph:
 
@@ -146,7 +209,7 @@ Some people also consider the **degree variance** of the graph as a measure of i
 
 $$
   \mathcal{v}(G) = \frac{\sum_i (k_i - \bar{k})^2}{n}
-$$
+$$ {#eq-degvar}
 
 ```{r}
    sum((d - mean(d))^2)/vcount(g)
@@ -205,13 +268,14 @@ Let's see how this would work for the *Pulp Fiction* network. First we need to e
    head(g.el)
 ```
 
-We can see that the `as_edgelist` function takes the igraph network object as input and returns an $E \times 2$ matrix, with $E = 102$ being the number of rows. Each column of the matrix records the name of the node on each end of the edge. So the first row of the edge list with entries "BRETT" and "MARSELLUS" tells us that there is an edge linking Brett and Marsellus, and so forth for each row. 
+We can see that the `as_edgelist` function takes the `igraph` network object as input and returns an $E \times 2$ matrix, with $E = 102$ being the number of rows. Each column of the matrix records the name of the node on each end of the edge. So the first row of the edge list with entries "Brett" and "Marsellus" tells us that there is an edge linking Brett and Marsellus, and so forth for each row. 
 
 To compute the correlation between the degrees of each node, all we need to do is attach the corresponding degrees to each name for each of the columns of the edge list, which can be done via data wrangling magic from the `dplyr` package (part of the `tidyverse`):
 
 ```{r}
    # install.packages(dplyr)
    library(dplyr)
+   d <- degree(g)
    deg.dat <- data.frame(name1 = names(d), name2 = names(d), d)
    el.temp <- data.frame(name2 = g.el[, 2]) %>% 
       left_join(deg.dat, by = "name2") %>% 
@@ -231,7 +295,7 @@ Lines 4-7 use `dplyr` functions to create a new object "el.temp" joining the deg
 
 Lines 8-12 do the same for the nodes listed in the first position in the original edge list, renames the imported columns of degrees "d1," and the binds the columns of the "el.temp" object to the new object "d.el." The resulting object has four columns: Two for the names of the nodes incident to each edge on the edge list (columns 1 and 3), and two other ones corresponding to the degrees of the corresponding nodes (columns 2 and 4). 
 
-We can see from the output of the first few rows of the "d.el" object that indeed "BRETT" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "MARSELLUS" a degree of 10, "VINCENT" a degree of 25 and so forth. 
+We can see from the output of the first few rows of the "d.el" object that indeed "Brett" is assigned a degree of 7 in each row of the edge list, "BUDDY" a degree of 2, "Marsellus" a degree of 10, "Vincent" a degree of 25 and so forth. 
 
 Now to compute the degree correlation in the network all we need to do is call the native `R` function `cor` on the two columns from "d.el" that containing the degree information. **Note that because each degree appears twice at the end of each edge in an undirected graph (as both "sender" and "receiver"), we need to double each column by appending the other degree column at the end**. So the first degree column is the vector:
 
@@ -256,8 +320,8 @@ The result $r_{deg} = -0.29$ tells us that there is *anti-correlation* by degree
 If you hate `dplyr` (and some people do with a passion) here's a relatively quick way to do the same thing without it:
 
 ```{r}
-   A <- as.matrix(as_adjacency_matrix(g)) #vectorized version of adjacency matrix
-   dat <- data.frame(e = as.vector(A), 
+   A <- as.matrix(as_adjacency_matrix(g)) 
+   dat <- data.frame(e = as.vector(A), #vectorized version of adjacency matrix
                      rd = rep(rowSums(A), ncol(A)), 
                      cd = rep(colSums(A), each = nrow(A)),
                      rn = rep(rownames(A), ncol(A)),
@@ -293,7 +357,7 @@ The maximum distance between two nodes in the graph (the longest shortest path t
 
 This means that in the *Pulp Fiction* network the maximum degree of separation between two characters is a path of length 8. 
 
-Of course, we cann also call the `igraph` function `diameter`:
+Of course, we can also call the `igraph` function `diameter`:
 
 ```{r}
    diameter(g)
@@ -307,11 +371,11 @@ Once we have the geodesic distance matrix, it is easy to calculate the average p
    mean(rm.S)
 ```
 
-- First (line 1) we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes (we will use this to compute **closeness centrality** later). 
+- First (line 1) we sum all the rows (or columns) of the geodesic distance matrix. This vector (of the same length as the number of nodes) gives us the sum of the geodesic distance of each node to each of the nodes (we will use this to compute [**closeness centrality**](closcent.qmd) later). 
 
 - Then (line 2) we divide this vector by the number of nodes minus one (to exclude the focal node) to create a vector of the *average* distance of each node to each of the other nodes. 
 
-- Finally (line 3) we take the average across all nodes of this average distance vector to get the *graph*'s average shortest path length, which in this case equals L =  `r round(mean(rm.S), 1)`.  
+- Finally (line 3) we take the average across all nodes of this average distance vector to get the *graph*'s average shortest path length, which in this case equals L =  `r round(mean(rm.S), 2)`.  
 
 This means that, on average, each character in *Pulp Fiction* is separated by little less than three contacts in the co-appearance network (a fairly small world).
 
@@ -340,7 +404,6 @@ We can then put these two vector together into a data frame:
 ```{r}
    net.stats <- data.frame(Stat, Value)
 ```
-
 We can then use the package `kableExtra` (a nice table maker) to create a nice html table:
 
 ```{r}
@@ -350,134 +413,6 @@ We can then use the package `kableExtra` (a nice table maker) to create a nice h
        caption = "Key Statistics for Pulp Fiction Network.") %>% 
    kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
-
-## Graph Degree Metrics in Directed Graphs
-
-As we saw earlier, the **degree distribution** and the **degree correlation** are two basic things we want to have a sense of when characterizing a network, and we showed examples for the undirected graph case. However, when you have a network measuring a tie with some meaningful "from" "to" directionality (represented as a **directed graph**) the number of things you have to compute in terms of degrees "doubles." 
-
-For instance, instead of a single degree set and sequence, now we have two: An **outdegree** and an **indegree** set and sequence. The same thing applies to the degree distribution and the degree correlation.
-
-### The Indegree and Outdegree Distributions
-
-In the case of the degree distribution, now we have *two distributions*: An **outdegree distribution** and an **indegree distribution**. 
-
-Let's see an example using the `law_advice` data. 
-
-```{r}
-   library(networkdata)
-   library(igraph)
-   g <- law_advice
-   i.prop <- degree_distribution(g, mode = "in")
-   o.prop <- degree_distribution(g, mode = "out")
-```
-
-So the main complication is that now we have to specify a value for the "mode" argument; "in" for indegree and "out" for outdegree. 
-
-That also means that when plotting, we have to create two data frames and present two plots.
-
-First the data frames:
-
-```{r}
-   i.d <- degree(g, mode = "in")
-   o.d <- degree(g, mode = "out")
-   i.d.vals <- c(0:max(i.d))
-   o.d.vals <- c(0:max(o.d))
-   i.deg.dist <- data.frame(i.d.vals, i.prop)
-   o.deg.dist <- data.frame(o.d.vals, o.prop)
-   head(i.deg.dist)
-   head(o.deg.dist)
-```
-
-Now, to plotting. To be effective, the resulting plot has to show the outdegree and indegree distribution side by side so as to allow the reader to compare. To do that, we first generate each plot separately:
-
-```{r}
-   library(ggplot2)
-   p <- ggplot(data = o.deg.dist, aes(x = o.d.vals, y = o.prop))
-   p <- p + geom_bar(stat = "identity", fill = "red", color = "red")
-   p <- p + theme_minimal()
-   p <- p + labs(x = "", y = "Proportion", 
-                 title = "Outdegree Distribution in Law Advice Network") 
-   p <- p + geom_vline(xintercept = mean(o.d), 
-                       linetype = 2, linewidth = 0.75, color = "blue")
-   p1 <- p + scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + xlim(0, 40)
-
-   p <- ggplot(data = i.deg.dist, aes(x = i.d.vals, y = i.prop))
-   p <- p + geom_bar(stat = "identity", fill = "red", color = "red")
-   p <- p + theme_minimal()
-   p <- p + labs(x = "", y = "Proportion", 
-                 title = "Indegree Distribution in Law Advice Network") 
-   p <- p + geom_vline(xintercept = mean(i.d), 
-                       linetype = 2, linewidth = 0.75, color = "blue")
-   p2 <- p + scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + xlim(0, 40)
-```
-
-Then we use the magical package `patchwork` to combine the plots:
-
-```{r}
-   # install.packages("patchwork")
-   library(patchwork)
-   p <- p1 / p2
-   p
-```
-
-The data clearly shows that while both distributions are skewed, the indegree distribution is more heterogeneous, with a larger proportion of nodes in the high end of *receiving* advice as compared to giving advice. 
-
-Note also that since the mean degree is the same regardless of whether we use the out or indegree distribution, then the blue line pointing to the mean degree falls in the same spot on the x-axis for both plots. 
-
-### The Four Different Flavors of Degree Correlations in the Directed Case
-
-The same doubling (really quadrupling) happens to degree correlations in directed graphs. While in an undirected graph, there is a single degree correlation, in the directed case we have *four* quantities to compute: The out-out degree correlation, the in-in degree correlation, the out-in degree correlation, and the in-out degree correlation (see [here](https://barabasi.com/f/620.pdf), p. 38). 
-
-To proceed, we need to create an edge list data set with six columns: The node id of the "from" node, the node id of the "to" node, the indegree of the "from" node, the outdegree of the "from" node, the indegree of the "to" node, and the outdegree of the "to" node. 
-
-We can adapt the code we used for the undirected case for this purpose. First, we create an edge list data frame using the `igraph` function `as_data_frame`:
-
-```{r}
-   library(dplyr)
-   g.el <- igraph::as_data_frame(g) %>% 
-      rename(fr = from)
-   head(g.el)
-```
-
-Note that we have to specify that this is in an `igraph` function by typing `igraph::` in front of the `as_data_frame` because there is an (older) `dplyr` function with the same name that was used for data wrangling. 
-
-Second, we create data frames containing the in and outdegrees of each node in the network:
-
-```{r}
-    deg.dat.fr <- data.frame(fr = 1:vcount(g), o.d, i.d)
-    deg.dat.to <- data.frame(to = 1:vcount(g), o.d, i.d)
-```
-
-Third, we merge this info into the edge list data frame to get the in and outdegrees of the from and to nodes in the directed edge:
-
-```{r}
-   d.el <- g.el %>% 
-      left_join(deg.dat.fr) %>% 
-      rename(o.d.fr = o.d, i.d.fr = i.d) %>% 
-      left_join(deg.dat.to, by = "to") %>% 
-      rename(o.d.to = o.d, i.d.to = i.d) 
-   head(d.el)
-```
-
-Now we can compute the four different flavors of the degree correlation for directed graphs:
-
-```{r}
-   round(cor(d.el$o.d.fr, d.el$o.d.to), 4) #out-out correlation
-   round(cor(d.el$i.d.fr, d.el$i.d.to), 4) #in-in correlation
-   round(cor(d.el$i.d.fr, d.el$o.d.to), 4) #in-out correlation
-   round(cor(d.el$o.d.fr, d.el$i.d.to), 4) #out-in correlation
-```
-
-These results tell us that there is not much degree assortativity going on in the law advice network, *except* for a slight tendency of people who receive advice from lots of others to give advice to people who also receive advice from a lot of other people (the "in-in" correlation)
-
-Note that by default, the `assortativity_degree` function in `igraph` only returns the *out-in* correlation for directed graphs:
-
-```{r}
-   round(assortativity_degree(g, directed = TRUE), 4)
-```
-
-That is, `assortativity_degree` checks if more active senders are more likely to send ties to people who are popular receivers of ties. 
-
 
 
 

@@ -1,0 +1,268 @@
+---
+title: "Basic Network Statistics for Directed Graphs"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+As we saw in the lecture notes on [basic network statistics](basic.qmd), the **degree distribution** and the **degree correlation** are two basic things we want to have a sense of when characterizing a network, and we showed examples for the undirected graph case. However, when you have a network measuring a tie with some meaningful "from" "to" directionality (represented as a **directed graph**) the number of things you have to compute in terms of degrees "doubles." 
+
+For instance, instead of a single degree set and sequence, now we have two: An **outdegree** and an **indegree** set and sequence. The same thing applies to the degree distribution and the degree correlation.
+
+Let's see how this works. First, we load a network of directed relations that is represented using a **directed graph**. This is a network composed of advice relations between members of a low firm studied by [-@lazega01]. In the `networkdata` package it is called `law_advice`.
+
+```{r}
+    library(networkdata)
+    library(igraph)
+    g <- law_advice
+```
+
+The nodes in this graph don't have names, so we just assign them numbers as labels, using the `graph` node attribute function `V()`, which takes the graph object as input, followed by a `$` sign and the name of the node attribute we are setting (in this case the `name` attribute):
+
+```{r}
+   V(g)$name <- paste("Lyr", 1:vcount(g), sep = "_")
+```
+
+Here we set the `name` attribute to a vector of labels composed of "Lyr" (for lawyer) followed by a number between one and the order the graph. 
+
+## Graph Density
+
+In the directed case, the formula for the density is just:
+
+$$
+ d(G) = \frac{m}{n(n-1)}
+$$ {#eq-dens}
+
+Note that the main difference with the formula for undirected graphs is that we don't double the numerator (number of edges).
+
+So in `R` we would just do:
+
+```{r}
+    m <- ecount(g)
+    n <- vcount(g)
+    m/(n*(n-1))
+```
+
+Which is the same answer we get with the `igraph` function `edge_density`:
+
+```{r}
+    edge_density(g)
+```
+
+## Graph Reciprocity
+
+One quantity that is only defined for directed graphs is the **graph reciprocity** ($r(G)$). This is a measure of the extent to which directed links are mutually directed among actors in the network (e.g., they go both ways). 
+
+We can express the graph reciprocity in terms of the entries of the adjacency matrix $\mathbf{A}$ as:
+
+$$
+r(G) = \sum_{i, j = 1}^N\frac{a_{ij}a_{ji}}{|E|}
+$$ {#eq-rep}
+
+Where $|E|$ refers to the number of edges in the graph. Note that the numerator of the @eq-rep counts the number of reciprocal links since the product term $a_{ij}a_{ji}$ only when $a_{ij}=1$ *and* $a_{ji}=1$ in the adjacency matrix.
+
+The graph reciprocity can also be expressed in "matrix" form as:
+
+
+$$
+r(G) = \frac{tr(\mathbf{A}^2)}{|E|}
+$$ {#eq-repm}
+
+Where $tr$ refers to the trace matrix operation which yields the sum of the matrix diagonal entries as a result, and the square refers to the (second) **powers of the matrix** (the adjacency matrix multiplied by itself), .
+
+So in `R` we can compute the reciprocity of a directed graph as:
+
+```{r}
+    A <- as.matrix(as_adjacency_matrix(g))
+    r <- sum(diag((A %*% A)))/ecount(g)
+    round(r, 3)
+```
+
+Where we use the `diag` function, which extracts the diagonal entries of a matrix (in this case the square of the adjacency matrix) as a vector to compute the matrix trace (the sum of the entries of the diagonal vector).
+
+The graph reciprocity is a number between zero and one, with zero indicating that none of the connected dyads are mutual, and one indicating that all are. Of course real networks will fall in between. As we can see, in the law advice network, about `r round(r*100, 1)`% of the observed connected dyads are composed of mutual advice relations.
+
+Of course, there's an `igraph` function to compute the graph reciprocity called (you guessed it) `reciprocity`:
+
+```{r}
+    r <- reciprocity(g)
+    round(r, 3)
+```
+
+## Indegrees and Outdegrees
+
+For the degree, now we have two different flavors: We can count the number of nodes that point to another node (called that node's **in-neighbors**) or we can count the number of nodes that a given node points to (called that node's **out-neighbors**).
+
+That means that we have two different degree vectors. The **indegree vector** and the **outdegree vector**. In `igraph` we obtain those by specifying the `mode` argument to either `in` or `out` in the `degree` function:
+
+```{r}
+   d.i <- degree(g, mode = "in") #indegrees
+   d.i.sort <- sort(d.i, decreasing = TRUE) #indegree sequence
+   d.i.sort
+```
+We can see that Lawyers 26, 13, and 17 are the most popular kids in terms of being sought after for advice. 
+
+And now for the outdegree:
+
+```{r}
+   d.o <- degree(g, mode = "out") #outdegrees
+   d.o.sort <- sort(d.o, decreasing = TRUE) #outdegree sequence
+   d.o.sort
+```
+
+We can see that lawyers 19, 16, and 28 are the most active advice seekers. 
+
+Just like before, we can compute various degree quantities, except we must do it twice:
+
+```{r}
+   sum(d.i)
+   sum(d.o)
+   max(d.i)
+   max(d.o)
+   min(d.i)
+   min(d.o)
+   mean(d.i)
+   mean(d.o)
+```
+
+Note that for both `sum` and the `mean` we actually *don't* have to do it twice. The sum of the indegrees in a directed graph is always equal to the sum of the indegrees, which means that the mean indegree is always equal to the mean outdegree (as that is the sum divided by the same number $N$).
+
+We can also express the in ($\mathbf{d}_i$) and out ($\mathbf{d}_o$) degrees in matrix form:
+
+$$
+\mathbf{d}_i = \mathbf{A}^T\mathbf{e}
+$$
+
+$$
+\mathbf{d}_o = \mathbf{A}\mathbf{e}
+$$
+
+Which in `R` can be obtained as:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+   e <- matrix(1, nrow(A), 1)
+   d.i <- t(A) %*% e
+   d.o <- A %*% e
+   d.i[1:10, ]
+   d.o[1:10, ]
+```
+
+### The Indegree and Outdegree Distributions
+
+In the case of the degree distribution, now we have *two distributions*: An **outdegree distribution** and an **indegree distribution**. 
+
+```{r}
+   i.prop <- degree_distribution(g, mode = "in")
+   o.prop <- degree_distribution(g, mode = "out")
+```
+
+So the main complication is that now, just like with degree, we have to specify a value for the `mode` argument; `in` for the indegree distribution and `out` for the outdegree distribution. 
+
+That also means that when plotting, we have to create two data frames and present two plots.
+
+First the data frames:
+
+```{r}
+   i.d.vals <- c(0:max(d.i))
+   o.d.vals <- c(0:max(d.o))
+   i.deg.dist <- data.frame(i.d.vals, i.prop)
+   o.deg.dist <- data.frame(o.d.vals, o.prop)
+   head(i.deg.dist)
+   head(o.deg.dist)
+```
+
+Now, to plotting. To be effective, the resulting plot has to show the outdegree and indegree distribution side by side so as to allow the reader to compare. To do that, we first generate each plot separately:
+
+```{r}
+   library(ggplot2)
+   p <- ggplot(data = o.deg.dist, aes(x = o.d.vals, y = o.prop))
+   p <- p + geom_bar(stat = "identity", fill = "red", color = "red")
+   p <- p + theme_minimal()
+   p <- p + labs(x = "", y = "Proportion", 
+                 title = "Outdegree Distribution in Law Advice Network") 
+   p <- p + geom_vline(xintercept = mean(d.o), 
+                       linetype = 2, linewidth = 0.75, color = "blue")
+   p1 <- p + scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + xlim(0, 40)
+
+   p <- ggplot(data = i.deg.dist, aes(x = i.d.vals, y = i.prop))
+   p <- p + geom_bar(stat = "identity", fill = "red", color = "red")
+   p <- p + theme_minimal()
+   p <- p + labs(x = "", y = "Proportion", 
+                 title = "Indegree Distribution in Law Advice Network") 
+   p <- p + geom_vline(xintercept = mean(d.i), 
+                       linetype = 2, linewidth = 0.75, color = "blue")
+   p2 <- p + scale_x_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + xlim(0, 40)
+```
+
+Then we use the magical package `patchwork` to combine the plots:
+
+```{r}
+   # install.packages("patchwork")
+   library(patchwork)
+   p <- p1 / p2
+   p
+```
+
+The data clearly shows that while both distributions are skewed, the indegree distribution is more heterogeneous, with a larger proportion of nodes in the high end of *receiving* advice as compared to giving advice. 
+
+Note also that since the mean degree is the same regardless of whether we use the out or indegree distribution, then the blue line pointing to the mean degree falls in the same spot on the x-axis for both plots. 
+
+### The Four Different Flavors of Degree Correlations in the Directed Case
+
+The same doubling (really quadrupling) happens to degree correlations in directed graphs. While in an undirected graph, there is a single degree correlation, in the directed case we have *four* quantities to compute: The out-out degree correlation, the in-in degree correlation, the out-in degree correlation, and the in-out degree correlation (see [here](https://barabasi.com/f/620.pdf), p. 38). 
+
+To proceed, we need to create an edge list data set with six columns: The node id of the "from" node, the node id of the "to" node, the indegree of the "from" node, the outdegree of the "from" node, the indegree of the "to" node, and the outdegree of the "to" node. 
+
+We can adapt the code we used for the [undirected case](basic.qmd) for this purpose. First, we create an edge list data frame using the `igraph` function `as_long_data_frame`, specifying that we only want the columns that have the names of the respective nodes incident to the edge:
+
+```{r}
+    library(dplyr)
+    g.el <- as_long_data_frame(g)[, c("from_name", "to_name")] |> 
+    rename(fr = from_name, to = to_name)
+    head(g.el)
+``` 
+
+Second, we create data frames containing the in and outdegrees of each node in the network:
+
+```{r}
+    deg.dat.fr <- data.frame(fr = V(g)$name, d.o, d.i)
+    deg.dat.to <- data.frame(to = V(g)$name, d.o, d.i)
+```
+
+Third, we merge this info into the edge list data frame to get the in and outdegrees of the from and to nodes in the directed edge:
+
+```{r}
+   d.el <- g.el %>% 
+      left_join(deg.dat.fr) %>% 
+      rename(d.o.fr = d.o, d.i.fr = d.i) %>% 
+      left_join(deg.dat.to, by = "to") %>% 
+      rename(d.o.to = d.o, d.i.to = d.i) 
+   head(d.el)
+```
+
+Now we can compute the four different flavors of the degree correlation for directed graphs:
+
+```{r}
+   round(cor(d.el$d.o.fr, d.el$d.o.to), 4) #out-out correlation
+   round(cor(d.el$d.i.fr, d.el$d.i.to), 4) #in-in correlation
+   round(cor(d.el$d.i.fr, d.el$d.o.to), 4) #in-out correlation
+   round(cor(d.el$d.o.fr, d.el$d.i.to), 4) #out-in correlation
+```
+
+These results tell us that there is not much degree assortativity going on in the law advice network, *except* for a slight tendency of people who receive advice from lots of others to give advice to people who also receive advice from a lot of other people (the "in-in" correlation)
+
+Note that by default, the `assortativity_degree` function in `igraph` only returns the *out-in* correlation for directed graphs:
+
+```{r}
+   round(assortativity_degree(g, directed = TRUE), 4)
+```
+
+That is, `assortativity_degree` checks if more active senders are more likely to send ties to people who are popular receivers of ties. 
+
