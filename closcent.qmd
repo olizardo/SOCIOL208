@@ -69,10 +69,10 @@ It makes sense that the three main characters are also the ones that are at clos
 We can also compute the **normalized closeness centrality** which is given by:
 
 $$
-C^{NCLO}_i = \frac{N-1}{\sum_{j \neq i}g_{ij}}
+C^{NCLO}_i = \left[\frac{\sum_{j \neq i}^N g_{ij}}{N-1}\right]^{-1} = \frac{N-1}{\sum_{j \neq i}g_{ij}}
 $$
 
-Where $N$ is the number of nodes in the network. The normalized closeness is just the inverse of the *average* distance of node $i$ to the other nodes in the network.
+Where $N$ is the number of nodes in the network. The normalized closeness is just the inverse of the *average* distance of node $i$ to the other nodes in the network (e.g., the inverse of the sum of the rows of $\mathbf{G}$ divided by $N-1$).
 
 In `R` this is just:
 
@@ -117,7 +117,7 @@ Here's a little `R` program that implements this idea:
       for(i in 1:n) {
          for (j in i:n) { #looping through upper triangle
             for (k in 1:n) {
-               C[i,j] <- min(C[i,j], (C[i, k] + C[k, j]))
+               if (i != k & j != k & i != j) {C[i,j] <- min(C[i,j], (C[i, k] + C[k, j]))}
                }
             }
          }
@@ -125,11 +125,44 @@ Here's a little `R` program that implements this idea:
    C[lower.tri(C)] <- t(C)[lower.tri(C)] #copying upper triangle into lower triangle
 ```
 
-And as we can see the entries in `C` are the same as those returned by `distances`:
+And as we can see the entries in `C` are the same as those returned by `distances` earlier:
 
 ```{r}
    C[1:10, 1:10]
-   distances(g)[1:10, 1:10]
+```
+
+## Markov Closeness
+
+We can use some of the random walk concepts discussed [here](random-walk.qmd) to construct a variant of the closeness centrality. The trick is that instead of using the length of the shortest path between each pair of nodes are our measure of "farness" (which we invert to produce closeness), we use the **average first passage time** between them, which is also a measure of farness, but it is based on random walks on *all* paths in the graph regardless of length. That is, two nodes $i$ and $j$ are far in the graph if it takes a long time for a random walker starting at $i$ to get to $j$ (on average).
+
+So all we need to do is recycle the code we used before to compute the average first passage time to get our farness matrix $\mathbf{M}$. Here it is packaged as a function that takes the graph as input:
+
+```{r}
+   avg.first.pass <- function(w) {
+      x <- as.matrix(as_adjacency_matrix(w))
+      e <- matrix(1, nrow(x), 1) #column vector of all ones
+      d <- degree(w) #degree vector 
+      h <- matrix(1/nrow(x), nrow(x), nrow(x))
+      l <- solve((diag(d) - x) + h) - h
+      z <- sum(d) * (e %*% t(diag(l))) - (sum(d) * l) + (l %*% d) %*% t(e) - (e %*% (t(d) %*% l))
+      rownames(z) <- V(w)$name
+      colnames(z) <- V(w)$name
+      return(z)
+   }
+```
+
+```{r}
+   M <- avg.first.pass(g)
+   round(M, 1)[1:10, 1:10]
+```
+
+```{r}
+   m.closeness <- (vcount(g) - 1) * rowSums(M)^-1
+   sort(m.closeness, decreasing = TRUE)[1:10]
+```
+
+```{r}
+   rowSums(M)^-1 * (vcount(g) - 1)
 ```
 
 ## Closeness Centrality in Directed Graphs
@@ -340,5 +373,5 @@ When we set $\delta=\infty$ the generalized harmonic centrality is the same as t
    round(degree(wg, normalized = TRUE), 3)
 ```
 
-## Computing the Geodesic Distance Matrix
+
 
