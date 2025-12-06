@@ -11,6 +11,8 @@ format:
       code-line-numbers: true
 ---
 
+## The Average First Passage Time
+
 Imagine something is diffusing through a network starting with some seed node $i$ following a series of discrete time steps. If the graph is connected, the thing will eventually reach every node in the network. However, depending on the connectivity structure of the graph, it will reach some nodes (e.g., those at a smaller graph theoretic distance from the seed node) sooner than others. 
 
 Here's a function called `first.pass1` that records the minimum number of steps that it takes for something to get to each node in a graph starting from a given seed node:
@@ -31,17 +33,23 @@ Here's a function called `first.pass1` that records the minimum number of steps 
    }
 ```
 
-The function takes a transition matrix $\mathbf{P}$ as the primary input (of the sort we discussed when talking about [status and prestige](#prestige.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node.
+The function takes a transition matrix $\mathbf{P}$ as the primary input (of the sort we discussed when talking about [status and prestige](#prestige.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node. It works like this:
 
-Let's test it out using the friendship network from the Krackhardt high-tech managers data:
+- Line 2 initializes the "first pass" vector `fp` to all zeros. Line 3 initializes the step counter `k` and line 4 initializes the scalar `i` to the whatever node was specified as the seed note in the `seed` argument of the function.
+
+- Lines 5-10 implement a little `while` loop that runs until there are no more zeros in the `fp` vector. Line 6 samples a random neighbor of node `i` with probability specified by the relevant entry in the transition matrix ($p_{ij} = \frac{1}{d_i}$), and then turns that node `j` into the new sender node `i`, marking that as the time that the thing that is diffusing through the network got to `j` using marker `k`.
+
+- Line 11 names the `fp` vector using the column names of the transition matrix, and line 12 returns the vector.
+
+Let's test the `first.pass1` function out using the **undirected** version of the friendship network from the Krackhardt high-tech managers data:
 
 ```{r}
    library(networkdata)
    library(igraph)
-   g <- as_undirected(ht_friends, mode = "collapse")
-   A <- as.matrix(as_adjacency_matrix(g))
-   P <- diag(1/rowSums(A)) %*% A    
-   set.seed(456)
+   g <- as_undirected(ht_friends, mode = "collapse") #undirected graph
+   A <- as.matrix(as_adjacency_matrix(g)) #adjacency matrix
+   P <- diag(1/rowSums(A)) %*% A  #creating transition matrix from adjacency matrix
+   set.seed(456) 
    first.pass1(P)
 ```
 
@@ -49,9 +57,7 @@ We can see for instance that the rumor got to node 16 in just one time step, but
 
 So it seems like this, the minimum time it takes for something that starts with me to get to you [@fouss_etal04b], is a good measure of the proximity between me and you in the graph. 
 
-## The Average First Passage Time
-
-However, we wouldn't want to use just one run of the diffusion process to calculate this proximity measure. Instead a better approach is to use the *average time* it takes for something to get to the other nodes when it starts from a given node. 
+However, we wouldn't want to use just one run of the diffusion process to calculate this proximity measure. Instead a better approach is to use the *average time* it takes for something to get to the other nodes when it starts from a given node, across a large number of realizations of the diffusion process. 
 
 To do that, we can just `replicate` the `first.pass1` function some number of times (e.g., $n = 100$) and take an average:
 
@@ -63,7 +69,7 @@ To do that, we can just `replicate` the `first.pass1` function some number of ti
 
 We can see that according to this measure, called **the average first passage time** [@fouss_etal16, p. 36], when we start with node 1, things get relatively quickly to node 17 ($\hat{t} = 8.7$) but they take forever to get to node 13 ($\hat{t} = 86.8$).
 
-We can of course, write a wrapper around the `first.pass1` function to compute the average first passage time from one node to another using every node in the graph as the initial seed:
+We can of course, write a wrapper around the `first.pass1` function to compute the average first passage time from one node to another using every node in the graph as the initial seed, and put all of the results in a matrix $\mathbf{M}$ where each entry $m_{ij}$ is the average first passage time between nodes $i$ and $j$:
 
 ```{r}
    first.pass2 <- function(w, n) {
@@ -76,26 +82,30 @@ We can of course, write a wrapper around the `first.pass1` function to compute t
    }
 ```
 
-And the result (showing the first ten rows and columns) is:
+And the result (showing the first ten rows and columns of $\matbf{M}$) is:
 
 ```{r}
    set.seed(456)
    round(first.pass2(P, 100), 1)[1:10, 1:10]
 ```
 
+Note that the $\mathbf{M}$ matrix is asymmetric. That is, the average number of steps that it takes for something to get from me to you ($m_{ij}$), is not necessarily the same as the average number of steps that it takes for something to get from you to me ($m_{ji}$). 
+
 The accuracy of the average first passage time estimate we get depends on the number of replications we use to get the average. The bigger, the more accurate. However, it can take a lot of computing time if we increased `n` to a giant number.
 
-## Iterating Until Convergence
+### Computing the AFPT by Iterating Until Convergence
 
-There's another approach to computing the average first passage time that involves iterating through a matrix using the information in the transition matrix. The basic idea is that the average first passage time for a random walker that starts at node $i$ and ends at node $j$ is given by:
+There's a more efficient approach to computing the entries in the average first passage time matrix $\mathbf{M}$ that involves iterating through a matrix using the information in the transition matrix $\mathbf{P}$. The basic idea is that the average first passage time for a random walker that starts at node $i$ and ends at node $j$ is given by:
 
 $$
 m_{ij} = 1 + \sum^N_{j \neq k}p_{ik}m_{k,j}
-$$
+$$ {#eq-first-pass-iter}
 
 With the proviso that $m_{ii}$ is always equal to zero. What this tells us is that the average first passage time between any two nodes in the graph $i$ and $j$, is given by one plus the product of the probability that something can transition from a sender node $i$ to an intermediary node $k$---given by $p_{ik}$---and $m_{kj}$ which is the average first passage time from that intermediary node $k$ to the destination node $j$. 
 
-Note that since we need to know $m_{kj}$ to get $m_{ij}$, then this opens up a chicken or the egg problem that we can solve through iteration like we did for the status scores in the [prestige](prestige.qmd) lesson. That is, we first start with a null value for all the entries of the $\mathbf{M}$ matrix (e.g., $m_{ij} = 0$ for all $i$ and $j$), compute an initial round of $m_{ij}$ estimates for all pairs of nodes $i$ and $j$ using the equation above, recompute $m_{ij}$ using those new values, rinse, repeat, and stop after we don't get any changes between successive versions of the $\mathbf{M}$ matrix. 
+Note that since we need to know $m_{kj}$ to get $m_{ij}$, then this opens up a chicken or the egg problem that we can solve through iteration like we did for the status scores in the [prestige](prestige.qmd) lesson. 
+
+Here's how to proceed. We first start with a null value for all the entries of the $\mathbf{M}$ matrix (e.g., $m_{ij} = 0$ for all $i$ and $j$), compute an initial round of $m_{ij}$ estimates for all pairs of nodes $i$ and $j$ using @eq-first-pass-iter, recompute $m_{ij}$ using those new values, rinse, repeat, and stop after we don't get any big changes between successive versions of the $\mathbf{M}$ matrix. 
 
 A function that implement this idea goes like this:
 
@@ -104,28 +114,24 @@ A function that implement this idea goes like this:
       n <- nrow(w)
       nodes <- 1:n
       m <- matrix(0, n, n) #initializing M matrix values
-      colnames(m) <- 1:n
-      rownames(m) <- 1:n
-      d <- 1
-      z <- 1
-      while(d > 1e-05) {
-      old.m <- m
-      for (i in nodes) { #loop through every node
-         for (j in nodes[-i]) { #loop through every node except i
-            m[i,j] <- 1
-            for (k in nodes[-c(i,j)]) { #loop through every node except i and j
-               m[i,j] <- m[i,j] + (w[i,k]*old.m[k,j]) #update M matrix values
+      d <- 1 #initialize delta
+      while(d > 1e-06) { #do while delta is bigger than a tiny number
+         old.m <- m
+         for (i in nodes) { #loop through every node
+            for (j in nodes[-i]) { #loop through every node except i
+               m[i,j] <- 1
+               for (k in nodes[-c(i,j)]) { #loop through every node except i and j
+                  m[i,j] <- m[i,j] + (w[i,k]*old.m[k,j]) #update M matrix values
+                  }
                }
             }
-         }
-      z <- z + 1
-      d <- abs(sum(abs(m) - abs(old.m))) #difference between current and previous M matrix
-      } #end while loop
+         d <- abs(sum(abs(m) - abs(old.m))) #delta equals difference between current and previous M matrix
+         } #end while loop
       return(m)
    }
 ```
 
-This function takes the probability transition matrix $\mathbf{P}$ as input and returns $\mathbf{M}$ a matrix of average first passage times between every pair of nodes in the network. 
+This function takes the probability transition matrix $\mathbf{P}$ as input and returns the $\mathbf{M}$ matrix of average first passage times between every pair of nodes in the network. 
 
 And the result is:
 
@@ -133,17 +139,17 @@ And the result is:
    round(first.pass3(P), 1)[1:10, 1:10]
 ```
 
-Which are values pretty close to the ones we obtained by averaging earlier, but which are closer to the right answer. 
+Which are the exact (up to rounding error) average first passage times between each pair of nodes in the network.
 
-## Using the Laplacian Matrix
+## Computing the AFPT Using the Laplacian Matrix
 
-Finally, there is a way to use matrix algebra magic to compute the average first pass at the limit ($n \approx \infty$) in closed form without averaging or iterations.
+Finally, there is a way to use matrix algebra magic to compute the average first passage time at the limit ($n \approx \infty$) in closed form without averaging or iterations.
 
 To do that, first we need to compute a matrix called the **graph Laplacian**, which is defined as:
 
 $$
 \mathbf{L} = \mathbf{D} - \mathbf{A}
-$$
+$$ {#eq-lap}
 
 Where $\mathbf{D}$ is a diagonal matrix containing the degrees of each node in the graph along the diagonals and zeroes everywhere else. 
 
@@ -154,18 +160,24 @@ In `R` we can compute $\mathbf{L}$ like this:
    L <- D - A
 ```
 
-Once we have $\mathbf{L}$, we need to compute a variation known by the less than memorable name of the **Moore-Penrose Pseudo-Inverse** of the Laplacian, written as $\mathbf{L}^+$. 
+Once we have $\mathbf{L}$, we need to compute a variation known by the less than memorable name of the **Moore-Penrose Pseudo-Inverse of the Laplacian**, written as $\mathbf{L}^+$, which is given by:
 
-Despite the terrible name, $\mathbf{L}^+$ is easy to compute:
+$$
+\mathbf{L}^+ = \left(\mathbf{L} -  \frac{\mathbf{E}}{N}\right) ^{-1}- \frac{\mathbf{E}}{N}
+$$ {#eq-ilap}
+
+Where $\mathbf{E}$ is the all ones matrix of the same dimensions as $\mathbf{L}$.
+
+So despite the terrible name, $\mathbf{L}^+$ is easy to compute in `R`:
 
 ```{r}
-   E <- matrix(1/nrow(A), nrow(A), nrow(A))
-   L.plus <- solve(L + E) - E
+   E <- matrix(1, nrow(A), nrow(A))/nrow(A)
+   L.p <- solve(L + E) - E
 ```
 
-As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell ($\frac{1}{n}$). 
+As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell ($\frac{1}{N}$). We use the function `solve` to obtain the **matrix inverse** of the expression in parentheses in @eq-ilap.
 
-The average first passage time between every pair of nodes in the network $m_{ij}$, contained in the matrix $\mathbf{M}$, expressed in terms of the entries of $\mathbf{L}^+$, is given by [@fouss_etal16, p. 158]:
+The average first passage time between every pair of nodes in the network $m_{ij}$ expressed in terms of the entries of $\mathbf{L}^+$ and the degree vector $\mathbf{d}$, is then given by [@fouss_etal16, p. 158]:
 
 $$
 m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
@@ -173,26 +185,45 @@ $$ {#eq-firstpass}
 
 Where $d_k$ is the degree of node $k$.
 
-Expressing @eq-firstpass in matrix form:
+So let's try it out:
+
+```{r}
+   nodes <- 1:nrow(A) #node id vector
+   d <- rowSums(A) #degree vector
+   m <- matrix(0, nrow(A), nrow(A)) #initializing M to all zeros
+   for (i in nodes) { 
+      for (j in nodes) { 
+         for (k in nodes) { 
+            m[i,j] <- m[i,j] + ((L.p[j,j] - L.p[i,j] + L.p[i,k] - L.p[k,j])*d[k])
+            }
+         }
+      }
+   round(m[1:10, 1:10], 1)
+```
+
+Which produces exactly the same results we obtained earlier via iteration. 
+
+## Computing the AFPT Using a Big Matrix Formula
+
+There is an even more straightforward way to compute the average first passage time that does not involve looping at all, but simple matrix operations. We can do that because we can express @eq-firstpass in matrix form like this:
 
 $$
-\mathbf{M} = \left[vol(A)\mathbf{e}(\mathbf{L}^+_{diag})^T - vol(A)\mathbf{L}^+\right] + \left[\mathbf{L}^+\mathbf{d})\mathbf{e}^T -\mathbf{e}(\mathbf{d}^T\mathbf{L}^+\right]
+\mathbf{M} = \left[vol(A)\mathbf{e}(\mathbf{l}^+_{d})^T - vol(A)\mathbf{L}^+\right] + \left[(\mathbf{L}^+\mathbf{d})\mathbf{e}^T -\mathbf{e}(\mathbf{d}^T\mathbf{L}^+)\right]
 $$
 
-Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to $\mathbf{L}^+$, while $\mathbf{e}$ is a column vector of ones with as many rows as the number of nodes in the graph, $\mathbf{d}$ is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, $vol(A) = \sum_{i} d_{i}$ is just the sum of the non-zero entries in the adjacency matrix, and $\mathbf{L}^+_{diag}$ is a vector containing the diagonal entries of $\mathbf{L}^+$ at each position. 
+Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to $\mathbf{L}^+$, while $\mathbf{e}$ is a column vector of ones with as many rows as the number of nodes in the graph, $\mathbf{d}$ is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, $vol(A) = \sum_{i} d_{i}$ is just the sum of the non-zero entries in the adjacency matrix, and $\mathbf{l}^+_{d}$ is a vector containing the diagonal entries of $\mathbf{L}^+$ at each position. 
 
 The following `R` code constructs $\mathbf{M}$ step by step:
 
 ```{r}
    e <- matrix(1, nrow(A), 1) #column vector of all ones
-   d <- rowSums(A) #degree vector of A
-   vol.A <- sum(d) #volume of A
-   M <- vol.A * (e %*% t(diag(L.plus)))
-   M <- M - (vol.A * L.plus)
-   M <- M + (L.plus %*% d) %*% t(e)
-   M <- M - (e %*% (t(d) %*% L.plus))
-   rownames(M) <- 1:nrow(A)
-   colnames(M) <- 1:nrow(A)
+   d <- rowSums(A) #degree vector 
+   l <- diag(L.p) #diagonal vector of Laplacian inverse
+   vol.A <- sum(d) #graph volume 
+   M <- vol.A * (e %*% t(l))
+   M <- M - (vol.A * L.p)
+   M <- M + (L.p %*% d) %*% t(e)
+   M <- M - (e %*% (t(d) %*% L.p))
 ```
 
 And now for the big reveal:
@@ -201,13 +232,13 @@ And now for the big reveal:
    round(M, 1)[1:10, 1:10]
 ```
 
-Which shows entries pretty close in value to the ones we obtained by iteration and averaging, but which are *precisely* the answer we were looking for.
+Which once again, gives us the results we seek.
 
-The interpretation of the entries of the $\mathbf{M}$ matrix is also straightforward. For instance, if we start a message from node 2, we should expect it to take an average of $m_{2, 6} =$ `r round(M[2,6], 1)` steps to get to node 6 by following random walks in the network.
+As we saw earlier, the interpretation of the entries of the $\mathbf{M}$ matrix is also straightforward. For instance, if we start a message from node 2, we should expect it to take an average of $m_{2, 6} =$ `r round(M[2,6], 1)` steps to get to node 6 by following random walks in the network.
 
 ## The Average Commute Distance
 
-Once we have the average first passage time, we can compute another important quantity called the **average commute distance** between two nodes $i$ and $j$ ($n_{ij}$). This is the number of steps it takes for a random walker to start at node  $i$, reach another specific node $j$ and then *get back* to the original node $i$ (hence commuting, like going from to work and back home again). 
+Once we have the average first passage time, we can compute another important quantity called the **average commute distance** between two nodes $i$ and $j$ ($n_{ij}$). This is the number of steps it takes for a random walker to start at node  $i$, reach another specific node $j$ and then *get back* to the original node $i$ (hence commuting, like going from home to work and then back from work to home again). 
 
 It turns out that $n_{ij}$ is pretty simple to compute, once we know the average first passage time between every pair of nodes $m_{ij}$, since it is given by:
 
@@ -215,16 +246,16 @@ $$
    n_{ij} = m_{ij} + m_{ji}
 $$
 
-So the Average Commute Distance is just the entries of $\mathbf{M}$ on the upper triangle added to the corresponding entries in the lower triangle:
+So the entries of the Average Commute Distance matrix $\mathbf{N}$ are just the entries of $\mathbf{M}$ on the upper triangle added to the corresponding entries in the lower triangle. In `R` we can obtain that by just adding $\mathbf{M}$ to its transpose $\mathbf{M}^T$:
 
 ```{r}
    N <- M + t(M)
    round(N[1:10, 1:10], 1)
 ```
 
-Note that the entries in this matrix are symmetric (it takes as long for something to go from to you to me and back to you as from me to you and back to me). They thus function as a **similarity metric** between nodes; the lower the average commute distance, the closer or more similar the two nodes are. 
+Note that the average commute distance matrix entries are symmetric, which makes sense, for it takes as long for something to go from to you to me and back to you as from me to you and back to me. The average commute distance between pairs of nodes thus functions as a **similarity metric**; the lower the average commute distance, the closer or more similar two nodes are in the network. 
 
-Of course, there's also math to compute $\mathbf{N}$ directly from the entries of $\mathbf{L}^+$ using the same ingredients we used before. It goes like this:
+Of course, we can also use math to compute $\mathbf{N}$ directly from the entries of $\mathbf{L}^+$ using a recombination of the same ingredients we used before to compute the average first passage time. It goes like this:
 
 $$
 n_{ij} = vol(A) \left(l^+_{ii} + l^+_{jj} + 2l^+_{ij}\right)
@@ -233,17 +264,17 @@ $$
 Which in (more complicated) matrix form looks like:
 
 $$
-\mathbf{N} = vol(A)\left[\mathbf{L}^+_{diag}\mathbf{e}^T + \mathbf{e}\mathbf{L}^+_{diag} - 2\mathbf{L}^+\right]
+\mathbf{N} = vol(A)\left[\mathbf{l}^+_{d}\mathbf{e}^T + \mathbf{e}\mathbf{l}^+_{d} - 2\mathbf{L}^+\right]
 $$
 
 But which is actually a much less monstrous and simpler expression than before. 
 
-The following `R` code constructs $\mathbf{N}$ step by step:
+The following `R` code constructs the $\mathbf{N}$ matrix of average commute distances between each pair of nodes in the network step by step:
 
 ```{r}
-   N <- diag(L.plus) %*% t(e)
-   N <- N + (e %*% diag(L.plus))
-   N <- N - (2 * L.plus)
+   N <- l %*% t(e)
+   N <- N + (e %*% l)
+   N <- N - (2 * L.p)
    N <- vol.A * N
    round(N, 1)[1:10, 1:10]
 ```
@@ -267,7 +298,7 @@ Let's construct two vectors full of zeros of the same length as the number of no
 @fouss_etal04b show that the average commute time distance between nodes 3 and 8 is also given by:
 
 ```{r}
-   round(sum(A) * (t((i - j)) %*% L.plus %*% (i - j)), 2)
+   round(sum(A) * (t((i - j)) %*% L.p %*% (i - j)), 2)
 ```
 
 Neat!
