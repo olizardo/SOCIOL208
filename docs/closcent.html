@@ -282,6 +282,11 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./random-cent.html" class="sidebar-item-text sidebar-link">Random Walk Centralities</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./edgecent.html" class="sidebar-item-text sidebar-link">Edge Centralities</a>
   </div>
 </li>
@@ -527,7 +532,6 @@ div.csl-indent {
   <ul>
   <li><a href="#normalized-closeness" id="toc-normalized-closeness" class="nav-link active" data-scroll-target="#normalized-closeness">Normalized Closeness</a></li>
   <li><a href="#computing-the-geodesic-distance-matrix" id="toc-computing-the-geodesic-distance-matrix" class="nav-link" data-scroll-target="#computing-the-geodesic-distance-matrix">Computing the Geodesic Distance Matrix</a></li>
-  <li><a href="#markov-closeness" id="toc-markov-closeness" class="nav-link" data-scroll-target="#markov-closeness">Markov Closeness</a></li>
   <li><a href="#closeness-centrality-in-directed-graphs" id="toc-closeness-centrality-in-directed-graphs" class="nav-link" data-scroll-target="#closeness-centrality-in-directed-graphs">Closeness Centrality in Directed Graphs</a>
   <ul class="collapse">
   <li><a href="#harmonic-centrality" id="toc-harmonic-centrality" class="nav-link" data-scroll-target="#harmonic-centrality">Harmonic Centrality</a></li>
@@ -846,111 +850,34 @@ Gawker #2           2          3         0</code></pre>
 </div>
 </div>
 </section>
-<section id="markov-closeness" class="level2">
-<h2 class="anchored" data-anchor-id="markov-closeness">Markov Closeness</h2>
-<p>We can use some of the random walk concepts discussed <a href="random-walk.qmd">here</a> to construct a variant of the closeness centrality. The trick is that instead of using the length of the shortest path between each pair of nodes are our measure of “farness” (which we invert to produce closeness), we use the <strong>average first passage time</strong> between them, which is also a measure of farness, but it is based on random walks on <em>all</em> paths in the graph regardless of length. That is, two nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> are far in the graph if it takes a long time for a random walker starting at <span class="math inline">\(i\)</span> to get to <span class="math inline">\(j\)</span> (on average).</p>
-<p>So all we need to do is recycle the code we used before to compute the average first passage time to get our farness matrix <span class="math inline">\(\mathbf{M}\)</span>. Here it is packaged as a function that takes the graph as input:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   avg.first.pass <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb18-2"><a href="#cb18-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(w))</span>
-<span id="cb18-3"><a href="#cb18-3"></a>      e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(x), <span class="dv">1</span>) <span class="co">#column vector of all ones</span></span>
-<span id="cb18-4"><a href="#cb18-4"></a>      d <span class="ot">&lt;-</span> <span class="fu">degree</span>(w) <span class="co">#degree vector </span></span>
-<span id="cb18-5"><a href="#cb18-5"></a>      h <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">nrow</span>(x), <span class="fu">nrow</span>(x), <span class="fu">nrow</span>(x))</span>
-<span id="cb18-6"><a href="#cb18-6"></a>      l <span class="ot">&lt;-</span> <span class="fu">solve</span>((<span class="fu">diag</span>(d) <span class="sc">-</span> x) <span class="sc">+</span> h) <span class="sc">-</span> h</span>
-<span id="cb18-7"><a href="#cb18-7"></a>      z <span class="ot">&lt;-</span> <span class="fu">sum</span>(d) <span class="sc">*</span> (e <span class="sc">%*%</span> <span class="fu">t</span>(<span class="fu">diag</span>(l))) <span class="sc">-</span> (<span class="fu">sum</span>(d) <span class="sc">*</span> l) <span class="sc">+</span> (l <span class="sc">%*%</span> d) <span class="sc">%*%</span> <span class="fu">t</span>(e) <span class="sc">-</span> (e <span class="sc">%*%</span> (<span class="fu">t</span>(d) <span class="sc">%*%</span> l))</span>
-<span id="cb18-8"><a href="#cb18-8"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(w)<span class="sc">$</span>name</span>
-<span id="cb18-9"><a href="#cb18-9"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(w)<span class="sc">$</span>name</span>
-<span id="cb18-10"><a href="#cb18-10"></a>      <span class="fu">return</span>(z)</span>
-<span id="cb18-11"><a href="#cb18-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   M <span class="ot">&lt;-</span> <span class="fu">avg.first.pass</span>(g)</span>
-<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">round</span>(M, <span class="dv">1</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>             Brett Buddy Butch Capt Koons Ed Sullivan English Dave Esmeralda
-Brett          0.0 110.8  13.1       49.1       110.8         53.9     216.1
-Buddy         35.0   0.0  16.7       44.4       102.0         51.6     219.7
-Butch         30.6 110.0   0.0       44.2       110.0         50.6     203.0
-Capt Koons    34.5 105.7  12.2        0.0       105.7         52.3     215.2
-Ed Sullivan   35.0 102.0  16.7       44.4         0.0         51.6     219.7
-English Dave  32.8 106.4  12.0       45.7       106.4          0.0     215.0
-Esmeralda     31.6 111.0   1.0       45.2       111.0         51.6       0.0
-Fabienne      21.6 111.8  11.1       49.1       111.8         54.6     214.1
-Fourth Man    33.2 109.2  18.2       49.7       109.2         55.8     221.2
-Gawker #2     31.1 111.2   7.8       47.6       111.2         50.9     210.8
-             Fabienne Fourth Man Gawker #2
-Brett            62.2      106.1      83.0
-Buddy            76.6      106.3      87.3
-Butch            69.2      108.5      77.2
-Capt Koons       75.1      108.0      84.9
-Ed Sullivan      76.6      106.3      87.3
-English Dave     74.2      107.6      81.7
-Esmeralda        70.2      109.5      78.2
-Fabienne          0.0      105.7      83.5
-Fourth Man       73.4        0.0      88.4
-Gawker #2        72.2      109.4       0.0</code></pre>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   m.closeness <span class="ot">&lt;-</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> <span class="fu">rowSums</span>(M)<span class="sc">^-</span><span class="dv">1</span></span>
-<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">sort</span>(m.closeness, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>       The Gimp             Zed Sportscaster #2         Maynard Sportscaster #1 
-     0.01173965      0.01173965      0.01168773      0.01128148      0.01110540 
-      Esmeralda       Gawker #2      Pedestrian           Buddy     Ed Sullivan 
-     0.01069453      0.01027273      0.01027273      0.01026157      0.01026157 </code></pre>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   <span class="fu">rowSums</span>(M)<span class="sc">^-</span><span class="dv">1</span> <span class="sc">*</span> (<span class="fu">vcount</span>(g) <span class="sc">-</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
-     0.01008473      0.01026157      0.01020489      0.01013598      0.01026157 
-   English Dave       Esmeralda        Fabienne      Fourth Man       Gawker #2 
-     0.01015026      0.01069453      0.01019696      0.01023256      0.01027273 
-    Honey Bunny          Jimmie            Jody           Jules           Lance 
-     0.01004095      0.01017907      0.01017643      0.01005170      0.01017643 
-        Manager       Marsellus          Marvin         Maynard             Mia 
-     0.01005733      0.01008772      0.01008379      0.01128148      0.01010784 
-         Mother          Patron      Pedestrian        Preacher         Pumpkin 
-     0.01013598      0.01005733      0.01027273      0.01022047      0.01004095 
-         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
-     0.01017907      0.01008379      0.01110540      0.01168773      0.01173965 
-       The Wolf         Vincent        Waitress         Winston           Woman 
-     0.01017907      0.01005749      0.01011230      0.01017907      0.01013598 
-      Young Man     Young Woman             Zed 
-     0.01011230      0.01011230      0.01173965 </code></pre>
-</div>
-</div>
-</section>
 <section id="closeness-centrality-in-directed-graphs" class="level2">
 <h2 class="anchored" data-anchor-id="closeness-centrality-in-directed-graphs">Closeness Centrality in Directed Graphs</h2>
 <p>What about closeness centrality for a directed network? Let us see how this works using a <strong>subgraph</strong> of the <span class="citation" data-cites="lazega01">Lazega (<a href="#ref-lazega01" role="doc-biblioref">2001</a>)</span> <code>law_advice</code> network, this time selecting just women under the age of forty:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
-<span id="cb25-2"><a href="#cb25-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
-<span id="cb25-3"><a href="#cb25-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
-<span id="cb25-4"><a href="#cb25-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
-<span id="cb25-5"><a href="#cb25-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
-<span id="cb25-6"><a href="#cb25-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
+<span id="cb18-2"><a href="#cb18-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
+<span id="cb18-3"><a href="#cb18-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
+<span id="cb18-5"><a href="#cb18-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This network is small enough that a plot could be informative about its structure. Let us plot it using the package <code>ggraph</code>, a visualization package that follows the same principles as the <code>ggplot</code> grammar of graphics but for network graphs (see <a href="https://exts.ggplot2.tidyverse.org/ggraph.html">here</a>).</p>
 <div class="cell" data-fig-cap-location="margin">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   <span class="co">#install.packages("ggraph")</span></span>
-<span id="cb26-2"><a href="#cb26-2"></a>   <span class="fu">library</span>(ggraph)</span>
-<span id="cb26-3"><a href="#cb26-3"></a>    p <span class="ot">&lt;-</span> <span class="fu">ggraph</span>(wg, <span class="at">layout =</span> <span class="st">'auto'</span>)</span>
-<span id="cb26-4"><a href="#cb26-4"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_edge_parallel</span>(<span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">edge_width =</span> <span class="fl">0.5</span>,</span>
-<span id="cb26-5"><a href="#cb26-5"></a>                                <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">2.5</span>, <span class="st">'mm'</span>)),</span>
-<span id="cb26-6"><a href="#cb26-6"></a>                                <span class="at">end_cap =</span> <span class="fu">circle</span>(<span class="dv">4</span>, <span class="st">'mm'</span>), </span>
-<span id="cb26-7"><a href="#cb26-7"></a>                                <span class="at">sep =</span> <span class="fu">unit</span>(<span class="dv">3</span>, <span class="st">'mm'</span>))</span>
-<span id="cb26-8"><a href="#cb26-8"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> <span class="st">"tan2"</span>) </span>
-<span id="cb26-9"><a href="#cb26-9"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
-<span id="cb26-10"><a href="#cb26-10"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_graph</span>() </span>
-<span id="cb26-11"><a href="#cb26-11"></a>    p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   <span class="co">#install.packages("ggraph")</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">library</span>(ggraph)</span>
+<span id="cb19-3"><a href="#cb19-3"></a>    p <span class="ot">&lt;-</span> <span class="fu">ggraph</span>(wg, <span class="at">layout =</span> <span class="st">'auto'</span>)</span>
+<span id="cb19-4"><a href="#cb19-4"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_edge_parallel</span>(<span class="at">color =</span> <span class="st">"steelblue"</span>, <span class="at">edge_width =</span> <span class="fl">0.5</span>,</span>
+<span id="cb19-5"><a href="#cb19-5"></a>                                <span class="at">arrow =</span> <span class="fu">arrow</span>(<span class="at">length =</span> <span class="fu">unit</span>(<span class="fl">2.5</span>, <span class="st">'mm'</span>)),</span>
+<span id="cb19-6"><a href="#cb19-6"></a>                                <span class="at">end_cap =</span> <span class="fu">circle</span>(<span class="dv">4</span>, <span class="st">'mm'</span>), </span>
+<span id="cb19-7"><a href="#cb19-7"></a>                                <span class="at">sep =</span> <span class="fu">unit</span>(<span class="dv">3</span>, <span class="st">'mm'</span>))</span>
+<span id="cb19-8"><a href="#cb19-8"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> <span class="st">"tan2"</span>) </span>
+<span id="cb19-9"><a href="#cb19-9"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
+<span id="cb19-10"><a href="#cb19-10"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme_graph</span>() </span>
+<span id="cb19-11"><a href="#cb19-11"></a>    p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Women lawyers advice network</figcaption><p></p>
 </figure>
 </div>
@@ -958,8 +885,8 @@ Gawker #2        72.2      109.4       0.0</code></pre>
 </div>
 <p>Now a question we might ask is who has the greatest closeness centrality in this advice network. We could proceed as usual and compute the geodesic distances between actors:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg)</span>
-<span id="cb27-2"><a href="#cb27-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg)</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   1 2 3 4 5 6 7 8 9 10 11 12
 1  0 1 2 1 3 3 4 2 2  3  3  3
@@ -979,8 +906,8 @@ Gawker #2        72.2      109.4       0.0</code></pre>
 <p>Note that this is not quite right. In <code>igraph</code> the default settings of the distance function treats the graph as undirected even though it is actually directed. So it doesn’t use the strict <strong>directed paths</strong>, but it just treats them all as <strong>semi-paths</strong> ignoring direction. That is why, for instance, it counts node 1 as being “adjacent” to node 4 even though there is only one incoming link from 4 to 1 and why the whole matrix is symmetric, when we know from just eyeballing the network that there is a lot of asymmetry in terms of who can reach who via directed paths.</p>
 <p>To get the actual directed distance matrix, we need to specify the “mode” option, asking whether we want in or out paths. Here, we follow convention and select the out-paths:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
-<span id="cb29-2"><a href="#cb29-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
+<span id="cb22-2"><a href="#cb22-2"></a>   G</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   1 2   3   4   5   6   7   8   9  10  11  12
 1  0 1 Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf
@@ -999,8 +926,8 @@ Gawker #2        72.2      109.4       0.0</code></pre>
 </div>
 <p>This is better but introduces a problem. The directed graph is not <strong>strongly connected</strong>, so it means that some nodes cannot reach other ones via a directed path of <em>any</em> length. That means that the <strong>geodesic distances</strong> from a node to an unreachable node is coded as “infinite” (<code>Inf</code>). The problem with infinity is that it gets in the way of calculating sums of distances, a requirement for the closeness centrality.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
-<span id="cb31-2"><a href="#cb31-2"></a>   <span class="fu">rowSums</span>(G)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   G <span class="ot">&lt;-</span> <span class="fu">distances</span>(wg, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   <span class="fu">rowSums</span>(G)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  1   2   3   4   5   6   7   8   9  10  11  12 
 Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf Inf </code></pre>
@@ -1020,9 +947,9 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 \]</span></p>
 <p>In <code>R</code> we can do this as follows. First, let’s compute the inverse of the entries of the geodesic distance matrix:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   inv.G <span class="ot">=</span> G<span class="sc">^-</span><span class="dv">1</span></span>
-<span id="cb33-2"><a href="#cb33-2"></a>   <span class="fu">diag</span>(inv.G) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#setting diagonals to zero</span></span>
-<span id="cb33-3"><a href="#cb33-3"></a>   <span class="fu">round</span>(inv.G, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   inv.G <span class="ot">=</span> G<span class="sc">^-</span><span class="dv">1</span></span>
+<span id="cb26-2"><a href="#cb26-2"></a>   <span class="fu">diag</span>(inv.G) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#setting diagonals to zero</span></span>
+<span id="cb26-3"><a href="#cb26-3"></a>   <span class="fu">round</span>(inv.G, <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       1     2   3     4 5   6 7   8     9 10 11  12
 1  0.000 1.000 0.0 0.000 0 0.0 0 0.0 0.000  0  0 0.0
@@ -1043,8 +970,8 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 <p>Also note that the reachability relation expressed in this matrix is asymmetric: So node 4 can reach node 1 (there is a directed tie from 4 to 1), but node 1 cannot reach 4. This is precisely what we want.</p>
 <p>Once we have this matrix of inverse distances, we can then we can compute the normalized harmonic centrality the same way as regular closeness by adding up the row scores for each node and dividing by the number of nodes minus one:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(inv.G)<span class="sc">/</span>(<span class="fu">vcount</span>(wg) <span class="sc">-</span> <span class="dv">1</span>)</span>
-<span id="cb35-2"><a href="#cb35-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(inv.G)<span class="sc">/</span>(<span class="fu">vcount</span>(wg) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb28-2"><a href="#cb28-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 0.0909 0.0909 0.2727 0.3182 0.5303 0.1970 0.3409 0.2273 0.2273 0.4242 0.4242 
@@ -1054,15 +981,15 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 </div>
 <p>We can see that the highest harmonic closeness centrality node is 5, followed by 12. Here’s a plot of the network highlighting the highest harmonic centrality node.</p>
 <div class="cell" data-fig-cap-location="margin">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"tan2"</span>, <span class="fu">vcount</span>(wg)) <span class="co">#creating node color vector</span></span>
-<span id="cb37-2"><a href="#cb37-2"></a>   col[<span class="fu">which</span>(close4 <span class="sc">==</span> <span class="fu">max</span>(close4))] <span class="ot">&lt;-</span> <span class="st">"red"</span> <span class="co">#changing color of max centrality node to red</span></span>
-<span id="cb37-3"><a href="#cb37-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> col)</span>
-<span id="cb37-4"><a href="#cb37-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
-<span id="cb37-5"><a href="#cb37-5"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   col <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="st">"tan2"</span>, <span class="fu">vcount</span>(wg)) <span class="co">#creating node color vector</span></span>
+<span id="cb30-2"><a href="#cb30-2"></a>   col[<span class="fu">which</span>(close4 <span class="sc">==</span> <span class="fu">max</span>(close4))] <span class="ot">&lt;-</span> <span class="st">"red"</span> <span class="co">#changing color of max centrality node to red</span></span>
+<span id="cb30-3"><a href="#cb30-3"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y), <span class="at">size =</span> <span class="dv">8</span>, <span class="at">color =</span> col)</span>
+<span id="cb30-4"><a href="#cb30-4"></a>   p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_node_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg)), <span class="at">size =</span> <span class="dv">4</span>, <span class="at">color =</span> <span class="st">"white"</span>)</span>
+<span id="cb30-5"><a href="#cb30-5"></a>   p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Women lawyers advice network with highest closeness centrality node in red</figcaption><p></p>
 </figure>
 </div>
@@ -1070,8 +997,8 @@ C^{NHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-1}}{N-1}
 </div>
 <p>Of course, <code>igraph</code> has a built in function to calculate the harmonic centrality called (you guessed it) <code>harmonic_centrality</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb38-2"><a href="#cb38-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   close4 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb31-2"><a href="#cb31-2"></a>   <span class="fu">round</span>(close4, <span class="dv">4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>     1      2      3      4      5      6      7      8      9     10     11 
 0.0909 0.0909 0.2727 0.3182 0.5303 0.1970 0.3409 0.2273 0.2273 0.4242 0.4242 
@@ -1100,23 +1027,23 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <p>Let us see a real-world example of the generalized harmonic centrality in action:</p>
 <p>First, we create a custom function to compute the generalized harmonic centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1"></a>   g.harm <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d) {</span>
-<span id="cb40-2"><a href="#cb40-2"></a>      <span class="fu">library</span>(igraph)</span>
-<span id="cb40-3"><a href="#cb40-3"></a>      w <span class="ot">&lt;-</span> <span class="fu">distances</span>(x) <span class="co">#get distances from graph object</span></span>
-<span id="cb40-4"><a href="#cb40-4"></a>      w <span class="ot">&lt;-</span> (w<span class="sc">^</span>d)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#matrix of generalized inverse distances</span></span>
-<span id="cb40-5"><a href="#cb40-5"></a>      <span class="fu">diag</span>(w) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#set diagonals to zero</span></span>
-<span id="cb40-6"><a href="#cb40-6"></a>      h <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w)<span class="sc">/</span>(<span class="fu">vcount</span>(x) <span class="sc">-</span> <span class="dv">1</span>) <span class="co">#summing and averaging</span></span>
-<span id="cb40-7"><a href="#cb40-7"></a>      <span class="fu">return</span>(h)</span>
-<span id="cb40-8"><a href="#cb40-8"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   g.harm <span class="ot">&lt;-</span> <span class="cf">function</span>(x, d) {</span>
+<span id="cb33-2"><a href="#cb33-2"></a>      <span class="fu">library</span>(igraph)</span>
+<span id="cb33-3"><a href="#cb33-3"></a>      w <span class="ot">&lt;-</span> <span class="fu">distances</span>(x) <span class="co">#get distances from graph object</span></span>
+<span id="cb33-4"><a href="#cb33-4"></a>      w <span class="ot">&lt;-</span> (w<span class="sc">^</span>d)<span class="sc">^-</span><span class="dv">1</span> <span class="co">#matrix of generalized inverse distances</span></span>
+<span id="cb33-5"><a href="#cb33-5"></a>      <span class="fu">diag</span>(w) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#set diagonals to zero</span></span>
+<span id="cb33-6"><a href="#cb33-6"></a>      h <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w)<span class="sc">/</span>(<span class="fu">vcount</span>(x) <span class="sc">-</span> <span class="dv">1</span>) <span class="co">#summing and averaging</span></span>
+<span id="cb33-7"><a href="#cb33-7"></a>      <span class="fu">return</span>(h)</span>
+<span id="cb33-8"><a href="#cb33-8"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Second, we compute three versions of the harmonic centrality, with <span class="math inline">\(\delta = 5\)</span>, <span class="math inline">\(\delta = 0.05\)</span>, and <span class="math inline">\(\delta = -5\)</span>, using the full (unrestricted by age) subgraph of the <code>law_advice</code> network composed of the women lawyers at the firm, with relations constrained to be undirected:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(law_advice)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>)</span>
-<span id="cb41-2"><a href="#cb41-2"></a>   wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(law_advice, women)</span>
-<span id="cb41-3"><a href="#cb41-3"></a>   wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg)</span>
-<span id="cb41-4"><a href="#cb41-4"></a>   close5 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">5</span>)</span>
-<span id="cb41-5"><a href="#cb41-5"></a>   close6 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="fl">0.05</span>)</span>
-<span id="cb41-6"><a href="#cb41-6"></a>   far1 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="sc">-</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(law_advice)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>)</span>
+<span id="cb34-2"><a href="#cb34-2"></a>   wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(law_advice, women)</span>
+<span id="cb34-3"><a href="#cb34-3"></a>   wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg)</span>
+<span id="cb34-4"><a href="#cb34-4"></a>   close5 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">5</span>)</span>
+<span id="cb34-5"><a href="#cb34-5"></a>   close6 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="fl">0.05</span>)</span>
+<span id="cb34-6"><a href="#cb34-6"></a>   far1 <span class="ot">&lt;-</span> <span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="sc">-</span><span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <ul>
 <li><p>The first version of the harmonic centrality in line 5, with a positive value of <span class="math inline">\(\delta\)</span> above zero, will compute centrality scores emphasizing <em>direct</em> (one-step) connections, thus coming closer to <strong>degree</strong>.</p></li>
@@ -1127,7 +1054,7 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="closcent_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="closcent_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid figure-img" width="672"></p>
 <p></p><figcaption class="figure-caption">Full women lawyers advice network</figcaption><p></p>
 </figure>
 </div>
@@ -1142,12 +1069,12 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 <p>As we said earlier, both regular harmonic centrality and degree are special cases of the generalized measure. We can check this by setting <span class="math inline">\(\delta\)</span> to either one or infinity.</p>
 <p>When we set <span class="math inline">\(\delta=1\)</span> the generalized harmonic centrality is the same as the normalized harmonic centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">1</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="dv">1</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.598 0.534 0.706 0.598 0.657 0.627 0.426 0.539 0.696 0.647 0.667 0.407
 [13] 0.588 0.520 0.583 0.603 0.559 0.544</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   <span class="fu">round</span>(<span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1"></a>   <span class="fu">round</span>(<span class="fu">harmonic_centrality</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.598 0.534 0.706 0.598 0.657 0.627 0.426 0.539 0.696 0.647 0.667 0.407
 [13] 0.588 0.520 0.583 0.603 0.559 0.544</code></pre>
@@ -1155,12 +1082,12 @@ C^{GHC}_i = \frac{\sum_{j \neq i}(g_{ij})^{-\delta}}{N-1}
 </div>
 <p>When we set <span class="math inline">\(\delta=\infty\)</span> the generalized harmonic centrality is the same as the normalized degree centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="cn">Inf</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a>   <span class="fu">round</span>(<span class="fu">g.harm</span>(wg, <span class="at">d =</span> <span class="cn">Inf</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.235 0.176 0.471 0.235 0.353 0.294 0.059 0.176 0.412 0.353 0.412 0.059
 [13] 0.235 0.176 0.235 0.353 0.235 0.235</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">round</span>(<span class="fu">degree</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1"></a>   <span class="fu">round</span>(<span class="fu">degree</span>(wg, <span class="at">normalized =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.235 0.176 0.471 0.235 0.353 0.294 0.059 0.176 0.412 0.353 0.412 0.059
 [13] 0.235 0.176 0.235 0.353 0.235 0.235</code></pre>
