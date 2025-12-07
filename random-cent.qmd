@@ -1,0 +1,291 @@
+---
+title: "Random Walk Centralities"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+In the lecture notes on [random walk concepts](random.qmd) we defined two basic quantities helpful for analyzing networks in terms of dynamic diffusion processes: The **average first passage time** and the **average commute distance**. 
+
+Both of these concepts serve as measures of distances (and its inverse proximity) based on how to two nodes are connected via direct and indirect paths, where the paths are defined by how something (e.g., gossip, disease, a meme) diffuses through the walk structure of the network based on transition probabilities governed by the inverse of the degrees of each node.
+
+In the lecture on [closeness centrality](closcent.qmd) we saw how one of the fundamental centrality measures in social network analysis is defined according to a distance measure, in that case the **geodesic** or **shortest path distance**. Two nodes are far if the length of the shortest path separating is very long, and are close if it is very short (with the minimum being adjacency or length one).
+
+Since random walk concepts are distance/proximity concepts, we can use them to build analogues of the centrality measures based on the geodesic distance.
+
+## Randon Walk Closeness
+
+The most obvious extension is to build a measure of closeness based on the random walk concept fo the average first passage time. Two nodes are distant is the average number of steps it takes for something to get from one to the other is big, and they are close if the number of steps is small. So the average first passage time metric is the random-walk analogue to the geodesic distance, but it is based on random walks on *all* paths in the graph regardless of length.
+
+Thus, if $m_{ij}$ is the average first passage time between nodes $i$ and $j$ then the **random walk closeness centrality** of node $i$ is given by:
+
+$$
+C^{RCLO}_i = \left[\sum_j m_{ij}\right]^{-1}
+$$ {#eq-rclos}
+
+Where the denominator of the fraction is just the sum of the rows of the matrix $\mathbf{M}$
+
+Just like closeness, we can also compute the normalized version of random walk closeness, by taking the average first passage time of each node across all of the other nodes in the graph:
+
+$$
+C^{NRCL}_i = \frac{N-1}{\sum_j m_{ij}}
+$$ {#eq-nrclos}
+
+Let's see how this would work in real data. Let's load up our trusty *Pulp Fiction* dataset based on scene co-appearances in the movie:
+
+```{r}
+    library(networkdata)
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0
+```
+
+First, we need the code we used [before](random-cent.qmd) to compute the average first passage time to get our random walk distance matrix $\mathbf{M}$:
+
+```{r}
+    A <- as.matrix(as_adjacency_matrix(g))
+    d <- rowSums(A) #degree vector 
+    D <- diag(d) #degree matrix
+    L <- D - A #Laplacian
+    E <- matrix(1, nrow(A), nrow(A))/nrow(A)
+    L.p <- solve(L + E) - E #pseudo-inverse of Laplacian
+    e <- matrix(1, nrow(A), 1) #column vector of all ones
+    l <- diag(L.p) #diagonal vector of Laplacian inverse
+    vol.A <- sum(d) #graph volume 
+    M <- vol.A * (e %*% t(l))
+    M <- M - (vol.A * L.p)
+    M <- M + (L.p %*% d) %*% t(e)
+    M <- M - (e %*% (t(d) %*% L.p))
+   round(M[1:10, 1:10], 1)
+```
+
+And here are the first ten rows and columns of the $\mathbf{M}$ mmatrix:
+
+```{r}
+    rownames(M) <- colnames(M)
+    round(M, 1)[1:10, 1:10]
+```
+
+Now to compute random walk closeness according to @eq-rclos:
+
+```{r}
+   rw.clos <- rowSums(M)^-1
+   sort(rw.clos, decreasing = TRUE)[1:10] 
+```
+
+And the normalized version:
+
+```{r}
+   nrw.clos <- (vcount(g) - 1)/rowSums(M)
+   sort(nrw.clos, decreasing = TRUE)[1:10]
+```
+
+Note that in contrast to the measures based on shortest paths, in which the top characters also have the top closeness, the random walk version selects more obscure characters as the most central (e.g., The Gimp and Zed).
+
+Note that because the average first passage time is an asymmetric measure, we have a choice as to whether to compute it based on the "out" or the "in" distances. When we use the row sums of the $\mathbf{M}$ matrix we count a node as close if the average first passage time between them and the other nodes in the graph is small. 
+
+But we can also say that a node is close to others if the average first passage time between the others and that node is small. In that case we would want to use the *column sums* of the $\mathbf{M}$ matrix:
+
+```{r}
+   nrw.clos <- (vcount(g) - 1)/colSums(M)
+   sort(nrw.clos, decreasing = TRUE)[1:10]
+```
+
+Note that using this measure gives us more interpretable results, with the most important characters in the story being in the top ten.
+
+## Current Flow Closeness
+
+What if we were to use the average commute time as our distance measure instead? This makes sense, because just like the average first passage time, two nodes are far if the average commute time between them is big, and close if it is small. 
+
+If we do that, we end up with a closeness centrality measure called **Current Flow Closeness** which is a weird name due to the fact that it was developed in the study of electrical circuit networks!
+
+So if $n_{ij}$ is the average commute time distance between nodes $i$ and $j$ then the current flow closeness of $i$ is given by:
+
+$$
+C^{CFCL}_i = \left[\sum_j n_{ij}\right]^{-1}
+$$ {#eq-cfclos}
+
+And the normalized version:
+
+$$
+C^{NCFC}_i = \frac{N-1}{\sum_j n_{ij}}
+$$ {#eq-nrclos}
+
+
+Remember that once we have $\mathbf{M}$, the $\mathbf{N}$ matrix of average commute time distances is just:
+
+```{r}
+   N <- M + t(M)
+```
+
+And here are the first ten rows and columns of the $\mathbf{N}$ mmatrix:
+
+```{r}
+   round(N, 1)[1:10, 1:10]
+```
+
+And now to compute the current flow closeness:
+
+```{r}
+   cf.clos <- rowSums(N/sum(d))^-1
+   sort(cf.clos, decreasing = TRUE)[1:10] 
+```
+
+Note that we divided the entries in the average commute time matrix $\mathbf{N}$ by the volume of the graph $\sum_i d_i$ (the sum of degrees) to transform them into **resistance distances** [@fouss_etal16, p. 78], which does not make a difference for the rankings because it is just dividing by a constant.
+
+And the normalized version:
+
+
+```{r}
+   ncf.clos <- (vcount(g)-1)/rowSums(N/sum(d))
+   sort(ncf.clos, decreasing = TRUE)[1:10] 
+```
+
+We can see that in contrast to the random walk closeness based on out-distances, but like the random walk closeness based on in-distances, the current flow closeness gives results that are closer to those obtained using the geodesic distance version of closeness with the most important characters in the story being in the top ten. 
+
+## Random Walk Betweenness
+
+We can extend a similar "random walk" reasoning to the concept of [betweenness centrality](betcent.qmd). Recall that the standard computation of betweenness centrality only counts the number *shortest paths* that a given node is an intermediary on. We can extend the same reasoning beyond shortest paths to consider all paths of any length.
+
+Consider a random walk process on a social network of the sort we [talked about before](random.qmd). In this version we select a "seed" or "source" node $i$ and a destination (also called "sink) node $j$. We start a diffusion process on $i$ and stop it when it reaches $j$. The node-to-node transition are governed by the probabilities stored in the matrix $\mathbf{P}$.
+
+If we replay this process many times, each time selecting a random source and a random destination node in the network (such that all pairs of nodes get to play each role) then we *could* count the number of times the thing diffusing through the network when *through* some third node $k$. A node has a high **random walk betweenness centrality** if it is likely to be an intermediary on most random walk diffusion processes that start and end with some other pair of nodes $i$ and $j$. 
+
+### Computing Random Walk Betweeness
+
+How do we calculate random walk betweenness? Turns out the information we seek is stored in the **pseudo-inverse of the Laplacian** matrix ($\mathbf{L}^+$), which you recall from our [previous discussion](random.qmd) is defined as:
+
+$$
+\mathbf{L}^+ = \left(\mathbf{L} -  \frac{\mathbf{E}}{N}\right) ^{-1}- \frac{\mathbf{E}}{N}
+$$ {#eq-ilap}
+
+Where $\mathbf{L} = \mathbf{D} - \mathbf{A}$, $\mathbf{D}$ is the matrix containing the degrees of each node in the diagonal, $\mathbf{E}$ is the all ones matrix of the same dimension as $\mathbf{A}$, and $N$ is the number of nodes in the network. Note that we already computed this matrix when calculating random walk closeness earlier for the *Pulp Fiction* network (`L.p`).
+
+As @fouss_etal16 [p. 161] note, if we wanted to know the amount of "flow" ($\phi$) that goes through a node $k$ during a random walk process involving a seed node $i$ and destination node $l$ all we need to do is compute:
+
+$$
+\phi_k = \frac{1}{2}\sum_{j \in N(k)}^{N} a_{jk}|l_{ij}^+ - l_{jl}^+ - l_{ik}^+ + l_{kl}^+|
+$$ {#eq-flow1}
+
+Where the summation goes over all of $k$'s neighbors $j$. What this formula tells us is that the amount of flow that $k$ intermediates when a random walk process starts at $i$ and ends with $l$ is the sum of the amount of flow that would come through each edge $e_{jk}$ in the graph, connecting $k$ to one of their neighbors $j$.
+
+Let's write a function to test this out in the *Pulp Fiction* network:
+
+```{r}
+    flow.k <- function(a, b, c, w) {
+        z <- as.matrix(as_adjacency_matrix(w))
+        i <- which(V(w)$name == a)
+        l <- which(V(w)$name == b)
+        k <- which(V(w)$name == c)
+        f <- 0
+        for (j in 1:vcount(w)) {
+            if (i !=k & l != k) {
+                f <- f + (z[j,k] * abs(L.p[i,j] - L.p[j,l] - L.p[i,k] + L.p[k,l]))
+                }
+            }
+        f <- f/2
+        return(f)
+        }
+```
+
+The `flow.k` function takes the seed node `a`, the destination node `b`, the intermediary node `c` and the graph `w` as arguments, and returns the total amount of flow that would go from each of $k$'s neighbors $j$ as output according to @eq-flow1.
+
+For instance, if we wanted to find the amount of flow that would go through Vincent if we started a random walk process with Mia and ended it with Pumpkin an infinite number of times, we would just type:
+
+```{r}
+    round(flow.k("Mia", "Pumpkin", "Vincent", g), 3)
+```
+
+And if we wanted to change to the intermediary node to Brett:
+
+```{r}
+    round(flow.k("Mia", "Pumpkin", "Brett", g), 3)
+```
+
+Indicating that Vincent would intermediate much more of the flow between Mia and Pumpkin than would Brett. 
+
+Now, the overall random walk betweenness centrality of any node is just their average flow score across each pair of nodes in the graph. The following wrapper around `flow.k` figures that out:
+
+```{r}
+    flow.bet <- function(c, w) {
+        b <- 0
+        n <- vcount(w)
+        for (i in V(w)$name) {
+            for (j in V(w)$name) {
+                b <- b + flow.k(i, j, c, w) #summing flows
+            }
+        }
+        b <- b * ((n - 1) * (n- 2))^-1 #averaging across pairs
+        return(b)
+    }
+```
+
+We can now find Vincent's random walk betweenness:
+
+```{r}
+    round(flow.bet("Vincent", g), 3)
+```
+
+Which is higher than Brett's
+
+```{r}
+    round(flow.bet("Brett", g), 3)
+```
+
+@fouss_etal16 [p. 162] show that we can use some matrix tricks to compute these quantities more efficiently. First, they note that the total flow going through a particular edge $e_{jk}$ in the graph for every source/destination pair of nodes can be computed as follows. 
+
+First, we compute the matrix $\mathbf{N}_{jk}$:
+
+$$
+\mathbf{N}_{jk} = (\mathbf{l}^+_j  - \mathbf{l}^+_k)\mathbf{e^T} - \mathbf{e}(\mathbf{l}^+_j  - \mathbf{l}^+_k)^T
+$$
+
+Where $\mathbf{l}^+_j$ is the $j^{th}$ column of $\mathbf{L}^+$.
+
+Once we have $\mathbf{N}_{jk}$, the total random walk flow going through edge $e_{jk}$ is given by:
+
+$$
+\phi_{jk} = (\mathbf{e} - \mathbf{e}_k)^T |\mathbf{N}_{jk}| (\mathbf{e} - \mathbf{e}_k)
+$$
+
+The random walk betweenness of $k$ is then the sum of $\phi_{jk}$ across each neighbor $j \in N(k)$.
+
+Here's a function that packages those tricks to compute the random walk betweenness of each node in the graph, based on @fouss_etal16 [algorithm 4.5]:
+
+```{r}
+    cur.flow.bet <- function(w) {
+        n <- vcount(w)
+        b <- rep(0, n)
+        for (k in 1:n) {
+            l.k <- L.p[, k]
+            for (j in as.vector(neighbors(w, k))) {
+                l.j <- L.p[, j]
+                Njk <- ((l.j - l.k) %*% t(e)) - (e %*% t(l.j - l.k))
+                e.k <- matrix(0, n, 1)
+                e.k[k] <- 1
+                b[k] <- b[k] + (t(e - e.k) %*% abs(Njk) %*% (e - e.k))
+            }
+        }
+    b <- b * (2 * ((n - 1) * (n- 2)))^-1 #averaging across pairs
+    names(b) <- V(w)$name
+    return(b)
+    }
+```
+
+And now for the big reveal:
+
+```{r}
+    cf.bet <- cur.flow.bet(g)
+    round(sort(cf.bet, decreasing = TRUE), 3)[1:10]
+```
+
+Which gives us the same answer as we obtained earlier for Vincent (the top node) while also showing the other top random walk betweenness centrality nodes in the network. These nodes, are not surprisingly, also some of the most central characters in the story. 
