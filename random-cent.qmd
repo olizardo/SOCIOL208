@@ -65,7 +65,6 @@ First, we need the code we used [before](random-cent.qmd) to compute the average
     M <- M - (vol.A * L.p)
     M <- M + (L.p %*% d) %*% t(e)
     M <- M - (e %*% (t(d) %*% L.p))
-   round(M[1:10, 1:10], 1)
 ```
 
 And here are the first ten rows and columns of the $\mathbf{M}$ mmatrix:
@@ -89,9 +88,9 @@ And the normalized version:
    sort(nrw.clos, decreasing = TRUE)[1:10]
 ```
 
-Note that in contrast to the measures based on shortest paths, in which the top characters also have the top closeness, the random walk version selects more obscure characters as the most central (e.g., The Gimp and Zed).
+In contrast to the measures based on shortest paths, in which the top characters also have the top closeness, the random walk version selects more obscure characters as the most central (e.g., The Gimp and Zed).
 
-Note that because the average first passage time is an asymmetric measure, we have a choice as to whether to compute it based on the "out" or the "in" distances. When we use the row sums of the $\mathbf{M}$ matrix we count a node as close if the average first passage time between them and the other nodes in the graph is small. 
+Note, however, that because the average first passage time is an asymmetric measure, we have a choice as to whether to compute it based on the "out" or the "in" distances. When we use the row sums of the $\mathbf{M}$ matrix we count a node as close if the average first passage time between them and the other nodes in the graph is small. 
 
 But we can also say that a node is close to others if the average first passage time between the others and that node is small. In that case we would want to use the *column sums* of the $\mathbf{M}$ matrix:
 
@@ -100,7 +99,7 @@ But we can also say that a node is close to others if the average first passage 
    sort(nrw.clos, decreasing = TRUE)[1:10]
 ```
 
-Note that using this measure gives us more interpretable results, with the most important characters in the story being in the top ten.
+Using this measure gives us more interpretable results, with the most important characters in the story being in the top ten.
 
 ## Current Flow Closeness
 
@@ -156,9 +155,11 @@ We can see that in contrast to the random walk closeness based on out-distances,
 
 We can extend a similar "random walk" reasoning to the concept of [betweenness centrality](betcent.qmd). Recall that the standard computation of betweenness centrality only counts the number *shortest paths* that a given node is an intermediary on. We can extend the same reasoning beyond shortest paths to consider all paths of any length.
 
-Consider a random walk process on a social network of the sort we [talked about before](random.qmd). In this version we select a "seed" or "source" node $i$ and a destination (also called "sink) node $j$. We start a diffusion process on $i$ and stop it when it reaches $j$. The node-to-node transition are governed by the probabilities stored in the matrix $\mathbf{P}$.
+Consider a random walk process on a social network of the sort we [talked about before](random.qmd). In this version we select a "seed" or "source" node $i$ and a destination (also called "sink) node $j$. We start a diffusion process on $i$ and stop it when it reaches $j$ (this is called an **absorbing random walk**). The node-to-node transitions are governed by the probabilities stored in the matrix $\mathbf{P}$.
 
-If we replay this process many times, each time selecting a random source and a random destination node in the network (such that all pairs of nodes get to play each role) then we *could* count the number of times the thing diffusing through the network when *through* some third node $k$. A node has a high **random walk betweenness centrality** if it is likely to be an intermediary on most random walk diffusion processes that start and end with some other pair of nodes $i$ and $j$. 
+If we replay this process many times, each time selecting a random source and a random destination node in the network (such that all pairs of nodes get to play each role) then we *could* count the number of times the thing diffusing through the network when *through* some third node $k$. 
+
+A node has a high **random walk betweenness centrality**^[Also called **current flow betweenness** and **absorbing random walk betweenness**.] if it is likely to be a frequent intermediary on random walk diffusion processes that start and end with some other pair of nodes $i$ and $j$ in the graph. 
 
 ### Computing Random Walk Betweeness
 
@@ -173,7 +174,7 @@ Where $\mathbf{L} = \mathbf{D} - \mathbf{A}$, $\mathbf{D}$ is the matrix contain
 As @fouss_etal16 [p. 161] note, if we wanted to know the amount of "flow" ($\phi$) that goes through a node $k$ during a random walk process involving a seed node $i$ and destination node $l$ all we need to do is compute:
 
 $$
-\phi_k = \frac{1}{2}\sum_{j \in N(k)}^{N} a_{jk}|l_{ij}^+ - l_{jl}^+ - l_{ik}^+ + l_{kl}^+|
+\phi_k(i,l) = \frac{1}{2}\sum_{j \in N(k)}^{N} a_{jk}|l_{ij}^+ - l_{jl}^+ - l_{ik}^+ + l_{kl}^+|
 $$ {#eq-flow1}
 
 Where the summation goes over all of $k$'s neighbors $j$. What this formula tells us is that the amount of flow that $k$ intermediates when a random walk process starts at $i$ and ends with $l$ is the sum of the amount of flow that would come through each edge $e_{jk}$ in the graph, connecting $k$ to one of their neighbors $j$.
@@ -211,9 +212,15 @@ And if we wanted to change to the intermediary node to Brett:
     round(flow.k("Mia", "Pumpkin", "Brett", g), 3)
 ```
 
-Indicating that Vincent would intermediate much more of the flow between Mia and Pumpkin than would Brett. 
+Indicating that Vincent would intermediate much more of the random walk flow between Mia and Pumpkin than would Brett. 
 
-Now, the overall random walk betweenness centrality of any node is just their average flow score across each pair of nodes in the graph. The following wrapper around `flow.k` figures that out:
+Now, the overall random walk betweenness centrality of any node is just their average flow score across each pair of nodes in the graph:
+
+$$
+C^{RWB}_k = \frac{\sum_{i \neq l} \sum_{l \neq i} \phi_k(i,l)}{(N-1)(N-2)}
+$$
+
+The following wrapper around `flow.k` figures that out:
 
 ```{r}
     flow.bet <- function(c, w) {
@@ -241,7 +248,7 @@ Which is higher than Brett's
     round(flow.bet("Brett", g), 3)
 ```
 
-@fouss_etal16 [p. 162] show that we can use some matrix tricks to compute these quantities more efficiently. First, they note that the total flow going through a particular edge $e_{jk}$ in the graph for every source/destination pair of nodes can be computed as follows. 
+@fouss_etal16 [p. 162] show that we can use some matrix tricks to compute these quantities more efficiently (e.g., without looping). First, they note that the total flow going through a particular edge $e_{jk}$ in the graph for every source/destination pair of nodes can be computed as follows. 
 
 First, we compute the matrix $\mathbf{N}_{jk}$:
 
@@ -256,6 +263,8 @@ Once we have $\mathbf{N}_{jk}$, the total random walk flow going through edge $e
 $$
 \phi_{jk} = (\mathbf{e} - \mathbf{e}_k)^T |\mathbf{N}_{jk}| (\mathbf{e} - \mathbf{e}_k)
 $$
+
+Where $\mathbf{e}_k$ is a column vector of all zeros except for the $k^th$ position, where it contains a one.
 
 The random walk betweenness of $k$ is then the sum of $\phi_{jk}$ across each neighbor $j \in N(k)$.
 
