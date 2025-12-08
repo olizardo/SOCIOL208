@@ -1,0 +1,194 @@
+---
+title: "Global Vertex Similarities"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Global Similarity Indices
+
+As we saw in the lecture notes on [local similarity metrics](locsim.qmd), the most important ingredient of structural similarity measures between pairs of nodes is the number of common of neighbors (followed by the degrees of each node), and this quantity is given by the square of the adjacency matrix $\mathbf{A}^2$. So we can say that this matrix gives us a basic similarity measure between nodes, namely, the common neighbors similarity:
+
+$$
+\mathbf{S} = \mathbf{A}^2
+$$
+
+Another way of seeing this is that a common neighbor defines a *path of length two* between a pair of nodes. So the number of common neighbors between two nodes is equivalent to the number of paths of length two between them. We are thus saying that the *similarity between two nodes increases as the number of paths of length two between them increases*, and that info is also recorded in the $\mathbf{A}^2$ matrix. 
+
+### The Local Path Similarity Index
+
+But if the similarity between node pairs increases in the number of paths of length two between them, wouldn't nodes be even more similar if they also have a bunch of paths of length *three* between them? 
+
+@lu_etal09 asked themselves the same question and proposed the following as a similarity metric based on paths:
+
+$$
+\mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3
+$$ {#eq-locpath}
+
+This is the so-called **local path similarity index** [@lu_etal09]. Obviously, structurally equivalent nodes will be counted as similar by this metric (lots of paths of length two between them) but also nodes indirectly connected by many paths of length three, but to a lesser extent given the discount parameter $\alpha$ (a number between zero and one).
+
+A function that does this is:
+
+```{r}
+   local.path <- function(w, alpha = 0.5) {
+      w2 <- w %*% w
+      s <- w2 + alpha*(w2 %*% w)
+   return(s)
+   }
+```
+
+Here's how the local path similarity looks in the *Flintstones* network:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   library(stringr) #using stringr to change names from all caps to title case
+   g <- movie_267
+   V(g)$name <- str_to_title(V(g)$name)
+   g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
+   A <- as.matrix(as_adjacency_matrix(g))
+   S <- local.path(A)
+   S[1:10, 1:10]
+```
+
+Of course as $\alpha$ approaches zero, then the local path measure reduces to the number of common neighbors, while numbers closer to one count paths of length three more. 
+
+Another thing people may wonder if why not keep going and add paths of length four:
+
+$$
+\mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4
+$$
+
+Or paths of length whatever:
+
+$$
+\mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4 ... + \alpha^{k-2} \mathbf{A}^k
+$$
+
+Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter, so maybe we don't have to worry about them.
+
+### The Katz Similarity
+
+Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo @katz53 in the 1950s (!). 
+
+The basic idea was to use linear algebra tricks to solve:
+
+$$
+\mathbf{S} = \sum_{k=1}^{\infty} \alpha^k \mathbf{A}^k
+$$
+
+Which would theoretically count the *all* the paths of *all possible lengths* between two nodes while discounting the contribution of the longer paths in proportion to their length (as $k$ gets bigger, with $\alpha$ a number between zero and one, $\alpha^k$ gets smaller and smaller).
+
+Linear algebra hocus-pocus (non-technical explainer [here](https://olizardo.github.io/networks-textbook/lesson-sna-status.html#a-mathy-interlude)) turns the above infinite sum into the more tractable:
+
+$$
+\mathbf{S} = (\mathbf{I} - \alpha \mathbf{A})^{-1}
+$$ {#eq-katz}
+
+Where $\mathbf{I}$ is the **identity matrix** (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the **matrix inverse** operation (most matrices are invertible, unless they are weird).
+
+A function to compute the **Katz similarity** between all node pairs looks like:
+
+```{r}
+   katz.sim <- function(w) {
+      I <- diag(nrow(w)) #creating identity matrix
+      alpha <- 1/eigen(w)$values[1] - 1e-10 #reciprocal of first eigenvalue of adjacency matrix minus a tiny number
+      S <- solve(I - alpha * w) 
+      return(S)
+   }
+```
+
+This function takes the network's adjacency matrix (`w`) as input and returns the **Katz similarity matrix** (`S`) as output. 
+
+For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose $\alpha$ to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Here we just pick the reciprocal of the largest (first) eigenvalue minus a very small number ($10^{-10}$). 
+
+Line 4 computes the actual Katz similarity using the native `R` function `solve` to find the relevant matrix inverse.^[See [here](https://cran.r-project.org/web/packages/matlib/vignettes/inv-ex1.html) for an explainer of the matrix inverse in general and its computation in `R`.] 
+
+In the *Flintstones* network the Katz similarity looks like:
+
+```{r}
+   set.seed(456)
+   S <- katz.sim(A)
+   round(S[1:10, 1:10], 2)
+```
+
+Which are pretty big numbers! Which makes sense, since these are estimates of *all* the paths of *any* length between every pair of nodes in the network. We can get more tractable figures by normalizing the matrix by its maximum:
+
+```{r}
+   S <- S/max(S)
+   round(S[1:10, 1:10], 2)
+```
+
+Which looks better. As we would expect, Fred is very similar to Barney and Betty. We can then do the standard hierarchical clustering to see how this similarity measure groups nodes:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+   blocks  <- cutree(h.res, k = 6)
+   blocks
+```
+
+The Katz similarity (correctly) assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block. 
+
+### Degree-Weighted Katz Similarity (AKA Leicht-Holme-Newman)
+
+@leicht_etal06 argue that the Katz approach is fine and dandy as a similarity measure, but note that is an unweighted index (like the raw number of common neighbors). This means that nodes with large degree will end up being "similar" to a bunch of other nodes in the graph, just because they have lots of paths of length whatever between them and those nodes.
+
+@leicht_etal06 propose a "fix" for this weakness in the Katz similarity, resulting in the matrix linear algebra equivalent of a degree-normalized similarity measure like the Jaccard or Cosine. 
+
+So instead of Katz they suggest we compute:
+
+$$
+\mathbf{S} = \mathbf{D}^{-1} \left( \frac{\alpha A}{\lambda_1} \right)^{-1} \mathbf{D}^{-1}
+$$
+
+Here $\mathbf{D}$ is a matrix containing the degrees of each node along the diagonal. The inverse of this matrix $\mathbf{D}^{-1}$ will contain the *reciprocal* of each degree $1/k_i$ along the diagonals. $\lambda_1$, on the other hand, is just the first eigenvalue of the adjacency matrix. 
+
+So, the **LHN Similarity** is just the Katz similarity weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends. 
+
+Which leads to the function:
+
+```{r}
+   LHN.sim <- function(A, alpha = 0.9) {
+      D <- solve(diag(rowSums(A))) #inverse of degree matrix
+      lambda <- eigen(A)$values[1] #first eigenvalue of adjacency matrix
+      S <- D %*% solve((alpha * A)/lambda) %*% D #LHN index
+      rownames(S) <- rownames(A)
+      colnames(S) <- colnames(A)
+      return(S)
+   }
+```
+
+And the *Flintstones* result:
+
+```{r}
+   S <- LHN.sim(A)
+   round(S[, 1:5], 2)
+```
+
+Note that as @leicht_etal06 discuss, the entries in the **LHN** version of the similarity $\mathbf{S}$ can be either positive or negative. Negative entries are nodes that are *surprisingly* dissimilar given their degrees, and positive numbers indicating node pairs that are *surprisingly* similar. Numbers closer to zero are nodes that are neither similar nor dissimilar given their degrees.
+
+Here we can see that Barney and Fred are actually not that similar to one another (after we take into account their very high degree) and that Barney is actually most similar to Feldspar (and Fred even more so). 
+
+Because the LHN similarities have negative and positive values, they already define a distance between nodes in the graph, like the correlation distance. So if we wanted to find blocks of actors using this similarity criterion, all we need to do is:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(S)
+   h.res <- hclust(D, method = "ward.D2")
+   plot(h.res)
+   blocks <- cutree(h.res, k = 8)
+   blocks
+```
+
+It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data. 

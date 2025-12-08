@@ -344,7 +344,17 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./similarity.html" class="sidebar-item-text sidebar-link">Vertex Similarity</a>
+  <a href="./locsim.html" class="sidebar-item-text sidebar-link">Local Vertex Similarities</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./globsim.html" class="sidebar-item-text sidebar-link">Global Vertex Similarities</a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./gensim.html" class="sidebar-item-text sidebar-link">Generalized Vertex Similarities</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -354,7 +364,7 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./tm-similarity.html" class="sidebar-item-text sidebar-link">Similarity and Equivalence in Two-Mode Networks</a>
+  <a href="./dualsim.html" class="sidebar-item-text sidebar-link">Similarity and Equivalence in Two-Mode Networks</a>
   </div>
 </li>
       </ul>
@@ -576,7 +586,7 @@ div.csl-indent {
 <span id="cb1-12"><a href="#cb1-12"></a>   <span class="fu">return</span>(fp)</span>
 <span id="cb1-13"><a href="#cb1-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The function takes a transition matrix <span class="math inline">\(\mathbf{P}\)</span> as the primary input (of the sort we discussed when talking about <a href="#prestige.qmd">status and prestige</a>) and returns a vector containing the time step at which the thing that diffused through the network got to the <span class="math inline">\(j^{th}\)</span> node. It works like this:</p>
+<p>The function takes a transition matrix <span class="math inline">\(\mathbf{P} = \mathbf{D}^{-1}\mathbf{A}\)</span>—where <span class="math inline">\(\mathbf{D}^{-1}\)</span> is a matrix containing the inverse of the degrees of each node along the diagonals and zeros everywhere else—as the primary input (of the sort we discussed when talking about <a href="#prestige.qmd">status and prestige</a>) and returns a vector containing the time step at which the thing that diffused through the network got to the <span class="math inline">\(j^{th}\)</span> node. It works like this:</p>
 <ul>
 <li><p>Line 2 initializes the “first pass” vector <code>fp</code> to all zeros. Line 3 initializes the step counter <code>k</code> and line 4 initializes the scalar <code>i</code> to the whatever node was specified as the seed note in the <code>seed</code> argument of the function.</p></li>
 <li><p>Lines 5-10 implement a little <code>while</code> loop that runs until there are no more zeros in the <code>fp</code> vector. Line 6 samples a random neighbor of node <code>i</code> with probability specified by the relevant entry in the transition matrix (<span class="math inline">\(p_{ij} = \frac{1}{d_i}\)</span>), and then turns that node <code>j</code> into the new sender node <code>i</code>, marking that as the time that the thing that is diffusing through the network got to <code>j</code> using marker <code>k</code>.</p></li>
@@ -588,9 +598,10 @@ div.csl-indent {
 <span id="cb2-2"><a href="#cb2-2"></a>   <span class="fu">library</span>(igraph)</span>
 <span id="cb2-3"><a href="#cb2-3"></a>   g <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(ht_friends, <span class="at">mode =</span> <span class="st">"collapse"</span>) <span class="co">#undirected graph</span></span>
 <span id="cb2-4"><a href="#cb2-4"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g)) <span class="co">#adjacency matrix</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a>   P <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span><span class="sc">/</span><span class="fu">rowSums</span>(A)) <span class="sc">%*%</span> A  <span class="co">#creating transition matrix from adjacency matrix</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>) </span>
-<span id="cb2-7"><a href="#cb2-7"></a>   <span class="fu">first.pass1</span>(P)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-5"><a href="#cb2-5"></a>   D <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">rowSums</span>(A)<span class="sc">^-</span><span class="dv">1</span>) <span class="co">#inverse of degree matrix</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a>   P <span class="ot">&lt;-</span> D <span class="sc">%*%</span> A  <span class="co">#transition matrix</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>) </span>
+<span id="cb2-8"><a href="#cb2-8"></a>   <span class="fu">first.pass1</span>(P)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20 
   0   2 137  24  14  28  43  36   8   9  16  29  15  26   7   1  25  33   6  32 
@@ -598,7 +609,7 @@ div.csl-indent {
  12 </code></pre>
 </div>
 </div>
-<p>We can see for instance that the rumor got to node 16 in just one time step, but that it took 24 time steps to get to node 3 and 137 (!) to get to node 3.</p>
+<p>We can see for instance that the rumor got to node 16 in just one time step, but that it took 26 time steps to get to node 14 and 137 (!) to get to node 3.</p>
 <p>So it seems like this, the minimum time it takes for something that starts with me to get to you <span class="citation" data-cites="fouss_etal04b">(<a href="#ref-fouss_etal04b" role="doc-biblioref">Fouss, Pirotte, and Saerens 2004</a>)</span>, is a good measure of the proximity between me and you in the graph.</p>
 <p>However, we wouldn’t want to use just one run of the diffusion process to calculate this proximity measure. Instead a better approach is to use the <em>average time</em> it takes for something to get to the other nodes when it starts from a given node, across a large number of realizations of the diffusion process.</p>
 <p>To do that, we can just <code>replicate</code> the <code>first.pass1</code> function some number of times (e.g., <span class="math inline">\(n = 100\)</span>) and take an average:</p>
@@ -721,6 +732,35 @@ m_{ij} = 1 + \sum^N_{j \neq k}p_{ik}m_{k,j}
 <span id="cb13-2"><a href="#cb13-2"></a>   L.p <span class="ot">&lt;-</span> <span class="fu">solve</span>(L <span class="sc">+</span> E) <span class="sc">-</span> E</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>As we can see, <code>E</code> is just a matrix containing the inverse of the number of nodes in the network in every cell (<span class="math inline">\(\frac{1}{N}\)</span>). We use the function <code>solve</code> to obtain the <strong>matrix inverse</strong> of the expression in parentheses in <a href="#eq-ilap">Equation&nbsp;3</a>.</p>
+<p>What’s in the <span class="math inline">\(\mathbf{L}^+\)</span> matrix? Let’s see the first ten rows and columns:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">round</span>(L.p[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        [,1]   [,2]   [,3]   [,4]   [,5]   [,6]   [,7]   [,8]   [,9]  [,10]
+ [1,]  0.112  0.004 -0.011  0.015 -0.012 -0.013 -0.025  0.015 -0.013 -0.008
+ [2,]  0.004  0.099 -0.015  0.007 -0.002  0.001 -0.021 -0.010 -0.012 -0.012
+ [3,] -0.011 -0.015  0.167 -0.017 -0.007 -0.015 -0.014 -0.014 -0.009  0.006
+ [4,]  0.015  0.007 -0.017  0.147 -0.015 -0.015 -0.028  0.022 -0.016 -0.007
+ [5,] -0.012 -0.002 -0.007 -0.015  0.099 -0.010 -0.019 -0.016  0.007 -0.001
+ [6,] -0.013  0.001 -0.015 -0.015 -0.010  0.145  0.030 -0.020  0.011 -0.014
+ [7,] -0.025 -0.021 -0.014 -0.028 -0.019  0.030  0.341 -0.030 -0.016 -0.025
+ [8,]  0.015 -0.010 -0.014  0.022 -0.016 -0.020 -0.030  0.200 -0.014  0.011
+ [9,] -0.013 -0.012 -0.009 -0.016  0.007  0.011 -0.016 -0.014  0.164  0.007
+[10,] -0.008 -0.012  0.006 -0.007 -0.001 -0.014 -0.025  0.011  0.007  0.125</code></pre>
+</div>
+</div>
+<p>As we can see, some of the entries of <span class="math inline">\(\mathbf{L}^+\)</span> are positive and others are negative. More interestingly, we can see that <span class="math inline">\(\mathbf{L}^+\)</span> is a <strong>symmetric</strong> matrix: <span class="math inline">\(l^+_{ij} = l^+_{ij}\)</span>.</p>
+<p>Even more interestingly, <span class="math inline">\(\mathbf{L}^+\)</span> is <strong>doubly centered</strong>—similar to the <strong>modularity matrix</strong> <a href="./community.html">considered here</a>. That means <em>both</em> the rows and column sums of the matrix are equal to the all zeros vector:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">round</span>(<span class="fu">rowSums</span>(L.p), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="fu">round</span>(<span class="fu">colSums</span>(L.p), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</code></pre>
+</div>
+</div>
 <p>The average first passage time between every pair of nodes in the network <span class="math inline">\(m_{ij}\)</span> expressed in terms of the entries of <span class="math inline">\(\mathbf{L}^+\)</span> and the degree vector <span class="math inline">\(\mathbf{d}\)</span>, is then given by <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 158</a>)</span>:</p>
 <p><span id="eq-firstpass"><span class="math display">\[
 m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
@@ -728,17 +768,17 @@ m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
 <p>Where <span class="math inline">\(d_k\)</span> is the degree of node <span class="math inline">\(k\)</span>.</p>
 <p>So let’s try it out:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   nodes <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A) <span class="co">#node id vector</span></span>
-<span id="cb14-2"><a href="#cb14-2"></a>   d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#degree vector</span></span>
-<span id="cb14-3"><a href="#cb14-3"></a>   m <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(A), <span class="fu">nrow</span>(A)) <span class="co">#initializing M to all zeros</span></span>
-<span id="cb14-4"><a href="#cb14-4"></a>   <span class="cf">for</span> (i <span class="cf">in</span> nodes) { </span>
-<span id="cb14-5"><a href="#cb14-5"></a>      <span class="cf">for</span> (j <span class="cf">in</span> nodes) { </span>
-<span id="cb14-6"><a href="#cb14-6"></a>         <span class="cf">for</span> (k <span class="cf">in</span> nodes) { </span>
-<span id="cb14-7"><a href="#cb14-7"></a>            m[i,j] <span class="ot">&lt;-</span> m[i,j] <span class="sc">+</span> ((L.p[j,j] <span class="sc">-</span> L.p[i,j] <span class="sc">+</span> L.p[i,k] <span class="sc">-</span> L.p[k,j])<span class="sc">*</span>d[k])</span>
-<span id="cb14-8"><a href="#cb14-8"></a>            }</span>
-<span id="cb14-9"><a href="#cb14-9"></a>         }</span>
-<span id="cb14-10"><a href="#cb14-10"></a>      }</span>
-<span id="cb14-11"><a href="#cb14-11"></a>   <span class="fu">round</span>(m[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   nodes <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A) <span class="co">#node id vector</span></span>
+<span id="cb20-2"><a href="#cb20-2"></a>   d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#degree vector</span></span>
+<span id="cb20-3"><a href="#cb20-3"></a>   m <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(A), <span class="fu">nrow</span>(A)) <span class="co">#initializing M to all zeros</span></span>
+<span id="cb20-4"><a href="#cb20-4"></a>   <span class="cf">for</span> (i <span class="cf">in</span> nodes) { </span>
+<span id="cb20-5"><a href="#cb20-5"></a>      <span class="cf">for</span> (j <span class="cf">in</span> nodes) { </span>
+<span id="cb20-6"><a href="#cb20-6"></a>         <span class="cf">for</span> (k <span class="cf">in</span> nodes) { </span>
+<span id="cb20-7"><a href="#cb20-7"></a>            m[i,j] <span class="ot">&lt;-</span> m[i,j] <span class="sc">+</span> ((L.p[j,j] <span class="sc">-</span> L.p[i,j] <span class="sc">+</span> L.p[i,k] <span class="sc">-</span> L.p[k,j])<span class="sc">*</span>d[k])</span>
+<span id="cb20-8"><a href="#cb20-8"></a>            }</span>
+<span id="cb20-9"><a href="#cb20-9"></a>         }</span>
+<span id="cb20-10"><a href="#cb20-10"></a>      }</span>
+<span id="cb20-11"><a href="#cb20-11"></a>   <span class="fu">round</span>(m[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
  [1,]  0.0 15.0 28.5 21.1 17.7 25.4 59.7 29.9 28.5  21.2
@@ -764,18 +804,18 @@ m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
 <p>Now, this formula looks long and monstrous but it is composed of simple quantities we know and love. We have already been introduced to <span class="math inline">\(\mathbf{L}^+\)</span>, while <span class="math inline">\(\mathbf{e}\)</span> is a column vector of ones with as many rows as the number of nodes in the graph, <span class="math inline">\(\mathbf{d}\)</span> is a vector of the same length as the number of nodes in the graph containing the degrees of each node at each position, <span class="math inline">\(vol(A) = \sum_{i} d_{i}\)</span> is just the sum of the non-zero entries in the adjacency matrix, and <span class="math inline">\(\mathbf{l}^+_{d}\)</span> is a vector containing the diagonal entries of <span class="math inline">\(\mathbf{L}^+\)</span> at each position.</p>
 <p>The following <code>R</code> code constructs <span class="math inline">\(\mathbf{M}\)</span> step by step:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(A), <span class="dv">1</span>) <span class="co">#column vector of all ones</span></span>
-<span id="cb16-2"><a href="#cb16-2"></a>   d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#degree vector </span></span>
-<span id="cb16-3"><a href="#cb16-3"></a>   l <span class="ot">&lt;-</span> <span class="fu">diag</span>(L.p) <span class="co">#diagonal vector of Laplacian inverse</span></span>
-<span id="cb16-4"><a href="#cb16-4"></a>   vol.A <span class="ot">&lt;-</span> <span class="fu">sum</span>(d) <span class="co">#graph volume </span></span>
-<span id="cb16-5"><a href="#cb16-5"></a>   M <span class="ot">&lt;-</span> vol.A <span class="sc">*</span> (e <span class="sc">%*%</span> <span class="fu">t</span>(l))</span>
-<span id="cb16-6"><a href="#cb16-6"></a>   M <span class="ot">&lt;-</span> M <span class="sc">-</span> (vol.A <span class="sc">*</span> L.p)</span>
-<span id="cb16-7"><a href="#cb16-7"></a>   M <span class="ot">&lt;-</span> M <span class="sc">+</span> (L.p <span class="sc">%*%</span> d) <span class="sc">%*%</span> <span class="fu">t</span>(e)</span>
-<span id="cb16-8"><a href="#cb16-8"></a>   M <span class="ot">&lt;-</span> M <span class="sc">-</span> (e <span class="sc">%*%</span> (<span class="fu">t</span>(d) <span class="sc">%*%</span> L.p))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   e <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(A), <span class="dv">1</span>) <span class="co">#column vector of all ones</span></span>
+<span id="cb22-2"><a href="#cb22-2"></a>   d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#degree vector </span></span>
+<span id="cb22-3"><a href="#cb22-3"></a>   l <span class="ot">&lt;-</span> <span class="fu">diag</span>(L.p) <span class="co">#diagonal vector of Laplacian inverse</span></span>
+<span id="cb22-4"><a href="#cb22-4"></a>   vol.A <span class="ot">&lt;-</span> <span class="fu">sum</span>(d) <span class="co">#graph volume </span></span>
+<span id="cb22-5"><a href="#cb22-5"></a>   M <span class="ot">&lt;-</span> vol.A <span class="sc">*</span> (e <span class="sc">%*%</span> <span class="fu">t</span>(l))</span>
+<span id="cb22-6"><a href="#cb22-6"></a>   M <span class="ot">&lt;-</span> M <span class="sc">-</span> (vol.A <span class="sc">*</span> L.p)</span>
+<span id="cb22-7"><a href="#cb22-7"></a>   M <span class="ot">&lt;-</span> M <span class="sc">+</span> (L.p <span class="sc">%*%</span> d) <span class="sc">%*%</span> <span class="fu">t</span>(e)</span>
+<span id="cb22-8"><a href="#cb22-8"></a>   M <span class="ot">&lt;-</span> M <span class="sc">-</span> (e <span class="sc">%*%</span> (<span class="fu">t</span>(d) <span class="sc">%*%</span> L.p))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now for the big reveal:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   <span class="fu">round</span>(M, <span class="dv">1</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   <span class="fu">round</span>(M, <span class="dv">1</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
  [1,]  0.0 15.0 28.5 21.1 17.7 25.4 59.7 29.9 28.5  21.2
@@ -802,8 +842,8 @@ m_{ij} = \sum_{k=1}^n \left(l^+_{jj} - l^+_{ij} + l^+_{ik} - l^+_{kj}\right)d_k
 \]</span></p>
 <p>So the entries of the Average Commute Distance matrix <span class="math inline">\(\mathbf{N}\)</span> are just the entries of <span class="math inline">\(\mathbf{M}\)</span> on the upper triangle added to the corresponding entries in the lower triangle. In <code>R</code> we can obtain that by just adding <span class="math inline">\(\mathbf{M}\)</span> to its transpose <span class="math inline">\(\mathbf{M}^T\)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   N <span class="ot">&lt;-</span> M <span class="sc">+</span> <span class="fu">t</span>(M)</span>
-<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">round</span>(N[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>   N <span class="ot">&lt;-</span> M <span class="sc">+</span> <span class="fu">t</span>(M)</span>
+<span id="cb25-2"><a href="#cb25-2"></a>   <span class="fu">round</span>(N[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
  [1,]  0.0 32.0 47.6 36.2 37.1 44.7 79.6 44.8 47.9  39.9
@@ -830,11 +870,11 @@ n_{ij} = vol(A) \left(l^+_{ii} + l^+_{jj} + 2l^+_{ij}\right)
 <p>But which is actually a much less monstrous and simpler expression than before.</p>
 <p>The following <code>R</code> code constructs the <span class="math inline">\(\mathbf{N}\)</span> matrix of average commute distances between each pair of nodes in the network step by step:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   N <span class="ot">&lt;-</span> l <span class="sc">%*%</span> <span class="fu">t</span>(e)</span>
-<span id="cb21-2"><a href="#cb21-2"></a>   N <span class="ot">&lt;-</span> N <span class="sc">+</span> (e <span class="sc">%*%</span> l)</span>
-<span id="cb21-3"><a href="#cb21-3"></a>   N <span class="ot">&lt;-</span> N <span class="sc">-</span> (<span class="dv">2</span> <span class="sc">*</span> L.p)</span>
-<span id="cb21-4"><a href="#cb21-4"></a>   N <span class="ot">&lt;-</span> vol.A <span class="sc">*</span> N</span>
-<span id="cb21-5"><a href="#cb21-5"></a>   <span class="fu">round</span>(N, <span class="dv">1</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>   N <span class="ot">&lt;-</span> l <span class="sc">%*%</span> <span class="fu">t</span>(e)</span>
+<span id="cb27-2"><a href="#cb27-2"></a>   N <span class="ot">&lt;-</span> N <span class="sc">+</span> (e <span class="sc">%*%</span> l)</span>
+<span id="cb27-3"><a href="#cb27-3"></a>   N <span class="ot">&lt;-</span> N <span class="sc">-</span> (<span class="dv">2</span> <span class="sc">*</span> L.p)</span>
+<span id="cb27-4"><a href="#cb27-4"></a>   N <span class="ot">&lt;-</span> vol.A <span class="sc">*</span> N</span>
+<span id="cb27-5"><a href="#cb27-5"></a>   <span class="fu">round</span>(N, <span class="dv">1</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
  [1,]  0.0 32.0 47.6 36.2 37.1 44.7 79.6 44.8 47.9  39.9
@@ -854,15 +894,15 @@ n_{ij} = vol(A) \left(l^+_{ii} + l^+_{jj} + 2l^+_{ij}\right)
 <p>Interestingly, we can obtain the average commute time distance between any pair nodes yet another way. For instance from the above matrix, we know the average commute time distances between nodes 3 and 8 is 62.38.</p>
 <p>Let’s construct two vectors full of zeros of the same length as the number of nodes in the graph, except they have a one in the third and eighth spot respectively:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   n <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
-<span id="cb23-2"><a href="#cb23-2"></a>   i <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n)</span>
-<span id="cb23-3"><a href="#cb23-3"></a>   j <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n)</span>
-<span id="cb23-4"><a href="#cb23-4"></a>   i[<span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb23-5"><a href="#cb23-5"></a>   j[<span class="dv">8</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1"></a>   n <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
+<span id="cb29-2"><a href="#cb29-2"></a>   i <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n)</span>
+<span id="cb29-3"><a href="#cb29-3"></a>   j <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, n)</span>
+<span id="cb29-4"><a href="#cb29-4"></a>   i[<span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb29-5"><a href="#cb29-5"></a>   j[<span class="dv">8</span>] <span class="ot">&lt;-</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><span class="citation" data-cites="fouss_etal04b">Fouss, Pirotte, and Saerens (<a href="#ref-fouss_etal04b" role="doc-biblioref">2004</a>)</span> show that the average commute time distance between nodes 3 and 8 is also given by:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   <span class="fu">round</span>(<span class="fu">sum</span>(A) <span class="sc">*</span> (<span class="fu">t</span>((i <span class="sc">-</span> j)) <span class="sc">%*%</span> L.p <span class="sc">%*%</span> (i <span class="sc">-</span> j)), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   <span class="fu">round</span>(<span class="fu">sum</span>(A) <span class="sc">*</span> (<span class="fu">t</span>((i <span class="sc">-</span> j)) <span class="sc">%*%</span> L.p <span class="sc">%*%</span> (i <span class="sc">-</span> j)), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1]
 [1,] 62.38</code></pre>

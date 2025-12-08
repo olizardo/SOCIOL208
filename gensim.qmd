@@ -1,0 +1,131 @@
+---
+title: "Generalized Vertex Similarities"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+## Generalized Similarities
+
+So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
+
+Yet, similarities based on local neighborhood information only have been criticized (e.g., by @borgatti_everett92) for not quite capturing the sociological intuition behind the idea of a *role* which is usually what they are deployed for. 
+That is, two doctors don't occupy the same role because they treat the *same* set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not. 
+
+This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as **automorphic** or **regular equivalence** [@borgatti_everett92]. 
+
+Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting. 
+
+A better approach here is to use the more relaxed notion of similarity like we did above to come up with a more general definition that can capture our role-based intuitions. Note that all the similarity notions studied earlier have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that *nodes are similar to the extent they connect to the same others*. 
+
+We can generalize this idea (to deal with the doctor/patient role problem) in the following way: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff). 
+
+As @jeh_widom02 note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity *recursively* and iterate through the graph until the similarity scores stop changing.^[Note the similarity (heh, heh) between this idea and the various status ranking algorithms we discussed in the previous handout.] 
+More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each time-step in the iteration using the formula:
+
+
+$$
+   s_{ij}(t) = \frac{\alpha}{d_i d_j} \sum_{k \in N(i)} \sum_{l \in N(j)} s_{kl}(t-1)
+$$
+
+So the similarity between two nodes at step $t$ is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step, $t-1$), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees (to take a weighted average). 
+
+This measure nicely captures the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes in $p$ + $q$ versus $p$ + $r$ as defined earlier) or whether the set of neighbors are themselves neighbors, which deals with the doctor/patient problem. 
+
+A function that implements this idea looks like:
+
+```{r}
+   SimRank.in <- function(A, C = 0.8, iter = 10) {
+      d <- colSums(A)
+      n <- nrow(A)
+      S <- diag(1, n, n)
+      rownames(S) <- rownames(A)
+      colnames(S) <- colnames(A)
+      m <- 1
+      while(m < iter) {
+          for(i in 1:n) {
+               for(j in 1:n) {
+                    if (i < j) {
+                        a <- names(which(A[, i] == 1)) 
+                        b <- names(which(A[, j] == 1)) 
+                        Sij <- 0
+                        for (k in a) {
+                           for (l in b) {
+                              Sij <- Sij + S[k, l] #i's similarity to j
+                           }
+                        }
+                        S[i, j] <- C/(d[i] * d[j]) * Sij
+                        S[j, i] <- C/(d[i] * d[j]) * Sij
+                    }
+               }
+          }
+         m <- m + 1
+      }
+    return(S)
+    }
+```
+
+Note that this function calculates `SimRank` using each node's in-neighbors (this doesn't matter if the graph is undirected). 
+
+Let's try it out in the *Flintstones* graph using $\alpha = 0.95$:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   library(stringr) #using stringr to change names from all caps to title case
+   g <- movie_267
+   V(g)$name <- str_to_title(V(g)$name)
+   g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
+   A <- as.matrix(as_adjacency_matrix(g))
+   S <- SimRank.in(A, 0.95)
+   round(S[, 1:5], 2)
+```
+
+We can transform the generalized similarities to distances and plot:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+   blocks  <- cutree(h.res, k = 6)
+   blocks
+```
+
+Which returns a somewhat different role partition than the metrics relying on structural equivalence. In the SimRank equivalence partition, $\{$ Fred, Barney $\}$ are in their own standalone class, while $\{$ Betty, Wilma, Slate, Mrs. Slate, Lava $\}$ appear as a separate cluster.  
+
+## Appendix
+
+A more general (and shorter) version of the function to compute `SimRank` looks like this [partly based on @fouss_etal16, pp. 84, algorithm 2.4]:
+
+```{r}
+   SimRank <- function(A, sigma = 0.0001, alpha = 0.8) {
+      n <- nrow(A)
+      d <- as.numeric(colSums(A) > 0)
+      e <- matrix(1, n, 1)
+      Q <- diag(as.vector(t(e) %*% A), n, n)
+      diag(Q) <- 1/diag(Q)
+      Q <- A %*% Q
+      Q[is.nan(Q)] <- 0
+      diff <- 1
+      k <- 1
+      K <- diag(1, n, n)
+      while(diff > sigma) {
+         K.old <- K
+         K.p <- alpha * t(Q) %*% K %*% Q
+         K <- K.p - diag(as.vector(diag(K.p)), n, n) + diag(d, n, n)
+         diff <- abs(sum(abs(K.old)) - sum(abs(K)))
+         k <- k + 1
+      }
+      rownames(K) <- rownames(A)
+      colnames(K) <- colnames(A)
+      return(K)
+   }
+```

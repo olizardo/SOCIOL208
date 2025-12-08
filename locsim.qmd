@@ -1,0 +1,280 @@
+---
+title: "Local Vertex Similarities"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+As we noted in the role equivalence handout, for odd reasons, classical approaches to structural similarity in networks used *distance* metrics but did not measure similarity directly. More recent approaches from network and information science prefer to define vertex similarity using direct similarity measures based on local structural characteristics, like node neighborhoods.
+
+Mathematically, similarity is a less stringent (but also less well-defined compared to distances) relation between pairs of nodes in a graph than distance, so it can be easier to work with in most applications. 
+
+For instance, similarity is required to be symmetric ($s_{ij} = s_{ji}$ for all $i$ and $j$) and most metrics have reasonable bounds (e.g., 0 for least similar and 1.0 for maximally similar). Given such a bounded similarity we can get to *dissimilarity* by subtracting one: $d_{ij} = 1 - s_{ij}$
+
+## Basic Ingredients of Vertex Similarity Metrics
+
+Consider two nodes and the set of nodes that are the immediate neighbors to each. In this case, most vertex similarity measures will make use of three pieces of information:
+
+1. The number of common neighbors $p$.
+
+1. The number of actors $q$ who are connected to node $i$ but not to node $j$.
+
+1. The number of actors $r$ who are connected to node $j$ but not to node $i$.
+
+In the simplest case of the binary undirected graph then these are given by:
+
+$$
+   p = \sum_{k = 1}^{n} a_{ik} a_{jk}
+$$
+
+$$
+   q = \sum_{k = 1}^{n} a_{ik} (1 - a_{jk})
+$$
+
+$$
+   r = \sum_{k = 1}^{n} (1- a_{ik}) a_{jk}
+$$
+
+In matrix form:
+
+$$
+   \mathbf{A}(p) = \mathbf{A} \mathbf{A} = \mathbf{A}^2
+$$
+
+$$
+   \mathbf{A}(q) = \mathbf{A} (1 - \mathbf{A})
+$$
+
+$$
+   \mathbf{A}(r) = (1 - \mathbf{A}) \mathbf{A}
+$$
+
+Let's look at an example:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   library(stringr) #using stringr to change names from all caps to title case
+   g <- movie_267
+   V(g)$name <- str_to_title(V(g)$name)
+   g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
+   A <- as.matrix(as_adjacency_matrix(g))
+   A.p <- A %*% A #common neighbors matrix
+   A.q <- A %*% (1 - A) #neighbors of i not connected to j
+   A.r <- (1 - A) %*% A #neighbors of j not connected to i
+   A.p[1:10, 1:10]
+   A.q[1:10, 1:10]
+   A.r[1:10, 1:10]
+```
+
+Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix in the undirected case. 
+
+So the most obvious measure of similarity between two nodes is simply the number of common neighbors [@leicht_etal06]:
+
+$$
+   s_{ij} = p_{ij}
+$$
+
+We have already seen a version of this in the directed case when talking about the HITS algorithm [@kleinberg99], which computes a spectral (eigenvector-based) ranking based on the matrices of common in and out-neighbors in a directed graph. 
+
+$$
+   p^{in}_{ij} = \sum_{k = 1}^{n} a_{ki} a_{kj}
+$$
+
+$$
+   p^{out}_{ij} = \sum_{k = 1}^{n} a_{ik} a_{jk}
+$$
+
+Which in matrix form is:
+
+$$
+   \mathbf{A}(p^{out}) = \mathbf{A}^T \mathbf{A}
+$$
+
+$$
+   \mathbf{A}(p^{in}) = \mathbf{A} \mathbf{A}^T
+$$
+
+In this case, similarity can be measured *either* by the number of common in-neighbors or the number of common out-neighbors. 
+
+If the network under consideration is a (directed) **citation network** with nodes being papers and links between papers defined as a citation from paper $i$ to paper $j$, then the number of *common in-neighbors* between two papers is their **co-citation** similarity (the number of other papers that cite both papers), and the number of *common out-neighbors* is their **bibliographic coupling** similarity (the overlap in their list of references).
+
+One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network [@leicht_etal06]. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
+
+## Normalized Similarity Metrics
+
+Normalized similarity metrics deal with this issue by adjusting the raw similarity based on $p$ using the number of non-shared neighbors $q$ and $r$. 
+
+The two most popular versions of normalized vertex similarity scores are the **Jaccard index** and the **cosine similarity** (sometimes also referred to as the **Salton Index**). 
+
+The Jacccard index is given by:
+
+$$
+   s_{ij} = \frac{p}{p + q + r}
+$$
+
+Which is the ratio of the size of the *intersection* of the neighborhoods of the two nodes (number of common neighbors) divided by the size of the *union* of the two neighborhoods. 
+
+In our example, this would be:
+
+```{r}
+   J <- A.p / (A.p + A.q + A.r)
+   round(J[1:10, 1:10], 2)
+```
+
+Here showing that Barney is more similar to Fred and Betty than he is to Bam-Bam.
+
+The cosine similarity is given by:
+
+$$
+   s_{ij} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
+$$
+
+Which is the ratio of the number of common neighbors divided by the product of the square root of the degrees of each node (or the square root of the product which is the same thing), since $p$ + $q$ is the degree of node $i$ and $p$ + $r$ is the degree of node $j$.
+
+In our example, this would be:
+
+```{r}
+   C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
+   round(C[1:10, 1:10], 2)
+```
+
+Showing results similar (pun intended) to those obtained using the Jaccard index. 
+
+A less commonly used option is the **Dice Coefficient** (sometimes called the **Sorensen Index**) given by:
+
+$$
+   s_{ij} = \frac{2p}{2p + q + r}
+$$
+
+Which is given by the ratio of *twice* the number of common neighbors divided by twice the same quantity plus the sum of the non-shared neighbors (and thus a variation of the Jaccard measure).
+
+In our example, this would be:
+
+```{r}
+   D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
+   round(D[1:10, 1:10], 2)
+```
+
+Once again, showing results comparable to the previous.  
+
+Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).
+
+@leicht_etal06 introduce a variation on the theme of normalized structural similarity scores. Their point is that maybe we should care about nodes that are *surprisingly* similar given some suitable null model. They propose the **configuration model** as such a null model. This model takes a graph with the same degree distribution as the original but with connections formed at random as reference. 
+
+The **LHN similarity index** (for Leicht, Holme, and Newman) is then given by: 
+
+$$
+s_{ij} = \frac{p}{(p + q)(p + r)}
+$$
+
+Which can be seen as a variation of the cosine similarity defined earlier. 
+
+In our example, this would be:
+
+```{r}
+   D <- A.p / ((A.p + A.q) * (A.p + A.r))
+   round(D[1:10, 1:10], 2)
+```
+
+Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
+
+## Similarity and Structural Equivalence
+
+All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes. 
+
+Because they define distances, this also means that these approaches can be used to find approximately structurally equivalent classes of nodes in a graph just like we did with the Euclidean and correlation distances. 
+
+For instance, consider our toy graph from before with four structurally equivalent sets of nodes:
+
+```{r}
+#| fig-cap: "A toy graph demonstrating structural equivalence."
+#| echo: false
+   library(igraph)
+   library(ggraph)
+   h <- make_empty_graph(9, directed = FALSE) %>% 
+      set_vertex_attr("name", value = LETTERS[1:9])  %>% 
+      add_edges(c("A","B", "A","C", "B","D", "B","E", "B","F",
+                  "B","G", "C","D", "C","E", "C","F", "C","G", 
+                  "H","D", "H","E", "H","F", "I","D", 
+                  "I","E", "I","F", "A","G", "I","H")) 
+   cols <- c(2, 1, 1, 3, 3, 3, 2, 4, 4)
+   p <- ggraph(h, layout = 'kk')
+   p <- p + geom_edge_fan(color = "gray", edge_width = 0.75)
+   p <- p + geom_node_point(aes(x = x, y = y, 
+                                color = as.factor(cols)), size = 12) 
+   p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
+   p <- p + theme_graph() + theme(legend.position = "none")
+   p
+```
+
+The cosine similarity matrix for this graph is:
+
+```{r}
+   W <- as.matrix(as_adjacency_matrix(h))
+   W.p <- W %*% W
+   W.q <- W %*% (1 - W) 
+   W.r <- (1 - W) %*% W
+   C <- W.p / (sqrt(W.p + W.q) * sqrt(W.p + W.r))
+   round(C, 2)
+```
+
+Note that structurally equivalent nodes have similarity scores equal to 1.0. In this case, the distance matrix is given by:
+
+```{r}
+   D <- 1 - C
+```
+
+And a hierarchical clustering on this matrix reveals the structurally equivalent classes:
+
+```{r}
+#| fig-height: 6
+#| fig-width: 6
+   D <- dist(D) 
+   h.res <- hclust(D, method = "ward.D2")
+   plot(h.res)
+```
+
+We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
+
+```{r}
+   vertex.sim <- function(x) {
+      A <- as.matrix(as_adjacency_matrix(x))
+      A.p <- A %*% A 
+      A.q <- A %*% (1 - A) 
+      A.r <- (1 - A) %*% A 
+      J <- A.p / (A.p + A.q + A.r)
+      C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
+      D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
+      L <- A.p / ((A.p + A.q) * (A.p + A.r))
+      return(list(J = J, C = C, D = D, L = L))
+      }
+```
+
+In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- vertex.sim(g)$C)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+```
+
+We can then extract our blocks just like we did with the Euclidean distance hierarchical clustering results in the previous handout:
+
+```{r}
+   blocks  <- cutree(h.res, k = 6)
+   blocks
+```
+
+This analysis now puts $\{Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma\}$ in the second block of equivalent actors (shown as the right-most cluster of actors in the dendrogram). 
+
+
+

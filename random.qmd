@@ -33,7 +33,7 @@ Here's a function called `first.pass1` that records the minimum number of steps 
    }
 ```
 
-The function takes a transition matrix $\mathbf{P}$ as the primary input (of the sort we discussed when talking about [status and prestige](#prestige.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node. It works like this:
+The function takes a transition matrix $\mathbf{P} = \mathbf{D}^{-1}\mathbf{A}$---where $\mathbf{D}^{-1}$ is a matrix containing the inverse of the degrees of each node along the diagonals and zeros everywhere else---as the primary input (of the sort we discussed when talking about [status and prestige](#prestige.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node. It works like this:
 
 - Line 2 initializes the "first pass" vector `fp` to all zeros. Line 3 initializes the step counter `k` and line 4 initializes the scalar `i` to the whatever node was specified as the seed note in the `seed` argument of the function.
 
@@ -48,12 +48,13 @@ Let's test the `first.pass1` function out using the **undirected** version of th
    library(igraph)
    g <- as_undirected(ht_friends, mode = "collapse") #undirected graph
    A <- as.matrix(as_adjacency_matrix(g)) #adjacency matrix
-   P <- diag(1/rowSums(A)) %*% A  #creating transition matrix from adjacency matrix
+   D <- diag(rowSums(A)^-1) #inverse of degree matrix
+   P <- D %*% A  #transition matrix
    set.seed(456) 
    first.pass1(P)
 ```
 
-We can see for instance that the rumor got to node 16 in just one time step, but that it took 24 time steps to get to node 3 and 137 (!) to get to node 3.
+We can see for instance that the rumor got to node 16 in just one time step, but that it took 26 time steps to get to node 14 and 137 (!) to get to node 3.
 
 So it seems like this, the minimum time it takes for something that starts with me to get to you [@fouss_etal04b], is a good measure of the proximity between me and you in the graph. 
 
@@ -176,6 +177,21 @@ So despite the terrible name, $\mathbf{L}^+$ is easy to compute in `R`:
 ```
 
 As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell ($\frac{1}{N}$). We use the function `solve` to obtain the **matrix inverse** of the expression in parentheses in @eq-ilap.
+
+What's in the $\mathbf{L}^+$ matrix? Let's see the first ten rows and columns:
+
+```{r}
+   round(L.p[1:10, 1:10], 3)
+```
+
+As we can see, some of the entries of $\mathbf{L}^+$ are positive and others are negative. More interestingly, we can see that $\mathbf{L}^+$ is a **symmetric** matrix: $l^+_{ij} = l^+_{ij}$. 
+
+Even more interestingly, $\mathbf{L}^+$ is **doubly centered**---similar to the **modularity matrix** [considered here](community.qmd). That means *both* the rows and column sums of the matrix are equal to the all zeros vector:
+
+```{r}
+   round(rowSums(L.p), 2)
+   round(colSums(L.p), 2)
+```
 
 The average first passage time between every pair of nodes in the network $m_{ij}$ expressed in terms of the entries of $\mathbf{L}^+$ and the degree vector $\mathbf{d}$, is then given by [@fouss_etal16, p. 158]:
 
