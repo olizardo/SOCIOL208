@@ -543,6 +543,7 @@ div.csl-indent {
   <li><a href="#the-katz-similarity" id="toc-the-katz-similarity" class="nav-link" data-scroll-target="#the-katz-similarity">The Katz Similarity</a></li>
   <li><a href="#degree-weighted-katz-similarity-aka-leicht-holme-newman" id="toc-degree-weighted-katz-similarity-aka-leicht-holme-newman" class="nav-link" data-scroll-target="#degree-weighted-katz-similarity-aka-leicht-holme-newman">Degree-Weighted Katz Similarity (AKA Leicht-Holme-Newman)</a></li>
   </ul></li>
+  <li><a href="#the-matrix-exponential-similarity" id="toc-the-matrix-exponential-similarity" class="nav-link" data-scroll-target="#the-matrix-exponential-similarity">The Matrix Exponential Similarity</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/globsim.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -814,14 +815,113 @@ Wilma              0.01   0.00  0.02     0.09  0.00</code></pre>
 </div>
 </div>
 <p>It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data.</p>
-
-
-
 </section>
+</section>
+<section id="the-matrix-exponential-similarity" class="level2">
+<h2 class="anchored" data-anchor-id="the-matrix-exponential-similarity">The Matrix Exponential Similarity</h2>
+<p>Another approach to computing global similarities between nodes, similar to the Katz similarities, is to use an operation called the <strong>matrix exponential</strong> <span class="citation" data-cites="fouss_etal16">(<a href="#ref-fouss_etal16" role="doc-biblioref">Fouss, Saerens, and Shimbo 2016, 87</a>)</span>.</p>
+<p>For the adjacency matrix, the matrix exponential similarity is defined as:</p>
+<p><span class="math display">\[
+\mathbf{S} = \sum_{k=1}^{\infty} \frac{\alpha^k\mathbf{A}^k}{k!}
+\]</span></p>
+<p>Where, the denominator is the factorial of the <span class="math inline">\(k^{th}\)</span> matrix power <span class="math inline">\((k \times (k-1) \times (k-2) \ldots \times 1)\)</span>.</p>
+<p>Recall that the <strong>powers of the adjacency matrix</strong> <span class="math inline">\(\mathbf{A}^k\)</span> produces a matrix counting the number of paths of length <span class="math inline">\(k\)</span> between every pair of nodes (and cycles of length <span class="math inline">\(k\)</span> in the diagonals). So this global measure of similarity, like the Katz similarity, counts nodes as similar if they are connected by indirect paths of all lengths, discounted by their length, as given by the denominator <span class="math inline">\(k!\)</span>.</p>
+<p>Matrix algebra magic turns the above infinite sum into the more tractable:</p>
+<p><span class="math display">\[
+\mathbf{S} = expm(\alpha\mathbf{A})
+\]</span></p>
+<p>Where <span class="math inline">\(expm\)</span> refers to the <a href="https://en.wikipedia.org/wiki/Matrix_exponential">matrix exponential</a> operation.</p>
+<p>In <code>R</code> we can calculate the matrix exponential similarity using the package <code>expm</code>. Here’s a quick function that does that:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="co">#install.packages(c("expm", "Matrix"))</span></span>
+<span id="cb18-2"><a href="#cb18-2"></a>   me.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w, alpha) {</span>
+<span id="cb18-3"><a href="#cb18-3"></a>      <span class="fu">library</span>(expm)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>      s <span class="ot">&lt;-</span> <span class="fu">expm</span>(alpha <span class="sc">*</span> w)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>      <span class="fu">return</span>(s)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And now to test it out:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">me.sim</span>(A, <span class="at">alpha =</span> <span class="fl">1.5</span>)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Bam-Bam  Barney   Betty Feldspar    Fred Headmistress Herdmaster
+Bam-Bam      25550.4 43929.1 44572.7  10044.3 45715.2      19816.1    16417.6
+Barney       43929.1 75565.6 76661.1  17279.0 78632.2      34082.8    28252.7
+Betty        44572.7 76661.1 77781.2  17526.6 79772.8      34585.3    28655.0
+Feldspar     10044.3 17279.0 17526.6   3953.4 17980.9       7789.8     6462.2
+Fred         45715.2 78632.2 79772.8  17980.9 81827.1      35463.6    29399.8
+Headmistress 19816.1 34082.8 34585.3   7789.8 35463.6      15388.7    12732.9
+Herdmaster   16417.6 28252.7 28655.0   6462.2 29399.8      12732.9    10572.9
+Lava         39893.6 68624.8 69622.9  15690.0 71411.0      30958.1    25655.1
+Leach        14022.3 24115.9 24468.0   5514.0 25097.1      10880.7     9013.7
+Morris       12224.2 21019.7 21332.3   4803.7 21870.9       9491.2     7850.8
+                Lava   Leach  Morris
+Bam-Bam      39893.6 14022.3 12224.2
+Barney       68624.8 24115.9 21019.7
+Betty        69622.9 24468.0 21332.3
+Feldspar     15690.0  5514.0  4803.7
+Fred         71411.0 25097.1 21870.9
+Headmistress 30958.1 10880.7  9491.2
+Herdmaster   25655.1  9013.7  7850.8
+Lava         62327.6 21904.4 19091.1
+Leach        21904.4  7701.0  6710.2
+Morris       19091.1  6710.2  5857.4</code></pre>
+</div>
+</div>
+<p>Note that we set the alpha parameter to <span class="math inline">\(\alpha = 1.5\)</span>. When <span class="math inline">\(\alpha &lt; 1\)</span> it functions as a discount parameter on longer paths (counting shorter paths more) when <span class="math inline">\(\alpha &gt; 1\)</span> it switches the weight toward longer paths. When <span class="math inline">\(\alpha = 1\)</span> it counts shorter and longer paths equally.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>As we can see, the resulting matrix has pretty giant numbers as entries, which we would expect since we decide to put the weight on longer paths. Dividing by the maximum gives us the similarities we seek:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
+<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             Bam-Bam Barney Betty Feldspar Fred Headmistress Herdmaster Lava
+Bam-Bam         0.31   0.54  0.54     0.12 0.56         0.24       0.20 0.49
+Barney          0.54   0.92  0.94     0.21 0.96         0.42       0.35 0.84
+Betty           0.54   0.94  0.95     0.21 0.97         0.42       0.35 0.85
+Feldspar        0.12   0.21  0.21     0.05 0.22         0.10       0.08 0.19
+Fred            0.56   0.96  0.97     0.22 1.00         0.43       0.36 0.87
+Headmistress    0.24   0.42  0.42     0.10 0.43         0.19       0.16 0.38
+Herdmaster      0.20   0.35  0.35     0.08 0.36         0.16       0.13 0.31
+Lava            0.49   0.84  0.85     0.19 0.87         0.38       0.31 0.76
+Leach           0.17   0.29  0.30     0.07 0.31         0.13       0.11 0.27
+Morris          0.15   0.26  0.26     0.06 0.27         0.12       0.10 0.23
+             Leach Morris
+Bam-Bam       0.17   0.15
+Barney        0.29   0.26
+Betty         0.30   0.26
+Feldspar      0.07   0.06
+Fred          0.31   0.27
+Headmistress  0.13   0.12
+Herdmaster    0.11   0.10
+Lava          0.27   0.23
+Leach         0.09   0.08
+Morris        0.08   0.07</code></pre>
+</div>
+</div>
+<p>And the resulting clustering solution looks like:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb23-2"><a href="#cb23-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="globsim_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="960"></p>
+</div>
+</div>
+<p>Which is substantively identical to the three cluster solution obtained using the Katz similarity, which makes sense given the similarity (pun intended) between the two metrics.</p>
+
+
+
 </section>
 
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-estrada08" class="csl-entry" role="doc-biblioentry">
+Estrada, Ernesto, and Naomichi Hatano. 2008. <span>“Communicability in Complex Networks.”</span> <em>Physical Review E—Statistical, Nonlinear, and Soft Matter Physics</em> 77 (3): 036111.
+</div>
+<div id="ref-fouss_etal16" class="csl-entry" role="doc-biblioentry">
+Fouss, François, Marco Saerens, and Masashi Shimbo. 2016. <em>Algorithms and Models for Network Data and Link Analysis</em>. Cambridge University Press.
+</div>
 <div id="ref-katz53" class="csl-entry" role="doc-biblioentry">
 Katz, Leo. 1953. <span>“A New Status Index Derived from Sociometric Analysis.”</span> <em>Psychometrika</em> 18 (1): 39–43.
 </div>
@@ -835,6 +935,7 @@ Lü, Linyuan, Ci-Hang Jin, and Tao Zhou. 2009. <span>“Similarity Index Based o
 
 <ol>
 <li id="fn1"><p>See <a href="https://cran.r-project.org/web/packages/matlib/vignettes/inv-ex1.html">here</a> for an explainer of the matrix inverse in general and its computation in <code>R</code>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>This last is what <span class="citation" data-cites="estrada08">Estrada and Hatano (<a href="#ref-estrada08" role="doc-biblioref">2008</a>)</span> calls the communicability between nodes.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

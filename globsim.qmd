@@ -192,3 +192,65 @@ Because the LHN similarities have negative and positive values, they already def
 ```
 
 It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data. 
+
+## The Matrix Exponential Similarity
+
+Another approach to computing global similarities between nodes, similar to the Katz similarities, is to use an operation called the **matrix exponential** [@fouss_etal16, p. 87]. 
+
+For the adjacency matrix, the matrix exponential similarity is defined as:
+
+$$
+\mathbf{S} = \sum_{k=1}^{\infty} \frac{\alpha^k\mathbf{A}^k}{k!}
+$$
+
+Where, the denominator is the factorial of the $k^{th}$ matrix power $(k \times (k-1) \times (k-2) \ldots \times 1)$.
+
+Recall that the **powers of the adjacency matrix** $\mathbf{A}^k$ produces a matrix counting the number of paths of length $k$ between every pair of nodes (and cycles of length $k$ in the diagonals). So this global measure of similarity, like the Katz similarity, counts nodes as similar if they are connected by indirect paths of all lengths, discounted by their length, as given by the denominator $k!$.
+
+Matrix algebra magic turns the above infinite sum into the more tractable:
+
+$$
+\mathbf{S} = expm(\alpha\mathbf{A})
+$$
+
+Where $expm$ refers to the [matrix exponential](https://en.wikipedia.org/wiki/Matrix_exponential) operation. 
+
+In `R` we can calculate the matrix exponential similarity using the package `expm`. Here's a quick function that does that:
+
+```{r}
+   #install.packages(c("expm", "Matrix"))
+   me.sim <- function(w, alpha) {
+      library(expm)
+      s <- expm(alpha * w)
+      return(s)
+      }
+```
+
+And now to test it out:
+
+```{r}
+   S <- me.sim(A, alpha = 1.5)
+   round(S[1:10, 1:10], 1)
+```
+
+Note that we set the alpha parameter to $\alpha = 1.5$. When $\alpha < 1$ it functions as a discount parameter on longer paths (counting shorter paths more) when $\alpha > 1$ it switches the weight toward longer paths. When $\alpha = 1$ it counts shorter and longer paths equally.^[This last is what @estrada08 calls the communicability between nodes.]
+
+As we can see, the resulting matrix has pretty giant numbers as entries, which we would expect since we decide to put the weight on longer paths. Dividing by the maximum gives us the similarities we seek:
+
+
+```{r}
+   S <- S/max(S)
+   round(S[1:10, 1:10], 2)
+```
+
+And the resulting clustering solution looks like:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1-S)
+   h.res <- hclust(D, method = "ward.D2")
+   plot(h.res)
+```
+
+Which is substantively identical to the three cluster solution obtained using the Katz similarity, which makes sense given the similarity (pun intended) between the two metrics. 
