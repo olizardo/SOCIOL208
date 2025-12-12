@@ -117,11 +117,13 @@ The Jacccard index is given by:
 
 $$
    s_{ij} = \frac{p}{p + q + r}
-$$
+$$ {#eq-jac}
 
 Which is the ratio of the size of the *intersection* of the neighborhoods of the two nodes (number of common neighbors) divided by the size of the *union* of the two neighborhoods. 
 
-In our example, this would be:
+When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-jac turns into $\frac{p}{p} = 1.0$. 
+
+In our example, we can compute the Jaccard similarity as follows:
 
 ```{r}
    J <- A.p / (A.p + A.q + A.r)
@@ -134,11 +136,13 @@ The cosine similarity is given by:
 
 $$
    s_{ij} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
-$$
+$$ {#eq-cos}
 
 Which is the ratio of the number of common neighbors divided by the product of the square root of the degrees of each node (or the square root of the product which is the same thing), since $p$ + $q$ is the degree of node $i$ and $p$ + $r$ is the degree of node $j$.
 
-In our example, this would be:
+When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-cos turns into $\frac{p}{(\sqrt(p))^2} = \frac{p}{p} = 1.0$. 
+
+In our example, we can compute the Cosine similarity as follows:
 
 ```{r}
    C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
@@ -151,11 +155,13 @@ A less commonly used option is the **Dice Coefficient** (sometimes called the **
 
 $$
    s_{ij} = \frac{2p}{2p + q + r}
-$$
+$$ {#eq-dice}
 
 Which is given by the ratio of *twice* the number of common neighbors divided by twice the same quantity plus the sum of the non-shared neighbors (and thus a variation of the Jaccard measure).
 
-In our example, this would be:
+When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-dice turns into $\frac{2p}{2p} = 1.0$. 
+
+In our example, we can compute the Dice similarity as follows:
 
 ```{r}
    D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
@@ -172,11 +178,13 @@ The **LHN similarity index** (for Leicht, Holme, and Newman) is then given by:
 
 $$
 s_{ij} = \frac{p}{(p + q)(p + r)}
-$$
+$$ {#eq-lhn}
 
-Which can be seen as a variation of the cosine similarity defined earlier. 
+Which can be seen as a variation of the cosine similarity defined earlier. Note that in contrast to the other similarities we have considered which reach a maximum of 1.0 when the two nodes have the same neighborhood ($q = 0$ and $r = 0$) the LHN similarity only reaches that limit for two nodes that are adjacent *and don't have any other neighbors* ($p=1$). 
 
-In our example, this would be:
+For nodes with identical neighborhoods, the maximum LHN score will always be $\frac{p}{p^2} = \frac{1}{p}$ which means that it will decrease as node degree increases, even when the two nodes share the same neighbors. This makes sense, since it is much more "surprising" for two nodes to share neighbors when they only have a few friends than we they have lots of friends. 
+
+In our example, we can compute the LHN similarity as follows:
 
 ```{r}
    D <- A.p / ((A.p + A.q) * (A.p + A.r))
@@ -185,9 +193,24 @@ In our example, this would be:
 
 Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
 
+Another approach is to compute:
+
+$$
+1 - \frac{(p + q + r) - p}{(p + q + r) + p} = 1 - \frac{q + r}{2p + q + r}
+$$ {#eq-braun}
+
+Which is equivalent to the ratio of the union of the neighborhood of the two nodes minus their intersection divided by the sum of the union plus the intersection.
+
+```{r}
+   S <- 1 - ((A.q + A.r)/((2*A.p) + A.q + A.r))
+   round(S[1:10, 1:10], 2)
+```
+
+Like the others (except LHN), this similarity measure is at its maximum of 1.0 when the neighborhoods of the two nodes coincide ($q = 0$ and $r = 0$), and therefore @eq-braun turns into $1-\frac{0}{2p} = 1-0 = 1$.
+
 ## Similarity and Structural Equivalence
 
-All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes. 
+All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes.^[Note that this are not technically *metric distances* as the triangle inequality (e.g., $d(x,z) \leq d(x,y) + d(x,z)$) may not always be respected. They perform well however in most applied clustering applications.]
 
 Because they define distances, this also means that these approaches can be used to find approximately structurally equivalent classes of nodes in a graph just like we did with the Euclidean and correlation distances. 
 

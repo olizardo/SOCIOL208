@@ -59,7 +59,30 @@ Here's how the local path similarity looks in the *Flintstones* network:
 
 Of course as $\alpha$ approaches zero, then the local path measure reduces to the number of common neighbors, while numbers closer to one count paths of length three more. 
 
-Another thing people may wonder if why not keep going and add paths of length four:
+Let us now cluster the nodes in the graph according to the local path similarity. To do that, we need to transform the similarities into proper **distances** that we can feed to the usual hierarchical clustering algorithm. We can do by computing $\mathbf{D} = 1-\mathbf{S}$.^[Note that this does not return a *metric* distance in the technical sense, since the triangle inequality ($d(x, z) \leq d{x, y} + d{y, z}$ is not guaranteed to be respected.)]
+
+In `R` we can do this as follows:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+```
+
+"Eyeballing" the dendrogram, it seems like there are three similarity blocks in the network. We can obtain them like this:
+
+```{r}
+   blocks  <- cutree(h.res, k = 3) #requesting three blocks
+   blocks
+```
+
+We can see that Betty, Barney, Fred, and Wilma (along with Slate and Lava) end up in the same block.
+
+### The Katz Similarity
+
+The local path similarity considers number of paths of lengths two and three linking two nodes in computing their similarity. Naturally, people may wonder why we can't keep going and add paths of length four:
 
 $$
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4
@@ -72,8 +95,6 @@ $$
 $$
 
 Where $k$ is the length of the maximum path considered. @lu_etal09 argue that these higher order paths don't matter, so maybe we don't have to worry about them.
-
-### The Katz Similarity
 
 Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo @katz53 in the 1950s (!). 
 
@@ -133,11 +154,11 @@ Which looks better. As we would expect, Fred is very similar to Barney and Betty
    D <- dist(1- S)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
    plot(h.res)
-   blocks  <- cutree(h.res, k = 6)
+   blocks  <- cutree(h.res, k = 3)
    blocks
 ```
 
-The Katz similarity (correctly) assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block. 
+The Katz similarity, like the local paths one, assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block. 
 
 ### Degree-Weighted Katz Similarity (AKA Leicht-Holme-Newman)
 
@@ -148,23 +169,25 @@ The Katz similarity (correctly) assigns Fred, Barney, Betty, Wilma (along with S
 So instead of Katz they suggest we compute:
 
 $$
-\mathbf{S} = \mathbf{D}^{-1} \left( \frac{\alpha \mathbf{A}}{\lambda_1} \right)^{-1} \mathbf{D}^{-1}
+\mathbf{S} = \mathbf{D}^{-1} \left( \mathbf{I} - \alpha \mathbf{A} \right)^{-1} \mathbf{D}^{-1}
 $$
 
-Here $\mathbf{D}$ is a matrix containing the degrees of each node along the diagonal. The inverse of this matrix $\mathbf{D}^{-1}$ will contain the *reciprocal* of each degree $1/k_i$ along the diagonals. $\lambda_1$, on the other hand, is just the first eigenvalue of the adjacency matrix. 
+Where $\mathbf{D}$ is the **degree matrix** containing the degrees of each node along the diagonals, meaning that $\mathbf{D}^{-1}$ will  contain the inverse of each node's degree $\frac{1}{k_i}$ along the diagonals. 
 
-So, the **LHN Similarity** is just the Katz similarity weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends. 
+So, the **LHN Similarity** is just the Katz similarity (the term in parentheses) weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends. 
 
 Which leads to the function:
 
 ```{r}
-   LHN.sim <- function(A, alpha = 0.9) {
-      D <- solve(diag(rowSums(A))) #inverse of degree matrix
-      lambda <- eigen(A)$values[1] #first eigenvalue of adjacency matrix
-      S <- D %*% solve((alpha * A)/lambda) %*% D #LHN index
-      rownames(S) <- rownames(A)
-      colnames(S) <- colnames(A)
-      return(S)
+   LHN.sim <- function(w) {
+      I <- diag(nrow(w)) #creating identity matrix
+      d <- rowSums(w) #degree vector
+      D <- diag(d) #creating degree matrix from degree vector
+      alpha <- 1/eigen(w)$values[1] - 1e-10 #reciprocal of first eigenvalue of adjacency matrix minus a tiny number
+      z <- solve(D) %*% solve(I - alpha * w)  %*% solve(D) #LHN index
+      rownames(z) <- rownames(w)
+      colnames(z) <- colnames(w)
+      return(z)
    }
 ```
 
@@ -172,26 +195,25 @@ And the *Flintstones* result:
 
 ```{r}
    S <- LHN.sim(A)
+   S <- S/max(S)
    round(S[, 1:5], 2)
 ```
 
-Note that as @leicht_etal06 discuss, the entries in the **LHN** version of the similarity $\mathbf{S}$ can be either positive or negative. Negative entries are nodes that are *surprisingly* dissimilar given their degrees, and positive numbers indicating node pairs that are *surprisingly* similar. Numbers closer to zero are nodes that are neither similar nor dissimilar given their degrees.
+Here we can see that, compared to the number we got for the Katz similarity, Barney and Fred are actually not that similar to one another after we take into account their very high degree, and that Barney is actually most similar to Feldspar.
 
-Here we can see that Barney and Fred are actually not that similar to one another (after we take into account their very high degree) and that Barney is actually most similar to Feldspar (and Fred even more so). 
-
-Because the LHN similarities have negative and positive values, they already define a distance between nodes in the graph, like the correlation distance. So if we wanted to find blocks of actors using this similarity criterion, all we need to do is:
+Let's block the actors in this network according to the LHN similarities:
 
 ```{r}
 #| fig-height: 10
 #| fig-width: 10
-   D <- dist(S)
+   D <- dist(1 - S)
    h.res <- hclust(D, method = "ward.D2")
    plot(h.res)
-   blocks <- cutree(h.res, k = 8)
+   blocks <- cutree(h.res, k = 3)
    blocks
 ```
 
-It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data. 
+It seems like this approach is geared towards finding smaller, more fine-grained clusters (e.g., Feldspar and Leach) of similar actors in the data, although it still correctly assigns Wilma, Fred, Barney, and Betty to the same cluster. 
 
 ## The Matrix Exponential Similarity
 
@@ -254,3 +276,4 @@ And the resulting clustering solution looks like:
 ```
 
 Which is substantively identical to the three cluster solution obtained using the Katz similarity, which makes sense given the similarity (pun intended) between the two metrics. 
+

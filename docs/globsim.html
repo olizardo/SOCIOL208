@@ -627,7 +627,36 @@ Morris         4.0    6.0</code></pre>
 </div>
 </div>
 <p>Of course as <span class="math inline">\(\alpha\)</span> approaches zero, then the local path measure reduces to the number of common neighbors, while numbers closer to one count paths of length three more.</p>
-<p>Another thing people may wonder if why not keep going and add paths of length four:</p>
+<p>Let us now cluster the nodes in the graph according to the local path similarity. To do that, we need to transform the similarities into proper <strong>distances</strong> that we can feed to the usual hierarchical clustering algorithm. We can do by computing <span class="math inline">\(\mathbf{D} = 1-\mathbf{S}\)</span>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>In <code>R</code> we can do this as follows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
+<span id="cb4-2"><a href="#cb4-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb4-3"><a href="#cb4-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="globsim_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="960"></p>
+</div>
+</div>
+<p>“Eyeballing” the dendrogram, it seems like there are three similarity blocks in the network. We can obtain them like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">3</span>) <span class="co">#requesting three blocks</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        Bam-Bam          Barney           Betty        Feldspar            Fred 
+              1               2               2               3               2 
+   Headmistress      Herdmaster            Lava           Leach          Morris 
+              3               3               2               3               3 
+      Mrs Slate         Pebbles Pebbles Bam-Bam        Piltdown      Poindexter 
+              1               1               1               1               1 
+         Pyrite           Slate           Wilma 
+              1               2               2 </code></pre>
+</div>
+</div>
+<p>We can see that Betty, Barney, Fred, and Wilma (along with Slate and Lava) end up in the same block.</p>
+</section>
+<section id="the-katz-similarity" class="level3">
+<h3 class="anchored" data-anchor-id="the-katz-similarity">The Katz Similarity</h3>
+<p>The local path similarity considers number of paths of lengths two and three linking two nodes in computing their similarity. Naturally, people may wonder why we can’t keep going and add paths of length four:</p>
 <p><span class="math display">\[
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4
 \]</span></p>
@@ -636,9 +665,6 @@ Morris         4.0    6.0</code></pre>
 \mathbf{S} = \mathbf{A}^2 + \alpha \mathbf{A}^3 + \alpha^2 \mathbf{A}^4 ... + \alpha^{k-2} \mathbf{A}^k
 \]</span></p>
 <p>Where <span class="math inline">\(k\)</span> is the length of the maximum path considered. <span class="citation" data-cites="lu_etal09">Lü, Jin, and Zhou (<a href="#ref-lu_etal09" role="doc-biblioref">2009</a>)</span> argue that these higher order paths don’t matter, so maybe we don’t have to worry about them.</p>
-</section>
-<section id="the-katz-similarity" class="level3">
-<h3 class="anchored" data-anchor-id="the-katz-similarity">The Katz Similarity</h3>
 <p>Another issue is that there was already an all-paths similarity measure in existence, one developed by the mathematical social scientist Leo <span class="citation" data-cites="katz53">Katz (<a href="#ref-katz53" role="doc-biblioref">1953</a>)</span> in the 1950s (!).</p>
 <p>The basic idea was to use linear algebra tricks to solve:</p>
 <p><span class="math display">\[
@@ -652,21 +678,21 @@ Morris         4.0    6.0</code></pre>
 <p>Where <span class="math inline">\(\mathbf{I}\)</span> is the <strong>identity matrix</strong> (a matrix of all zeros except that it has the number one in each diagonal cell) of the same dimensions as the original. Raising the result of the subtraction in parentheses to minus one indicates the <strong>matrix inverse</strong> operation (most matrices are invertible, unless they are weird).</p>
 <p>A function to compute the <strong>Katz similarity</strong> between all node pairs looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb4-2"><a href="#cb4-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
-<span id="cb4-3"><a href="#cb4-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#reciprocal of first eigenvalue of adjacency matrix minus a tiny number</span></span>
-<span id="cb4-4"><a href="#cb4-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> w) </span>
-<span id="cb4-5"><a href="#cb4-5"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb4-6"><a href="#cb4-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   katz.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb7-2"><a href="#cb7-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#reciprocal of first eigenvalue of adjacency matrix minus a tiny number</span></span>
+<span id="cb7-4"><a href="#cb7-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> w) </span>
+<span id="cb7-5"><a href="#cb7-5"></a>      <span class="fu">return</span>(S)</span>
+<span id="cb7-6"><a href="#cb7-6"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This function takes the network’s adjacency matrix (<code>w</code>) as input and returns the <strong>Katz similarity matrix</strong> (<code>S</code>) as output.</p>
 <p>For technical reasons (e.g., guarantee that the infinite sum converges) we need to choose <span class="math inline">\(\alpha\)</span> to be a number larger than zero but smaller than the reciprocal of the first eigenvalue of the matrix. Here we just pick the reciprocal of the largest (first) eigenvalue minus a very small number (<span class="math inline">\(10^{-10}\)</span>).</p>
-<p>Line 4 computes the actual Katz similarity using the native <code>R</code> function <code>solve</code> to find the relevant matrix inverse.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>Line 4 computes the actual Katz similarity using the native <code>R</code> function <code>solve</code> to find the relevant matrix inverse.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
 <p>In the <em>Flintstones</em> network the Katz similarity looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
-<span id="cb5-2"><a href="#cb5-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">katz.sim</span>(A)</span>
-<span id="cb5-3"><a href="#cb5-3"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb8-2"><a href="#cb8-2"></a>   S <span class="ot">&lt;-</span> <span class="fu">katz.sim</span>(A)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>              Bam-Bam    Barney     Betty Feldspar      Fred Headmistress
 Bam-Bam      43912268  75530407  76630126 17269355  78596698     34072232
@@ -694,8 +720,8 @@ Morris         13511834  32826196 11536403 10056129</code></pre>
 </div>
 <p>Which are pretty big numbers! Which makes sense, since these are estimates of <em>all</em> the paths of <em>any</em> length between every pair of nodes in the network. We can get more tractable figures by normalizing the matrix by its maximum:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
-<span id="cb7-2"><a href="#cb7-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
+<span id="cb10-2"><a href="#cb10-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             Bam-Bam Barney Betty Feldspar Fred Headmistress Herdmaster Lava
 Bam-Bam         0.31   0.54  0.54     0.12 0.56         0.24       0.20 0.49
@@ -723,26 +749,26 @@ Morris        0.08   0.07</code></pre>
 </div>
 <p>Which looks better. As we would expect, Fred is very similar to Barney and Betty. We can then do the standard hierarchical clustering to see how this similarity measure groups nodes:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
-<span id="cb9-2"><a href="#cb9-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb9-3"><a href="#cb9-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span> S)</span>
+<span id="cb12-2"><a href="#cb12-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="globsim_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="960"></p>
+<p><img src="globsim_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="960"></p>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">6</span>)</span>
-<span id="cb10-2"><a href="#cb10-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">3</span>)</span>
+<span id="cb13-2"><a href="#cb13-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        Bam-Bam          Barney           Betty        Feldspar            Fred 
               1               2               2               3               2 
    Headmistress      Herdmaster            Lava           Leach          Morris 
-              4               4               5               3               3 
+              3               3               2               3               3 
       Mrs Slate         Pebbles Pebbles Bam-Bam        Piltdown      Poindexter 
-              1               1               6               6               6 
+              1               1               1               1               1 
          Pyrite           Slate           Wilma 
-              6               5               5 </code></pre>
+              1               2               2 </code></pre>
 </div>
 </div>
-<p>The Katz similarity (correctly) assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block.</p>
+<p>The Katz similarity, like the local paths one, assigns Fred, Barney, Betty, Wilma (along with Slate and Lava) to the same group, and puts the kids in a separate block.</p>
 </section>
 <section id="degree-weighted-katz-similarity-aka-leicht-holme-newman" class="level3">
 <h3 class="anchored" data-anchor-id="degree-weighted-katz-similarity-aka-leicht-holme-newman">Degree-Weighted Katz Similarity (AKA Leicht-Holme-Newman)</h3>
@@ -750,71 +776,73 @@ Morris        0.08   0.07</code></pre>
 <p><span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> propose a “fix” for this weakness in the Katz similarity, resulting in the matrix linear algebra equivalent of a degree-normalized similarity measure like the Jaccard or Cosine.</p>
 <p>So instead of Katz they suggest we compute:</p>
 <p><span class="math display">\[
-\mathbf{S} = \mathbf{D}^{-1} \left( \frac{\alpha \mathbf{A}}{\lambda_1} \right)^{-1} \mathbf{D}^{-1}
+\mathbf{S} = \mathbf{D}^{-1} \left( \mathbf{I} - \alpha \mathbf{A} \right)^{-1} \mathbf{D}^{-1}
 \]</span></p>
-<p>Here <span class="math inline">\(\mathbf{D}\)</span> is a matrix containing the degrees of each node along the diagonal. The inverse of this matrix <span class="math inline">\(\mathbf{D}^{-1}\)</span> will contain the <em>reciprocal</em> of each degree <span class="math inline">\(1/k_i\)</span> along the diagonals. <span class="math inline">\(\lambda_1\)</span>, on the other hand, is just the first eigenvalue of the adjacency matrix.</p>
-<p>So, the <strong>LHN Similarity</strong> is just the Katz similarity weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends.</p>
+<p>Where <span class="math inline">\(\mathbf{D}\)</span> is the <strong>degree matrix</strong> containing the degrees of each node along the diagonals, meaning that <span class="math inline">\(\mathbf{D}^{-1}\)</span> will contain the inverse of each node’s degree <span class="math inline">\(\frac{1}{k_i}\)</span> along the diagonals.</p>
+<p>So, the <strong>LHN Similarity</strong> is just the Katz similarity (the term in parentheses) weighted by the degree of the sender and receiver node along each path, further discounting paths featuring high-degree nodes at either or both ends.</p>
 <p>Which leads to the function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   LHN.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">alpha =</span> <span class="fl">0.9</span>) {</span>
-<span id="cb12-2"><a href="#cb12-2"></a>      D <span class="ot">&lt;-</span> <span class="fu">solve</span>(<span class="fu">diag</span>(<span class="fu">rowSums</span>(A))) <span class="co">#inverse of degree matrix</span></span>
-<span id="cb12-3"><a href="#cb12-3"></a>      lambda <span class="ot">&lt;-</span> <span class="fu">eigen</span>(A)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="co">#first eigenvalue of adjacency matrix</span></span>
-<span id="cb12-4"><a href="#cb12-4"></a>      S <span class="ot">&lt;-</span> D <span class="sc">%*%</span> <span class="fu">solve</span>((alpha <span class="sc">*</span> A)<span class="sc">/</span>lambda) <span class="sc">%*%</span> D <span class="co">#LHN index</span></span>
-<span id="cb12-5"><a href="#cb12-5"></a>      <span class="fu">rownames</span>(S) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb12-6"><a href="#cb12-6"></a>      <span class="fu">colnames</span>(S) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb12-7"><a href="#cb12-7"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb12-8"><a href="#cb12-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   LHN.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb15-2"><a href="#cb15-2"></a>      I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(w)) <span class="co">#creating identity matrix</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a>      d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#degree vector</span></span>
+<span id="cb15-4"><a href="#cb15-4"></a>      D <span class="ot">&lt;-</span> <span class="fu">diag</span>(d) <span class="co">#creating degree matrix from degree vector</span></span>
+<span id="cb15-5"><a href="#cb15-5"></a>      alpha <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span><span class="fu">eigen</span>(w)<span class="sc">$</span>values[<span class="dv">1</span>] <span class="sc">-</span> <span class="fl">1e-10</span> <span class="co">#reciprocal of first eigenvalue of adjacency matrix minus a tiny number</span></span>
+<span id="cb15-6"><a href="#cb15-6"></a>      z <span class="ot">&lt;-</span> <span class="fu">solve</span>(D) <span class="sc">%*%</span> <span class="fu">solve</span>(I <span class="sc">-</span> alpha <span class="sc">*</span> w)  <span class="sc">%*%</span> <span class="fu">solve</span>(D) <span class="co">#LHN index</span></span>
+<span id="cb15-7"><a href="#cb15-7"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w)</span>
+<span id="cb15-8"><a href="#cb15-8"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w)</span>
+<span id="cb15-9"><a href="#cb15-9"></a>      <span class="fu">return</span>(z)</span>
+<span id="cb15-10"><a href="#cb15-10"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And the <em>Flintstones</em> result:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">LHN.sim</span>(A)</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">LHN.sim</span>(A)</span>
+<span id="cb16-2"><a href="#cb16-2"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
+<span id="cb16-3"><a href="#cb16-3"></a>   <span class="fu">round</span>(S[, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                Bam-Bam Barney Betty Feldspar  Fred
-Bam-Bam           -0.09   0.01  0.01    -0.16 -0.01
-Barney             0.01  -0.02  0.00     0.11  0.01
-Betty              0.01   0.00 -0.04    -0.48  0.00
-Feldspar          -0.16   0.11 -0.48    -2.55  0.25
-Fred              -0.01   0.01  0.00     0.25 -0.01
-Headmistress       0.20   0.05 -0.13    -2.96 -0.05
-Herdmaster         0.16   0.08  0.10     0.07 -0.07
-Lava               0.00  -0.02 -0.02    -0.42  0.02
-Leach             -0.27  -0.10  0.04     2.01  0.09
-Morris            -0.25  -0.03  0.12     1.90  0.03
-Mrs Slate         -0.05   0.01  0.04     0.74 -0.01
-Pebbles            0.19   0.01  0.01    -0.16 -0.01
-Pebbles Bam-Bam    0.03   0.00  0.03     0.16  0.00
-Piltdown           0.00   0.00  0.00    -0.35  0.00
-Poindexter         0.01   0.03  0.04     0.66 -0.02
-Pyrite             0.00   0.00  0.00    -0.35  0.00
-Slate             -0.08  -0.01  0.04     0.91  0.01
-Wilma              0.01   0.00  0.02     0.09  0.00</code></pre>
+<pre><code>                Bam-Bam Barney Betty Feldspar Fred
+Bam-Bam            0.72   0.57  0.58     0.85 0.55
+Barney             0.57   0.45  0.46     0.67 0.44
+Betty              0.58   0.46  0.47     0.68 0.44
+Feldspar           0.85   0.67  0.68     1.00 0.65
+Fred               0.55   0.44  0.44     0.65 0.42
+Headmistress       0.67   0.53  0.54     0.79 0.51
+Herdmaster         0.69   0.55  0.56     0.82 0.53
+Lava               0.61   0.49  0.49     0.72 0.47
+Leach              0.79   0.63  0.64     0.93 0.61
+Morris             0.69   0.55  0.55     0.81 0.53
+Mrs Slate          0.60   0.48  0.49     0.71 0.46
+Pebbles            0.72   0.57  0.58     0.85 0.55
+Pebbles Bam-Bam    0.69   0.55  0.56     0.82 0.53
+Piltdown           0.69   0.54  0.55     0.81 0.53
+Poindexter         0.67   0.53  0.54     0.79 0.52
+Pyrite             0.69   0.54  0.55     0.81 0.53
+Slate              0.66   0.52  0.53     0.77 0.50
+Wilma              0.56   0.44  0.45     0.66 0.43</code></pre>
 </div>
 </div>
-<p>Note that as <span class="citation" data-cites="leicht_etal06">Leicht, Holme, and Newman (<a href="#ref-leicht_etal06" role="doc-biblioref">2006</a>)</span> discuss, the entries in the <strong>LHN</strong> version of the similarity <span class="math inline">\(\mathbf{S}\)</span> can be either positive or negative. Negative entries are nodes that are <em>surprisingly</em> dissimilar given their degrees, and positive numbers indicating node pairs that are <em>surprisingly</em> similar. Numbers closer to zero are nodes that are neither similar nor dissimilar given their degrees.</p>
-<p>Here we can see that Barney and Fred are actually not that similar to one another (after we take into account their very high degree) and that Barney is actually most similar to Feldspar (and Fred even more so).</p>
-<p>Because the LHN similarities have negative and positive values, they already define a distance between nodes in the graph, like the correlation distance. So if we wanted to find blocks of actors using this similarity criterion, all we need to do is:</p>
+<p>Here we can see that, compared to the number we got for the Katz similarity, Barney and Fred are actually not that similar to one another after we take into account their very high degree, and that Barney is actually most similar to Feldspar.</p>
+<p>Let’s block the actors in this network according to the LHN similarities:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(S)</span>
-<span id="cb15-2"><a href="#cb15-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb15-3"><a href="#cb15-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span> <span class="sc">-</span> S)</span>
+<span id="cb18-2"><a href="#cb18-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="globsim_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="960"></p>
+<p><img src="globsim_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="960"></p>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   blocks <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">8</span>)</span>
-<span id="cb16-2"><a href="#cb16-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   blocks <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res, <span class="at">k =</span> <span class="dv">3</span>)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>        Bam-Bam          Barney           Betty        Feldspar            Fred 
-              1               2               1               3               2 
+              1               2               2               3               2 
    Headmistress      Herdmaster            Lava           Leach          Morris 
-              4               5               1               6               7 
+              1               1               2               3               1 
       Mrs Slate         Pebbles Pebbles Bam-Bam        Piltdown      Poindexter 
-              8               1               2               1               8 
+              2               1               1               1               1 
          Pyrite           Slate           Wilma 
-              1               8               2 </code></pre>
+              1               1               2 </code></pre>
 </div>
 </div>
-<p>It seems like this approach is geared towards finding smaller, more fine-grained clusters of similar actors in the data.</p>
+<p>It seems like this approach is geared towards finding smaller, more fine-grained clusters (e.g., Feldspar and Leach) of similar actors in the data, although it still correctly assigns Wilma, Fred, Barney, and Betty to the same cluster.</p>
 </section>
 </section>
 <section id="the-matrix-exponential-similarity" class="level2">
@@ -833,17 +861,17 @@ Wilma              0.01   0.00  0.02     0.09  0.00</code></pre>
 <p>Where <span class="math inline">\(expm\)</span> refers to the <a href="https://en.wikipedia.org/wiki/Matrix_exponential">matrix exponential</a> operation.</p>
 <p>In <code>R</code> we can calculate the matrix exponential similarity using the package <code>expm</code>. Here’s a quick function that does that:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   <span class="co">#install.packages(c("expm", "Matrix"))</span></span>
-<span id="cb18-2"><a href="#cb18-2"></a>   me.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w, alpha) {</span>
-<span id="cb18-3"><a href="#cb18-3"></a>      <span class="fu">library</span>(expm)</span>
-<span id="cb18-4"><a href="#cb18-4"></a>      s <span class="ot">&lt;-</span> <span class="fu">expm</span>(alpha <span class="sc">*</span> w)</span>
-<span id="cb18-5"><a href="#cb18-5"></a>      <span class="fu">return</span>(s)</span>
-<span id="cb18-6"><a href="#cb18-6"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   <span class="co">#install.packages(c("expm", "Matrix"))</span></span>
+<span id="cb21-2"><a href="#cb21-2"></a>   me.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w, alpha) {</span>
+<span id="cb21-3"><a href="#cb21-3"></a>      <span class="fu">library</span>(expm)</span>
+<span id="cb21-4"><a href="#cb21-4"></a>      s <span class="ot">&lt;-</span> <span class="fu">expm</span>(alpha <span class="sc">*</span> w)</span>
+<span id="cb21-5"><a href="#cb21-5"></a>      <span class="fu">return</span>(s)</span>
+<span id="cb21-6"><a href="#cb21-6"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now to test it out:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">me.sim</span>(A, <span class="at">alpha =</span> <span class="fl">1.5</span>)</span>
-<span id="cb19-2"><a href="#cb19-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">me.sim</span>(A, <span class="at">alpha =</span> <span class="fl">1.5</span>)</span>
+<span id="cb22-2"><a href="#cb22-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             Bam-Bam  Barney   Betty Feldspar    Fred Headmistress Herdmaster
 Bam-Bam      25550.4 43929.1 44572.7  10044.3 45715.2      19816.1    16417.6
@@ -869,11 +897,11 @@ Leach        21904.4  7701.0  6710.2
 Morris       19091.1  6710.2  5857.4</code></pre>
 </div>
 </div>
-<p>Note that we set the alpha parameter to <span class="math inline">\(\alpha = 1.5\)</span>. When <span class="math inline">\(\alpha &lt; 1\)</span> it functions as a discount parameter on longer paths (counting shorter paths more) when <span class="math inline">\(\alpha &gt; 1\)</span> it switches the weight toward longer paths. When <span class="math inline">\(\alpha = 1\)</span> it counts shorter and longer paths equally.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>Note that we set the alpha parameter to <span class="math inline">\(\alpha = 1.5\)</span>. When <span class="math inline">\(\alpha &lt; 1\)</span> it functions as a discount parameter on longer paths (counting shorter paths more) when <span class="math inline">\(\alpha &gt; 1\)</span> it switches the weight toward longer paths. When <span class="math inline">\(\alpha = 1\)</span> it counts shorter and longer paths equally.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
 <p>As we can see, the resulting matrix has pretty giant numbers as entries, which we would expect since we decide to put the weight on longer paths. Dividing by the maximum gives us the similarities we seek:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
-<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   S <span class="ot">&lt;-</span> S<span class="sc">/</span><span class="fu">max</span>(S)</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   <span class="fu">round</span>(S[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>             Bam-Bam Barney Betty Feldspar Fred Headmistress Herdmaster Lava
 Bam-Bam         0.31   0.54  0.54     0.12 0.56         0.24       0.20 0.49
@@ -901,11 +929,11 @@ Morris        0.08   0.07</code></pre>
 </div>
 <p>And the resulting clustering solution looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb23-2"><a href="#cb23-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb23-3"><a href="#cb23-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   D <span class="ot">&lt;-</span> <span class="fu">dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb26-2"><a href="#cb26-2"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb26-3"><a href="#cb26-3"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="globsim_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="960"></p>
+<p><img src="globsim_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="960"></p>
 </div>
 </div>
 <p>Which is substantively identical to the three cluster solution obtained using the Katz similarity, which makes sense given the similarity (pun intended) between the two metrics.</p>
@@ -934,8 +962,9 @@ Lü, Linyuan, Ci-Hang Jin, and Tao Zhou. 2009. <span>“Similarity Index Based o
 </div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
 
 <ol>
-<li id="fn1"><p>See <a href="https://cran.r-project.org/web/packages/matlib/vignettes/a3-inv-ex1.html">here</a> for an explainer of the matrix inverse in general and its computation in <code>R</code>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>This last is what <span class="citation" data-cites="estrada08">Estrada and Hatano (<a href="#ref-estrada08" role="doc-biblioref">2008</a>)</span> calls the communicability between nodes.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>Note that this does not return a <em>metric</em> distance in the technical sense, since the triangle inequality (<span class="math inline">\(d(x, z) \leq d{x, y} + d{y, z}\)</span> is not guaranteed to be respected.)<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>See <a href="https://cran.r-project.org/web/packages/matlib/vignettes/a3-inv-ex1.html">here</a> for an explainer of the matrix inverse in general and its computation in <code>R</code>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>This last is what <span class="citation" data-cites="estrada08">Estrada and Hatano (<a href="#ref-estrada08" role="doc-biblioref">2008</a>)</span> calls the communicability between nodes.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
