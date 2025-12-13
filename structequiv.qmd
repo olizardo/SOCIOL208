@@ -1,5 +1,5 @@
 ---
-title: "Role Equivalence and Structural Similarity"
+title: "Structural Equivalence"
 execute: 
   eval: true
   echo: true
@@ -38,17 +38,16 @@ Let us illustrate these concepts. Consider the following toy graph:
 ```{r}
 #| label: fig-se
 #| fig-cap: "A toy graph demonstrating structural equivalence."
-#| echo: false
    library(igraph)
    library(ggraph)
-   g <- make_empty_graph(9, directed = FALSE) %>% 
+   g.toy <- make_empty_graph(9, directed = FALSE) %>% 
       set_vertex_attr("name", value = LETTERS[1:9])  %>% 
       add_edges(c("A","B", "A","C", "B","D", "B","E", "B","F",
                   "B","G", "C","D", "C","E", "C","F", "C","G", 
                   "H","D", "H","E", "H","F", "I","D", 
                   "I","E", "I","F", "A","G", "I","H")) 
    
-   p <- ggraph(g, layout = 'kk')
+   p <- ggraph(g.toy, layout = 'kk')
    p <- p + geom_edge_fan(color = "steelblue", edge_width = 0.75)
    p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
    p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
@@ -60,7 +59,7 @@ With associated adjacency matrix:
 
 ```{r}
 #| echo: false
-   A <- as.matrix(as_adjacency_matrix(g))
+   A <- as.matrix(as_adjacency_matrix(g.toy))
    library(kableExtra)
    kbl(A, align = "c", format = "html") %>%
        kable_styling(full_width = TRUE,
@@ -111,7 +110,7 @@ The equivalence check is done in line 14 using the native `R` function `setequal
 After writing our function, we can then type:
 
 ```{r}
-   Equiv <- check.equiv(g)
+   Equiv <- check.equiv(g.toy)
 ```
 
 And the resulting equivalence matrix $\mathbf{E}$ corresponding to the graph in @fig-se is:
@@ -171,7 +170,6 @@ Once the equivalence matrix is re-ordered we can see that sets of structurally e
 Even more interestingly, we can do the same re-arranging on the original adjacency matrix, to reveal:
 
 ```{r}
-#| echo: false
    kbl(A[SE.ord, SE.ord], align = "c", format = "html") %>%
        kable_styling(full_width = TRUE,
                      bootstrap_options = c("hover", "condensed", "responsive")) %>% 
@@ -220,7 +218,6 @@ Then we can see that:
 These intra and inter-block relations can then be represented in the reduced **image matrix**:
 
 ```{r}
-#| echo: false
    IM <- matrix(0, 4, 4)
    IM[1, ] <- c(0, 1, 0, 1)
    IM[2, ] <- c(1, 1, 0, 0)
@@ -295,7 +292,7 @@ A function that does this for any graph is:
 And we can try it out with our toy graph:
 
 ```{r}
-   E <- d.euclid(g)
+   E <- d.euclid(g.toy)
    round(E, 1)
 ```
 
@@ -322,7 +319,7 @@ Which would give us:
 As noted, a distance function defines a *clustering* on the nodes, and the results of the clustering generate our blocks. In `R` we can use the functions `dist` and `hclust` to do the job:
 
 ```{r}
-   E <- dist(E) #transforming E to a dist object
+   E <- as.dist(E) #transforming E to a dist object
    h.res <- hclust(E, method = "ward.D2")
    plot(h.res)
 ```
@@ -335,19 +332,14 @@ Let's see how this would work in real data. Let's take the *Flintstones* (film) 
 #| fig-width: 8
 #| fig-height: 8
    library(networkdata)
-   g.flint <- movie_267
-   g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
-   E <- d.euclid(g.flint)
-   E <- dist(E) #transforming E to a dist object
+   library(stringr) #using stringr to change names from all caps to title case
+   g <- movie_267
+   V(g)$name <- str_to_title(V(g)$name)
+   g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
+   E <- d.euclid(g) #Euclidean distance matrix
+   E <- as.dist(E) #transforming E to a dist object
    h.res <- hclust(E, method = "ward.D2") #hierarchical clustering
-   #install.packages("dendextend")
-   library(dendextend) #nice dendrogram plotting
-   dend <- as.dendrogram(h.res) %>% 
-      color_branches(k = 8) %>% 
-      color_labels(k = 8) %>% 
-      set("labels_cex", 0.65) %>% 
-      set("branches_lwd", 2) %>% 
-      plot
+   plot(h.res) #plot dendrogram   
 ```
 
 The *Flintstones* is a film based on a family, and families are the prototypes of *social roles* in networks, so if structural equivalence gets at roles, then it should recover known kin roles here, and indeed it does to some extent. One cluster is the focal parents separated into "moms" and "dads" roles, and another has the kids.
@@ -361,7 +353,7 @@ Choosing the number of clusters after a hierarchical clustering is not a well-de
    blocks
 ```
 
-Note that the result is a **named vector** with the node labels as the names and a value of $k$ for each node, where $k$ indicates the class of that node. For instance, $\{Barney, Betty,  Fred, Lava, Slate, Wilma\}$ all belong to $k = 2$. Remember this is a purely **nominal** classification so the order of the numbers doesn't matter. 
+Note that the result is a **named vector** with the node labels as the names and a value of $k$ for each node, where $k$ indicates the class of that node. For instance, $\{$ Barney, Betty,  Fred, Lava, Slate, Wilma $\}$ all belong to $k = 2$. Remember this is a purely **nominal** classification so the order of the numbers doesn't matter. 
 
 
 ## CONCOR
@@ -393,7 +385,7 @@ So the correlation distance is the ratio of the covariance of the column vectors
 The correlation distance between nodes in our toy network is given by simply typing:
 
 ```{r}
-   m <- as.matrix(as_adjacency_matrix(g))
+   m <- as.matrix(as_adjacency_matrix(g.toy))
    C <- cor(m)
    round(C, 2)
 ```
@@ -461,19 +453,17 @@ The following function--simplified and adapted from [Adam Slez's work](https://r
 This function takes the graph as input and returns a list of column names containing the structurally equivalent blocks as output:
 
 ```{r}
-   blocks(g)
+   blocks(g.toy)
 ```
 
 Which are the original structurally equivalent classes. The argument `s` controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on. 
 
 This is the algorithm called CONCOR [@breiger_etal75], short for **con**vergence of iterate **cor**relations, and can be used to cluster the rows(columns) of any valued square data matrix. 
 
-For instance, if we wanted to split the *Flintstones* network into four blocks we would proceed as follows:
+For instance, if we wanted to split the *Flintstones* network into four blocks we would just type:
 
 ```{r}
-   g.flint <- movie_267
-   g.flint <- delete_vertices(g.flint, degree(g.flint) <= 3)
-   blocks(g.flint)
+   blocks(g)
 ```
 
 Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms. 
@@ -483,8 +473,8 @@ We could then visualize the results as follows:
 ```{r}
    #install.packages("ggcorrplot")
    library(ggcorrplot)
-   A <- as.matrix(as_adjacency_matrix(g.flint))
-   ord <- unlist(blocks(g.flint, 2))
+   A <- as.matrix(as_adjacency_matrix(g))
+   ord <- unlist(blocks(g, 2))
    A <- A[ord, ord]
    p <- ggcorrplot(A, colors = c("white", "white", "black")) 
    p <- p + theme(legend.position = "none", 

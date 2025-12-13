@@ -73,7 +73,7 @@ Let's look at an example:
    A.r[1:10, 1:10]
 ```
 
-Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix in the undirected case. 
+Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix $\left[\mathbf{A}(q)\right]^T$ in the undirected case. 
 
 So the most obvious measure of similarity between two nodes is simply the number of common neighbors [@leicht_etal06]:
 
@@ -119,9 +119,7 @@ $$
    s_{ij} = \frac{p}{p + q + r}
 $$ {#eq-jac}
 
-Which is the ratio of the size of the *intersection* of the neighborhoods of the two nodes (number of common neighbors) divided by the size of the *union* of the two neighborhoods. 
-
-When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-jac turns into $\frac{p}{p} = 1.0$. 
+Which is the ratio of the size of the *intersection* of the neighborhoods of the two nodes (number of common neighbors) divided by the size of the *union* of the two neighborhoods. When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-jac turns into $\frac{p}{p} = 1.0$. 
 
 In our example, we can compute the Jaccard similarity as follows:
 
@@ -140,7 +138,7 @@ $$ {#eq-cos}
 
 Which is the ratio of the number of common neighbors divided by the product of the square root of the degrees of each node (or the square root of the product which is the same thing), since $p$ + $q$ is the degree of node $i$ and $p$ + $r$ is the degree of node $j$.
 
-When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-cos turns into $\frac{p}{(\sqrt(p))^2} = \frac{p}{p} = 1.0$. 
+When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-cos turns into $\frac{p}{\sqrt{p^2}} = \frac{p}{p} = 1.0$. 
 
 In our example, we can compute the Cosine similarity as follows:
 
@@ -151,15 +149,13 @@ In our example, we can compute the Cosine similarity as follows:
 
 Showing results similar (pun intended) to those obtained using the Jaccard index. 
 
-A less commonly used option is the **Dice Coefficient** (sometimes called the **Sorensen Index**) given by:
+A less commonly used option is the **Dice Coefficient** (sometimes called the **Sorensen Index** and other times called the ) given by:
 
 $$
-   s_{ij} = \frac{2p}{2p + q + r}
+   s_{ij} = \frac{2p}{(p + q) + (p + r)} = \frac{2p}{2p + q + r}
 $$ {#eq-dice}
 
-Which is given by the ratio of *twice* the number of common neighbors divided by twice the same quantity plus the sum of the non-shared neighbors (and thus a variation of the Jaccard measure).
-
-When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-dice turns into $\frac{2p}{2p} = 1.0$. 
+Which is given by the ratio of *twice* the number of common neighbors divided by the sum of the number of total neighbors of the two nodes (hence the number of common neighbors $p$ shows up twice also in the denominator). When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-dice turns into $\frac{2p}{2p} = 1.0$. 
 
 In our example, we can compute the Dice similarity as follows:
 
@@ -193,28 +189,29 @@ In our example, we can compute the LHN similarity as follows:
 
 Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
 
-Another approach is to compute:
-
-$$
-1 - \frac{(p + q + r) - p}{(p + q + r) + p} = 1 - \frac{q + r}{2p + q + r}
-$$ {#eq-braun}
-
-Which is equivalent to the ratio of the union of the neighborhood of the two nodes minus their intersection divided by the sum of the union plus the intersection.
+We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
 
 ```{r}
-   S <- 1 - ((A.q + A.r)/((2*A.p) + A.q + A.r))
-   round(S[1:10, 1:10], 2)
+   vertex.sim <- function(x) {
+      A <- as.matrix(as_adjacency_matrix(x))
+      A.p <- A %*% A 
+      A.q <- A %*% (1 - A) 
+      A.r <- (1 - A) %*% A 
+      J <- A.p / (A.p + A.q + A.r)
+      C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
+      D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
+      L <- A.p / ((A.p + A.q) * (A.p + A.r))
+      return(list(J = J, C = C, D = D, L = L))
+      }
 ```
-
-Like the others (except LHN), this similarity measure is at its maximum of 1.0 when the neighborhoods of the two nodes coincide ($q = 0$ and $r = 0$), and therefore @eq-braun turns into $1-\frac{0}{2p} = 1-0 = 1$.
 
 ## Similarity and Structural Equivalence
 
-All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes.^[Note that this are not technically *metric distances* as the triangle inequality (e.g., $d(x,z) \leq d(x,y) + d(x,z)$) may not always be respected. They perform well however in most applied clustering applications.]
+All normalized similarity measures bounded between zero and one (like Jaccard, Cosine, and Dice) also define a *distance* on each pair of nodes which is equal to one minus the similarity. So the **cosine distance** between two nodes is one minus the cosine similarity, and so on for the Jaccard and Dice indexes.^[Note that for a measure to count as a true metric distance, the triangle inequality must be respected (e.g., $d(x,z) \leq d(x,y) + d(z,y)$). This is the case for the complement of the Jaccard and the Cosine similarities.]
 
 Because they define distances, this also means that these approaches can be used to find approximately structurally equivalent classes of nodes in a graph just like we did with the Euclidean and correlation distances. 
 
-For instance, consider our toy graph from before with four structurally equivalent sets of nodes:
+For instance, consider our toy graph from our [previous discussion](structequiv.qmd) showcasing four structurally equivalent sets of nodes:
 
 ```{r}
 #| fig-cap: "A toy graph demonstrating structural equivalence."
@@ -252,6 +249,7 @@ Note that structurally equivalent nodes have similarity scores equal to 1.0. In 
 
 ```{r}
    D <- 1 - C
+   round(D, 2)
 ```
 
 And a hierarchical clustering on this matrix reveals the structurally equivalent classes:
@@ -259,45 +257,36 @@ And a hierarchical clustering on this matrix reveals the structurally equivalent
 ```{r}
 #| fig-height: 6
 #| fig-width: 6
-   D <- dist(D) 
+   D <- as.dist(D) 
    h.res <- hclust(D, method = "ward.D2")
    plot(h.res)
-```
-
-We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
-
-```{r}
-   vertex.sim <- function(x) {
-      A <- as.matrix(as_adjacency_matrix(x))
-      A.p <- A %*% A 
-      A.q <- A %*% (1 - A) 
-      A.r <- (1 - A) %*% A 
-      J <- A.p / (A.p + A.q + A.r)
-      C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
-      D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
-      L <- A.p / ((A.p + A.q) * (A.p + A.r))
-      return(list(J = J, C = C, D = D, L = L))
-      }
 ```
 
 In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):
 
 ```{r}
-#| fig-height: 10
-#| fig-width: 10
-   D <- dist(1- vertex.sim(g)$C)
+   D <- as.dist(1- vertex.sim(g)$C)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+```
+
+We can then plot the resulting clusters into a dendrogram:
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
    plot(h.res)
 ```
 
-We can then extract our blocks just like we did with the Euclidean distance hierarchical clustering results in the previous handout:
+Which reveals four major blocks of structurally similar actors.
+
+We can then extract our blocks just like we did with the Euclidean distance hierarchical clustering results in our discussion of [structural equivalence](structequiv.qmd):
 
 ```{r}
-   blocks  <- cutree(h.res, k = 6)
+   blocks  <- cutree(h.res, k = 4) #requesting four blocks
    blocks
 ```
 
-This analysis now puts $\{Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma\}$ in the second block of equivalent actors (shown as the right-most cluster of actors in the dendrogram). 
+This analysis puts $\{$ Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma $\}$ in the second block of equivalent actors (shown as the right-most cluster in the dendrogram). Which seems about right!
 
 
 
