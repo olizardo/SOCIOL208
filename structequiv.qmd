@@ -15,7 +15,7 @@ One of the earlier "proofs of concept" of the power of social network analysis c
 
 This and other contemporaneous work [@breiger_etal75] set off an entire sub-tradition of data analysis of networks focused on the idea that one could *partition* the set of vertices in a graph into meaningful classes based on some mathematical (e.g., graph theoretic) criterion. 
 
-These classes would in turn  would be isomorphic with the concept of role as *social position* and the classes thereby derived as indicating the number of such positions in the social structure under investigation as well as which actors belonged to which positions. 
+These classes would in turn be isomorphic with the concept of role as *social position* and the classes thereby derived as indicating the number of such positions in the social structure under investigation. As a bonus, we would get to find out *which* actors belonged to *which* positions. 
 
 ## Structural Equivalence
 
@@ -40,14 +40,14 @@ Let us illustrate these concepts. Consider the following toy graph:
 #| fig-cap: "A toy graph demonstrating structural equivalence."
    library(igraph)
    library(ggraph)
-   g.toy <- make_empty_graph(9, directed = FALSE) %>% 
+   h <- make_empty_graph(9, directed = FALSE) %>% 
       set_vertex_attr("name", value = LETTERS[1:9])  %>% 
       add_edges(c("A","B", "A","C", "B","D", "B","E", "B","F",
                   "B","G", "C","D", "C","E", "C","F", "C","G", 
                   "H","D", "H","E", "H","F", "I","D", 
                   "I","E", "I","F", "A","G", "I","H")) 
    
-   p <- ggraph(g.toy, layout = 'kk')
+   p <- ggraph(h, layout = 'kk')
    p <- p + geom_edge_fan(color = "steelblue", edge_width = 0.75)
    p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
    p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
@@ -59,7 +59,7 @@ With associated adjacency matrix:
 
 ```{r}
 #| echo: false
-   A <- as.matrix(as_adjacency_matrix(g.toy))
+   A <- as.matrix(as_adjacency_matrix(h))
    library(kableExtra)
    kbl(A, align = "c", format = "html") %>%
        kable_styling(full_width = TRUE,
@@ -98,7 +98,6 @@ A simple function to check for structural equivalence in the graph, relying on t
       colnames(E) <- v
    return(E)
    }
-
 ```
 
 This function creates an empty "equivalence" matrix $\mathbf{E}$ in line 4, loops through each pair of nodes in the graph in lines 5-20. The main condition restricts the checking to nodes that are not the same or have not yet to be found to be equivalent (line 7). Lines 8-9 extract the node neighborhoods using the `igraph` function `neighbors`. 
@@ -110,7 +109,7 @@ The equivalence check is done in line 14 using the native `R` function `setequal
 After writing our function, we can then type:
 
 ```{r}
-   Equiv <- check.equiv(g.toy)
+   Equiv <- check.equiv(h)
 ```
 
 And the resulting equivalence matrix $\mathbf{E}$ corresponding to the graph in @fig-se is:
@@ -292,7 +291,7 @@ A function that does this for any graph is:
 And we can try it out with our toy graph:
 
 ```{r}
-   E <- d.euclid(g.toy)
+   E <- d.euclid(h)
    round(E, 1)
 ```
 
@@ -385,7 +384,7 @@ So the correlation distance is the ratio of the covariance of the column vectors
 The correlation distance between nodes in our toy network is given by simply typing:
 
 ```{r}
-   m <- as.matrix(as_adjacency_matrix(g.toy))
+   m <- as.matrix(as_adjacency_matrix(h))
    C <- cor(m)
    round(C, 2)
 ```
@@ -417,17 +416,17 @@ A function implementing this method of iterated correlation distances until conv
 
 ```{r}
    con.cor <- function(x) {
-      C <- x
-      while (mean(abs(C)) != 1) {
-         C <- cor(C)
-         }
-      b1 <- C[, 1] > 0
-      b2 <- !b1
-      return(list(x[, b1, drop = FALSE], x[, b2, drop = FALSE]))
+      c <- x
+      while (mean(abs(c)) != 1) {c <- cor(c)}
+      names1 <- c[, 1] > 0 #nodes with 1.0 in the first column of converged correlation matrix
+      names2 <- c[, 1] < 0 #nodes with -1.0 in the first column of converged correlation matrix
+      a1 <- x[, names1, drop = FALSE] #subsetting original adjacency matrix by column (first block)
+      a2 <- x[, names2, drop = FALSE] #subsetting original adjacency matrix by column (second block)
+      return(list(A1 = a1, A2 = a2))
       }
 ```
 
-This function takes a graph's adjacency matrix as input, creates a copy of the adjacency matrix in line 2 (to be put through the iterated correlations meat grinder). The three-line (3-5) `while` loop goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of a couple of matrices stored in a list in line 8. 
+This function takes a graph's adjacency matrix as input (`x`), creates a copy of the adjacency matrix (`c`) in line 2, to be put through the iterated correlations meat grinder (we will need the original adjacency matrix later). The `while` loop in line 3 goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of two partial versions of the original adjacency matrix (`a1` and `a2`) stored in a list.
 
 For instance, to use our example above:
 
@@ -435,35 +434,38 @@ For instance, to use our example above:
    con.cor(m)
 ```
 
-The columns of these two matrices are the two blocks we found before. Of course, to implement this method as a *divisive* clustering algorithm, what we want is to split these two blocks into two finer grained blocks, by iterative correlations of the columns of these two sub-matrices (to reveal two further sub-matrices each) and thus find our original four structurally equivalent groups. 
+As we can see, the nodes in the columns of these slices of the adjacency matrix are the two blocks we found before. 
+
+Of course, to implement this method as a **divisive clustering** algorithm, what we want is to split these two blocks into two finer-grained blocks, by iterative correlations of the columns of these two sub-adjacency matrices (to reveal two further sub-adjacency matrices each) and thus find our original four structurally equivalent groups. 
 
 The following function--simplified and adapted from [Adam Slez's work](https://rdrr.io/github/aslez/concoR/src/R/concoR.R)---which includes the `con.cor` function shown earlier inside of it, will do it:
 
 ```{r}
-  blocks <- function(g, s = 2) {
-     A <- as.matrix(as_adjacency_matrix(g))
-     B <- list(A)
-     for(i in 1:s) {
-       B <- unlist(lapply(B, con.cor), recursive = FALSE)
-       }
-     return(lapply(B, colnames))
+  blocks <- function(w, s = 2) {
+   if (is.null(colnames(w)) == TRUE) {colnames(w) <- 1:ncol(w)} #naming columns if they have no name
+   z <- list(cor(w))
+   for(i in 1:s) {z <- unlist(lapply(z, con.cor), recursive = FALSE)}
+   return(lapply(z, colnames))
    }
 ```
 
-This function takes the graph as input and returns a list of column names containing the structurally equivalent blocks as output:
+This function takes the graph's adjacency matrix (`w`) as input and checks to see if it has any column names in line 2. After turning the adjacency matrix into a `list` object `z` in line 3, the `for` loop in line 4 goes for `s` iterations and populates the list object `z` with repeated applications of the `con.cor` function to itself (which are the previous `con.cor` partitions). Note that the `blocks` function returns a `list` object containing the *column names* of each of the `con.cor` indicator matrices of structurally equivalent nodes as output rather than the full matrices themselves (like the internal `con.cor` function does). It does this by applying the `colnames` function to each of the matrix elements of the resulting `z` list.
+
+Here's the `blocks` function in action for our toy network:
 
 ```{r}
-   blocks(g.toy)
+   blocks(m)
 ```
 
-Which are the original structurally equivalent classes. The argument `s` controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on. 
+Which are the original four structurally equivalent classes. The argument `s` in the `blocks` function controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on. 
 
-This is the algorithm called CONCOR [@breiger_etal75], short for **con**vergence of iterate **cor**relations, and can be used to cluster the rows(columns) of any valued square data matrix. 
+In a nutshell, this is the algorithm called CONCOR [@breiger_etal75], short for **con**vergence of iterate **cor**relations, and can be used to cluster the rows(columns) of any valued square data matrix. 
 
 For instance, if we wanted to split the *Flintstones* network into four blocks we would just type:
 
 ```{r}
-   blocks(g)
+   A <- as.matrix(as_adjacency_matrix(g))
+   blocks(A)
 ```
 
 Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms. 
@@ -473,8 +475,7 @@ We could then visualize the results as follows:
 ```{r}
    #install.packages("ggcorrplot")
    library(ggcorrplot)
-   A <- as.matrix(as_adjacency_matrix(g))
-   ord <- unlist(blocks(g, 2))
+   ord <- unlist(blocks(A, 2))
    A <- A[ord, ord]
    p <- ggcorrplot(A, colors = c("white", "white", "black")) 
    p <- p + theme(legend.position = "none", 
@@ -509,7 +510,7 @@ $$
                   }
 $$ 
 
-Which just computes the Euclidean distances between nodes using both in and out neighbors. Here nodes would be structurally equivalent only if they have the same set of in and out-neighbors. This would mean changing line 11 in the function `d.euclid` above with the following: 
+Which just computes the Euclidean distances between nodes using both in and out neighbors. Here nodes would be structurally equivalent only if they have the same set of in and out-neighbors. This would mean replacing line 11 in the function `d.euclid` above with the following: 
 
 ```{r}
 #| eval: false
@@ -555,15 +556,7 @@ Note that this matrix has the same number of columns as the original adjacency m
 And we would then do a blockmodel based on these distances:
 
 ```{r}
-   blocks2 <- function(A, s = 2) {
-     colnames(A) <- 1:ncol(A) #use only if the original matrix has no names
-     B <- list(A)
-     for(i in 1:s) {
-       B <- unlist(lapply(B, con.cor), recursive = FALSE)
-       }
-     return(lapply(B, colnames))
-   }
-   blocks2(A.stack)
+   blocks(A.stack)
 ```
 
 ## Structural Equivalence in Multigraphs
@@ -573,14 +566,14 @@ Note that we would apply the same trick if we wanted to do a blockmodel based on
 ```{r}
    A.f <- as.matrix(as_adjacency_matrix(ht_friends))
    A.stack <- rbind(A, A.f)
-   blocks2(A.stack)
+   blocks(A.stack)
 ```
 
 And one combining incoming and outgoing friendship and advice ties:
 
 ```{r}
    A.stack <- rbind(A, A.t, A.f, t(A.f))
-   blocks2(A.stack)
+   blocks(A.stack)
 ```
 
 Note that here the stacked matrix has four sub-matrices: (1) Incoming advice, (2) outgoing advice, (3) incoming friendship, and (4) Outgoing friendship.
