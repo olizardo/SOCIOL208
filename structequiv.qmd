@@ -418,16 +418,17 @@ A function implementing this method of iterated correlation distances until conv
 ```{r}
    con.cor <- function(x) {
       c <- x
-      while (mean(abs(c)) != 1) {c <- cor(c)}
-      names1 <- c[, 1] > 0 #nodes with 1.0 in the first column of converged correlation matrix
-      names2 <- c[, 1] < 0 #nodes with -1.0 in the first column of converged correlation matrix
+      n <- nrow(c) #number of nodes
+      while (1 - mean(abs(c)) > 1e-10) {c <- cor(c)}
+      names1 <- c[, 1] > 9.9e-10 #nodes with 1.0 in the first column of converged correlation matrix
+      names2 <- c[, 1] < -9.9e-10 #nodes with -1.0 in the first column of converged correlation matrix
       a1 <- x[, names1, drop = FALSE] #subsetting original adjacency matrix by column (first block)
       a2 <- x[, names2, drop = FALSE] #subsetting original adjacency matrix by column (second block)
       return(list(A1 = a1, A2 = a2))
       }
 ```
 
-This function takes a graph's adjacency matrix as input (`x`), creates a copy of the adjacency matrix (`c`) in line 2, to be put through the iterated correlations meat grinder (we will need the original adjacency matrix later). The `while` loop in line 3 goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of two partial versions of the original adjacency matrix (`a1` and `a2`) stored in a list.
+This function takes a graph's adjacency matrix as input (`x`), creates a copy of the adjacency matrix (`c`) in line 2, to be put through the iterated correlations meat grinder (we will need the original adjacency matrix later). The `while` loop in line 4 goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of two partial versions of the original adjacency matrix (`a1` and `a2`) stored in a list.
 
 For instance, to use our example above:
 
@@ -462,6 +463,8 @@ Which are the original four structurally equivalent classes. The argument `s` in
 
 In a nutshell, this is the algorithm called CONCOR [@breiger_etal75], short for **con**vergence of iterate **cor**relations, and can be used to cluster the rows(columns) of any valued square data matrix. 
 
+## Flintstones CONCOR
+
 For instance, if we wanted to split the *Flintstones* network into four blocks we would just type:
 
 ```{r}
@@ -471,19 +474,27 @@ For instance, if we wanted to split the *Flintstones* network into four blocks w
 
 Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms. 
 
-We could then visualize the results as follows:
+To visualize the results, we first need to convert a re-ordered version of the adjacency matrix into a "long" `data.frame` object in `R`, containing the adjacency relations between each pair of nodes in the graph. We can do that by recycling the approach we used to compute the degree correlation [here](basic.qmd):
 
-```{r, echo = FALSE}
+```{r}
+   ord <- unlist(blocks(A)) #node names in the order they appear in each block
+   dat <- data.frame(rn = rep(rownames(A), ncol(A)), #row names
+                     cn = rep(colnames(A), each = nrow(A)), #column names
+                     e = as.vector(A) #vectorized version of adjacency matrix
+                     ) 
+   dat$rn <- factor(dat$rn, levels = ord) #reordering row name factor
+   dat$cn <- factor(dat$cn, levels = ord) #reordering column name factor
+   head(dat)
+```
+
+Now that we have the adjacency matrix converted into a `data.frame` we can use the `geom_tile` plotting function in `ggplot`:
+
+```{r}
 #| fig-width: 8
 #| fig-height: 8
-   ord <- unlist(blocks(A))
-   library(reshape2)
-   ord <- unlist(blocks(A))
-   df <- melt(A[ord, ord])
-   colnames(df) <- c("x", "y", "value")
-   p <- ggplot(df, aes(x = x, y = y, fill = value))
-   p <- p + geom_tile(color = "blue") 
-   p <- p + scale_fill_gradient2(low = "white", mid = "white", high = "black")
+   p <- ggplot(dat, aes(x = rn, y = cn, fill = e))
+   p <- p + geom_tile(color = "darkgray") 
+   p <- p + scale_fill_gradient2(low = "white", mid = "white", high = "red")
    p <- p + scale_x_discrete(position = "top", limits = rev)
    p <- p + theme(legend.position = "none", 
                   axis.text.x = element_text(hjust = 0.1, angle = 90),
@@ -495,12 +506,14 @@ We could then visualize the results as follows:
    p <- p + geom_vline(xintercept = 7.5, linewidth = 2, color = "blue")
    p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
    p <- p + geom_vline(xintercept = 13.5, linewidth = 2, color = "blue")
-   p
+   p + ylab("") + xlab("")
 ```
 
-Which is just a tile plot of the original adjacency matrix (adjacent cells in black) with rows and columns re-ordered according to the four-block solution and `ggplot` vertical and horizontal lines highlighting the boundaries of the blocked matrix. 
+Which as its name suggests, produces a tile plot of the original adjacency matrix (adjacent cells in red) with rows and columns re-ordered according to the four-block solution and custom vertical and horizontal lines highlighting the boundaries of the blocked matrix using `geom_hline` (horizontal) and `geom_vline` (vertical). 
 
 As you can see, characters with similar patterns of scene co-appearances (like Barney and Fred) are drawn next to one another, revealing the larger "roles" in the network. 
+
+## Flinstones Image Matrix
 
 Note that if we wanted to create an **image matrix** from this blocking just like we did for our toy graph, we would have to impose a "rule" to generate one or zero blocks in the network. This can be done by choosing a **density** cutoff for each of the blocks in the network. If the density of the block is above a threshold, then it is a one-block; if it is below, then it is a zero block. 
 
@@ -518,10 +531,10 @@ Here's a function that does that:
             e <- sum(sb)
             r <- nrow(sb)
             c <- ncol(sb)
-            if (i == j) {
+            if (i == j) { #diagonal blocks
                d <- e/(r * (c-1))
                }
-            if (i != j) {
+            if (i != j) { #off-diagonal blocks
                d <- e/(r * c)
                }
             if (d > cut) {im[i, j] <- 1}
@@ -529,7 +542,7 @@ Here's a function that does that:
          }
       rownames(im) <- l
       colnames(im) <- l
-      return(im)
+      return(im[rev(l), rev(l)])
       }
 ```
 
