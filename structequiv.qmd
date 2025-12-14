@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-One of the earlier "proofs of concept" of the power of social network analysis came from demonstrating that you could formalize the fuzzy idea of "role" central to functionalist sociology and British social anthropology using the combined tools of graph theoretical and matrix representations of networks [@white_etal76]. 
+One of the earlier "proofs of concept" of the power of social network analysis came from showing that you could formalize the fuzzy idea of "role" central to functionalist sociology and British social anthropology using the combined tools of graph theoretical and matrix representations of networks [@white_etal76]. 
 
 This and other contemporaneous work [@breiger_etal75] set off an entire sub-tradition of data analysis of networks focused on the idea that one could *partition* the set of vertices in a graph into meaningful classes based on some mathematical (e.g., graph theoretic) criterion. 
 
@@ -38,6 +38,7 @@ Let us illustrate these concepts. Consider the following toy graph:
 ```{r}
 #| label: fig-se
 #| fig-cap: "A toy graph demonstrating structural equivalence."
+#| echo: false
    library(igraph)
    library(ggraph)
    h <- make_empty_graph(9, directed = FALSE) %>% 
@@ -442,7 +443,7 @@ The following function--simplified and adapted from [Adam Slez's work](https://r
 
 ```{r}
   blocks <- function(w, s = 2) {
-   if (is.null(colnames(w)) == TRUE) {colnames(w) <- 1:ncol(w)} #naming columns if they have no name
+   if (is.null(colnames(w)) == TRUE) {colnames(w) <- paste("v", 1:ncol(w), sep = "_")} #naming columns if they have no name
    z <- list(cor(w))
    for(i in 1:s) {z <- unlist(lapply(z, con.cor), recursive = FALSE)}
    return(lapply(z, colnames))
@@ -472,28 +473,73 @@ Which is similar to the results we got from the Euclidean distance method, excep
 
 We could then visualize the results as follows:
 
-```{r}
-   #install.packages("ggcorrplot")
-   library(ggcorrplot)
-   ord <- unlist(blocks(A, 2))
-   A <- A[ord, ord]
-   p <- ggcorrplot(A, colors = c("white", "white", "black")) 
+```{r, echo = FALSE}
+#| fig-width: 8
+#| fig-height: 8
+   ord <- unlist(blocks(A))
+   library(reshape2)
+   ord <- unlist(blocks(A))
+   df <- melt(A[ord, ord])
+   colnames(df) <- c("x", "y", "value")
+   p <- ggplot(df, aes(x = x, y = y, fill = value))
+   p <- p + geom_tile(color = "blue") 
+   p <- p + scale_fill_gradient2(low = "white", mid = "white", high = "black")
+   p <- p + scale_x_discrete(position = "top", limits = rev)
    p <- p + theme(legend.position = "none", 
-                  axis.text.y = element_text(size = 8),
-                  axis.text.x = element_text(size = 8),
+                  axis.text.x = element_text(hjust = 0.1, angle = 90),
+                  axis.text = element_text(size = 11, face = "bold")
                   )
-   p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
-   p <- p + geom_vline(xintercept = 5.5, linewidth = 2, color = "blue")
-   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
-   p <- p + geom_vline(xintercept = 11.5, linewidth = 2, color = "blue")
    p <- p + geom_hline(yintercept = 15.5, linewidth = 2, color = "blue")
-   p <- p + geom_vline(xintercept = 15.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 3.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 7.5, linewidth = 2, color = "blue")
+   p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
+   p <- p + geom_vline(xintercept = 13.5, linewidth = 2, color = "blue")
    p
 ```
 
 Which is just a tile plot of the original adjacency matrix (adjacent cells in black) with rows and columns re-ordered according to the four-block solution and `ggplot` vertical and horizontal lines highlighting the boundaries of the blocked matrix. 
 
 As you can see, characters with similar patterns of scene co-appearances (like Barney and Fred) are drawn next to one another, revealing the larger "roles" in the network. 
+
+Note that if we wanted to create an **image matrix** from this blocking just like we did for our toy graph, we would have to impose a "rule" to generate one or zero blocks in the network. This can be done by choosing a **density** cutoff for each of the blocks in the network. If the density of the block is above a threshold, then it is a one-block; if it is below, then it is a zero block. 
+
+Here's a function that does that:
+
+```{r}
+   image.matrix <- function(x, cut) {
+      b <- blocks(x)
+      n <- length(b)
+      l <- names(b)
+      im <- matrix(0, n, n)
+      for (i in 1:n) {
+         for (j in 1:n) {
+            sb <- x[b[[i]], b[[j]]]
+            e <- sum(sb)
+            r <- nrow(sb)
+            c <- ncol(sb)
+            if (i == j) {
+               d <- e/(r * (c-1))
+               }
+            if (i != j) {
+               d <- e/(r * c)
+               }
+            if (d > cut) {im[i, j] <- 1}
+            }
+         }
+      rownames(im) <- l
+      colnames(im) <- l
+      return(im)
+      }
+```
+
+And we can then apply to the *Flinstones* network, using a cutoff of $c = 0.4$:
+
+```{r}
+   image.matrix(A, cut = 0.4)
+```
+
+Which shows that the main "domestic" block of Wilma, Betty, Pebbles and Bam Bam (`A1.A1`) is connected to all the blocks except the block composed of mostly workplace characters (`A1.A2`), suggesting a strong division between work and home. 
 
 ## Structural Equivalence in Directed Graphs
 
