@@ -23,19 +23,44 @@ We first load our trusty *Pulp Fiction* data set from the `networkdata` package,
     library(stringr) #using stringr to change names from all caps to title case
     g <- movie_559
     V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
 ```
 
-Degree centrality is the simplest and most straightforward measure. In fact, we are already computed in the [lecture notes on basic network statistics](basic.qmd) since it is the same as obtaining the graph's **degree sequence**. So the `igraph` function `degree` would do it as we already saw. 
+Degree centrality is the simplest and most straightforward measure. In fact, we are already computed in the [lecture notes on basic network statistics](basic.qmd) since it is the same as obtaining the graph's **degree sequence**. 
 
-Here we follow a different approach using the row (or column) sums of the graph's **adjacency matrix**:
+We can obtain that by computing the row (or column) sums of the graph's **adjacency matrix**:
+
+$$
+C_i^{DEG}=\sum_j a_{ij}
+$$ {#eq-deg}
+
+Which in `R` we calculate as follows:
 
 ```{r}
    A <- as_adjacency_matrix(g)
    A <- as.matrix(A)
-   rowSums(A)
+   d <- rowSums(A)
+   sort(d, decreasing = TRUE)
 ```
 
-The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` matrix object, so we have to further coerce the resulting object into a numerical matrix containing zeroes and ones using the `as.matrix` function in line 2. Then we can apply the native `rowSums` function to obtain each node's degree. Note that this is same output we got using the `degree` function before. 
+The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` matrix object, so we have to further coerce the resulting object into a numerical matrix containing zeroes and ones using the `as.matrix` function in line 2. Then we can apply the native `rowSums` function to obtain each node's degree.  
+
+We can also express the degree in "matrix" form as follows:
+
+$$
+\mathbf{d} = \mathbf{A}\mathbf{e}
+$$ {#eq-degmat}
+
+Where $\mathbf{d}$ is the column vector containing each node's degree and $\mathbf{e}$ is the all ones column vector of dimensions $N \times 1$ with $N$ equal to the number of nodes in the graph.
+
+In `R` we can calculate the degree using matrix multiplication as follows:
+
+```{r}
+   e <- matrix(1, nrow(A), 1) #all ones column vector
+   d <- A %*% e
+   names(d) <- rownames(A)
+   sort(d, decreasing = TRUE)
+```
 
 Of course, we can also use the `igraph` function `degree` which returns the same named vector with the degrees of each node as output:
 
@@ -44,7 +69,7 @@ Of course, we can also use the `igraph` function `degree` which returns the same
    sort(d, decreasing = TRUE)
 ```
 
-## Degree in Weighted Graphs
+## Degree Centrality in Weighted Graphs
 
 Typically, undirected graphs record the interactions between actors in the networks as binary (1/0) ties. Nevertheless in many cases edges have a **weight** associated with them, recording the intensity of the interactions between pair of actors, resulting in a **weighted graph**.
 
@@ -94,19 +119,19 @@ Note that in `igraph`, we obtain the weighted adjacency matrix , by specifying `
 
 Not surprisingly, the main characters in the story have the largest vertex strengths, as they tend to co-appear with other characters several times in the film.
 
-The vertex strength approach is intuitive but it has the drawback of giving the same score to low degree nodes with large weights and high degree nodes with small weights (e.g., a node with two contacts each with a weight of 3.0 gets the same score as node with six contacts each with a weight of 1.0).
+The vertex strength approach is simple but it has the drawback of giving the same score to low degree nodes with large weights and high degree nodes with small weights (e.g., a node with two contacts each with a weight of 3.0 gets the same score as node with six contacts each with a weight of 1.0).
 
 ### Generalized Degree
 
 To deal with this issue, @opsahl_etal10 propose that we instead compute:
 
 $$
-C^{WD}_i = \left(\sum_j w_{ij}\right)^{\alpha}\left(\sum_j a_{ij}\right)^{(1-\alpha)} 
+C^{WD}_i = \left(\sum_j w_{ij}\right)^{\alpha}\left(\sum_j a_{ij}\right)^{1-\alpha} 
 $$ {#eq-wd}
 
-With the parameter $\alpha$ chosen by the researcher. Note that in the right-hand side of the equation, the factor on the left is just vertex strength as defined in @eq-vs raised to the power of $\alpha$, and the factor on the right is just the usual binary degree centrality, counting the number of alters ego is connected to, raised to the power of $1-\alpha$.
+With the parameter $\alpha$ chosen by the researcher, with the restriction that $0  \geq \alpha \leq 1$. Note that in the right-hand side of the equation, the factor on the left is just vertex strength as defined in @eq-vs raised to the power of $\alpha$, and the factor on the right is just the usual binary degree centrality, counting the number of alters ego is connected to, raised to the power of $1-\alpha$.
 
-The $\alpha$ parameter thus controls the importance we give the number of contacts versus the weight of the edges in computing the degree. When $\alpha = 1$ then @eq-wd reduces to @eq-vs the vertex strength; when $\alpha = 0$ then @eq-wd reduces to the regular unweighted degree. 
+The $\alpha$ parameter thus controls the importance we give the number of contacts versus the weight of the edges in computing the degree. When $\alpha = 1$ then @eq-wd reduces to @eq-vs the vertex strength; when $\alpha = 0$ then @eq-wd reduces to @eq-deg the regular unweighted degree. 
 
 $\alpha$ values between zero and one combine both quantities, with numbers closer to zero giving more weight to number of contacts, and numbers closer to one giving more importance to the weight of the edges.
 
@@ -150,57 +175,115 @@ Which ends up being a compromise between the two top 10 lists, containing charac
 
 ## Degree Centrality in Directed Graphs
 
-### Indegree and Outdegree
+### Indegree and Outdegree Centrality
 
 The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed ties, which are represented by a **directed graph**. So to illustrate them, we need to switch to a different source of data.
 
 We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can give advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm [@lazega01] called `law_advice`:
 
 ```{r}
-   d.g <- law_advice
-   V(d.g)
-   vertex_attr(d.g)
+   g <- law_advice
+   V(g)
+   vertex_attr(g)
 ```
 
 We can see that the graph has 71 vertices, and that there are various **attributes** associated with each vertex, like gender, age, seniority, status in the law firm, etc. We can query those attributes using the `igraph` function `vertex_attr`, which takes the graph object as input. 
 
+Note that in contrast to the *Pulp Fiction* network the vertices in this graph don't have a `name` attribute. We can assign one like this:
+
+```{r}
+   V(g)$name <- paste("v", 1:vcount(g), sep = "_")
+```
+
+Now each node is just going to be named "v_1", "v_2" and so forth:
+
+```{r}
+   V(g)$name
+```
+
 To keep things manageable, we will restrict our analysis to partners. To do that we need to select the **subgraph** that only includes the vertices with value of 1 in the "status" vertex attribute. From the [data description](https://www.rdocumentation.org/packages/networkdata/versions/0.1.6/topics/law_advice), we know the first 36 nodes (with value of 1 in the status attribute) are the law firm's partners (the rest are associates). In `igraph` we can do this as using the `subgraph` function:
 
 ```{r}
-   d.g <- subgraph(d.g, 1:36)
-   V(d.g)
-   V(d.g)$status
+   g <- subgraph(g, 1:36)
+   V(g)
+   V(g)$status
 ```
 
 The first line just tells `igraph` to generate the subgraph containing the first 36 nodes (the partners). The `subgraph` function thus takes two main inputs: The graph object, and then a vector of node ids (or node labels) telling the function which nodes to select to create the **node-induced subgraph**.
 
-OK, going back to the partners subgraph, we can now create our (asymmetric) adjacency matrix and compute the row and column sums:
-
-
 ```{r}
-   d.A <- as_adjacency_matrix(d.g)
-   d.A <- as.matrix(d.A)
-   rowSums(d.A)
-   colSums(d.A)
+   A <- as_adjacency_matrix(g)
+   A <- as.matrix(A)
 ```
 
-Note that in contrast to the undirected case the row and column sums give you two different sets of numbers. The row sums provide the directed graph's **outdegree set** (number of *outgoing* links incident to each node), and the column sums provide the graph's **indegree set** (number of *incoming* links incident to each node). So if you are high in the first vector, you are an *advice giver* (perhaps indicating informal status or experience) and if you are high in the second you are advice taker.
+As we saw in the lecture notes on [basic statistics for directed graphs](basic-dir.qmd), in contrast to the undirected case where the row and column sums give you the same number (each node's degree), in the directed case, the row and column sums give you two different sets of numbers.
+
+The row sums provide each node's **outdegree centrality** (number of *outgoing* links incident to each node), and the column sums provide the each nodes's **indegree centrality** (number of *incoming* links incident to each node):
+
+$$
+C_i^{OUT}=\sum_j a_{ij}
+$$ {#eq-odeg}
+
+$$
+C_i^{IN}=\sum_i a_{ij}
+$$ {#eq-ideg}
+
+Note that to compute $C_i^{OUT}$ we sum across the rows ($j$ subscript) and to compute $C_i^{IN}$ we sum across the columns ($i$ subscript).
+ 
+In the `law_advice` network case, each directed tie indicates that the source node $i$ *seeks* advice from the destination $j$. This means that if you are high in in-degree centrality, you are an *advice giver* (perhaps indicating informal status or experience) and if you are high in the outdegree centrality you are advice seeker (perhaps indicating novice or subordinate status).
+
+In `R` we can compute that in and out degrees using the `colSums` and `rowSums` matrix functions like this:
+
+```{r}
+   d.i <- colSums(A)
+   d.o <- rowSums(A)
+   sort(d.i, decreasing = TRUE)[1:10] #top ten nodes by indegree
+   sort(d.o, decreasing = TRUE)[1:10] #top ten nodes by outdegree
+```
+
+We can see from these results that $v_{17}$, $v_{26}$ and $v_1$ are the top advice givers and $v_{26}$, $v_{28}$ and $v_{19}$ are the top advice seekers. 
+
+We can also express the in ($\mathbf{d}_i$) and out ($\mathbf{d}_o$) degree vectors in matrix form:
+
+$$
+\mathbf{d}_i = \mathbf{A}^T\mathbf{e}
+$$ {#eq-odegmat}
+
+$$
+\mathbf{d}_o = \mathbf{A}\mathbf{e}
+$$ {#eq-idegmat}
+
+Where $\mathbf{e}$ is the all ones column vector of dimensions $N \times 1$ with $N$ equal to the number of nodes in the graph, and $\mathbf{A}^T$ is the **transpose** of the adjacency matrix.
+
+In `R` we can compute the in and outdegrees using matrix multiplication as follows:
+
+```{r}
+   e <- matrix(1, nrow(A), 1) #all ones column vector
+   d.i <- t(A) %*% e
+   d.o <- A %*% e
+   names(d.i) <- rownames(A)
+   names(d.o) <- rownames(A)
+   sort(d.i, decreasing = TRUE)[1:10] #top ten nodes by indegree
+   sort(d.o, decreasing = TRUE)[1:10] #top ten nodes by outdegree
+```
 
 Of course `igraph` has a dedicated function for this, which is just our old friend `degree` with an extra option `mode`, indicating whether you want the in or outdegrees:
 
 ```{r}
-   d.o <- degree(d.g, mode = "out")
-   d.i <- degree(d.g, mode = "in")
-   d.o
-   d.i
+   d.o <- degree(g, mode = "out")
+   d.i <- degree(g, mode = "in")
+   sort(d.i, decreasing = TRUE)[1:10] #top ten nodes by indegree
+   sort(d.o, decreasing = TRUE)[1:10] #top ten nodes by outdegree
 ```
+
+### Correlation Between Degree and Vertex Attributes
 
 Note that the graph attributes are just vectors of values, and can be accessed from the graph object using the $ operator attached to the `V()` function as we did above. 
 
 So if we wanted to figure out the correlation between some vertex attribute and in or out degree centrality, all we need to do is correlate the two vectors:
 
 ```{r}
-   r <- cor(d.o, V(d.g)$age)
+   r <- cor(d.o, V(g)$age)
    round(r, 2)
 ```
 
