@@ -11,17 +11,19 @@ format:
       code-line-numbers: true
 ---
 
-In these lecture notes we will go through the basic centrality metrics. Particularly, the "big three" according to @freeman79, namely, **degree**, **closeness** (in two flavors) and **betweenness**. 
+In the following lecture notes we will go through the basic centrality metrics. Particularly, the "big three" according to @freeman79, namely, **degree** (treated here), followed by [**closeness**](closcent.qmd) and [**betweenness**](betcent.qmd). 
+
+## Degree Centrality in Undirected Graphs
 
 We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   g <- movie_559
+    library(networkdata)
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
 ```
-
-## Degree Centrality
 
 Degree centrality is the simplest and most straightforward measure. In fact, we are already computed in the [lecture notes on basic network statistics](basic.qmd) since it is the same as obtaining the graph's **degree sequence**. So the `igraph` function `degree` would do it as we already saw. 
 
@@ -35,9 +37,122 @@ Here we follow a different approach using the row (or column) sums of the graph'
 
 The `igraph` function `as_adjancency_matrix` doesn't quite return a regular `R` matrix object, so we have to further coerce the resulting object into a numerical matrix containing zeroes and ones using the `as.matrix` function in line 2. Then we can apply the native `rowSums` function to obtain each node's degree. Note that this is same output we got using the `degree` function before. 
 
-## Indegree and Outdegree
+Of course, we can also use the `igraph` function `degree` which returns the same named vector with the degrees of each node as output:
 
-The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed relations. So to illustrate them, we need to switch to a different source of data.
+```{r}
+   d <- degree(g)
+   sort(d, decreasing = TRUE)
+```
+
+## Degree in Weighted Graphs
+
+Typically, undirected graphs record the interactions between actors in the networks as binary (1/0) ties. Nevertheless in many cases edges have a **weight** associated with them, recording the intensity of the interactions between pair of actors, resulting in a **weighted graph**.
+
+In `igraph` we can check if the network in question is weighted by seeing whether there is a `weight` attribute associated with the edges in the graph:
+
+```{r}
+   E(g)$weight
+```
+
+If the graph was unweighted, this call would return a `NULL` value. We can see however, that there are weights associated with each edge. In the *Pulp Fiction* network, the weights represent the *number of scenes* in the movie that two characters co-appeared in. 
+
+We can take a quick peek at how these edge weights look by creating an edge list data frame using the `igraph` function `as_edgelist` and then attaching the edge weight attribute:
+
+```{r}
+   dat <- data.frame(as_edgelist(g), w = E(g)$weight)
+```
+
+And looking at the first twenty rows:
+
+```{r}
+   dat[1:20, ]
+```
+
+We can see, for instance, that Butch and Marsellus co-appear in three different scenes.
+
+### Vertex Strength
+
+How do we incorporate edge weights into the calculation of degree centrality? One approach, proposed by @barrat_etal04 is to compute:
+
+$$
+C^{VS}_i = \sum_j w_{ij}
+$$ {#eq-vs}
+
+Where the weighted degree (@barrat_etal04 call it the **vertex strength**) of a node is just the sum of the weights of the edges incident to that node. 
+
+In `R` we can compute the vertex strength by calculating the row (or column) sums of the **weighted adjacency matrix** $\mathbf{W}$ containing the weight of the edge between $i$ and $j$ in each cell $w_{ij}$. 
+
+We can do that like this:
+
+```{r}
+   W <- as.matrix(as_adjacency_matrix(g, attr="weight"))
+   vs <- rowSums(W)
+   sort(vs, decreasing = TRUE)
+```
+
+Note that in `igraph`, we obtain the weighted adjacency matrix , by specifying `"weight"` as the value of the `attr` argument (for edge attribute) in the call to the `as_adjacency matrix` function. 
+
+Not surprisingly, the main characters in the story have the largest vertex strengths, as they tend to co-appear with other characters several times in the film.
+
+The vertex strength approach is intuitive but it has the drawback of giving the same score to low degree nodes with large weights and high degree nodes with small weights (e.g., a node with two contacts each with a weight of 3.0 gets the same score as node with six contacts each with a weight of 1.0).
+
+### Generalized Degree
+
+To deal with this issue, @opsahl_etal10 propose that we instead compute:
+
+$$
+C^{WD}_i = \left(\sum_j w_{ij}\right)^{\alpha}\left(\sum_j a_{ij}\right)^{(1-\alpha)} 
+$$ {#eq-wd}
+
+With the parameter $\alpha$ chosen by the researcher. Note that in the right-hand side of the equation, the factor on the left is just vertex strength as defined in @eq-vs raised to the power of $\alpha$, and the factor on the right is just the usual binary degree centrality, counting the number of alters ego is connected to, raised to the power of $1-\alpha$.
+
+The $\alpha$ parameter thus controls the importance we give the number of contacts versus the weight of the edges in computing the degree. When $\alpha = 1$ then @eq-wd reduces to @eq-vs the vertex strength; when $\alpha = 0$ then @eq-wd reduces to the regular unweighted degree. 
+
+$\alpha$ values between zero and one combine both quantities, with numbers closer to zero giving more weight to number of contacts, and numbers closer to one giving more importance to the weight of the edges.
+
+Here's function that computes the @opsahl_etal10 generalized degree:
+
+```{r}
+   gen.deg <- function(x, alpha) {
+      s <- rowSums(as.matrix(as_adjacency_matrix(x, attr="weight")))
+      d <- rowSums(as.matrix(as_adjacency_matrix(x)))
+      wd <- s^alpha * d^(1-alpha)
+      return(wd)
+      }
+```
+
+The function takes the graph and a value for $\alpha$ as inputs and returns the vector of generalized degrees as output. In lines 2 and 3 we compute the vertex strength and the regular degree from the row sums of the weighted adjacency matrix and the regular adjacency matrix. 
+
+We can see that when we set $\alpha = 0$ we get values identical to the degree:
+
+```{r}
+   dr <- gen.deg(g, alpha = 0)
+   sort(dr, decreasing = TRUE)[1:10]
+```
+
+And when we set $\alpha = 1$ we get values identical to the vertex strength:
+
+```{r}
+   dr <- gen.deg(g, alpha = 1)
+   sort(dr, decreasing = TRUE)[1:10]
+```
+
+Note that the top 10 ranks differ; while Vincent is the top character by either measure, Buth is second and Just is third by degree, but their places switch when we rank them by vertex strength. Also, while the Wolf is not in the top 10 by degree, he is by vertex strength. 
+
+The interesting thing is what happens with other values. Let's set $\alpha = 0.6$:
+
+```{r}
+   dr <- gen.deg(g, alpha = 0.6)
+   sort(round(dr, 1), decreasing = TRUE)[1:10]
+```
+
+Which ends up being a compromise between the two top 10 lists, containing characters from both. 
+
+## Degree Centrality in Directed Graphs
+
+### Indegree and Outdegree
+
+The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it's a symmetric relation) and can therefore be represented in an **undirected graph**. The concepts of in and outdegree, by contrast, are only applicable to directed ties, which are represented by a **directed graph**. So to illustrate them, we need to switch to a different source of data.
 
 We pick an **advice network** which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn't necessarily mean you can give advice to me. The `networkdata` package contains one such data set collected in the late 80s early 1990s in a New England law firm [@lazega01] called `law_advice`:
 
@@ -58,8 +173,6 @@ To keep things manageable, we will restrict our analysis to partners. To do that
 ```
 
 The first line just tells `igraph` to generate the subgraph containing the first 36 nodes (the partners). The `subgraph` function thus takes two main inputs: The graph object, and then a vector of node ids (or node labels) telling the function which nodes to select to create the **node-induced subgraph**.
-
-### Computing in and outdegree
 
 OK, going back to the partners subgraph, we can now create our (asymmetric) adjacency matrix and compute the row and column sums:
 

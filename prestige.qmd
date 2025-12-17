@@ -13,9 +13,9 @@ format:
 
 In the the centrality lecture notes, we saw how to compute the most popular centrality measures ([degree](degcent.qmd), [closeness](closcent.qmd), and [betweeness](betcent.qmd)). Freeman's "big three" have strong *graph-theoretic* foundation and do a good job of formalizing and quantifying the idea that a node is central if it is "well-placed" in the network, where being well-placed resolves into either being able to *reach* others (directly as with degree or indirectly as with closeness) or being able to *intermediate* between others (as with betweenness).
 
-## Networks as Prisms
-
 There is, however, another strong and well-motivated intuition as to what it means to be "well-placed" in a network. Here the ties in the network are seen less as "pipes" that transmit stuff and more like "prisms" that *reflect* on you [@podolny01]. 
+
+## Networks as Prisms
 
 One way to think about this second version of well-placedness is that what is transmitted through the network is the *network itself*, or more accurately, the *importance*, *status*, and *prestige* of the people you are connected to, preferably flowing *from* them (high status people) to *you*.
 
@@ -221,18 +221,18 @@ While the top indegree centrality node (2) also gets the top Eigenvector Central
 
 ## Combining Prestige and Similarity
 
-In a neat paper, @alvarez-socorro_etal15 combine ideas of [node similarity analysis](similarity.qmd) with prestige ranking to derive an interesting twist on the usual Eigenvector-based prestige score. 
+In a neat paper, @alvarez-socorro_etal15 combine ideas of [local similarity analysis](locsim.qmd) with prestige ranking to derive an interesting twist on the usual Eigenvector-based prestige score. 
 
 Their idea is simple and intuitive, linking the "getting status from others" idea we just talked about, but *weighting* those others by their *similarity* to ego. Their point is that linking to others who are not similar to you should give you more status than linking to others that are similar, which is the principle behind such fundamental network theories as Strength of Weak Ties [@granovetter73] and Structural Holes [@burt92].
 
-How do we do it? First, we just need to compute one of the [many similarity metrics](similarity.qmd), to come up with a **dissimilarity matrix** between nodes. We choose the Jaccard similarity, which can be computed using the following function:
+How do we do it? First, we just need to compute one of the [many similarity metrics](locsim.qmd), to come up with a **dissimilarity matrix** between nodes. We choose the Jaccard similarity (because the Jaccard dissimilarity is a true metric distance), which can be computed using the following function:
 
 ```{r}
    jaccard.sim <- function(x) {
       A <- as.matrix(as_adjacency_matrix(x))
       A.p <- A %*% A 
       A.q <- A %*% (1 - A) 
-      A.r <- (1 - A) %*% A 
+      A.r <- t(A.q)
       return(A.p / (A.p + A.q + A.r))
       }
 ```
@@ -337,7 +337,7 @@ Neat!
 
 ## Connection Between Eigenvector Centrality and the Katz Similarity
 
-There is of course an even more intimate connection between vertex similarity analysis and prestige scoring at the node in level in networks. The reason for this some forms of "generalized" vertex similarity analysis, like the **Katz similarity** [@katz53] discussed in the [vertex similarity lecture notes](similarity.qmd) rely on the same mathematical apparatus, and distributional network imagery as the prestige ranking scores like eigenvector centrality [@vigna16]. 
+There is of course an even more intimate connection between vertex similarity analysis and prestige scoring at the node in level in networks. The reason for this some forms of "generalized" vertex similarity analysis, like the **Katz similarity** [@katz53] discussed in the [global vertex similarities lecture notes](globsim.qmd) rely on the same mathematical apparatus, and distributional network imagery as the prestige ranking scores like eigenvector centrality [@vigna16]. 
 
 Recall from that lecture that the **Katz similarity matrix** for every pair of nodes is given by: 
 
@@ -363,9 +363,9 @@ Let's now compute the Katz similarity matrix for the Krackhardt managers in the 
    head(S[1:10, 1:10])
 ```
 
-Recall from the [vertex similarity lecture](similarity.qmd) that these (giant) numbers are the *expected number of paths* of *all* lengths between every pair of managers in the network (with diagonals indicating the expected number of *cycles* of all lengths that start and end in the same manager) with longer paths discounted by $\alpha$ which in this case equals `r round((1/eigen(A)$values[1] - 1e-10), 3)`.
+Recall from the [global vertex similarity lecture](globsim.qmd) that these (giant) numbers are the *expected number of walks* of *all* lengths between every pair of managers in the network (with diagonals indicating the expected number of *cycles* of all lengths that start and end in the same manager) with longer walks discounted by $\alpha$ which in this case equals `r round((1/eigen(A)$values[1] - 1e-10), 3)`.
 
-In the vertex similarity lecture, we treated the dyadic entries in this matrix as a pairwise similarity score. However, nothing is stopping us from computing the *row* (or column) *sums* of this matrix to obtain a node-level score. This score is larger for nodes that are able to reach other nodes (and themselves) via more paths in the network, with shorter paths counting for more than longer paths. 
+In the vertex similarity lecture, we treated the dyadic entries in this matrix as a pairwise similarity score. However, nothing is stopping us from computing the *row* (or column) *sums* of this matrix to obtain a node-level "centrality" score.^[Note that if the graph is directed, we would want to compute the *column* sums only (or the row sums of the transpose), as prestigious nodes would have lots of incoming indirect connections flowing to them.] This score is larger for nodes that are able to reach other nodes (and themselves) via more paths in the network, with shorter paths counting for more than longer paths. 
 
 Thus, the row sums of the Katz-similarity matrix, can be used to obtain the **Katz centrality** of each node:
 
@@ -382,7 +382,7 @@ The big reveal is that normalized (by the maximum) Katz centrality scores are eq
 
 So here's another way of understanding the "eigenvector centralities" computed by our status distribution game: Better connected nodes by this metric are those who are able to reach all nodes in the graph via direct or indirect paths, with those who are able to do so using the shorter paths being better placed. 
 
-So an alternative expression of the eigenvector centrality vector $\mathbf{s}$ for each node using the "Katz" approach is:
+An alternative expression of the eigenvector centrality vector $\mathbf{s}$ for each node using the "Katz" approach is:
 
 $$
 \mathbf{s} = \left[(\mathbf{I} - \alpha A)^{-1}\right]\mathbf{1}
@@ -570,8 +570,6 @@ This is precisely what the Beta Centrality with a negative $\beta$ parameter doe
 ```
 
 As expected, in the Beta Centrality scoring with a negative $\beta$ parameter, the blue nodes, who are connected to others who don't have many other options are now the most central and node 1 who is connected to the blue nodes with many options is now the least central!
-
-### Beta Centrality with igraph
 
 Of course, `igraph` has a dedicated function called `power_centrality` that does everything that we did earlier with our custom function. You just have to specify the `exponent` argument, which is the value of $\beta$ above:
 

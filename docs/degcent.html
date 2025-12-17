@@ -143,10 +143,11 @@ div.csl-indent {
   }
 }</script>
 
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
 <meta property="og:title" content="SOCIOL 208 - Degree Centrality">
-<meta property="og:description" content="In these lecture notes we will go through the basic centrality metrics. Particularly, the “big three” according to Freeman (1979), namely, degree, closeness (in two flavors) and betweenness.">
+<meta property="og:description" content="In the following lecture notes we will go through the basic centrality metrics.">
 <meta property="og:site-name" content="SOCIOL 208">
 </head>
 
@@ -338,7 +339,7 @@ div.csl-indent {
       <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 ">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./structequiv.html" class="sidebar-item-text sidebar-link">Role Equivalence and Structural Similarity</a>
+  <a href="./structequiv.html" class="sidebar-item-text sidebar-link">Structural Equivalence</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -536,10 +537,15 @@ div.csl-indent {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#degree-centrality" id="toc-degree-centrality" class="nav-link active" data-scroll-target="#degree-centrality">Degree Centrality</a></li>
-  <li><a href="#indegree-and-outdegree" id="toc-indegree-and-outdegree" class="nav-link" data-scroll-target="#indegree-and-outdegree">Indegree and Outdegree</a>
+  <li><a href="#degree-centrality-in-undirected-graphs" id="toc-degree-centrality-in-undirected-graphs" class="nav-link active" data-scroll-target="#degree-centrality-in-undirected-graphs">Degree Centrality in Undirected Graphs</a></li>
+  <li><a href="#degree-in-weighted-graphs" id="toc-degree-in-weighted-graphs" class="nav-link" data-scroll-target="#degree-in-weighted-graphs">Degree in Weighted Graphs</a>
   <ul class="collapse">
-  <li><a href="#computing-in-and-outdegree" id="toc-computing-in-and-outdegree" class="nav-link" data-scroll-target="#computing-in-and-outdegree">Computing in and outdegree</a></li>
+  <li><a href="#vertex-strength" id="toc-vertex-strength" class="nav-link" data-scroll-target="#vertex-strength">Vertex Strength</a></li>
+  <li><a href="#generalized-degree" id="toc-generalized-degree" class="nav-link" data-scroll-target="#generalized-degree">Generalized Degree</a></li>
+  </ul></li>
+  <li><a href="#degree-centrality-in-directed-graphs" id="toc-degree-centrality-in-directed-graphs" class="nav-link" data-scroll-target="#degree-centrality-in-directed-graphs">Degree Centrality in Directed Graphs</a>
+  <ul class="collapse">
+  <li><a href="#indegree-and-outdegree" id="toc-indegree-and-outdegree" class="nav-link" data-scroll-target="#indegree-and-outdegree">Indegree and Outdegree</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/degcent.qmd" class="toc-action">View source</a></p></div></div></nav>
@@ -564,15 +570,17 @@ div.csl-indent {
 
 </header>
 
-<p>In these lecture notes we will go through the basic centrality metrics. Particularly, the “big three” according to <span class="citation" data-cites="freeman79">Freeman (<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span>, namely, <strong>degree</strong>, <strong>closeness</strong> (in two flavors) and <strong>betweenness</strong>.</p>
+<p>In the following lecture notes we will go through the basic centrality metrics. Particularly, the “big three” according to <span class="citation" data-cites="freeman79">Freeman (<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span>, namely, <strong>degree</strong> (treated here), followed by <a href="./closcent.html"><strong>closeness</strong></a> and <a href="./betcent.html"><strong>betweenness</strong></a>.</p>
+<section id="degree-centrality-in-undirected-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="degree-centrality-in-undirected-graphs">Degree Centrality in Undirected Graphs</h2>
 <p>We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
-<span id="cb1-3"><a href="#cb1-3"></a>   g <span class="ot">&lt;-</span> movie_559</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
+<span id="cb1-2"><a href="#cb1-2"></a>    <span class="fu">library</span>(igraph)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>    <span class="fu">library</span>(stringr) <span class="co">#using stringr to change names from all caps to title case</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>    g <span class="ot">&lt;-</span> movie_559</span>
+<span id="cb1-5"><a href="#cb1-5"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<section id="degree-centrality" class="level2">
-<h2 class="anchored" data-anchor-id="degree-centrality">Degree Centrality</h2>
 <p>Degree centrality is the simplest and most straightforward measure. In fact, we are already computed in the <a href="./basic.html">lecture notes on basic network statistics</a> since it is the same as obtaining the graph’s <strong>degree sequence</strong>. So the <code>igraph</code> function <code>degree</code> would do it as we already saw.</p>
 <p>Here we follow a different approach using the row (or column) sums of the graph’s <strong>adjacency matrix</strong>:</p>
 <div class="cell">
@@ -580,40 +588,202 @@ div.csl-indent {
 <span id="cb2-2"><a href="#cb2-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(A)</span>
 <span id="cb2-3"><a href="#cb2-3"></a>   <span class="fu">rowSums</span>(A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          BRETT           BUDDY           BUTCH      CAPT KOONS     ED SULLIVAN 
+<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
               7               2              17               5               2 
-   ENGLISH DAVE       ESMARELDA        FABIENNE      FOURTH MAN       GAWKER #2 
+   English Dave       Esmarelda        Fabienne      Fourth Man       Gawker #2 
               4               1               3               2               3 
-    HONEY BUNNY          JIMMIE            JODY           JULES           LANCE 
+    Honey Bunny          Jimmie            Jody           Jules           Lance 
               8               3               4              16               4 
-        MANAGER       MARSELLUS          MARVIN         MAYNARD             MIA 
+        Manager       Marsellus          Marvin         Maynard             Mia 
               5              10               6               3              11 
-         MOTHER          PATRON      PEDESTRIAN        PREACHER         PUMPKIN 
+         Mother          Patron      Pedestrian        Preacher         Pumpkin 
               5               5               3               3               8 
-         RAQUEL           ROGER SPORTSCASTER #1 SPORTSCASTER #2        THE GIMP 
+         Raquel           Roger Sportscaster #1 Sportscaster #2        The Gimp 
               3               6               2               1               2 
-       THE WOLF         VINCENT        WAITRESS         WINSTON           WOMAN 
+       The Wolf         Vincent        Waitress         Winston           Woman 
               3              25               4               3               5 
-      YOUNG MAN     YOUNG WOMAN             ZED 
+      Young Man     Young Woman             Zed 
               4               4               2 </code></pre>
 </div>
 </div>
 <p>The <code>igraph</code> function <code>as_adjancency_matrix</code> doesn’t quite return a regular <code>R</code> matrix object, so we have to further coerce the resulting object into a numerical matrix containing zeroes and ones using the <code>as.matrix</code> function in line 2. Then we can apply the native <code>rowSums</code> function to obtain each node’s degree. Note that this is same output we got using the <code>degree</code> function before.</p>
+<p>Of course, we can also use the <code>igraph</code> function <code>degree</code> which returns the same named vector with the degrees of each node as output:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   d <span class="ot">&lt;-</span> <span class="fu">degree</span>(g)</span>
+<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">sort</span>(d, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        Vincent           Butch           Jules             Mia       Marsellus 
+             25              17              16              11              10 
+    Honey Bunny         Pumpkin           Brett          Marvin           Roger 
+              8               8               7               6               6 
+     Capt Koons         Manager          Mother          Patron           Woman 
+              5               5               5               5               5 
+   English Dave            Jody           Lance        Waitress       Young Man 
+              4               4               4               4               4 
+    Young Woman        Fabienne       Gawker #2          Jimmie         Maynard 
+              4               3               3               3               3 
+     Pedestrian        Preacher          Raquel        The Wolf         Winston 
+              3               3               3               3               3 
+          Buddy     Ed Sullivan      Fourth Man Sportscaster #1        The Gimp 
+              2               2               2               2               2 
+            Zed       Esmarelda Sportscaster #2 
+              2               1               1 </code></pre>
+</div>
+</div>
 </section>
-<section id="indegree-and-outdegree" class="level2">
-<h2 class="anchored" data-anchor-id="indegree-and-outdegree">Indegree and Outdegree</h2>
-<p>The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it’s a symmetric relation) and can therefore be represented in an <strong>undirected graph</strong>. The concepts of in and outdegree, by contrast, are only applicable to directed relations. So to illustrate them, we need to switch to a different source of data.</p>
+<section id="degree-in-weighted-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="degree-in-weighted-graphs">Degree in Weighted Graphs</h2>
+<p>Typically, undirected graphs record the interactions between actors in the networks as binary (1/0) ties. Nevertheless in many cases edges have a <strong>weight</strong> associated with them, recording the intensity of the interactions between pair of actors, resulting in a <strong>weighted graph</strong>.</p>
+<p>In <code>igraph</code> we can check if the network in question is weighted by seeing whether there is a <code>weight</code> attribute associated with the edges in the graph:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">E</span>(g)<span class="sc">$</span>weight</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  [1] 1 1 1 1 1 1 1 1 2 1 1 3 1 1 1 1 2 1 1 1 1 1 2 1 2 1 1 2 2 1 1 1 1 1 3 1 4
+ [38] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 2 6 4 3 3 1 1 2
+ [75] 1 1 3 9 1 3 2 6 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</code></pre>
+</div>
+</div>
+<p>If the graph was unweighted, this call would return a <code>NULL</code> value. We can see however, that there are weights associated with each edge. In the <em>Pulp Fiction</em> network, the weights represent the <em>number of scenes</em> in the movie that two characters co-appeared in.</p>
+<p>We can take a quick peek at how these edge weights look by creating an edge list data frame using the <code>igraph</code> function <code>as_edgelist</code> and then attaching the edge weight attribute:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(g), <span class="at">w =</span> <span class="fu">E</span>(g)<span class="sc">$</span>weight)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>And looking at the first twenty rows:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   dat[<span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, ]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           X1              X2 w
+1       Brett       Marsellus 1
+2       Brett          Marvin 1
+3       Brett           Roger 1
+4       Brett         Vincent 1
+5       Buddy             Mia 1
+6       Buddy         Vincent 1
+7       Brett           Butch 1
+8       Butch      Capt Koons 1
+9       Butch       Esmarelda 2
+10      Butch       Gawker #2 1
+11      Butch           Jules 1
+12      Butch       Marsellus 3
+13      Butch      Pedestrian 1
+14      Butch Sportscaster #1 1
+15      Butch    English Dave 1
+16      Brett        Fabienne 1
+17      Butch        Fabienne 2
+18   Fabienne           Jules 1
+19 Fourth Man           Jules 1
+20 Fourth Man         Vincent 1</code></pre>
+</div>
+</div>
+<p>We can see, for instance, that Butch and Marsellus co-appear in three different scenes.</p>
+<section id="vertex-strength" class="level3">
+<h3 class="anchored" data-anchor-id="vertex-strength">Vertex Strength</h3>
+<p>How do we incorporate edge weights into the calculation of degree centrality? One approach, proposed by <span class="citation" data-cites="barrat_etal04">Barrat et al. (<a href="#ref-barrat_etal04" role="doc-biblioref">2004</a>)</span> is to compute:</p>
+<p><span id="eq-vs"><span class="math display">\[
+C^{VS}_i = \sum_j w_{ij}
+\tag{1}\]</span></span></p>
+<p>Where the weighted degree (<span class="citation" data-cites="barrat_etal04">Barrat et al. (<a href="#ref-barrat_etal04" role="doc-biblioref">2004</a>)</span> call it the <strong>vertex strength</strong>) of a node is just the sum of the weights of the edges incident to that node.</p>
+<p>In <code>R</code> we can compute the vertex strength by calculating the row (or column) sums of the <strong>weighted adjacency matrix</strong> <span class="math inline">\(\mathbf{W}\)</span> containing the weight of the edge between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> in each cell <span class="math inline">\(w_{ij}\)</span>.</p>
+<p>We can do that like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   W <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g, <span class="at">attr=</span><span class="st">"weight"</span>))</span>
+<span id="cb11-2"><a href="#cb11-2"></a>   vs <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(W)</span>
+<span id="cb11-3"><a href="#cb11-3"></a>   <span class="fu">sort</span>(vs, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        Vincent           Jules           Butch             Mia       Marsellus 
+             51              31              23              16              15 
+       The Wolf     Honey Bunny          Jimmie           Lance         Pumpkin 
+             13               9               9               9               9 
+          Brett            Jody          Marvin           Roger      Capt Koons 
+              8               8               8               6               5 
+   English Dave         Manager          Mother          Patron           Woman 
+              5               5               5               5               5 
+       Fabienne        Waitress       Young Man     Young Woman       Gawker #2 
+              4               4               4               4               3 
+        Maynard      Pedestrian        Preacher          Raquel Sportscaster #1 
+              3               3               3               3               3 
+        Winston           Buddy     Ed Sullivan       Esmarelda      Fourth Man 
+              3               2               2               2               2 
+Sportscaster #2        The Gimp             Zed 
+              2               2               2 </code></pre>
+</div>
+</div>
+<p>Note that in <code>igraph</code>, we obtain the weighted adjacency matrix , by specifying <code>"weight"</code> as the value of the <code>attr</code> argument (for edge attribute) in the call to the <code>as_adjacency matrix</code> function.</p>
+<p>Not surprisingly, the main characters in the story have the largest vertex strengths, as they tend to co-appear with other characters several times in the film.</p>
+<p>The vertex strength approach is intuitive but it has the drawback of giving the same score to low degree nodes with large weights and high degree nodes with small weights (e.g., a node with two contacts each with a weight of 3.0 gets the same score as node with six contacts each with a weight of 1.0).</p>
+</section>
+<section id="generalized-degree" class="level3">
+<h3 class="anchored" data-anchor-id="generalized-degree">Generalized Degree</h3>
+<p>To deal with this issue, <span class="citation" data-cites="opsahl_etal10">Opsahl, Agneessens, and Skvoretz (<a href="#ref-opsahl_etal10" role="doc-biblioref">2010</a>)</span> propose that we instead compute:</p>
+<p><span id="eq-wd"><span class="math display">\[
+C^{WD}_i = \left(\sum_j w_{ij}\right)^{\alpha}\left(\sum_j a_{ij}\right)^{(1-\alpha)}
+\tag{2}\]</span></span></p>
+<p>With the parameter <span class="math inline">\(\alpha\)</span> chosen by the researcher. Note that in the right-hand side of the equation, the factor on the left is just vertex strength as defined in <a href="#eq-vs">Equation&nbsp;1</a> raised to the power of <span class="math inline">\(\alpha\)</span>, and the factor on the right is just the usual binary degree centrality, counting the number of alters ego is connected to, raised to the power of <span class="math inline">\(1-\alpha\)</span>.</p>
+<p>The <span class="math inline">\(\alpha\)</span> parameter thus controls the importance we give the number of contacts versus the weight of the edges in computing the degree. When <span class="math inline">\(\alpha = 1\)</span> then <a href="#eq-wd">Equation&nbsp;2</a> reduces to <a href="#eq-vs">Equation&nbsp;1</a> the vertex strength; when <span class="math inline">\(\alpha = 0\)</span> then <a href="#eq-wd">Equation&nbsp;2</a> reduces to the regular unweighted degree.</p>
+<p><span class="math inline">\(\alpha\)</span> values between zero and one combine both quantities, with numbers closer to zero giving more weight to number of contacts, and numbers closer to one giving more importance to the weight of the edges.</p>
+<p>Here’s function that computes the <span class="citation" data-cites="opsahl_etal10">Opsahl, Agneessens, and Skvoretz (<a href="#ref-opsahl_etal10" role="doc-biblioref">2010</a>)</span> generalized degree:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   gen.deg <span class="ot">&lt;-</span> <span class="cf">function</span>(x, alpha) {</span>
+<span id="cb13-2"><a href="#cb13-2"></a>      s <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x, <span class="at">attr=</span><span class="st">"weight"</span>)))</span>
+<span id="cb13-3"><a href="#cb13-3"></a>      d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x)))</span>
+<span id="cb13-4"><a href="#cb13-4"></a>      wd <span class="ot">&lt;-</span> s<span class="sc">^</span>alpha <span class="sc">*</span> d<span class="sc">^</span>(<span class="dv">1</span><span class="sc">-</span>alpha)</span>
+<span id="cb13-5"><a href="#cb13-5"></a>      <span class="fu">return</span>(wd)</span>
+<span id="cb13-6"><a href="#cb13-6"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function takes the graph and a value for <span class="math inline">\(\alpha\)</span> as inputs and returns the vector of generalized degrees as output. In lines 2 and 3 we compute the vertex strength and the regular degree from the row sums of the weighted adjacency matrix and the regular adjacency matrix.</p>
+<p>We can see that when we set <span class="math inline">\(\alpha = 0\)</span> we get values identical to the degree:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   dr <span class="ot">&lt;-</span> <span class="fu">gen.deg</span>(g, <span class="at">alpha =</span> <span class="dv">0</span>)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>   <span class="fu">sort</span>(dr, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Vincent       Butch       Jules         Mia   Marsellus Honey Bunny 
+         25          17          16          11          10           8 
+    Pumpkin       Brett      Marvin       Roger 
+          8           7           6           6 </code></pre>
+</div>
+</div>
+<p>And when we set <span class="math inline">\(\alpha = 1\)</span> we get values identical to the vertex strength:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   dr <span class="ot">&lt;-</span> <span class="fu">gen.deg</span>(g, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb16-2"><a href="#cb16-2"></a>   <span class="fu">sort</span>(dr, <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Vincent       Jules       Butch         Mia   Marsellus    The Wolf 
+         51          31          23          16          15          13 
+Honey Bunny      Jimmie       Lance     Pumpkin 
+          9           9           9           9 </code></pre>
+</div>
+</div>
+<p>Note that the top 10 ranks differ; while Vincent is the top character by either measure, Buth is second and Just is third by degree, but their places switch when we rank them by vertex strength. Also, while the Wolf is not in the top 10 by degree, he is by vertex strength.</p>
+<p>The interesting thing is what happens with other values. Let’s set <span class="math inline">\(\alpha = 0.6\)</span>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   dr <span class="ot">&lt;-</span> <span class="fu">gen.deg</span>(g, <span class="at">alpha =</span> <span class="fl">0.6</span>)</span>
+<span id="cb18-2"><a href="#cb18-2"></a>   <span class="fu">sort</span>(<span class="fu">round</span>(dr, <span class="dv">1</span>), <span class="at">decreasing =</span> <span class="cn">TRUE</span>)[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    Vincent       Jules       Butch         Mia   Marsellus Honey Bunny 
+       38.3        23.8        20.4        13.8        12.8         8.6 
+    Pumpkin       Brett    The Wolf      Marvin 
+        8.6         7.6         7.2         7.1 </code></pre>
+</div>
+</div>
+<p>Which ends up being a compromise between the two top 10 lists, containing characters from both.</p>
+</section>
+</section>
+<section id="degree-centrality-in-directed-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="degree-centrality-in-directed-graphs">Degree Centrality in Directed Graphs</h2>
+<section id="indegree-and-outdegree" class="level3">
+<h3 class="anchored" data-anchor-id="indegree-and-outdegree">Indegree and Outdegree</h3>
+<p>The movie network is based on the relationship of co-appearance in a scene which by nature lacks any natural directionality (it’s a symmetric relation) and can therefore be represented in an <strong>undirected graph</strong>. The concepts of in and outdegree, by contrast, are only applicable to directed ties, which are represented by a <strong>directed graph</strong>. So to illustrate them, we need to switch to a different source of data.</p>
 <p>We pick an <strong>advice network</strong> which is a classical directed kind of (asymmetric) relation. I can give advice to you, but that doesn’t necessarily mean you can give advice to me. The <code>networkdata</code> package contains one such data set collected in the late 80s early 1990s in a New England law firm <span class="citation" data-cites="lazega01">(<a href="#ref-lazega01" role="doc-biblioref">Lazega 2001</a>)</span> called <code>law_advice</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   d.g <span class="ot">&lt;-</span> law_advice</span>
-<span id="cb4-2"><a href="#cb4-2"></a>   <span class="fu">V</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   d.g <span class="ot">&lt;-</span> law_advice</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   <span class="fu">V</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>+ 71/71 vertices, from d1a9da7:
  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 [26] 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50
 [51] 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">vertex_attr</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   <span class="fu">vertex_attr</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$status
  [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2
@@ -649,31 +819,29 @@ $law_school
 <p>We can see that the graph has 71 vertices, and that there are various <strong>attributes</strong> associated with each vertex, like gender, age, seniority, status in the law firm, etc. We can query those attributes using the <code>igraph</code> function <code>vertex_attr</code>, which takes the graph object as input.</p>
 <p>To keep things manageable, we will restrict our analysis to partners. To do that we need to select the <strong>subgraph</strong> that only includes the vertices with value of 1 in the “status” vertex attribute. From the <a href="https://www.rdocumentation.org/packages/networkdata/versions/0.1.6/topics/law_advice">data description</a>, we know the first 36 nodes (with value of 1 in the status attribute) are the law firm’s partners (the rest are associates). In <code>igraph</code> we can do this as using the <code>subgraph</code> function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   d.g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(d.g, <span class="dv">1</span><span class="sc">:</span><span class="dv">36</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>   <span class="fu">V</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   d.g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(d.g, <span class="dv">1</span><span class="sc">:</span><span class="dv">36</span>)</span>
+<span id="cb24-2"><a href="#cb24-2"></a>   <span class="fu">V</span>(d.g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>+ 36/36 vertices, from 756dfbd:
+<pre><code>+ 36/36 vertices, from 1d3e55b:
  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 [26] 26 27 28 29 30 31 32 33 34 35 36</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   <span class="fu">V</span>(d.g)<span class="sc">$</span>status</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1"></a>   <span class="fu">V</span>(d.g)<span class="sc">$</span>status</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1</code></pre>
 </div>
 </div>
 <p>The first line just tells <code>igraph</code> to generate the subgraph containing the first 36 nodes (the partners). The <code>subgraph</code> function thus takes two main inputs: The graph object, and then a vector of node ids (or node labels) telling the function which nodes to select to create the <strong>node-induced subgraph</strong>.</p>
-<section id="computing-in-and-outdegree" class="level3">
-<h3 class="anchored" data-anchor-id="computing-in-and-outdegree">Computing in and outdegree</h3>
 <p>OK, going back to the partners subgraph, we can now create our (asymmetric) adjacency matrix and compute the row and column sums:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   d.A <span class="ot">&lt;-</span> <span class="fu">as_adjacency_matrix</span>(d.g)</span>
-<span id="cb12-2"><a href="#cb12-2"></a>   d.A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(d.A)</span>
-<span id="cb12-3"><a href="#cb12-3"></a>   <span class="fu">rowSums</span>(d.A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   d.A <span class="ot">&lt;-</span> <span class="fu">as_adjacency_matrix</span>(d.g)</span>
+<span id="cb28-2"><a href="#cb28-2"></a>   d.A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(d.A)</span>
+<span id="cb28-3"><a href="#cb28-3"></a>   <span class="fu">rowSums</span>(d.A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1]  3  7  7 17  4  0  4  2  3  7  5 18 11 13 10 19 17  5 21 10  9 12  9 16  8
 [26] 22 18 22 13 15 16  9 15  6 15  7</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   <span class="fu">colSums</span>(d.A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1"></a>   <span class="fu">colSums</span>(d.A)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 18 17  8 14 10 17  4  8 10  6 11 14 14 12 15 13 21  7  7 17 11 10  2 14  7
 [26] 20  2 14 12 11  8 13  2 16  8  2</code></pre>
@@ -682,14 +850,14 @@ $law_school
 <p>Note that in contrast to the undirected case the row and column sums give you two different sets of numbers. The row sums provide the directed graph’s <strong>outdegree set</strong> (number of <em>outgoing</em> links incident to each node), and the column sums provide the graph’s <strong>indegree set</strong> (number of <em>incoming</em> links incident to each node). So if you are high in the first vector, you are an <em>advice giver</em> (perhaps indicating informal status or experience) and if you are high in the second you are advice taker.</p>
 <p>Of course <code>igraph</code> has a dedicated function for this, which is just our old friend <code>degree</code> with an extra option <code>mode</code>, indicating whether you want the in or outdegrees:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   d.o <span class="ot">&lt;-</span> <span class="fu">degree</span>(d.g, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
-<span id="cb16-2"><a href="#cb16-2"></a>   d.i <span class="ot">&lt;-</span> <span class="fu">degree</span>(d.g, <span class="at">mode =</span> <span class="st">"in"</span>)</span>
-<span id="cb16-3"><a href="#cb16-3"></a>   d.o</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1"></a>   d.o <span class="ot">&lt;-</span> <span class="fu">degree</span>(d.g, <span class="at">mode =</span> <span class="st">"out"</span>)</span>
+<span id="cb32-2"><a href="#cb32-2"></a>   d.i <span class="ot">&lt;-</span> <span class="fu">degree</span>(d.g, <span class="at">mode =</span> <span class="st">"in"</span>)</span>
+<span id="cb32-3"><a href="#cb32-3"></a>   d.o</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1]  3  7  7 17  4  0  4  2  3  7  5 18 11 13 10 19 17  5 21 10  9 12  9 16  8
 [26] 22 18 22 13 15 16  9 15  6 15  7</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   d.i</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a>   d.i</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 18 17  8 14 10 17  4  8 10  6 11 14 14 12 15 13 21  7  7 17 11 10  2 14  7
 [26] 20  2 14 12 11  8 13  2 16  8  2</code></pre>
@@ -698,8 +866,8 @@ $law_school
 <p>Note that the graph attributes are just vectors of values, and can be accessed from the graph object using the $ operator attached to the <code>V()</code> function as we did above.</p>
 <p>So if we wanted to figure out the correlation between some vertex attribute and in or out degree centrality, all we need to do is correlate the two vectors:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(d.o, <span class="fu">V</span>(d.g)<span class="sc">$</span>age)</span>
-<span id="cb20-2"><a href="#cb20-2"></a>   <span class="fu">round</span>(r, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   r <span class="ot">&lt;-</span> <span class="fu">cor</span>(d.o, <span class="fu">V</span>(d.g)<span class="sc">$</span>age)</span>
+<span id="cb36-2"><a href="#cb36-2"></a>   <span class="fu">round</span>(r, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.43</code></pre>
 </div>
@@ -712,11 +880,17 @@ $law_school
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-barrat_etal04" class="csl-entry" role="doc-biblioentry">
+Barrat, Alain, Marc Barthelemy, Romualdo Pastor-Satorras, and Alessandro Vespignani. 2004. <span>“The Architecture of Complex Weighted Networks.”</span> <em>Proceedings of the National Academy of Sciences</em> 101 (11): 3747–52.
+</div>
 <div id="ref-freeman79" class="csl-entry" role="doc-biblioentry">
 Freeman, Linton C. 1979. <span>“Centrality in Social Networks Conceptual Clarification.”</span> <em>Social Networks</em> 1: 215–39.
 </div>
 <div id="ref-lazega01" class="csl-entry" role="doc-biblioentry">
 Lazega, Emmanuel. 2001. <em>The Collegial Phenomenon: The Social Mechanisms of Cooperation Among Peers in a Corporate Law Partnership</em>. Oxford University Press.
+</div>
+<div id="ref-opsahl_etal10" class="csl-entry" role="doc-biblioentry">
+Opsahl, Tore, Filip Agneessens, and John Skvoretz. 2010. <span>“Node Centrality in Weighted Networks: Generalizing Degree and Shortest Paths.”</span> <em>Social Networks</em> 32 (3): 245–51.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
