@@ -25,13 +25,13 @@ For the people the relevant projection is:
 
 $$
 \mathbf{P} = \mathbf{A}\mathbf{A}^T
-$$
+$$ {#eq-p}
 
 And for the groups:
 
 $$
 \mathbf{G} = \mathbf{A}^T\mathbf{A}
-$$
+$$ {#eq-g}
 
 Let's see how this works out with real data by loading our usual friend the *Southern Women* data:
 
@@ -39,12 +39,14 @@ Let's see how this works out with real data by loading our usual friend the *Sou
     library(igraph)
     library(networkdata)
     g <- southern_women
-    A <- as_biadjacency_matrix(g)
+    library(stringr) #using stringr to change names from all caps to title case
+    V(g)$name <- str_to_title(V(g)$name)
 ```
 
-In this case, the above equations yield:
+In this case, equations @eq-g and @eq-p yield:
 
 ```{r}
+   A <- as_biadjacency_matrix(g)
    P <- A %*% t(A)
    P
    G <- t(A) %*% A
@@ -53,7 +55,7 @@ In this case, the above equations yield:
 
 The off-diagonal entries of these square person by person (group by group) matrices is the number of groups (people) shared by each person (group) and the diagonals are the number of memberships of each person (the size of each group/event).
 
-In `igraph` the  relevant function is called `bipartite_projection`. It takes a graph as an input and returns a list containing `igraph` graph objects of both projections by default:
+In `igraph` the  relevant function is called `bipartite_projection`. It takes a bipartite graph as an input and returns a list containing `igraph` graph objects of both projections by default:
 
 ```{r}
    Proj <- bipartite_projection(g)
@@ -61,7 +63,7 @@ In `igraph` the  relevant function is called `bipartite_projection`. It takes a 
    G.g <- Proj[[2]]
 ```
 
-In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code below to set the `edge.width`:
+In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code for @fig-projection to set the `edge.width`:
 
 ```{r}
    edge_attr(G.p)
@@ -87,7 +89,7 @@ We can also use the weights to draw a weighted graph network plot of people and 
 #| fig-subcap: 
 #|   - "Persons"
 #|   - "Groups"
-#| layout-ncol: 2
+#| layout-ncol: 1
 
    set.seed(123)
    plot(G.p, 
@@ -119,11 +121,11 @@ Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical co
 
 1. For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.
 
-We can verify this relationship for $EVELYN$:
+We can verify this relationship for Evelyn:
 
 ```{r}
-   sum.size.evelyn <- sum(A["EVELYN", ] * degree(g)[which(V(g)$type == TRUE)]) #sum of the sizes of the groups Evelyn belongs to
-   sum.size.evelyn - degree(g)[which(V(g)$name == "EVELYN")]
+   sum.size.evelyn <- sum(A["Evelyn", ] * degree(g)[which(V(g)$type == TRUE)]) #sum of the sizes of the groups Evelyn belongs to
+   sum.size.evelyn - degree(g)[which(V(g)$name == "Evelyn")]
 ```
 
 Which is indeed Evelyn's vertex strength. 
@@ -199,7 +201,7 @@ And here's a point and line plot the minimum spanning tree for persons and group
 #| fig-subcap: 
 #|   - "Persons"
 #|   - "Groups"
-#| layout-ncol: 2
+#| layout-ncol: 1
 
 set.seed(123)
    plot(Tr.p, 
@@ -214,3 +216,76 @@ set.seed(123)
      vertex.label.cex = 1.5, edge.color = "lightgray",
      edge.width = 3, vertex.color = cluster_leading_eigen(Tr.g)$membership)
 ```
+
+## An Asymmetric Approach to Dual Projection
+
+@zhou_etal07 describe an asymmetric approach to projecting a two-mode network into two one-mode weighted networks. The motivation is to move beyond two limitations of the Breiger projection approach: (1) the fact that the standard projection always results in a *symmetric* weighted adjacency matrix, and (2) the fact that nodes in two-mode networks that only connect to single entity in the other node are necessarily excluded from the traditional projection (they are isolates).
+
+To deal with this issue, @zhou_etal07 propose to weigh the one mode projections reciprocally by the degree of the nodes in each mode, similar to the degree-weighting that motivates the CA approach to analyzing two-mode networks we considered [here](tm-ca.qmd). So the idea is that instead of using the usual Breiger projection we considered above, we instead use the *degree-normalized projection*. 
+
+Recall from that [lecture](tm-ca.qmd) that the degree-normalized projections for persons and groups are obtained as follows:
+
+```{r}
+   D.p <- diag(1/rowSums(A)) #inverse of degree matrix of persons
+   P.pg <- D.p %*% A
+   rownames(P.pg) <- rownames(A) 
+   D.g <- diag(1/colSums(A)) #inverse of degree matrix of groups
+   P.gp <- D.g %*% t(A) #person-degree normalized biadjacency matrix
+   rownames(P.gp) <- colnames(A) #group-degree normalized biadjacency matrix
+   P.pp <- P.pg %*% P.gp #degree-normalized projection for people
+   P.gg <- P.gp %*% P.pg #degree-normalized projection for groups
+```
+
+Checking the first rows and columns of the degree-weighted person projection reveals:
+
+```{r}
+   round(P.pp[1:5, 1:5], 3)
+```
+
+Note that the entries of this matrix are *not* symmetric, like in the standard Breiger projection. For instance the weight of the link going form Evelyn to Laura is `r round(P.pp[1, 2], 3)`, but the weight of the link going from Laura to Evenly is  `r round(P.pp[2, 1], 3)`.
+
+We can check this formally using the base `R` function `isSymmetric`:
+
+```{r}
+   isSymmetric(P)
+   isSymmetric(P.pp)
+```
+
+Which returns `TRUE` for the usual Breiger projection but `FALSE` for the degree-weighted projection.
+
+We can create weighted directed `igraph` objects from the degree-weighted projections using the function `graph_from_adjacency_matrix` as follows:
+
+```{r}
+   G.dp <- graph_from_adjacency_matrix(P.pp, mode = "directed", weighted = TRUE)
+   G.dg <- graph_from_adjacency_matrix(P.gg, mode = "directed", weighted = TRUE)
+```
+
+Note that we specify the `mode` argument to be `directed` and the `weighted` argument to be `TRUE`.
+
+We can of course plot the directed weighted graphs on each mode as usual:
+
+```{r}
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Degree-weighted one mode projections."
+#| label: fig-dgproj
+#| fig-subcap: 
+#|   - "Persons"
+#|   - "Groups"
+#| layout-ncol: 1
+
+   set.seed(123)
+   plot(G.dp, 
+     vertex.size=8, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.cex = 1.5, edge.color = "lightgray",
+     edge.width = E(G.p)$weight*0.5)
+
+   set.seed(123)
+   plot(G.dg, 
+     vertex.size=8, vertex.frame.color="lightgray", 
+     vertex.label.dist=2, edge.curved=0.2, 
+     vertex.label.cex = 1.5, edge.color = "lightgray",
+     edge.width = E(G.g)$weight*0.5)
+```
+
