@@ -125,9 +125,25 @@ Lines 2 and 3 initialize various quantities, most importantly the initial status
    rep(1, nrow(A))
 ```
 
-Then lines 4-9 implement a little looping algorithm of how status is distributed through the network, with the most important piece of code being line 6 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier. The program stops when the difference between the old and the new scores is negligible ($\delta < 10^{-10}$) as checked in line 8. 
+Then lines 4-9 implement a little looping algorithm of how status is distributed through the network, with the most important piece of code being line 6 where the *current* status scores for each node are just the sum of the status scores of its neighbors computed one iteration earlier:
 
-Note the normalization step on line 7, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). In base `R`, the `type = "E"` normalization implements the **Euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm**), by which we divide each value of the status scores by after each update.^[For a vector of numbers $\mathbf{x}$ the Euclidean vector norm $||\mathbf{x}||_2$ is given by: $\sqrt{\sum x^2}$.]
+$$
+\mathbf{s}(t) = \mathbf{A}\mathbf{s}(t-1)
+$$
+
+Where $\mathbf{s}$ is the vector of status scores and $\mathbf{A}$ is the network's adjacency matrix.
+
+The program stops when the difference between the old and the new scores is negligible ($|\sum_i\left(|s(t)_i| - |s(t-1)_i|\right)| < 10^{-10}$) as checked in line 8. 
+
+Note the normalization step on line 7, where we divide the each status score by a normalized sum of all of the scores. This is required in order to prevent the sum of status scores from getting bigger and bigger indefinitely (in mathese, this is referred to as the sum "diverging"). 
+
+In base `R`, the `type = "E"` normalization implements the **Euclidean vector norm** (also sometimes confusingly called the **Frobenieus norm** implemented in `R` using `type = F`), by which we divide each value of the status scores by after each update:
+
+$$
+\mathbf{s}(t) = \frac{\mathbf{s}(t)}{||\mathbf{s}(t)||_2} = \frac{\mathbf{s}(t)}{\sqrt{\sum_i s_i^2}} 
+$$
+
+Which means dividing each status score in the vector by the square root of the sum of the squared scores.
 
 And here's the resulting (row) vector of status scores for each node:
 
@@ -337,7 +353,7 @@ Neat!
 
 ## Connection Between Eigenvector Centrality and the Katz Similarity
 
-There is of course an even more intimate connection between vertex similarity analysis and prestige scoring at the node in level in networks. The reason for this some forms of "generalized" vertex similarity analysis, like the **Katz similarity** [@katz53] discussed in the [global vertex similarities lecture notes](globsim.qmd) rely on the same mathematical apparatus, and distributional network imagery as the prestige ranking scores like eigenvector centrality [@vigna16]. 
+There is of course an even more intimate connection between vertex similarity analysis and prestige scoring at the node in level in networks. The reason for this some forms of "global" vertex similarity analysis, like the **Katz similarity** [@katz53] discussed in the [global vertex similarities lecture notes](globsim.qmd) rely on the same mathematical apparatus, and distributional network imagery as the prestige ranking scores like eigenvector centrality [@vigna16]. 
 
 Recall from that lecture that the **Katz similarity matrix** for every pair of nodes is given by: 
 
