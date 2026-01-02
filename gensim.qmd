@@ -30,7 +30,7 @@ We can generalize this idea (to deal with the doctor/patient role problem) in th
 
 As @jeh_widom02 note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity *recursively* and iterate through the graph until the similarity scores stop changing.^[Note the similarity (heh, heh) between this idea and the various status ranking algorithms for computing [prestige scores](tm-prestige.qmd).] 
 
-More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each time-step $t$ ($s_{ij}(t)$) in the iteration using the formula:
+More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each iteration-step $t$ ($s_{ij}(t)$) using the formula:
 
 
 $$
@@ -48,8 +48,10 @@ A function that implements this idea looks like:
       d <- rowSums(w) #degree vector
       n <- nrow(w) #number of nodes in the graph
       z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
-      rownames(z) <- rownames(w)
-      colnames(z) <- colnames(w)
+      if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
+      if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
+      rownames(z) <- rownames(w) #naming similarity matrix rows
+      colnames(z) <- colnames(w) #naming similarity matrix columns
       nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
       delta <- 1
       while(delta > 1e-10) { #run while delta is bigger than a tiny number
@@ -57,13 +59,13 @@ A function that implements this idea looks like:
          for(i in 1:n) {
             for(j in 1:n) {
                if (i != j) { 
-                  zij <- 0 #initialize ij similarity for iteration t
-                  for (k in names(nei[[i]])) { #loop through i's neighbors
-                     for (l in names(nei[[j]])) { #loop through j's neighbors
-                        zij <- zij + z[k, l] #i's similarity to j is equal to sum of neighbors' similarity
+                  sigma <- 0 #initialize ij sum for iteration t
+                  for (k in nei[[i]]) { #loop through i's neighbors
+                     for (l in nei[[j]]) { #loop through j's neighbors
+                        sigma <- sigma + z[k, l] #i's similarity to j is equal to sum of neighbors' similarity
                         } #end l for loop
                      } #end k for loop
-                  z[i,j] <- alpha/(d[i] * d[j]) * zij #updating new similarity matrix at t
+                  z[i,j] <- alpha/(d[i] * d[j]) * sigma #updating ij similarity score at t
                   } #end if
                } #end j for loop
             } #end i for loop
@@ -75,18 +77,19 @@ A function that implements this idea looks like:
 
 The `SimRank` function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output.
 
-Let's try it out in the *Flintstones* graph:
+Let's try it out in the *Pulp Fiction* graph:
 
 ```{r}
    library(networkdata)
    library(igraph)
    library(stringr) #using stringr to change names from all caps to title case
-   g <- movie_267
+   g <- movie_559
    V(g)$name <- str_to_title(V(g)$name)
-   g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
+   V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+   g <- delete_vertices(g, degree(g) < 2) #deleting low degree vertices
    A <- as.matrix(as_adjacency_matrix(g))
    S <- SimRank(A)
-   round(S[1:5, 1:5], 3)
+   round(S[1:5, 1:5], 2)
 ```
 
 We can transform the generalized similarities to distances and plot:
@@ -99,75 +102,50 @@ We can transform the generalized similarities to distances and plot:
    plot(h.res)
 ```
 
-The plot suggests a division into four major node clusters. We can obtain that as follows using the `cutree` function:
+Note that the lowest levels of the dendrogram hierarchy some of the pairings make a lot of sense: The Gimp is most similar to Zed, Pumpkin is most similar to Honey Bunny (and other characters in the diner scene), Jimmie is most similar ot the Wolf, and Jules, Marsellus, Butch, Mia, and Vincent (the main characters) are most similar to one another. 
+
+The plot suggests a division into five major node clusters. We can obtain that as follows using the `cutree` function:
 
 ```{r}
-   blocks  <- cutree(h.res, k = 4)
+   blocks  <- cutree(h.res, k = 5)
    blocks
 ```
-
-In the SimRank equivalence partition, $\{$ Fred, Barney, Betty, Wilma, Slate, Mrs. Slate, Lava $\}$ appear as a separate cluster.  
-
+ 
 ## The LHN Approach
 
 @leicht_etal06 provide a twist on the SimRank approach. Their idea is that a node $i$ is similar to another node $j$ just in case $i$'s neighbors are similar to $j$:
 
 $$
-   s_{ij}(t) = \alpha \sum_{k \in N(i)} s_{kj}(t-1)
+   s_{ij}(t) = \delta_{ij} + \alpha \sum_{k \in N(i)} s_{kj}(t-1)
 $$ {#eq-lhn}
 
-Here the pairwise similarity between $i$ and $j$ is just the sum of the previously calculated similarities between the neighbors of $i$ and $j$ weighted by the parameter $\alpha$.
+Where $\delta_{ij}$ is the Kronecker function that equals one when $i = j$ and zero otherwise, and $\alpha$ is a number between zero and one with the restriction: $\alpha < \frac{1}{\lambda_1}$, where $\lambda_1$ is the largest eigenvalue of the adjacency matrix (also called the **spectral radius** of the adjacency matrix). This is required for the series to converge, just like the global Katz similarity [we considered before](globsim.qmd).
+
+Meanwhile, the $\delta_{ij}$ can be interpreted as "free similarity points" that each node gets for being similar to itself. In this setup, the pairwise similarity between $i$ and $j$ is just the sum of the previously calculated similarities between the set of neighbors of $i$ and the focal node $j$ weighted by the parameter $\alpha$.
 
 Here's a function that does that:
 
 ```{r}
-   LHN.sim <- function(w) {
-      n <- nrow(w)
-      z <- diag(1, n, n) #all nodes are maximally similar to themselves
-      rownames(z) <- rownames(w)
-      colnames(z) <- colnames(w)
-      alpha <- (eigen(w)$values[1] - 1e-05)^-1
-      d <- 1 #initial delta
-      while (d > 1e-10) {
-         o.z <- z
-         for(i in 1:n) {
-            for(j in 1:n) {
-                  if (i < j) {
-                     a <- names(which(w[, i] == 1)) 
-                     zij <- 0
-                     for (k in a) {zij <- zij + z[k, j]} #i's similarity to j is equal to sum of j's similarities to i's neighbors
-                     z[i, j] <- alpha * zij
-                     z[j, i] <- z[i, j]
-                  }
-               }
-            }
-         d <- abs(sum(abs(z) - abs(o.z))) #delta between new and old scores
-         }
-    return(z)
-    }
-```
-
-```{r}
-   LHN.sim <- function(w) {
+   LHN.sim <- function(w, alpha = 0.25) {
       n <- nrow(w) #number of nodes in the graph
       z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
-      rownames(z) <- rownames(w)
-      colnames(z) <- colnames(w)
+      if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
+      if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
+      rownames(z) <- rownames(w) #naming similarity matrix rows
+      colnames(z) <- colnames(w) #naming similarity matrix columns
       nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
+      rho <- (eigen(w)$values[1]^-1) - 1e-02  #inverse of spectral radius of adjacency matrix minus a tiny number
+      if(alpha > rho) {alpha <- rho} #if alpha is larger than rho make it rho
       delta <- 1
       while(delta > 1e-10) { #run while delta is bigger than a tiny number
          z.o <- z #old similarity matrix at t-1
          for(i in 1:n) {
             for(j in 1:n) {
-               if (i != j) { 
-                  zij <- 0 #initialize ij similarity for iteration t
-                  for (k in names(nei[[i]])) { #loop through i's neighbors
-                     for (l in names(nei[[j]])) { #loop through j's neighbors
-                        zij <- zij + z[k, l] #i's similarity to j is equal to sum of neighbors' similarity
-                        } #end l for loop
-                     } #end k for loop
-                  z[i,j] <- alpha/(d[i] * d[j]) * zij #updating new similarity matrix at t
-                  } #end if
+               sigma <- 0 #initialize ij sum for iteration t
+               for (k in nei[[i]]) { #loop through i's neighbors
+                  sigma <- sigma + z[k,j] #ij similarity equal to sum of i's neighbors' k similarity to j
+                  } #end k for loop
+               z[i,j] <- as.numeric(i == j) + (alpha * sigma) #updating ij similarity score at t
                } #end j for loop
             } #end i for loop
          delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
@@ -176,16 +154,16 @@ Here's a function that does that:
       } #end function
 ```
 
-And here are the results for the Flintstones network:
+And here are the results for the *Pulp Fiction* network:
 
 ```{r}
    S <- LHN.sim(A)
    round(S[, 1:5], 2)
 ```
 
-Note that for the series to converge, we need to pick a value of $\alpha$ that is less than the reciprocal  of the largest eigenvalue of the adjacency matrix, just like the global Katz similarity [we considered before](globsim.qmd).
+Note that in the LHN framework, nodes are always maximally similar to themselves. 
 
-We can transform the similarities to distances by dividing by maximum and then clustering:
+We can transform the LHN generalized similarities to distances by dividing by the maximum and then clustering:
 
 ```{r}
 #| fig-height: 10
@@ -196,16 +174,96 @@ We can transform the similarities to distances by dividing by maximum and then c
    plot(h.res)
 ```
 
-We we partition this clustering into four blocks, we get:
+Which looks like another five-block partition. Cutting the dendrogram at the requisite height, we get:
 
 ```{r}
-   blocks  <- cutree(h.res, k = 4)
+   blocks  <- cutree(h.res, k = 5)
    blocks
 ```
 
-Which is different from the SimRank partition. Here, $\{$ Fred, Barney, Betty, Wilma, Lava $\}$ are their cluster, while $\{$ Wilma, Slate, Poindexter, Piltdown, Pyrite $\}$ constitute a separate similarity class. 
+Which is a bit different from the SimRank clustering. Here, the three main characters $\{$ Vincent, Jules, Butch $\}$ appear as maximally similar in their own cluster, while $\{$ Brett, Marvin, Roger, Marsellus, Mia $\}$ form their own similarity group. 
 
-## The Blondel Approach
+## The Melnik et al. Approach
+
+@melnik_etal02 provide yet another variation on the theme of generalized similarity scoring. Their approach is a bit different that SimRank or the LHN strategy. The idea is to start from state in which *all* pairs of nodes have the same similarity score (e.g., $s_{ij} = 1$) at $t = 0$ and then update the subsequent similarities according to the rule:
+
+$$
+s_{ij}(t) = s_{ij}(t-1) + \left[\sum_{k \in N(i)} \sum_{l \in N(j)} \frac{1}{d_k d_l} s_{kl}(t-1)\right]
+$${#eq-melnik}
+
+So the similarity between $i$ and $j$ is equal to their previous similarity $s_{ij}(t-1)$ plus the sum of their neighbors similarity (just like SimRank), weighted by their respective degrees (unlike SimRank).
+
+In order for the iterations to converge, we need to normalize the similarity matrix $\mathbf{S}$ at each iteration step $t$ according to:
+
+$$
+\mathbf{S}(t) = \frac{\mathbf{S}(t)}{||\mathbf{S}(t)||_2}
+$$
+
+Where $||\mathbf{S}||_2$ is the matrix Frobenius (Euclidean) norm, or the square root of the sum of the square entries: 
+
+$$
+||\mathbf{S}(t)||_2 = \sqrt{\sum_i \sum_j s_{ij}(t)^2}
+$$
+
+Here's a function that does that:
+
+```{r}
+   melnik.sim <- function(w) {
+      d <- rowSums(w) #degree vector
+      n <- nrow(w) #number of nodes in the graph
+      z <- matrix(1, n, n) #all pairs start as equally similar (sij = 1)
+      if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
+      if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
+      rownames(z) <- rownames(w) #naming similarity matrix rows
+      colnames(z) <- colnames(w) #naming similarity matrix columns
+      nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
+      delta <- 1
+      while(delta > 1e-10) { #run while delta is bigger than a tiny number
+         z.o <- z #old similarity matrix at t-1
+         for(i in 1:n) {
+            for(j in 1:n) {
+               sigma <- 0 #initialize ij sum for iteration t
+               for (k in nei[[i]]) { #loop through i's neighbors
+                  for (l in nei[[j]]) { #loop through j's neighbors
+                     sigma <- sigma + (d[k]*d[l])^-1 * z[k,l] #i's similarity to j is equal to sum of neighbors' similarity weighted by their degree 
+                     } #end l for loop
+                  } #end k for loop
+               z[i,j] <- z[i,j] + sigma #updating ij similarity score at t
+               } #end j for loop
+            } #end i for loop
+         z <- z/norm(z, type = "F") #normalizing similarity matrix at z
+         delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
+         } #end while loop
+      return(z) #return similarity matrix after convergence
+      } #end function
+```
+
+We can now test it on the *Flintstones* network:
+
+```{r}
+   S <- melnik.sim(A)
+   round(S[, 1:5], 2)
+```
+
+Which yields the following distance matrix and hierarchical clustering dendrogram:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   S <- S/max(S)
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+```
+
+Which looks like yet another five-block partition. Cutting the dendrogram at the requisite height, we get:
+
+```{r}
+   blocks  <- cutree(h.res, k = 5)
+   blocks
+```
+
+Note that the Milnek et al. approach produces a clustering that is distinct from that obtained using either SimRank or LHN. Here, $\{$ Vincent $\}$ is its own singleton cluster, and $\{$ Jules, Mia $\}$ comprise another small similarity class. 
 
 ## Appendix
 
