@@ -342,7 +342,7 @@ div.csl-indent {
       <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth3 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./structequiv.html" class="sidebar-item-text sidebar-link">Role Equivalence and Structural Similarity</a>
+  <a href="./structequiv.html" class="sidebar-item-text sidebar-link">Structural Equivalence</a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -568,21 +568,25 @@ div.csl-indent {
 
 <p>Sometimes we may want to figure out how similar a given node’s position in one social network is to that of another node in a <em>different</em> network. This calls for a method that could allow us to compare how similar a node in one graph is to <em>other nodes</em> in <em>another graph</em>.</p>
 <p>A particularly interesting version of this problem arises when we have information on the same set of nodes across different set of relations. In that case, we may be interested in answering the question as to whether nodes occupy similar or dissimilar positions across the networks defined by the different relations.</p>
-<p><span class="citation" data-cites="blondel_etal04">Blondel et al. (<a href="#ref-blondel_etal04" role="doc-biblioref">2004</a>)</span> describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute status scores from directed graphs (like PageRank and HITS) but this time to <em>compute similarity</em> scores between <em>pairs</em> of nodes <em>across</em> graphs.</p>
-<p>The idea, just like with the status scores, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs.</p>
+<p><span class="citation" data-cites="blondel_etal04">Blondel et al. (<a href="#ref-blondel_etal04" role="doc-biblioref">2004</a>)</span> describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute <a href="./prestige.html">prestige scores</a> from directed graphs (like <a href="./pagerank.html">PageRank</a> and <a href="./hits.html">HITS</a>) but this time to <em>compute <a href="./gensim.html">similarity</a></em> scores between <em>pairs</em> of nodes <em>across</em> graphs.</p>
+<p>The idea, just like with prestige scoring, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs.</p>
 <p>So let’s say the adjacency matrix of the first graph is <span class="math inline">\(\mathbf{A}\)</span> and that of the second graph is <span class="math inline">\(\mathbf{B}\)</span>. The first graph has <span class="math inline">\(n_A\)</span> number of nodes and the corresponding quantity in the second graph is <span class="math inline">\(n_B\)</span> our target similarity matrix <span class="math inline">\(\mathbf{Z}\)</span>, comparing the node sets in the two graphs, will therefore be of dimensions <span class="math inline">\(n_B \times n_A\)</span>.</p>
 <p>We initialize <span class="math inline">\(z_{ij}(0) = 1\)</span> for all <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>; that is, <span class="math inline">\(\mathbf{Z}(0)\)</span> is a matrix full of ones. At each time step subsequent to that, we fill up the <span class="math inline">\(\mathbf{Z}\)</span> matrix with new values according to:</p>
-<p><span class="math display">\[
+<p><span id="eq-blondel"><span class="math display">\[
    \mathbf{Z}(t + 1) = \mathbf{B}\mathbf{Z(t)}\mathbf{A}^T + \mathbf{B}^T\mathbf{Z(t)}\mathbf{A}
-\]</span></p>
-<p>To ensure convergence, we then normalize the <span class="math inline">\(\mathbf{Z}\)</span> matrix after every update using our trusty Euclidean norm:</p>
+\tag{1}\]</span></span></p>
+<p>To ensure convergence, we then normalize the <span class="math inline">\(\mathbf{Z}\)</span> matrix after every update using our trusty Euclidean (Frobenius) norm:</p>
 <p><span class="math display">\[
-\mathbf{Z}(t &gt; 0) = \frac{\mathbf{Z}}{||\mathbf{Z}||_2}
+\mathbf{Z}(t) = \frac{\mathbf{Z}(t)}{||\mathbf{Z}(t)||_2}
+\]</span></p>
+<p>Where:</p>
+<p><span class="math display">\[
+||\mathbf{Z}(t)||_2 = \sqrt{\sum_i \sum_j z_{ij}(t)^2}
 \]</span></p>
 <section id="computing-node-similarities-across-different-graphs" class="level2">
 <h2 class="anchored" data-anchor-id="computing-node-similarities-across-different-graphs">Computing Node Similarities Across Different Graphs</h2>
 <p>Let us see how this would work with real data. We will compare two subgraphs of the larger <code>law_advice</code> network <span class="citation" data-cites="lazega01">(<a href="#ref-lazega01" role="doc-biblioref">Lazega 2001</a>)</span> from the <code>networkdata</code> package. This is a directed <em>advice-seeking</em> network so a node goes <em>from</em> advisee to adviser.</p>
-<p>We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both parterns and associates). They look lik this:</p>
+<p>We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both partners and associates). They look like this:</p>
 <div class="cell quarto-layout-panel">
 <div class="quarto-layout-row quarto-layout-valign-top">
 <div class="cell-output-display quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
@@ -605,36 +609,30 @@ div.csl-indent {
 </div>
 </div>
 </div>
-<p>A function to compute the <strong>Blondel similarity</strong> as described earlier can be written as:</p>
+<p>A function to compute the <strong>Blondel similarity</strong> as described in <a href="#eq-blondel">Equation&nbsp;1</a> can be written as:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   blondel.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(A, B) {</span>
-<span id="cb1-2"><a href="#cb1-2"></a>      K <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(B), <span class="fu">nrow</span>(A))</span>
-<span id="cb1-3"><a href="#cb1-3"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">rownames</span>(A)) <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
-<span id="cb1-4"><a href="#cb1-4"></a>         <span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A)</span>
-<span id="cb1-5"><a href="#cb1-5"></a>         <span class="fu">colnames</span>(A) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(A)</span>
-<span id="cb1-6"><a href="#cb1-6"></a>         }</span>
-<span id="cb1-7"><a href="#cb1-7"></a>      <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">rownames</span>(B)) <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
-<span id="cb1-8"><a href="#cb1-8"></a>         <span class="fu">rownames</span>(B) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(B)</span>
-<span id="cb1-9"><a href="#cb1-9"></a>         <span class="fu">colnames</span>(B) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(B)</span>
-<span id="cb1-10"><a href="#cb1-10"></a>         }</span>
-<span id="cb1-11"><a href="#cb1-11"></a>      k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb1-12"><a href="#cb1-12"></a>      diff <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb1-13"><a href="#cb1-13"></a>      old.diff <span class="ot">&lt;-</span> <span class="dv">2</span></span>
-<span id="cb1-14"><a href="#cb1-14"></a>      <span class="cf">while</span> (diff <span class="sc">!=</span> old.diff <span class="sc">|</span> k <span class="sc">%%</span> <span class="dv">2</span> <span class="sc">==</span> <span class="dv">0</span>) {</span>
-<span id="cb1-15"><a href="#cb1-15"></a>         old.diff <span class="ot">&lt;-</span> diff</span>
-<span id="cb1-16"><a href="#cb1-16"></a>         K.old <span class="ot">&lt;-</span> K</span>
-<span id="cb1-17"><a href="#cb1-17"></a>         K <span class="ot">&lt;-</span> (B <span class="sc">%*%</span> K.old <span class="sc">%*%</span> <span class="fu">t</span>(A)) <span class="sc">+</span> (<span class="fu">t</span>(B) <span class="sc">%*%</span> K.old <span class="sc">%*%</span> A)</span>
-<span id="cb1-18"><a href="#cb1-18"></a>         K <span class="ot">&lt;-</span> K<span class="sc">/</span><span class="fu">norm</span>(K, <span class="at">type =</span> <span class="st">"F"</span>)</span>
-<span id="cb1-19"><a href="#cb1-19"></a>         diff <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(K)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(K.old)))</span>
-<span id="cb1-20"><a href="#cb1-20"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb1-21"><a href="#cb1-21"></a>      }</span>
-<span id="cb1-22"><a href="#cb1-22"></a>   <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(K)) {</span>
-<span id="cb1-23"><a href="#cb1-23"></a>      K[, j] <span class="ot">&lt;-</span> K[, j]<span class="sc">/</span><span class="fu">max</span>(K[, j])</span>
-<span id="cb1-24"><a href="#cb1-24"></a>      }</span>
-<span id="cb1-25"><a href="#cb1-25"></a>   <span class="fu">rownames</span>(K) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(B)</span>
-<span id="cb1-26"><a href="#cb1-26"></a>   <span class="fu">colnames</span>(K) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb1-27"><a href="#cb1-27"></a>   <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">K =</span> K, <span class="at">k =</span> k, <span class="at">diff =</span> diff))</span>
-<span id="cb1-28"><a href="#cb1-28"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   blondel.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(a, b) {</span>
+<span id="cb1-2"><a href="#cb1-2"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(a)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(a) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(a)} <span class="co">#checking if matrix has row names</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(a)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(a) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(a)} <span class="co">#checking if matrix has column names</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(b)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(b) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(b)} <span class="co">#checking if matrix has row names</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(b)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(b) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(b)} <span class="co">#checking if matrix has column names</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a>      z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(b), <span class="fu">nrow</span>(a)) <span class="co">#initializing similarity matrix to all ones matrix</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(b) <span class="co">#naming rows of similarity matrix</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(a) <span class="co">#naming columns of similarity matrix</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a>      d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing  delta</span></span>
+<span id="cb1-10"><a href="#cb1-10"></a>      d.o <span class="ot">&lt;-</span> <span class="dv">2</span> <span class="co">#initializing comparison delta</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a>      m <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#initializing iteration counter</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a>      <span class="cf">while</span> (d <span class="sc">!=</span> d.o <span class="sc">|</span> m <span class="sc">%%</span> <span class="dv">2</span> <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#do while delta is larger than a tiny number and the iteration is odd</span></span>
+<span id="cb1-13"><a href="#cb1-13"></a>         z.o <span class="ot">&lt;-</span> z <span class="co">#initializing old similarity matrix</span></span>
+<span id="cb1-14"><a href="#cb1-14"></a>         d.o <span class="ot">&lt;-</span> d</span>
+<span id="cb1-15"><a href="#cb1-15"></a>         z <span class="ot">&lt;-</span> (b <span class="sc">%*%</span> z.o <span class="sc">%*%</span> <span class="fu">t</span>(a)) <span class="sc">+</span> (<span class="fu">t</span>(b) <span class="sc">%*%</span> z.o <span class="sc">%*%</span> a) <span class="co">#blondel et al. similarity equation</span></span>
+<span id="cb1-16"><a href="#cb1-16"></a>         z <span class="ot">&lt;-</span> z<span class="sc">/</span><span class="fu">norm</span>(z, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co">#normalizing similarity matrix</span></span>
+<span id="cb1-17"><a href="#cb1-17"></a>         d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(z)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(z.o))) <span class="co">#updating delta</span></span>
+<span id="cb1-18"><a href="#cb1-18"></a>         m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span> <span class="co">#updating </span></span>
+<span id="cb1-19"><a href="#cb1-19"></a>         }</span>
+<span id="cb1-20"><a href="#cb1-20"></a>      <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(z)) {z[, j] <span class="ot">&lt;-</span> z[, j]<span class="sc">/</span><span class="fu">max</span>(z[, j])} <span class="co">#normalizing converged matrix by column max</span></span>
+<span id="cb1-21"><a href="#cb1-21"></a>   <span class="fu">return</span>(z) <span class="co">#return similarity matrix</span></span>
+<span id="cb1-22"><a href="#cb1-22"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Which is modeled after our status game function but instead of computing a vector of scores we are populating a whole matrix!</p>
 <p>The basic task is to figure out which nodes from the first matrix are most similar to which nodes from the second. That is, given these two networks can be identify actors who play similar roles in each?</p>
@@ -643,11 +641,12 @@ div.csl-indent {
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(kableExtra)</span>
 <span id="cb2-2"><a href="#cb2-2"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g1))</span>
 <span id="cb2-3"><a href="#cb2-3"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span>
-<span id="cb2-4"><a href="#cb2-4"></a>   K <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">blondel.sim</span>(A, B)[[<span class="dv">1</span>]], <span class="dv">2</span>)</span>
-<span id="cb2-5"><a href="#cb2-5"></a>   <span class="fu">kbl</span>(K, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-6"><a href="#cb2-6"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-7"><a href="#cb2-7"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb2-8"><a href="#cb2-8"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-4"><a href="#cb2-4"></a>   K <span class="ot">&lt;-</span> <span class="fu">blondel.sim</span>(A, B) </span>
+<span id="cb2-5"><a href="#cb2-5"></a>   <span class="fu">kbl</span>(K, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, </span>
+<span id="cb2-6"><a href="#cb2-6"></a>   <span class="at">row.names =</span> <span class="cn">TRUE</span>, <span class="at">digits =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-7"><a href="#cb2-7"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-8"><a href="#cb2-8"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb2-9"><a href="#cb2-9"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -963,9 +962,8 @@ div.csl-indent {
 
 </div>
 </div>
-<p>In the table each column is normalized by its maximum, so a 1.0 in that column tells us that that node (from the first network) is maximally similar to the corresponding row node (from the second network).</p>
-<p>For instance, node 5 in the women’s lawyers graph (a highly central node in terms of being an adviser) is most similar to node 1 in the older men partner’s graph (also a highly central node in terms of being an adviser).</p>
-<p>Node 9 in the women lawyer’s graph, who’s mostly an advise-seeker, is most similar to node 5 in the older men partner graph who’s also an advise-seeker. So it looks like it works!</p>
+<p>We can see that node 5 in the women’s lawyers graph (a highly central node in terms of being an adviser) is most similar to node 9 in the older men partner’s graph (also a highly central node in terms of being an adviser).</p>
+<p>Node 9 in the women lawyer’s graph, on the other hand, who’s mostly an advise-seeker, is most similar to node 5 in the older men partner graph who’s also an advise-seeker. So it looks like it works!</p>
 </section>
 <section id="equivalence-to-hits" class="level2">
 <h2 class="anchored" data-anchor-id="equivalence-to-hits">Equivalence to HITS</h2>
@@ -990,10 +988,10 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
 <span id="cb4-2"><a href="#cb4-2"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span>
-<span id="cb4-3"><a href="#cb4-3"></a>   K <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">blondel.sim</span>(A, B)[[<span class="dv">1</span>]], <span class="dv">4</span>)</span>
+<span id="cb4-3"><a href="#cb4-3"></a>   K <span class="ot">&lt;-</span> <span class="fu">blondel.sim</span>(A, B)</span>
 <span id="cb4-4"><a href="#cb4-4"></a>   tab <span class="ot">&lt;-</span> <span class="fu">cbind</span>(K, <span class="at">Hub.Score =</span> <span class="fu">round</span>(<span class="fu">hits_scores</span>(g2)<span class="sc">$</span>hub, <span class="dv">4</span>), </span>
 <span id="cb4-5"><a href="#cb4-5"></a>         <span class="at">Auth.Score =</span> <span class="fu">round</span>(<span class="fu">hits_scores</span>(g2)<span class="sc">$</span>authority, <span class="dv">4</span>))</span>
-<span id="cb4-6"><a href="#cb4-6"></a>   <span class="fu">kbl</span>(tab, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-6"><a href="#cb4-6"></a>   <span class="fu">kbl</span>(tab, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>, <span class="at">digits =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb4-7"><a href="#cb4-7"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb4-8"><a href="#cb4-8"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb4-9"><a href="#cb4-9"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1012,129 +1010,129 @@ div.csl-indent {
 <tbody>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 1 </td>
-   <td style="text-align:center;"> 0.3810 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.3810 </td>
-   <td style="text-align:center;"> 0.0000 </td>
+   <td style="text-align:center;"> 0.38 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.38 </td>
+   <td style="text-align:center;"> 0.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 2 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.3415 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.3415 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.34 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.34 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 3 </td>
-   <td style="text-align:center;"> 0.0813 </td>
-   <td style="text-align:center;"> 0.6021 </td>
-   <td style="text-align:center;"> 0.0813 </td>
-   <td style="text-align:center;"> 0.6021 </td>
+   <td style="text-align:center;"> 0.08 </td>
+   <td style="text-align:center;"> 0.60 </td>
+   <td style="text-align:center;"> 0.08 </td>
+   <td style="text-align:center;"> 0.60 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 4 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.7826 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.7826 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.78 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 5 </td>
-   <td style="text-align:center;"> 0.1654 </td>
-   <td style="text-align:center;"> 1.0000 </td>
-   <td style="text-align:center;"> 0.1654 </td>
-   <td style="text-align:center;"> 1.0000 </td>
+   <td style="text-align:center;"> 0.17 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.17 </td>
+   <td style="text-align:center;"> 1.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 6 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.7826 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.7826 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.78 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 7 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.0000 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 8 </td>
-   <td style="text-align:center;"> 0.2235 </td>
-   <td style="text-align:center;"> 0.2858 </td>
-   <td style="text-align:center;"> 0.2235 </td>
-   <td style="text-align:center;"> 0.2858 </td>
+   <td style="text-align:center;"> 0.22 </td>
+   <td style="text-align:center;"> 0.29 </td>
+   <td style="text-align:center;"> 0.22 </td>
+   <td style="text-align:center;"> 0.29 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 9 </td>
-   <td style="text-align:center;"> 1.0000 </td>
-   <td style="text-align:center;"> 0.0386 </td>
-   <td style="text-align:center;"> 1.0000 </td>
-   <td style="text-align:center;"> 0.0386 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.04 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.04 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 10 </td>
-   <td style="text-align:center;"> 0.8973 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.8973 </td>
-   <td style="text-align:center;"> 0.0000 </td>
+   <td style="text-align:center;"> 0.90 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.90 </td>
+   <td style="text-align:center;"> 0.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 11 </td>
-   <td style="text-align:center;"> 0.6110 </td>
-   <td style="text-align:center;"> 0.6559 </td>
-   <td style="text-align:center;"> 0.6110 </td>
-   <td style="text-align:center;"> 0.6559 </td>
+   <td style="text-align:center;"> 0.61 </td>
+   <td style="text-align:center;"> 0.66 </td>
+   <td style="text-align:center;"> 0.61 </td>
+   <td style="text-align:center;"> 0.66 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 12 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.2095 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.2095 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.21 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.21 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 13 </td>
-   <td style="text-align:center;"> 0.2239 </td>
-   <td style="text-align:center;"> 0.3364 </td>
-   <td style="text-align:center;"> 0.2239 </td>
-   <td style="text-align:center;"> 0.3364 </td>
+   <td style="text-align:center;"> 0.22 </td>
+   <td style="text-align:center;"> 0.34 </td>
+   <td style="text-align:center;"> 0.22 </td>
+   <td style="text-align:center;"> 0.34 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 14 </td>
-   <td style="text-align:center;"> 0.3197 </td>
-   <td style="text-align:center;"> 0.0523 </td>
-   <td style="text-align:center;"> 0.3197 </td>
-   <td style="text-align:center;"> 0.0523 </td>
+   <td style="text-align:center;"> 0.32 </td>
+   <td style="text-align:center;"> 0.05 </td>
+   <td style="text-align:center;"> 0.32 </td>
+   <td style="text-align:center;"> 0.05 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 15 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.4036 </td>
-   <td style="text-align:center;"> 0.1434 </td>
-   <td style="text-align:center;"> 0.4036 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.40 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.40 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 16 </td>
-   <td style="text-align:center;"> 0.8432 </td>
-   <td style="text-align:center;"> 0.2174 </td>
-   <td style="text-align:center;"> 0.8432 </td>
-   <td style="text-align:center;"> 0.2174 </td>
+   <td style="text-align:center;"> 0.84 </td>
+   <td style="text-align:center;"> 0.22 </td>
+   <td style="text-align:center;"> 0.84 </td>
+   <td style="text-align:center;"> 0.22 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 17 </td>
-   <td style="text-align:center;"> 0.4089 </td>
-   <td style="text-align:center;"> 0.3188 </td>
-   <td style="text-align:center;"> 0.4089 </td>
-   <td style="text-align:center;"> 0.3188 </td>
+   <td style="text-align:center;"> 0.41 </td>
+   <td style="text-align:center;"> 0.32 </td>
+   <td style="text-align:center;"> 0.41 </td>
+   <td style="text-align:center;"> 0.32 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 18 </td>
-   <td style="text-align:center;"> 0.5222 </td>
-   <td style="text-align:center;"> 0.0955 </td>
-   <td style="text-align:center;"> 0.5222 </td>
-   <td style="text-align:center;"> 0.0955 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.10 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.10 </td>
   </tr>
 </tbody>
 </table>
@@ -1164,8 +1162,8 @@ div.csl-indent {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
 <span id="cb6-2"><a href="#cb6-2"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g2))</span>
-<span id="cb6-3"><a href="#cb6-3"></a>   K <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">blondel.sim</span>(A, B)[[<span class="dv">1</span>]], <span class="dv">4</span>)</span>
-<span id="cb6-4"><a href="#cb6-4"></a>   <span class="fu">kbl</span>(K, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-3"><a href="#cb6-3"></a>   K <span class="ot">&lt;-</span> <span class="fu">blondel.sim</span>(A, B)</span>
+<span id="cb6-4"><a href="#cb6-4"></a>   <span class="fu">kbl</span>(K, <span class="at">align =</span> <span class="st">"c"</span>, <span class="at">format =</span> <span class="st">"html"</span>, <span class="at">row.names =</span> <span class="cn">TRUE</span>, <span class="at">digits =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb6-5"><a href="#cb6-5"></a>      <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb6-6"><a href="#cb6-6"></a>      <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb6-7"><a href="#cb6-7"></a>                     <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1183,111 +1181,111 @@ div.csl-indent {
 <tbody>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 1 </td>
-   <td style="text-align:center;"> 0.5190 </td>
-   <td style="text-align:center;"> 0.3321 </td>
-   <td style="text-align:center;"> 0.1135 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.33 </td>
+   <td style="text-align:center;"> 0.11 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 2 </td>
-   <td style="text-align:center;"> 0.1318 </td>
-   <td style="text-align:center;"> 0.3472 </td>
-   <td style="text-align:center;"> 0.3600 </td>
+   <td style="text-align:center;"> 0.13 </td>
+   <td style="text-align:center;"> 0.35 </td>
+   <td style="text-align:center;"> 0.36 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 3 </td>
-   <td style="text-align:center;"> 0.0998 </td>
-   <td style="text-align:center;"> 0.4586 </td>
-   <td style="text-align:center;"> 0.6923 </td>
+   <td style="text-align:center;"> 0.10 </td>
+   <td style="text-align:center;"> 0.46 </td>
+   <td style="text-align:center;"> 0.69 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 4 </td>
-   <td style="text-align:center;"> 0.0000 </td>
-   <td style="text-align:center;"> 0.4888 </td>
-   <td style="text-align:center;"> 0.7547 </td>
+   <td style="text-align:center;"> 0.00 </td>
+   <td style="text-align:center;"> 0.49 </td>
+   <td style="text-align:center;"> 0.75 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 5 </td>
-   <td style="text-align:center;"> 0.5241 </td>
-   <td style="text-align:center;"> 0.8968 </td>
-   <td style="text-align:center;"> 1.0000 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.90 </td>
+   <td style="text-align:center;"> 1.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 6 </td>
-   <td style="text-align:center;"> 0.0954 </td>
-   <td style="text-align:center;"> 0.5091 </td>
-   <td style="text-align:center;"> 0.7547 </td>
+   <td style="text-align:center;"> 0.10 </td>
+   <td style="text-align:center;"> 0.51 </td>
+   <td style="text-align:center;"> 0.75 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 7 </td>
-   <td style="text-align:center;"> 0.1318 </td>
-   <td style="text-align:center;"> 0.1234 </td>
-   <td style="text-align:center;"> 0.0000 </td>
+   <td style="text-align:center;"> 0.13 </td>
+   <td style="text-align:center;"> 0.12 </td>
+   <td style="text-align:center;"> 0.00 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 8 </td>
-   <td style="text-align:center;"> 0.2501 </td>
-   <td style="text-align:center;"> 0.3584 </td>
-   <td style="text-align:center;"> 0.2755 </td>
+   <td style="text-align:center;"> 0.25 </td>
+   <td style="text-align:center;"> 0.36 </td>
+   <td style="text-align:center;"> 0.28 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 9 </td>
-   <td style="text-align:center;"> 1.0000 </td>
-   <td style="text-align:center;"> 0.8236 </td>
-   <td style="text-align:center;"> 0.2000 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.82 </td>
+   <td style="text-align:center;"> 0.20 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 10 </td>
-   <td style="text-align:center;"> 0.9913 </td>
-   <td style="text-align:center;"> 0.6859 </td>
-   <td style="text-align:center;"> 0.0318 </td>
+   <td style="text-align:center;"> 0.99 </td>
+   <td style="text-align:center;"> 0.69 </td>
+   <td style="text-align:center;"> 0.03 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 11 </td>
-   <td style="text-align:center;"> 0.5445 </td>
-   <td style="text-align:center;"> 1.0000 </td>
-   <td style="text-align:center;"> 0.7371 </td>
+   <td style="text-align:center;"> 0.54 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.74 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 12 </td>
-   <td style="text-align:center;"> 0.1971 </td>
-   <td style="text-align:center;"> 0.1427 </td>
-   <td style="text-align:center;"> 0.1530 </td>
+   <td style="text-align:center;"> 0.20 </td>
+   <td style="text-align:center;"> 0.14 </td>
+   <td style="text-align:center;"> 0.15 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 13 </td>
-   <td style="text-align:center;"> 0.3175 </td>
-   <td style="text-align:center;"> 0.4117 </td>
-   <td style="text-align:center;"> 0.2970 </td>
+   <td style="text-align:center;"> 0.32 </td>
+   <td style="text-align:center;"> 0.41 </td>
+   <td style="text-align:center;"> 0.30 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 14 </td>
-   <td style="text-align:center;"> 0.3710 </td>
-   <td style="text-align:center;"> 0.2875 </td>
-   <td style="text-align:center;"> 0.0918 </td>
+   <td style="text-align:center;"> 0.37 </td>
+   <td style="text-align:center;"> 0.29 </td>
+   <td style="text-align:center;"> 0.09 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 15 </td>
-   <td style="text-align:center;"> 0.1318 </td>
-   <td style="text-align:center;"> 0.4205 </td>
-   <td style="text-align:center;"> 0.3780 </td>
+   <td style="text-align:center;"> 0.13 </td>
+   <td style="text-align:center;"> 0.42 </td>
+   <td style="text-align:center;"> 0.38 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 16 </td>
-   <td style="text-align:center;"> 0.9998 </td>
-   <td style="text-align:center;"> 0.8747 </td>
-   <td style="text-align:center;"> 0.2453 </td>
+   <td style="text-align:center;"> 1.00 </td>
+   <td style="text-align:center;"> 0.87 </td>
+   <td style="text-align:center;"> 0.25 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 17 </td>
-   <td style="text-align:center;"> 0.7783 </td>
-   <td style="text-align:center;"> 0.5841 </td>
-   <td style="text-align:center;"> 0.3102 </td>
+   <td style="text-align:center;"> 0.78 </td>
+   <td style="text-align:center;"> 0.58 </td>
+   <td style="text-align:center;"> 0.31 </td>
   </tr>
   <tr>
    <td style="text-align:left;font-weight: bold;"> 18 </td>
-   <td style="text-align:center;"> 0.9644 </td>
-   <td style="text-align:center;"> 0.5162 </td>
-   <td style="text-align:center;"> 0.1302 </td>
+   <td style="text-align:center;"> 0.96 </td>
+   <td style="text-align:center;"> 0.52 </td>
+   <td style="text-align:center;"> 0.13 </td>
   </tr>
 </tbody>
 </table>

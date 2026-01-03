@@ -238,11 +238,11 @@ Here's a function that does that:
       } #end function
 ```
 
-We can now test it on the *Flintstones* network:
+We can now test it on the *Pulp Fiction* network:
 
 ```{r}
    S <- melnik.sim(A)
-   round(S[, 1:5], 2)
+   round(S[1:5, 1:5], 2)
 ```
 
 Which yields the following distance matrix and hierarchical clustering dendrogram:
@@ -264,6 +264,68 @@ Which looks like yet another five-block partition. Cutting the dendrogram at the
 ```
 
 Note that the Milnek et al. approach produces a clustering that is distinct from that obtained using either SimRank or LHN. Here, $\{$ Vincent $\}$ is its own singleton cluster, and $\{$ Jules, Mia $\}$ comprise another small similarity class. 
+
+## The Blondel et al. Self Similarity
+
+We can adapt the approach we used to compute the similarity between nodes in different graphs [here](blondel.qmd) to compute the similarity between nodes in the same graph, or what @cason_etal10 call the *self-similarity*. 
+
+Recall that the similarity between nodes in different graphs $\mathbf{A}$ and $\mathbf{B}$ can be computed using the following formula:
+
+$$ 
+   \mathbf{Z}(t) = \mathbf{B}\mathbf{Z(t-1)}\mathbf{A}^T + \mathbf{B}^T\mathbf{Z(t-1)}\mathbf{A}
+$$ {#eq-blondel}
+
+Where the similarity matrix at $t=0$ is \mathbf{Z}(0) = 1$ the all ones matrix. 
+
+So to compute the self-similarity for a single graph $\mathbf{A}$, we just plug in $\mathbf{A}$ instead of $\mathbf{B}$ in @eq-blondel to get:
+
+$$ 
+   \mathbf{Z}(t) = \mathbf{A}\mathbf{Z(t-1)}\mathbf{A}^T + \mathbf{A}^T\mathbf{Z(t-1)}\mathbf{A}
+$$ {#eq-selfsim}
+
+Here's a function that does that:
+
+```{r}
+   self.sim <- function(a) {
+      z <- matrix(1, nrow(a), nrow(a))
+      if(is.null(rownames(a)) == TRUE) {rownames(a) <- 1:nrow(a)} #checking if matrix has row names
+      if(is.null(colnames(a)) == TRUE) {colnames(a) <- 1:ncol(a)} #checking if matrix has column names
+      rownames(z) <- rownames(a)
+      colnames(z) <- colnames(a)
+      d <- 1 #initializing  delta
+      d.o <- 2 #initializing comparison delta
+      m <- 1 #initializing iteration counter
+      while (d != d.o | m %% 2 != 0) { #do while delta is larger than a tiny number and the iteration is odd
+         z.o <- z #initializing old similarity matrix
+         d.o <- d
+         z <- (a %*% z.o %*% t(a)) + (t(a) %*% z.o %*% a) #blondel et al. similarity equation
+         z <- z/norm(z, type = "F") #normalizing similarity matrix
+         d <- abs(sum(abs(z)) - sum(abs(z.o))) #updating delta
+         m <- m + 1 #updating 
+         }
+      #for(j in 1:ncol(z)) {z[, j] <- z[, j]/max(z[, j])} #normalizing converged matrix by column max
+   return(z) #return similarity matrix
+   }
+```
+We can now test it on the *Pulp Fiction* network:
+
+```{r}
+   S <- self.sim(A)
+   S <- S/max(S)
+   round(S[1:5, 1:5], 2)
+```
+
+Which yields the following distance matrix and hierarchical clustering dendrogram:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   D <- dist(1- S)
+   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res)
+```
+
+This approach yields five major similarity clusters. At the center we see the cluster composed of the main characters $\{$ Vincent, Butch, Jules $\}$, on the right we see two clusters composed $\{$ Pumpkin, Honey Bunny $\}$ and the other diner folk, and another composed of $\{$ Mia, Marsellus, Rogert, Brett, Marvin $\}$. The cluster on the left is bigger, but we can see that maximally similar characters like $\{$ Zed, The Gimp $\}$ make sense.
 
 ## Appendix
 

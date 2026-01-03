@@ -15,9 +15,9 @@ Sometimes we may want to figure out how similar a given node's position in one s
 
 A particularly interesting version of this problem arises when we have information on the same set of nodes across different set of relations. In that case, we may be interested in answering the question as to whether nodes occupy similar or dissimilar positions across the networks defined by the different relations. 
 
-@blondel_etal04 describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute status scores from directed graphs (like PageRank and HITS) but this time to *compute similarity* scores between *pairs* of nodes *across* graphs. 
+@blondel_etal04 describe an approach that can help us make headway on this problem. They use a similar iterative procedure that we saw can be used to compute [prestige scores](prestige.qmd) from directed graphs (like [PageRank](pagerank.qmd) and [HITS](hits.qmd)) but this time to *compute [similarity](gensim.qmd)* scores between *pairs* of nodes *across* graphs. 
 
-The idea, just like with the status scores, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs. 
+The idea, just like with prestige scoring, is that the two set of nodes in each graph start with the same set of similarity scores, and then we update them as we traverse the connectivity structure of the two graphs. 
 
 So let's say the adjacency matrix of the first graph is $\mathbf{A}$ and that of the second graph is $\mathbf{B}$. The first graph has $n_A$ number of nodes and the corresponding quantity in the second graph is $n_B$ our target similarity matrix $\mathbf{Z}$, comparing the node sets in the two graphs, will therefore be of dimensions $n_B \times n_A$. 
 
@@ -25,19 +25,25 @@ We initialize $z_{ij}(0) = 1$ for all $i$ and $j$; that is, $\mathbf{Z}(0)$ is a
 
 $$ 
    \mathbf{Z}(t + 1) = \mathbf{B}\mathbf{Z(t)}\mathbf{A}^T + \mathbf{B}^T\mathbf{Z(t)}\mathbf{A}
+$$ {#eq-blondel}
+
+To ensure convergence, we then normalize the $\mathbf{Z}$ matrix after every update using our trusty Euclidean (Frobenius) norm:
+
+$$
+\mathbf{Z}(t) = \frac{\mathbf{Z}(t)}{||\mathbf{Z}(t)||_2}
 $$
 
-To ensure convergence, we then normalize the $\mathbf{Z}$ matrix after every update using our trusty Euclidean norm:
+Where:
 
 $$
-\mathbf{Z}(t > 0) = \frac{\mathbf{Z}}{||\mathbf{Z}||_2}
+||\mathbf{Z}(t)||_2 = \sqrt{\sum_i \sum_j z_{ij}(t)^2}
 $$
 
 ## Computing Node Similarities Across Different Graphs 
 
 Let us see how this would work with real data. We will compare two subgraphs of the larger `law_advice` network [@lazega01] from the `networkdata` package. This is a directed *advice-seeking* network so a node goes *from* advisee to adviser. 
 
-We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both parterns and associates). They look lik this:
+We create two subgraphs. One composed of older male partners (aged fifty or older) and the other composed of the women in the firm (both partners and associates). They look like this:
 
 ```{r}
 #| echo: false
@@ -70,36 +76,30 @@ We create two subgraphs. One composed of older male partners (aged fifty or olde
         vertex.label.dist=1, edge.curved=0.2)
 ```
 
-A function to compute the **Blondel similarity** as described earlier can be written as:
+A function to compute the **Blondel similarity** as described in @eq-blondel can be written as:
 
 ```{r}
-   blondel.sim <- function(A, B) {
-      K <- matrix(1, nrow(B), nrow(A))
-      if (is.null(rownames(A)) == TRUE) {
-         rownames(A) <- 1:nrow(A)
-         colnames(A) <- 1:nrow(A)
+   blondel.sim <- function(a, b) {
+      if(is.null(rownames(a)) == TRUE) {rownames(a) <- 1:nrow(a)} #checking if matrix has row names
+      if(is.null(colnames(a)) == TRUE) {colnames(a) <- 1:ncol(a)} #checking if matrix has column names
+      if(is.null(rownames(b)) == TRUE) {rownames(b) <- 1:nrow(b)} #checking if matrix has row names
+      if(is.null(colnames(b)) == TRUE) {colnames(b) <- 1:ncol(b)} #checking if matrix has column names
+      z <- matrix(1, nrow(b), nrow(a)) #initializing similarity matrix to all ones matrix
+      rownames(z) <- rownames(b) #naming rows of similarity matrix
+      colnames(z) <- rownames(a) #naming columns of similarity matrix
+      d <- 1 #initializing  delta
+      d.o <- 2 #initializing comparison delta
+      m <- 1 #initializing iteration counter
+      while (d != d.o | m %% 2 != 0) { #do while delta is larger than a tiny number and the iteration is odd
+         z.o <- z #initializing old similarity matrix
+         d.o <- d
+         z <- (b %*% z.o %*% t(a)) + (t(b) %*% z.o %*% a) #blondel et al. similarity equation
+         z <- z/norm(z, type = "F") #normalizing similarity matrix
+         d <- abs(sum(abs(z)) - sum(abs(z.o))) #updating delta
+         m <- m + 1 #updating 
          }
-      if (is.null(rownames(B)) == TRUE) {
-         rownames(B) <- 1:nrow(B)
-         colnames(B) <- 1:nrow(B)
-         }
-      k <- 1
-      diff <- 1
-      old.diff <- 2
-      while (diff != old.diff | k %% 2 == 0) {
-         old.diff <- diff
-         K.old <- K
-         K <- (B %*% K.old %*% t(A)) + (t(B) %*% K.old %*% A)
-         K <- K/norm(K, type = "F")
-         diff <- abs(sum(abs(K)) - sum(abs(K.old)))
-         k <- k + 1
-      }
-   for (j in 1:ncol(K)) {
-      K[, j] <- K[, j]/max(K[, j])
-      }
-   rownames(K) <- rownames(B)
-   colnames(K) <- rownames(A)
-   return(list(K = K, k = k, diff = diff))
+      for(j in 1:ncol(z)) {z[, j] <- z[, j]/max(z[, j])} #normalizing converged matrix by column max
+   return(z) #return similarity matrix
    }
 ```
 
@@ -113,18 +113,15 @@ And here are the results presented in tabular form:
    library(kableExtra)
    A <- as.matrix(as_adjacency_matrix(g1))
    B <- as.matrix(as_adjacency_matrix(g2))
-   K <- round(blondel.sim(A, B)[[1]], 2)
-   kbl(K, align = "c", format = "html", row.names = TRUE) %>% 
+   K <- blondel.sim(A, B) 
+   kbl(K, align = "c", format = "html", 
+   row.names = TRUE, digits = 2) %>% 
       column_spec(1, bold = TRUE) %>% 
       kable_styling(full_width = TRUE,
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-In the table each column is normalized by its maximum, so a 1.0 in that column tells us that that node (from the first network) is maximally similar to the corresponding row node (from the second network). 
-
-For instance, node 5 in the women's lawyers graph (a highly central node in terms of being an adviser) is most similar to node 1 in the older men partner's graph (also a highly central node in terms of being an adviser). 
-
-Node 9 in the women lawyer's graph, who's mostly an advise-seeker, is most similar to node 5 in the older men partner graph who's also an advise-seeker. So it looks like it works!
+We can see that node 5 in the older men partner's graph (a highly central node in terms of being an advice seeker) is most similar to node 9 in the women lawyer's graph (also a highly central node in terms of being an advice seeker). Node 11 in the older men partner's graph, on the other hand, who's mostly an advice-giver, is most similar to node 5 in the women lawyer's graph who's also the most central advicee-giver. So it looks like it works!
 
 ## Equivalence to HITS
 
@@ -151,10 +148,10 @@ We can check that this is the case for the women's lawyers advice graph:
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
    B <- as.matrix(as_adjacency_matrix(g2))
-   K <- round(blondel.sim(A, B)[[1]], 4)
+   K <- blondel.sim(A, B)
    tab <- cbind(K, Hub.Score = round(hits_scores(g2)$hub, 4), 
          Auth.Score = round(hits_scores(g2)$authority, 4))
-   kbl(tab, align = "c", format = "html", row.names = TRUE) %>% 
+   kbl(tab, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
       column_spec(1, bold = TRUE) %>% 
       kable_styling(full_width = TRUE,
                      bootstrap_options = c("hover", "condensed", "responsive"))
@@ -183,8 +180,8 @@ Here are the results for the women lawyers graph:
 ```{r}
    A <- as.matrix(as_adjacency_matrix(g))
    B <- as.matrix(as_adjacency_matrix(g2))
-   K <- round(blondel.sim(A, B)[[1]], 4)
-   kbl(K, align = "c", format = "html", row.names = TRUE) %>% 
+   K <- blondel.sim(A, B)
+   kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
       column_spec(1, bold = TRUE) %>% 
       kable_styling(full_width = TRUE,
                      bootstrap_options = c("hover", "condensed", "responsive"))
