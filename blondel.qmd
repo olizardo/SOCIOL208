@@ -49,7 +49,9 @@ We create two subgraphs. One composed of older male partners (aged fifty or olde
 #| echo: false
 #| fig-width: 8
 #| fig-height: 8
-#| layout-ncol: 1
+#| layout-ncol: 2
+#| label: fig-law
+#| fig-cap: "Two directed advice networks."
 #| fig-subcap:
 #|   - "Older Men Partners"
 #|   - "Women Lawyers"
@@ -92,14 +94,14 @@ A function to compute the **Blondel similarity** as described in @eq-blondel can
       m <- 1 #initializing iteration counter
       while (d != d.o | m %% 2 != 0) { #do while the previous delta is different from the current delta and the iteration is odd
          z.o <- z #initializing old similarity matrix
-         d.o <- d
+         d.o <- d #old delta equals previous delta
          z <- (b %*% z.o %*% t(a)) + (t(b) %*% z.o %*% a) #blondel et al. similarity equation
          z <- z/norm(z, type = "F") #normalizing similarity matrix
          d <- abs(sum(abs(z)) - sum(abs(z.o))) #updating delta
-         m <- m + 1 #updating 
+         m <- m + 1 #updating iteration counter
          }
-      for(j in 1:ncol(z)) {z[, j] <- z[, j]/max(z[, j])} #normalizing converged matrix by column max
-   return(z) #return similarity matrix
+      z <- apply(z, 2, function(x) {x/max(x)}) #normalizing converged matrix by column max
+   return(z) #return converged similarity matrix
    }
 ```
 
@@ -114,8 +116,7 @@ And here are the results presented in tabular form:
    A <- as.matrix(as_adjacency_matrix(g1))
    B <- as.matrix(as_adjacency_matrix(g2))
    K <- blondel.sim(A, B) 
-   kbl(K, align = "c", format = "html", 
-   row.names = TRUE, digits = 2) %>% 
+   kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
       column_spec(1, bold = TRUE) %>% 
       kable_styling(full_width = TRUE,
                      bootstrap_options = c("hover", "condensed", "responsive"))
@@ -127,7 +128,7 @@ We can see that node 5 in the older men partner's graph (a highly central node i
 
 One neat thing that @blondel_etal04 show is that we can also take a network and compare it to ideal-typical small graphs and get scores for how much each node in the observed network resembles each of the nodes in the hypothetical ideal-typical structure. 
 
-More specifically, they show that if we can run their algorithm to compare any network to the following two-node graph:
+More specifically, they show that we can run their algorithm to compare any network to the following two-node graph:
 
 ```{r}
    g <- make_empty_graph(2)
@@ -141,7 +142,7 @@ More specifically, they show that if we can run their algorithm to compare any n
         vertex.label.dist=-3)
 ```
 
-In which case, the result "similarity" scores, will be equivalent to the Hub and Authority scores! 
+In which case, the resulting "similarity" scores, will be equivalent to Kleinberg's [Hub and Authority scores](hits.qmd)! 
 
 We can check that this is the case for the women's lawyers advice graph:
 
@@ -187,5 +188,7 @@ Here are the results for the women lawyers graph:
                      bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
-Columns one and three gives us versions of the Hub and Authority scores (respectively), but column two now gives us a "score" for how much the row node resembles and intermediary (or broker) in the network. We can see that the "purest" broker in the women's advice network is node 11. 
+Columns one and three gives us versions of the Hub and Authority scores (respectively), "purged" of any contribution made by the intermediary status of nodes. Column two now gives us an ordinal score for how much the row node resembles and intermediary (or broker) in the network. 
+
+We can use the second column score to rank each node in term of their brokerage status. We can see that the "purest" broker in the women's advice network is woman 11, followed closely by woman 5. This makes sense from looking at the spring embedding layout of @fig-law-1 which puts them right at the center of the action. The weakest brokers, on the other hand, are woman 7 and 12, which, as we can see from @fig-law-1 are the most peripheral lawyers in the advice network. 
 
