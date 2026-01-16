@@ -32,7 +32,7 @@ $$
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 $$ {#eq-one}
 
-The **betweenness centrality** of a node $k$ is then defined as the *sum of the dependencies* that *every pair* of nodes in the graph has on that node:
+The **betweenness centrality** of a node $k$ is then defined as the *sum* of the pair dependencies that *every* pair of nodes in the graph has on that node:
 
 $$
 C^{B}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
@@ -53,14 +53,16 @@ Let's see an example of how to calculate betweenness centrality using real data.
     V(g)$name
 ```
 
-To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the *length* of the shortest path between every pair of nodes. As we saw in our discussion of [closeness](closcent.qmd), this is stored in the **geodesic distance matrix** ($\mathbf{G}$) of dimensions $N \times N$. In `igraph` we can calculate the entries for $\mathbf{G}$ using the `distances` function:
+To compute the components of the betweenness centrality defined earlier, we need two pieces of information. 
+
+First we need to know the *length* of the shortest path between every pair of nodes, so that we can separate the shortest paths from the other longer paths. As we saw in our discussion of [closeness](closcent.qmd), this is stored in the **geodesic distance matrix** ($\mathbf{G}$) of dimensions $N \times N$, because the length of the shortest path between a pair of nodes is also the **geodesic distance** between them. In `igraph` we can calculate the entries for $\mathbf{G}$ using the `distances` function:
 
 ```{r}
     G <- distances(g)
     G[1:10, 1:10]
 ```
 
-Next we need to know the *number* of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In `igraph` we can use the `all_shortest_paths` function to figure out this information. 
+Second, we need to know the *number* of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In `igraph` we can use the `all_shortest_paths` function to figure out this information. 
 
 For instance, let's say we wanted to find the number of shortest paths between the pair of nodes "Young Man" (at the diner) and "The Pedestrian" (who appears when Butch encounters Marsellus on the street). To do that we can just type:
 
@@ -69,7 +71,7 @@ For instance, let's say we wanted to find the number of shortest paths between t
     ap$vpaths
 ```
 
-The `all_shortest_paths` function has three arguments: The graph `g`, the `from` node (the starting node in the path count) and the `to` node (the end node in the path count).^[In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.] 
+The `all_shortest_paths` function has three arguments: The graph `g`, the `from` node (the **starting node** in the path count) and the `to` node (the **end node** in the path count).^[In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.] 
 
 The function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called `vpaths`, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The `length` of this list is the number of shortest paths between the young man at the diner and the pedestrian:
 
@@ -85,7 +87,7 @@ If we wanted to verify the *length of the shortest path* between these two nodes
     G["Young Man", "Pedestrian"]
 ```
 
-Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).
+Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes), because the length of the path is the number of edges in it, and the length of a path is always $n-1$ where $n$ is the number of nodes in the path.
 
 Note that we could have gotten the same information using the `distances` function in `igraph` specifying the `v` and `to` nodes:
 
@@ -120,13 +122,13 @@ Once we have the information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrice
 @brandes01 [p. 166] shows that we can take advantage of the fact that a node $k$ can only lie on a shortest path between $i$ and $j$ if the sum of the geodesic distances between $i$ and $k$ and between $k$ and $j$ is equal to the geodesic distance between $i$ and $j$:
 $$
 g_{ij} = g_{ik} + g_{kj}
-$$
+$$ {#eq-brandes1}
 
 If the above equality obtains, then the number of shortest paths between $i$ and $j$ that involve $k$ as an inner node (the numerator of @eq-pair) is simply $s_{ik} \times s_{kj}$. This means that the pair dependency of $i$ and $j$ on $k$ will be just:
 
 $$
 \delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
-$$
+$$ {#eq-brandes2}
 
 Where $s_{ij}$ is the corresponding entry for $i$ and $j$ in the $\mathbf{S}$ matrix (the total number of shortest paths between $i$ and $j$). 
 
@@ -141,7 +143,7 @@ Using this approach, we can write a simple function to compute the pair dependen
         }
 ```
 
-This function computes the pair dependency of the nodes entered as values of the `a` and `b` arguments on the node entered as the value of the `c` argument. 
+This function computes the pair dependency of the nodes entered as values of the `a` and `b` arguments on the node entered as the value of the `c` argument using the entries stored on the `S` matrix according to equation @eq-brandes2. 
 
 We can test it out to compute the pair dependency of the young man and the pedestrian on Vincent:
 
@@ -183,7 +185,7 @@ As the young man stands on none of the paths that link Vincent to other nodes in
 
 ## Computing Betweenness
 
-As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the dependencies of each pair of nodes in the graph on him. We could compute that quantity (not very efficiently) for any node in the graph using the following wrapper function:
+As noted in @eq-bet1, Vincent's *betweenness* is just the sum of the pair dependencies of each pair of nodes in the graph on him. We could compute that quantity (not very efficiently) for any node in the graph using the following wrapper over the `pair.dep` function:
 
 ```{r}
     bet.cent <- function(c) {

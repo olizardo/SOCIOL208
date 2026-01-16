@@ -574,7 +574,7 @@ div.csl-indent {
 <p>We can also define the <strong>one-sided dependency</strong> of any one node <span class="math inline">\(i\)</span> on any other node <span class="math inline">\(k\)</span> in the graph as the sum of the pairwise dependencies on <span class="math inline">\(k\)</span> that involve <span class="math inline">\(i\)</span> across every other node <span class="math inline">\(j\)</span>: <span id="eq-one"><span class="math display">\[
 \delta_{i|k} = \sum_j \delta_{i(k)j}
 \tag{2}\]</span></span></p>
-<p>The <strong>betweenness centrality</strong> of a node <span class="math inline">\(k\)</span> is then defined as the <em>sum of the dependencies</em> that <em>every pair</em> of nodes in the graph has on that node:</p>
+<p>The <strong>betweenness centrality</strong> of a node <span class="math inline">\(k\)</span> is then defined as the <em>sum</em> of the pair dependencies that <em>every</em> pair of nodes in the graph has on that node:</p>
 <p><span id="eq-bet1"><span class="math display">\[
 C^{B}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 \tag{3}\]</span></span></p>
@@ -604,7 +604,8 @@ C^{B}_k = \sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}
 [37] "Young Woman"     "Zed"            </code></pre>
 </div>
 </div>
-<p>To compute the components of the betweenness centrality defined earlier, we need two pieces of information. First we need to know the <em>length</em> of the shortest path between every pair of nodes. As we saw in our discussion of <a href="./closcent.html">closeness</a>, this is stored in the <strong>geodesic distance matrix</strong> (<span class="math inline">\(\mathbf{G}\)</span>) of dimensions <span class="math inline">\(N \times N\)</span>. In <code>igraph</code> we can calculate the entries for <span class="math inline">\(\mathbf{G}\)</span> using the <code>distances</code> function:</p>
+<p>To compute the components of the betweenness centrality defined earlier, we need two pieces of information.</p>
+<p>First we need to know the <em>length</em> of the shortest path between every pair of nodes, so that we can separate the shortest paths from the other longer paths. As we saw in our discussion of <a href="./closcent.html">closeness</a>, this is stored in the <strong>geodesic distance matrix</strong> (<span class="math inline">\(\mathbf{G}\)</span>) of dimensions <span class="math inline">\(N \times N\)</span>, because the length of the shortest path between a pair of nodes is also the <strong>geodesic distance</strong> between them. In <code>igraph</code> we can calculate the entries for <span class="math inline">\(\mathbf{G}\)</span> using the <code>distances</code> function:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    G <span class="ot">&lt;-</span> <span class="fu">distances</span>(g)</span>
 <span id="cb3-2"><a href="#cb3-2"></a>    G[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -633,7 +634,7 @@ Fourth Man          2          0         3
 Gawker #2           2          3         0</code></pre>
 </div>
 </div>
-<p>Next we need to know the <em>number</em> of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In <code>igraph</code> we can use the <code>all_shortest_paths</code> function to figure out this information.</p>
+<p>Second, we need to know the <em>number</em> of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In <code>igraph</code> we can use the <code>all_shortest_paths</code> function to figure out this information.</p>
 <p>For instance, let’s say we wanted to find the number of shortest paths between the pair of nodes “Young Man” (at the diner) and “The Pedestrian” (who appears when Butch encounters Marsellus on the street). To do that we can just type:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    ap <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, <span class="at">from =</span> <span class="st">"Pedestrian"</span>, <span class="at">to =</span> <span class="st">"Young Man"</span>)</span>
@@ -672,7 +673,7 @@ Gawker #2           2          3         0</code></pre>
 [1] Pedestrian Marsellus  Vincent    Pumpkin    Young Man </code></pre>
 </div>
 </div>
-<p>The <code>all_shortest_paths</code> function has three arguments: The graph <code>g</code>, the <code>from</code> node (the starting node in the path count) and the <code>to</code> node (the end node in the path count).<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
+<p>The <code>all_shortest_paths</code> function has three arguments: The graph <code>g</code>, the <code>from</code> node (the <strong>starting node</strong> in the path count) and the <code>to</code> node (the <strong>end node</strong> in the path count).<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
 <p>The function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called <code>vpaths</code>, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The <code>length</code> of this list is the number of shortest paths between the young man at the diner and the pedestrian:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>    <span class="fu">length</span>(ap<span class="sc">$</span>vpaths)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -688,7 +689,7 @@ Gawker #2           2          3         0</code></pre>
 <pre><code>[1] 4</code></pre>
 </div>
 </div>
-<p>Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes).</p>
+<p>Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes), because the length of the path is the number of edges in it, and the length of a path is always <span class="math inline">\(n-1\)</span> where <span class="math inline">\(n\)</span> is the number of nodes in the path.</p>
 <p>Note that we could have gotten the same information using the <code>distances</code> function in <code>igraph</code> specifying the <code>v</code> and <code>to</code> nodes:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    <span class="fu">distances</span>(g, <span class="at">v =</span> <span class="st">"Young Man"</span>, <span class="at">to =</span> <span class="st">"Pedestrian"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -743,13 +744,13 @@ Gawker #2           1          4         1</code></pre>
 </section>
 <section id="computing-pairwise-dependencies" class="level2">
 <h2 class="anchored" data-anchor-id="computing-pairwise-dependencies">Computing Pairwise Dependencies</h2>
-<p><span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span class="math display">\[
+<p><span class="citation" data-cites="brandes01">Brandes (<a href="#ref-brandes01" role="doc-biblioref">2001, 166</a>)</span> shows that we can take advantage of the fact that a node <span class="math inline">\(k\)</span> can only lie on a shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if the sum of the geodesic distances between <span class="math inline">\(i\)</span> and <span class="math inline">\(k\)</span> and between <span class="math inline">\(k\)</span> and <span class="math inline">\(j\)</span> is equal to the geodesic distance between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>: <span id="eq-brandes1"><span class="math display">\[
 g_{ij} = g_{ik} + g_{kj}
-\]</span></p>
+\tag{4}\]</span></span></p>
 <p>If the above equality obtains, then the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> that involve <span class="math inline">\(k\)</span> as an inner node (the numerator of <a href="#eq-pair">Equation&nbsp;1</a>) is simply <span class="math inline">\(s_{ik} \times s_{kj}\)</span>. This means that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> will be just:</p>
-<p><span class="math display">\[
+<p><span id="eq-brandes2"><span class="math display">\[
 \delta_{i(k)j}= \frac{s_{ik} s_{kj}}{s_{ij}}
-\]</span></p>
+\tag{5}\]</span></span></p>
 <p>Where <span class="math inline">\(s_{ij}\)</span> is the corresponding entry for <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> in the <span class="math inline">\(\mathbf{S}\)</span> matrix (the total number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
 <p>This also means that if the above equality does <em>not</em> obtain and <span class="math inline">\(g_{ij} &lt; g_{ik} + g_{kj}\)</span>, then we know for sure that the pair dependency of <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> on <span class="math inline">\(k\)</span> is zero (<span class="math inline">\(k\)</span> does not lie on any shortest path between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>).</p>
 <p>Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the <span class="math inline">\(\mathbf{G}\)</span> and <span class="math inline">\(\mathbf{S}\)</span> matrices:</p>
@@ -759,7 +760,7 @@ g_{ij} = g_{ik} + g_{kj}
 <span id="cb15-3"><a href="#cb15-3"></a>        <span class="cf">else</span> {<span class="fu">return</span>(<span class="dv">0</span>)}</span>
 <span id="cb15-4"><a href="#cb15-4"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This function computes the pair dependency of the nodes entered as values of the <code>a</code> and <code>b</code> arguments on the node entered as the value of the <code>c</code> argument.</p>
+<p>This function computes the pair dependency of the nodes entered as values of the <code>a</code> and <code>b</code> arguments on the node entered as the value of the <code>c</code> argument using the entries stored on the <code>S</code> matrix according to equation <a href="#eq-brandes2">Equation&nbsp;5</a>.</p>
 <p>We can test it out to compute the pair dependency of the young man and the pedestrian on Vincent:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>    <span class="fu">pair.dep</span>(<span class="st">"Pedestrian"</span>, <span class="st">"Young Man"</span>, <span class="st">"Vincent"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -905,7 +906,7 @@ g_{ij} = g_{ik} + g_{kj}
 <p>The <code>betweenness</code> function in <code>igraph</code> uses Freeman’s <span class="citation" data-cites="freeman79">(<a href="#ref-freeman79" role="doc-biblioref">1979</a>)</span> normalization for the betweenness centrality, which is equal to:</p>
 <p><span id="eq-nbet"><span class="math display">\[
 C^{NB}_k = = \frac{2\left[\sum_{i,j} \frac{\sigma_{i(k)j}}{\sigma_{ij}}\right]}{(n-1)(n-2)}
-\tag{4}\]</span></span></p>
+\tag{6}\]</span></span></p>
 <p>Where the denominator of the fraction, <span class="math inline">\((n-1)(n-2)\)</span>, is equal to (two times) the betweenness a node would have if it was the center of a <strong>star graph</strong> of the same order as the observed network.</p>
 <p>So for the <em>Pulp Fiction</em> network the normalized betweenness is equal to:</p>
 <div class="cell">
