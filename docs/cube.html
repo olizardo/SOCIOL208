@@ -570,53 +570,52 @@ div.csl-indent {
 </div>
 </div>
 <p>The basic innovation behind the centrality cube is to store the intermediation information among every node triplet in the graph <span class="math inline">\(s\)</span>, <span class="math inline">\(r\)</span>, <span class="math inline">\(b\)</span> (standing for “<strong>s</strong>ender,” <strong>r</strong>eceiver,” and “<strong>b</strong>roker”) in a three dimensional <em>array</em> rather than the usual two dimensional matrix.</p>
-<p>The three dimensional array can be thought of as a “cube” by stacking multiple reachability matrices between every pair <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> along a three dimensional dimension <span class="math inline">\(b\)</span>. So each “b-slice” of the cube will contain the number of times node <span class="math inline">\(b\)</span> stands in a shortest path between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> divided by the total number of paths between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> which as you recall computes the pairwise betweenness of <span class="math inline">\(b\)</span> with respect to <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span>.</p>
+<p>The three dimensional array can be thought of as a “cube” by stacking multiple reachability matrices between every pair <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> along a three dimensional dimension <span class="math inline">\(b\)</span>. So each “b-slice” of the cube will contain the number of times node <span class="math inline">\(b\)</span> stands in a shortest path between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> divided by the total number of paths between <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> which as you <a href="./betcent.html">recall</a> computes the pairwise dependence of <span class="math inline">\(s\)</span> and <span class="math inline">\(r\)</span> with respect to <span class="math inline">\(b\)</span>.</p>
 <p>Let’s see how that works.</p>
 <section id="building-the-cube" class="level2">
 <h2 class="anchored" data-anchor-id="building-the-cube">Building the Cube</h2>
-<p>We begin by writing a simple user-defined function to count the total number of shortest paths between each pair of nodes:</p>
+<p>We begin by recycling our simple user-defined function to count the total number of shortest paths between each pair of nodes:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   nsp <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
-<span id="cb2-3"><a href="#cb2-3"></a>      S <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n)</span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   nsp <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(w)</span>
+<span id="cb2-3"><a href="#cb2-3"></a>      S <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, n, n)</span>
 <span id="cb2-4"><a href="#cb2-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb2-5"><a href="#cb2-5"></a>            <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb2-6"><a href="#cb2-6"></a>                  <span class="cf">if</span> (j <span class="sc">%in%</span> <span class="fu">neighbors</span>(x, i) <span class="sc">==</span> <span class="cn">FALSE</span>) {</span>
-<span id="cb2-7"><a href="#cb2-7"></a>                     S[i, j] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">all_shortest_paths</span>(x, i, j)<span class="sc">$</span>vpaths)</span>
-<span id="cb2-8"><a href="#cb2-8"></a>               }</span>
-<span id="cb2-9"><a href="#cb2-9"></a>            }</span>
-<span id="cb2-10"><a href="#cb2-10"></a>         }</span>
-<span id="cb2-11"><a href="#cb2-11"></a>      <span class="fu">return</span>(S)</span>
-<span id="cb2-12"><a href="#cb2-12"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-5"><a href="#cb2-5"></a>         <span class="cf">for</span> (j <span class="cf">in</span> i<span class="sc">:</span>n) { <span class="co">#looping through upper triangle</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a>            <span class="cf">if</span> (j <span class="sc">%in%</span> <span class="fu">neighbors</span>(w, i) <span class="sc">==</span> <span class="cn">FALSE</span>) {S[i, j] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">all_shortest_paths</span>(w, i, j)<span class="sc">$</span>vpaths)}</span>
+<span id="cb2-7"><a href="#cb2-7"></a>            }</span>
+<span id="cb2-8"><a href="#cb2-8"></a>         }</span>
+<span id="cb2-9"><a href="#cb2-9"></a>      S[<span class="fu">lower.tri</span>(S)] <span class="ot">&lt;-</span> <span class="fu">t</span>(S)[<span class="fu">lower.tri</span>(S)] <span class="co">#copying upper triangle into lower triangle</span></span>
+<span id="cb2-10"><a href="#cb2-10"></a>      <span class="fu">return</span>(S)</span>
+<span id="cb2-11"><a href="#cb2-11"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The function is called <code>nsp</code> and takes a graph as input and returns and matrix called <span class="math inline">\(\mathbf{S}\)</span> with entries <span class="math inline">\(s_{ij}\)</span> equal to the total number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. This is done by computing the <code>length</code> of the list returned by the <code>all_shortest_paths</code> function in <code>igraph</code> for each pair of non-adjacent nodes. This is done in two steps.</p>
 <ul>
 <li><p>First, we check whether <span class="math inline">\(j\)</span> is a neighbor of <span class="math inline">\(i\)</span> using the <code>neighbors</code> function in <code>igraph</code>. The <code>neighbors</code> function takes a graph and a node id as input and returns a vector of that node’s neighbors in the graph. We want the function to update the <span class="math inline">\(S\)</span> matrix only when <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> are <em>not</em> adjacent (indirectly connected).</p></li>
-<li><p>Second, we use the <code>all_shortest_paths</code> function to actually compute the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. This function takes three inputs: (1) A graph object, (2) a sender node id, and (3) a receiver node id (which can be a vector of receiver nodes), and returns a <code>list</code> of the paths between the sender and receiver nodes in the form of vectors of node ids defining each path as elements of a list called “vpaths.”</p></li>
+<li><p>Second, we use the <code>all_shortest_paths</code> function to actually compute the number of shortest paths between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>. This function takes three inputs: (1) A graph object <code>x</code>, (2) a sender node id <code>i</code>, and (3) a receiver node id <code>j</code>, and returns a <code>list</code> of the paths between the sender and receiver nodes in the form of vectors of node ids defining each path as elements of a list called “vpaths.”</p></li>
 </ul>
 <p>Now we are ready to write a user defined function to build the cube. Here’s a not-so-efficient (programming wise) but working example:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   cube <span class="ot">&lt;-</span> <span class="cf">function</span>(g) {</span>
-<span id="cb3-2"><a href="#cb3-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   cube <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb3-2"><a href="#cb3-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(w)</span>
 <span id="cb3-3"><a href="#cb3-3"></a>      c <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="fu">rep</span>(n<span class="sc">^</span><span class="dv">3</span>, <span class="dv">0</span>), <span class="fu">c</span>(n, n, n))</span>
-<span id="cb3-4"><a href="#cb3-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">nsp</span>(g)</span>
+<span id="cb3-4"><a href="#cb3-4"></a>      S <span class="ot">&lt;-</span> <span class="fu">nsp</span>(w)</span>
 <span id="cb3-5"><a href="#cb3-5"></a>      <span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
 <span id="cb3-6"><a href="#cb3-6"></a>         <span class="cf">for</span> (s <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
 <span id="cb3-7"><a href="#cb3-7"></a>            <span class="cf">for</span> (r <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb3-8"><a href="#cb3-8"></a>               <span class="cf">if</span> (s <span class="sc">!=</span> r <span class="sc">&amp;</span> r <span class="sc">%in%</span> <span class="fu">neighbors</span>(g, s) <span class="sc">==</span> <span class="cn">FALSE</span>) {</span>
-<span id="cb3-9"><a href="#cb3-9"></a>                  p.sr <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(g, s, r)<span class="sc">$</span>vpaths</span>
+<span id="cb3-8"><a href="#cb3-8"></a>               <span class="cf">if</span> (s <span class="sc">!=</span> r <span class="sc">&amp;</span> r <span class="sc">%in%</span> <span class="fu">neighbors</span>(w, s) <span class="sc">==</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb3-9"><a href="#cb3-9"></a>                  p.sr <span class="ot">&lt;-</span> <span class="fu">all_shortest_paths</span>(w, s, r)<span class="sc">$</span>vpaths</span>
 <span id="cb3-10"><a href="#cb3-10"></a>                  b.sr <span class="ot">&lt;-</span> <span class="fu">lapply</span>(p.sr, <span class="cf">function</span>(x) {x[<span class="sc">-</span><span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(x))]}) </span>
 <span id="cb3-11"><a href="#cb3-11"></a>                  c[s, r, b] <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.numeric</span>(<span class="fu">sapply</span>(b.sr, <span class="cf">function</span>(x) {b <span class="sc">%in%</span> x})))</span>
 <span id="cb3-12"><a href="#cb3-12"></a>                  c[s, r, b] <span class="ot">&lt;-</span> c[s, r, b]<span class="sc">/</span>S[s, r]</span>
-<span id="cb3-13"><a href="#cb3-13"></a>               }</span>
-<span id="cb3-14"><a href="#cb3-14"></a>            }</span>
-<span id="cb3-15"><a href="#cb3-15"></a>         }</span>
-<span id="cb3-16"><a href="#cb3-16"></a>      }</span>
-<span id="cb3-17"><a href="#cb3-17"></a>   c[<span class="fu">is.na</span>(c)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb3-18"><a href="#cb3-18"></a>   <span class="fu">return</span>(c)</span>
-<span id="cb3-19"><a href="#cb3-19"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-13"><a href="#cb3-13"></a>                  }</span>
+<span id="cb3-14"><a href="#cb3-14"></a>               }</span>
+<span id="cb3-15"><a href="#cb3-15"></a>            }</span>
+<span id="cb3-16"><a href="#cb3-16"></a>         }</span>
+<span id="cb3-17"><a href="#cb3-17"></a>      c[<span class="fu">is.na</span>(c)] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb3-18"><a href="#cb3-18"></a>      <span class="fu">return</span>(c)</span>
+<span id="cb3-19"><a href="#cb3-19"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>In line 1, we name the function <code>cube</code>. Line 3 initializes the <code>array</code> in <code>R</code>. It takes a string of zeros of length <span class="math inline">\(n^3\)</span> where <span class="math inline">\(n\)</span> is the number of nodes and crams them into an <span class="math inline">\(n \times n \times n\)</span> array. In this case, since <span class="math inline">\(n = 8\)</span>, this means eight empty matrices of dimensions <span class="math inline">\(8 \times 8\)</span> stacked together to form our cube full of zeros. The <span class="math inline">\(ijk^{th}\)</span> cell of the array corresponds to sender <span class="math inline">\(i\)</span>, receiver <span class="math inline">\(j\)</span> and broker node <span class="math inline">\(k\)</span>. Line 4 computes the matrix <span class="math inline">\(S\)</span> containing the number of shortest paths between every sender and receiver node in the graph.</p>
+<p>In line 1, we name the function <code>cube</code>. Line 3 initializes the <code>array</code> in <code>R</code>. It takes a string of zeros of length <span class="math inline">\(n^3\)</span> where <span class="math inline">\(n\)</span> is the number of nodes and crams them into an <span class="math inline">\(n \times n \times n\)</span> array. In this case, since <span class="math inline">\(n = 8\)</span>, this means eight empty matrices of dimensions <span class="math inline">\(8 \times 8\)</span> stacked together to form our cube full of zeros. The <span class="math inline">\(ijk^{th}\)</span> cell of the array corresponds to sender <span class="math inline">\(i\)</span>, receiver <span class="math inline">\(j\)</span> and broker node <span class="math inline">\(k\)</span>. Line 4 computes the matrix <span class="math inline">\(S\)</span> using the <code>nsp</code> function above containing the number of shortest paths between every sender and receiver node in the graph.</p>
 <p>Lines 5-15 populate the cube with the required information using an (inefficient) triple <code>for</code> loop. As noted some, useful <code>igraph</code> functions come into play here:</p>
 <ul>
 <li><p>In line 8 the <code>if</code> conditional inside the triple loop uses the <code>neighbors</code> function in <code>igraph</code> and checks that node <span class="math inline">\(r\)</span> is not a neighbor of <span class="math inline">\(s\)</span> (if they are directly connected then node <span class="math inline">\(b\)</span> cannot be a broker).</p></li>
@@ -657,7 +656,7 @@ div.csl-indent {
 1.5 2.0 0.0 3.0 6.0 3.5 3.0 1.0 </code></pre>
 </div>
 </div>
-<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span>, note this vector gives us the dependence of each node in the graph on node 3. Obviously node 3 doesn’t depend on itself so there is a zero on the third spot in the vector. As is clear from the plot, node 5 is the most dependent on 3 for intermediation with the rest of the nodes in the graph.</p>
+<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span>, note this vector gives us the <a href="./betcent.html">one-sided dependence</a> of each node in the graph on node 3. Obviously node 3 doesn’t depend on itself so there is a zero on the third spot in the vector. As is clear from the plot, node 5 is the most dependent on 3 for intermediation with the rest of the nodes in the graph.</p>
 <p>We can also pick a particular sender and receiver node and sum all their dyadic entries in the cube <em>across</em> the third (broker) dimension:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   <span class="fu">sum</span>(srb[<span class="dv">1</span>, <span class="dv">6</span>, ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -675,7 +674,7 @@ div.csl-indent {
 </section>
 <section id="betweenness-and-closeness-in-the-cube" class="level2">
 <h2 class="anchored" data-anchor-id="betweenness-and-closeness-in-the-cube">Betweenness and Closeness in the Cube</h2>
-<p>The betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on. For instance, let’s look at the matrix composed by taking the slice of cube that corresponds to node 3 as a broker:</p>
+<p>The betweenness centrality of each node is encoded in the cube, because we already computed the main ratio that the measure depends on, namely, the pairwise dependence of each pair of nodes in the graph on any given node. For instance, let’s look at the matrix composed by taking the slice of cube that corresponds to node 3 as a broker:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   srb[, , <span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -719,7 +718,7 @@ div.csl-indent {
 </div>
 </div>
 <p>Note the neat trick of using the argument <code>dims = 2</code> in the usual <code>colSums</code> command. This tells <code>colSums</code> that we are dealing with a three dimensional matrix, and that what we want is the sum of the columns across the cube’s third dimension (the brokers). Note also that we divide the cube betweenness by two because we are summing identical entries across the upper and lower triangle of the symmetric dyadic brokerage matrices inside the cube (not surprisingly, node 3 is the top betweenness centrality node).</p>
-<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> point out, using the cube info, we can build a matrix of <em>dependencies</em> between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the <span class="math inline">\(sb^{th}\)</span> entry contains the sum of the proportion of paths containing the broker nodes that starts with the sender node and end with some other node in the graph.</p>
+<p>As <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> point out, using the cube info, we can build a matrix of <em>one-sided dependencies</em> between each pair of nodes. In this matrix, the rows correspond to a sender (or receiver) node, the columns to a broker node and the <span class="math inline">\(sb^{th}\)</span> entry contains the sum of the proportion of paths containing the broker nodes that starts with the sender node and end with some other node in the graph.</p>
 <p>Here’s a function that uses the cube info to build the dependency matrix that <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> talk about using the cube as input:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   dep.ij <span class="ot">&lt;-</span> <span class="cf">function</span>(c) {</span>
@@ -854,7 +853,7 @@ div.csl-indent {
 
 </div>
 </div>
-<p>Note that this is valued matrix that is also <em>asymmetric</em>. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 does not depend on nodes 1, 5, 6, or 8.</p>
+<p>Note that this valued matrix of one-sided dependencies is <em>asymmetric</em>, because the one-dependence of <span class="math inline">\(i\)</span> on <span class="math inline">\(j\)</span> does not have to be the same as the one-sided dependency of <span class="math inline">\(j\)</span> on <span class="math inline">\(i\)</span>. Take for instance, node 3. Every node in the graph depends on node 3 for access to other nodes, but node 3 does not depend on nodes 1, 5, 6, or 8.</p>
 <p>Interestingly, as <span class="citation" data-cites="brandes_etal16">Brandes, Borgatti, and Freeman (<a href="#ref-brandes_etal16" role="doc-biblioref">2016</a>)</span> also show, the betweenness centrality also can be calculated from the dependency matrix! All we need to do is compute the <em>column sums</em>, equivalent to <strong>in-degree</strong> in the directed dependence network:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1"></a>   <span class="fu">round</span>(<span class="fu">colSums</span>(<span class="fu">dep.ij</span>(srb))<span class="sc">/</span><span class="dv">2</span>, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
