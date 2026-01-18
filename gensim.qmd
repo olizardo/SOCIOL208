@@ -138,8 +138,8 @@ We can transform the generalized similarities to distances and plot:
 #| fig-height: 10
 #| fig-width: 10
    D <- as.dist(1- S)
-   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   plot(h.res)
+   h.res.pulp1 <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res.pulp1)
 ```
 
 Note that the lowest levels of the dendrogram hierarchy some of the pairings make a lot of sense: The Gimp is most similar to Zed, Pumpkin is most similar to Honey Bunny (and other characters in the diner scene), Jimmie is most similar ot the Wolf, and Jules, Marsellus, Butch, Mia, and Vincent (the main characters) are most similar to one another. 
@@ -152,8 +152,6 @@ The plot suggests a division into five major node clusters. We can obtain that a
 ```
 
 We can see that the people in the diner scene all end up in the same cluster (4) which makes sense, as do Maynard, Zed, and the Gimp (5) which also makes sense. The main characters also end up in the same generalized similarity cluster (1), suggesting they play a similar role in the story. 
-
-## Appendix
 
 A more general (and shorter) version of the function to compute `SimRank` looks like this [partly based on @fouss_etal16, pp. 84, algorithm 2.4]:
 
@@ -179,3 +177,223 @@ A more general (and shorter) version of the function to compute `SimRank` looks 
       return(k)
    }
 ```
+
+## Does SimRank Escape the Role Problem?
+
+Recall that we turned to SimRank because it promised to solve Borgatti and Everett's [-@borgatti_everett92] *role problem*, or the idea that nodes can play the same role in the network even when they don't share *any* neighbors. 
+
+Now, we know from @eq-simrank that *SimRank* uses information on the neighborhoods of the two nodes, but relaxes the local structural similarity assumption that these neighbors need to be *shared*. 
+
+However, it is clear that nodes that have *completely disjoint* neighborhoods would be considered by *SimRank* to be low similarity even though they could be playing the same *roles*. So maybe *SimRank* doesn't solve the doctor/patient problem after all. 
+
+
+```{r}
+#| label: fig-be1
+#| fig-cap: "Borgatti and Everett's Thinking Graph"
+#| fig-height: 8
+#| fig-width: 8
+   library(igraph)
+   g <- make_empty_graph(10, directed = FALSE)
+   V(g)$name <- LETTERS[1:10]
+   g <- g + edge("A","B")
+   g <- g + edge("A","C")
+   g <- g + edge("A","D")
+   g <- g + edge("B","C")
+   g <- g + edge("B","E")
+   g <- g + edge("C","D")
+   g <- g + edge("D","E")
+   g <- g + edge("E","F")
+   g <- g + edge("F","G")
+   g <- g + edge("F","I")
+   g <- g + edge("G","H")
+   g <- g + edge("G","J")
+   g <- g + edge("H","I")
+   g <- g + edge("H","J")
+   g <- g + edge("I","J")
+   A <- as.matrix(as_adjacency_matrix(g))
+   plot(g, 
+      vertex.size=14, vertex.frame.color="lightgray", 
+      vertex.label = V(g)$name, edge.arrow.size = 1, 
+      layout = layout.kamada.kawai, vertex.label.cex = 2)
+```
+
+To build some intuition, consider the graph in @fig-be1, which is a toy example taken from @borgatti_everett92 [p. 14, Figure 7 (a)]. This is a **regular graph** of order three (each node has the same degree and that degree happens to be three). Going by the standard of *structural equivalence* (see [here](structequiv.qmd)) we would say that that set of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, and {A, C} because each pair in brackets has *identical* neighborhoods.
+
+We can ascertain this by reviving our old Euclidean distance function:
+
+```{r}
+   d.euclid <- function(x) {
+      n <- nrow(x)
+      E <- matrix(0, n, n)
+      for (i in 1:n) {
+         for (j in 1:n) {
+            if (i < j & i != j) {
+               d.ij <- 0
+               for (k in 1:n) {
+                  if (k != i & k != j) {
+                     d.ij <- d.ij + (A[i,k] - A[j,k])^2
+                     }
+                  }
+               E[i,j] <- sqrt(d.ij)
+               E[j,i] <- sqrt(d.ij)
+            }
+         }
+      }
+   rownames(E) <- rownames(A)
+   colnames(E) <- colnames(A)
+   return(E)
+   }
+```
+
+And then using it to cluster the nodes into six structurally equivalent classes, using the `igraph` plotting argument `vertex.color` to color the nodes according to the grouping returned by the `cutree` function applied to the `hclust` result:
+
+```{r}
+#| label: fig-be2
+#| fig-cap: "Euclidean Distance Partition (k = 6)"
+#| fig-height: 12
+#| fig-width: 12
+   E <- d.euclid(A)
+   E <- as.dist(E) #transforming E to a dist object
+   h.res <- hclust(E, method = "ward.D2")
+   blocks  <- cutree(h.res, k = 6)
+   plot(g, 
+      vertex.size=14, vertex.frame.color="lightgray", 
+      vertex.label = V(g)$name, edge.arrow.size = 1, 
+      layout = layout.kamada.kawai, vertex.label.cex = 2,
+      vertex.color = blocks
+      )
+```
+
+We can see that indeed, the good old Euclidean distance finds the set of structurally equivalent nodes in the graph.
+
+Yet, going by our intuitive idea that two nodes occupy the same position if they are structurally *similar* (regardless of whether they share the same set of neighbors) we want to say that nodes {J, H, A, C} occupy the same *role*, as do nodes {G, I, D, B} and nodes {E, F}. So going by this abstract idea of role, we would expect there to be *three* role positions in the graph, not six like suggested by the structural equivalence approach. 
+
+However, standard approaches to structural equivalence like the Euclidean distance shown in @fig-be2, will not capture these higher level similarities, they will only capture the lower-level similarity based on local neighborhood overlap that the algorithms for structural equivalence are designed to extract. 
+
+Can `SimRank` do better? Let's see:
+
+```{r}
+#| label: fig-be3
+#| fig-cap: "SimRank Partition (k = 3)"
+#| fig-height: 12
+#| fig-width: 12
+   S <- SimRank(A)
+   D <- as.dist(1-S)
+   h.res <- hclust(D, method = "ward.D2")
+   blocks  <- cutree(h.res, k = 3)
+   plot(g, 
+      vertex.size=14, vertex.frame.color="lightgray", 
+      vertex.label = V(g)$name, edge.arrow.size = 1, 
+      layout = layout.kamada.kawai, vertex.label.cex = 2,
+      vertex.color = blocks
+      )
+```
+
+We can see that `SimRank` does not discover the more general role groups in the Borgatti-Everett graph. Instead, it assigns {A, B, E, F, H} to a large similarity cluster and then assigns {D, G, J} and {I, C} to smaller clusters. So the good news is that `SimRank` does assign nodes to the same cluster even when they share no neighbors (like {C} and {I}) but the bad news is that this is not the assignment that makes sense for what we are looking for. 
+
+## CentSim
+
+But don't despair. @li_etal15 provide an ingenious and relatively simple solution to the problem. Their key observation is that nodes like {J, H, A, C} in @fig-be1 are **automorphically equivalent** (see @borgatti_everett92 for relevant discussion). 
+
+While automorphic equivalence is a terrible name coming from the depths of graph theory, it has a simple explanation. Two nodes are automorphically equivalent just in case we could swap the labels of any pair (e.g., J for A and A for J) in the relevant set in @fig-be1 and *nothing* would change in the graph. That is, *every* graph theoretic property and quantity we could compute in the graph would remain the same (density, average shortest path length, diameter, etc.). 
+
+The same goes for any quantity we can compute at the node level, which means that automorphically equivalent nodes have the property of being *graph-theoretically indistinguishable*. That means that they will have the same score on *any* centrality measure we could compute on them. 
+
+@li_etal15 build on this observation to compute a role similarity measure called `CentSim` on each pair of nodes in the graph, by comparing their centrality scores across various measures. Li et al.'s [-@li_etal15] proposal is that the similarity between $i$ and $j$ is given by:
+
+$$
+s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
+$$ {#eq-li1}
+
+Where the function $\theta_k$ defined on each pair of nodes $i$, $j$, is given by:
+
+$$
+\theta_k(i,j) = \frac{min\left[c_k(i), c_k(j)\right]}{max\left[c_k(i), c_k(j)\right]}
+$$ {#eq-li1}
+
+Where $c_k(i)$ is the $k^{th}$ centrality score computed on node $i$.
+
+So the idea is to compute a bunch of different centrality scores on each node and the compute the average ratio between the minimum and the maximum scores for each pair. 
+
+Here's a function that does that, using degree, closeness, betweenness and eigenvector centrality:
+
+```{r}
+   cent.sim <- function(x) {
+      library(igraph)
+      c1 <- degree(x)
+      c2 <- closeness(x)
+      c3 <- betweenness(x)
+      c4 <- eigen_centrality(x)$vector
+      n <- vcount(x)
+      min.max <- function(g, h) {
+         if (max(g, h) != 0) {r <- min(g, h)/max(g, h)}
+         else {r <- 1}
+         return(r)
+         }
+      z <- diag(1, n, n)
+      rownames(z) <- V(x)$name
+      colnames(z) <- V(x)$name
+         for(i in 1:n) {
+            for(j in i:n) {
+               w1 <- min.max(c1[i], c1[j])
+               w2 <- min.max(c2[i], c2[j])
+               w3 <- min.max(c3[i], c3[j])
+               w4 <- min.max(c4[i], c4[j])
+               z[i,j] <- (w1 + w2 + w3 + w4)/4
+            }
+         }
+      z[lower.tri(z)] <- t(z)[lower.tri(z)] #copying upper triangle into lower triangle
+      return(z)
+      }
+```
+The `cent.sim` function takes an igraph graph object as input and returns a similarity matrix `z` as output.
+
+Can `CentSim` find the automorphically equivalent classes in @fig-be1 that we are looking for? Let's find out:
+
+```{r}
+#| label: fig-ex2
+#| fig-cap: "CentSim Partition"
+#| fig-height: 12
+#| fig-width: 12
+   S <- cent.sim(g)
+   D <- as.dist(1-S)
+   h.res <- hclust(D, method = "ward.D") #hierarchical clustering
+   blocks  <- cutree(h.res, k = 3)
+   plot(g, 
+      vertex.size=14, vertex.frame.color="lightgray", 
+      vertex.label = V(g)$name, edge.arrow.size = 1, 
+      layout = layout.kamada.kawai, vertex.label.cex = 2,
+      vertex.color = blocks)
+```
+
+Indeed it does! Nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
+
+Let's see how it works on the *Pulp Fiction* data:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   g <- movie_559
+   V(g)$name <- str_to_title(V(g)$name)
+   V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+   g <- delete_vertices(g, degree(g) < 2) #deleting low degree vertices
+   S <- cent.sim(g)
+   D <- as.dist(1-S)
+   h.res.pulp2 <- hclust(D, method = "ward.D") #hierarchical clustering
+   plot(h.res.pulp2)
+```
+
+We can see that the `CentSim` partition is not too far off from that offered by `SimRank` providing a more fine-grained but also more intuitive set of clusters. The three main characters in the story {Vincent, Butch, Jules} are assigned to the same cluster. Lower down, we see similar node pairs that make sense like {Pumpkin, Honey Bunny}, {Capt Koons, Mother}, {The Gimp, Zed}, and {Jimmie, The Wolf}
+
+<!-- 
+```{r}
+#| fig-height: 12
+#| fig-width: 12
+   library(dendextend)
+   dend.pulp1 <- as.dendrogram(h.res.pulp1)
+   dend.pulp2 <- as.dendrogram(h.res.pulp2)
+   dend.pulp <- dendlist(dend.pulp1, dend.pulp2)
+   dend.pulp %>% untangle(method = "step1side") %>% 
+   tanglegram(common_subtrees_color_branches = TRUE, highlight_distinct_edges = FALSE)
+   #tanglegram(dend.pulp1, dend.pulp2, common_subtrees_color_branches = TRUE)
+``` -->
