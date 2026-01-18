@@ -1,5 +1,5 @@
 ---
-title: "Generalized Vertex Similarities"
+title: "SimRank"
 execute: 
   eval: true
   echo: true
@@ -11,20 +11,16 @@ format:
       code-line-numbers: true
 ---
 
-## Generalized Similarities
 
 So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
 
 Yet, similarities based on local neighborhood information only have been criticized (e.g., by @borgatti_everett92) for not quite capturing the sociological intuition behind the idea of a *role* which is usually what they are deployed for. 
-That is, two doctors don't occupy the same role because they treat the *same* set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not. 
 
-This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as **automorphic** or **regular equivalence** [@borgatti_everett92]. 
+That is, two doctors don't occupy the same role because they treat the *same* set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not.  Note that all the similarity notions studied in the [local similarity lecture](locsim.qmd) have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that *nodes are similar to the extent they connect to the same others*. 
 
-Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting. 
+This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as **automorphic** or **regular equivalence** [@borgatti_everett92]. Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting. 
 
-A better approach here is to use the more relaxed notion of similarity like we did above to come up with a more general definition that can capture our role-based intuitions. Note that all the similarity notions studied earlier have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that *nodes are similar to the extent they connect to the same others*. 
-
-We can generalize this idea (to deal with the doctor/patient role problem) in the following way: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff).
+A better approach here is to use the more relaxed notion of similarity to come up with a more general definition that can capture our role-based intuitions. One strategy is to define similarity in a more "generalized" way as follows: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff).
 
 ## Jeh and Widom's SimRank
 
@@ -37,22 +33,22 @@ $$
    s_{ij}(t) = \frac{\alpha}{d_i d_j} \sum_{k \in N(i)} \sum_{l \in N(j)} s_{kl}(t-1)
 $$ {#eq-simrank}
 
-So the similarity between two nodes at step $t$ is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step, $t-1$), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their degrees (to take a weighted average). 
+So the similarity between two nodes at step $t$ is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step, $t-1$), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their in-degrees (to take a weighted average). 
 
-This measure nicely captures the idea that nodes are similar to the extent they both connect to people who are themselves similar. Note that it doesn't matter whether these neighbors are shared between the two nodes (the summation occurs over each pair of nodes formed by crossing the set $p$ + $q$ against $p$ + $r$ as defined in the [local similarity](locsim.qmd) lecture), whether they are themselves neighbors, which deals with the doctor/patient problem we referred to earlier. 
+This measure nicely captures the idea that nodes are similar to the extent they are both connected to people who are themselves similar. Note that it doesn't matter whether these in-neighbors are shared between the two nodes (the summation occurs over each pair of nodes formed by crossing the set $p$ + $q$ against $p$ + $r$ as defined in the [local similarity](locsim.qmd) lecture), whether they are themselves neighbors, which deals with the doctor/patient problem we referred to earlier. 
 
 A function that implements this idea looks like:
 
 ```{r}
-   SimRank <- function(w, alpha = 0.85) {
-      d <- rowSums(w) #degree vector
+   SimRank <- function(w, alpha = 0.8) {
+      d <- colSums(w) #indegree vector
       n <- nrow(w) #number of nodes in the graph
       z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
       if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
       if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
       rownames(z) <- rownames(w) #naming similarity matrix rows
       colnames(z) <- colnames(w) #naming similarity matrix columns
-      nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
+      nei <- apply(w, 2, function(x){which(x == 1)}) #in-neighbors list
       delta <- 1
       while(delta > 1e-10) { #run while delta is bigger than a tiny number
          z.o <- z #old similarity matrix at t-1
@@ -65,7 +61,7 @@ A function that implements this idea looks like:
                         sigma <- sigma + z[k, l] #i's similarity to j is equal to sum of neighbors' similarity
                         } #end l for loop
                      } #end k for loop
-                  z[i,j] <- alpha/(d[i] * d[j]) * sigma #updating ij similarity score at t
+                     z[i,j] <- alpha/(d[i] * d[j]) * sigma #updating ij similarity score at t
                   } #end if
                } #end j for loop
             } #end i for loop
@@ -75,13 +71,57 @@ A function that implements this idea looks like:
       } #end function
 ```
 
-The `SimRank` function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output.
+This function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output.
 
-Let's try it out in the *Pulp Fiction* graph:
+Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in @fig-jw, which is supposed to be a set of web pages in an university. There is a link from the main University page to that of the two professors, and a link from the professor to the student pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link on their webpage to the main university page. 
+
+```{r}
+#| label: fig-jw
+#| fig-cap: "Jeh and Widom's Toy Example"
+#| fig-height: 12
+#| fig-width: 12
+#| echo: false
+   library(igraph)
+   g <- make_empty_graph(5, directed = TRUE)
+   V(g)$name <- c("Univ", "ProfA", "ProfB", "StudentA", "StudentB")
+   g <- g + edge("Univ","ProfA")
+   g <- g + edge("Univ","ProfB")
+   g <- g + edge("ProfA","StudentA")
+   g <- g + edge("ProfB", "StudentB")
+   g <- g + edge("StudentB", "ProfB")
+   g <- g + edge("StudentA", "Univ")
+   plot(g, 
+      vertex.size=14, vertex.frame.color="lightgray", 
+      vertex.label = V(g)$name, edge.arrow.size = 2, 
+      layout = layout.auto, vertex.label.cex = 2, 
+       vertex.label.dist=2)
+```
+
+We can now test the `SimRank` function on the toy example:
+
+```{r}
+   A <- as.matrix(as_adjacency_matrix(g))
+   S <- SimRank(A)
+   round(S, 3)
+```
+
+Which reproduces the pairwise similarity numbers reported by @jeh_widom02 [p. 540, Figure 2] in their original paper.
+
+
+We can transform the similarity matrix into a distance matrix and then perform a hierarchical clustering to obtain the roles:
+
+```{r}
+   D <- as.dist(1-S)
+   h.res <- hclust(D, method = "ward.D") #hierarchical clustering
+   plot(h.res)
+```
+
+Which, as we can see, recovers the Professor, Student, and University Roles in the network. 
+
+Let's try it out on more realistic data using the *Pulp Fiction* graph:
 
 ```{r}
    library(networkdata)
-   library(igraph)
    library(stringr) #using stringr to change names from all caps to title case
    g <- movie_559
    V(g)$name <- str_to_title(V(g)$name)
@@ -97,7 +137,7 @@ We can transform the generalized similarities to distances and plot:
 ```{r}
 #| fig-height: 10
 #| fig-width: 10
-   D <- dist(1- S)
+   D <- as.dist(1- S)
    h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
    plot(h.res)
 ```
@@ -110,221 +150,8 @@ The plot suggests a division into five major node clusters. We can obtain that a
    blocks  <- cutree(h.res, k = 5)
    blocks
 ```
- 
-## The LHN Approach
 
-@leicht_etal06 provide a twist on the SimRank approach. Their idea is that a node $i$ is similar to another node $j$ just in case $i$'s neighbors are similar to $j$:
-
-$$
-   s_{ij}(t) = \delta_{ij} + \alpha \sum_{k \in N(i)} s_{kj}(t-1)
-$$ {#eq-lhn}
-
-Where $\delta_{ij}$ is the Kronecker function that equals one when $i = j$ and zero otherwise, and $\alpha$ is a number between zero and one with the restriction: $\alpha < \frac{1}{\lambda_1}$, where $\lambda_1$ is the largest eigenvalue of the adjacency matrix (also called the **spectral radius** of the adjacency matrix). This is required for the series to converge, just like the global Katz similarity [we considered before](globsim.qmd).
-
-Meanwhile, the $\delta_{ij}$ can be interpreted as "free similarity points" that each node gets for being similar to itself. In this setup, the pairwise similarity between $i$ and $j$ is just the sum of the previously calculated similarities between the set of neighbors of $i$ and the focal node $j$ weighted by the parameter $\alpha$.
-
-Here's a function that does that:
-
-```{r}
-   LHN.sim <- function(w, alpha = 0.25) {
-      n <- nrow(w) #number of nodes in the graph
-      z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
-      if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
-      if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
-      rownames(z) <- rownames(w) #naming similarity matrix rows
-      colnames(z) <- colnames(w) #naming similarity matrix columns
-      nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
-      rho <- (eigen(w)$values[1]^-1) - 1e-02  #inverse of spectral radius of adjacency matrix minus a tiny number
-      if(alpha > rho) {alpha <- rho} #if alpha is larger than rho make it rho
-      delta <- 1
-      while(delta > 1e-10) { #run while delta is bigger than a tiny number
-         z.o <- z #old similarity matrix at t-1
-         for(i in 1:n) {
-            for(j in 1:n) {
-               sigma <- 0 #initialize ij sum for iteration t
-               for (k in nei[[i]]) { #loop through i's neighbors
-                  sigma <- sigma + z[k,j] #ij similarity equal to sum of i's neighbors' k similarity to j
-                  } #end k for loop
-               z[i,j] <- as.numeric(i == j) + (alpha * sigma) #updating ij similarity score at t
-               } #end j for loop
-            } #end i for loop
-         delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
-         } #end while loop
-      return(z) #return similarity matrix after convergence
-      } #end function
-```
-
-And here are the results for the *Pulp Fiction* network:
-
-```{r}
-   S <- LHN.sim(A)
-   round(S[1:5, 1:5], 2)
-```
-
-Note that in the LHN framework, nodes are always maximally similar to themselves. 
-
-We can transform the LHN generalized similarities to distances by dividing by the maximum and then clustering:
-
-```{r}
-#| fig-height: 10
-#| fig-width: 10
-   S <- S/max(S)
-   D <- dist(1- S)
-   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   plot(h.res)
-```
-
-Which looks like another five-block partition. Cutting the dendrogram at the requisite height, we get:
-
-```{r}
-   blocks  <- cutree(h.res, k = 5)
-   blocks
-```
-
-Which is a bit different from the SimRank clustering. Here, the three main characters $\{$ Vincent, Jules, Butch $\}$ appear as maximally similar in their own cluster, while $\{$ Brett, Marvin, Roger, Marsellus, Mia $\}$ form their own similarity group. 
-
-## The Melnik et al. Approach
-
-@melnik_etal02 provide yet another variation on the theme of generalized similarity scoring. Their approach is a bit different that SimRank or the LHN strategy. The idea is to start from state in which *all* pairs of nodes have the same similarity score (e.g., $s_{ij} = 1$) at $t = 0$ and then update the subsequent similarities according to the rule:
-
-$$
-s_{ij}(t) = s_{ij}(t-1) + \left[\sum_{k \in N(i)} \sum_{l \in N(j)} \frac{1}{d_k d_l} s_{kl}(t-1)\right]
-$${#eq-melnik}
-
-So the similarity between $i$ and $j$ is equal to their previous similarity $s_{ij}(t-1)$ plus the sum of their neighbors similarity (just like SimRank), weighted by their respective degrees (unlike SimRank).
-
-In order for the iterations to converge, we need to normalize the similarity matrix $\mathbf{S}$ at each iteration step $t$ according to:
-
-$$
-\mathbf{S}(t) = \frac{\mathbf{S}(t)}{||\mathbf{S}(t)||_2}
-$$
-
-Where $||\mathbf{S}||_2$ is the matrix Frobenius (Euclidean) norm, or the square root of the sum of the square entries: 
-
-$$
-||\mathbf{S}(t)||_2 = \sqrt{\sum_i \sum_j s_{ij}(t)^2}
-$$
-
-Here's a function that does that:
-
-```{r}
-   melnik.sim <- function(w) {
-      d <- rowSums(w) #degree vector
-      n <- nrow(w) #number of nodes in the graph
-      z <- matrix(1, n, n) #all pairs start as equally similar (sij = 1)
-      if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
-      if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
-      rownames(z) <- rownames(w) #naming similarity matrix rows
-      colnames(z) <- colnames(w) #naming similarity matrix columns
-      nei <- apply(w, 1, function(x){which(x == 1)}) #neighbors list
-      delta <- 1
-      while(delta > 1e-10) { #run while delta is bigger than a tiny number
-         z.o <- z #old similarity matrix at t-1
-         for(i in 1:n) {
-            for(j in 1:n) {
-               sigma <- 0 #initialize ij sum for iteration t
-               for (k in nei[[i]]) { #loop through i's neighbors
-                  for (l in nei[[j]]) { #loop through j's neighbors
-                     sigma <- sigma + (d[k]*d[l])^-1 * z[k,l] #i's similarity to j is equal to sum of neighbors' similarity weighted by their degree 
-                     } #end l for loop
-                  } #end k for loop
-               z[i,j] <- z[i,j] + sigma #updating ij similarity score at t
-               } #end j for loop
-            } #end i for loop
-         z <- z/norm(z, type = "F") #normalizing similarity matrix at z
-         delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
-         } #end while loop
-      return(z) #return similarity matrix after convergence
-      } #end function
-```
-
-We can now test it on the *Pulp Fiction* network:
-
-```{r}
-   S <- melnik.sim(A)
-   round(S[1:5, 1:5], 2)
-```
-
-Which yields the following distance matrix and hierarchical clustering dendrogram:
-
-```{r}
-#| fig-height: 10
-#| fig-width: 10
-   S <- S/max(S)
-   D <- dist(1- S)
-   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   plot(h.res)
-```
-
-Which looks like yet another five-block partition. Cutting the dendrogram at the requisite height, we get:
-
-```{r}
-   blocks  <- cutree(h.res, k = 5)
-   blocks
-```
-
-Note that the Milnek et al. approach produces a clustering that is distinct from that obtained using either SimRank or LHN. Here, $\{$ Vincent $\}$ is its own singleton cluster, and $\{$ Jules, Mia $\}$ comprise another small similarity class. 
-
-## The Blondel et al. Self Similarity
-
-We can adapt the approach we used to compute the similarity between nodes in different graphs [here](blondel.qmd) to compute the similarity between nodes in the same graph, or what @blondel_etal04 call the *self-similarity*. 
-
-Recall that the similarity between nodes in different graphs $\mathbf{A}$ and $\mathbf{B}$ can be computed using the following formula:
-
-$$ 
-   \mathbf{Z}(t) = \mathbf{B}\mathbf{Z(t-1)}\mathbf{A}^T + \mathbf{B}^T\mathbf{Z(t-1)}\mathbf{A}
-$$ {#eq-blondel}
-
-Where the similarity matrix at $t=0$ is $\mathbf{Z}(0) = 1$, the all ones matrix. 
-
-So to compute the self-similarity for a single graph $\mathbf{A}$, we just plug in $\mathbf{A}$ instead of $\mathbf{B}$ in @eq-blondel to get:
-
-$$ 
-   \mathbf{Z}(t) = \mathbf{A}\mathbf{Z(t-1)}\mathbf{A}^T + \mathbf{A}^T\mathbf{Z(t-1)}\mathbf{A}
-$$ {#eq-selfsim}
-
-Here's a function that does that:
-
-```{r}
-   self.sim <- function(a) {
-      z <- matrix(1, nrow(a), nrow(a))
-      if(is.null(rownames(a)) == TRUE) {rownames(a) <- 1:nrow(a)} #checking if matrix has row names
-      if(is.null(colnames(a)) == TRUE) {colnames(a) <- 1:ncol(a)} #checking if matrix has column names
-      rownames(z) <- rownames(a)
-      colnames(z) <- colnames(a)
-      d <- 1 #initializing  delta
-      d.o <- 2 #initializing comparison delta
-      m <- 1 #initializing iteration counter
-      while (d != d.o | m %% 2 != 0) { #do while the previous delta is different from the current delta and the iteration is odd
-         z.o <- z #initializing old similarity matrix
-         d.o <- d #old delta equals previous delta
-         z <- (a %*% z.o %*% t(a)) + (t(a) %*% z.o %*% a) #blondel et al. similarity equation
-         z <- z/norm(z, type = "F") #normalizing similarity matrix
-         d <- abs(sum(abs(z)) - sum(abs(z.o))) #updating delta
-         m <- m + 1 #updating iteration counter
-         }
-   return(z) #return converged similarity matrix
-   }
-```
-We can now test it on the *Pulp Fiction* network:
-
-```{r}
-   S <- self.sim(A)
-   S <- S/max(S)
-   round(S[1:5, 1:5], 2)
-```
-
-Which yields the following distance matrix and hierarchical clustering dendrogram:
-
-```{r}
-#| fig-height: 10
-#| fig-width: 10
-   D <- dist(1- S)
-   h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
-   plot(h.res)
-```
-
-This approach yields five major similarity clusters. At the center we see the cluster composed of the main characters $\{$ Vincent, Butch, Jules $\}$, on the right we see two clusters composed $\{$ Pumpkin, Honey Bunny $\}$ and the other diner folk, and another composed of $\{$ Mia, Marsellus, Rogert, Brett, Marvin $\}$. The cluster on the left is bigger, but we can see that maximally similar characters like $\{$ Zed, The Gimp $\}$ make sense.
+We can see that the people in the diner scene all end up in the same cluster (4) which makes sense, as do Maynard, Zed, and the Gimp (5) which also makes sense. The main characters also end up in the same generalized similarity cluster (1), suggesting they play a similar role in the story. 
 
 ## Appendix
 
