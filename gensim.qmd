@@ -1,5 +1,5 @@
 ---
-title: "SimRank"
+title: "Role Similarities"
 execute: 
   eval: true
   echo: true
@@ -11,6 +11,7 @@ format:
       code-line-numbers: true
 ---
 
+## The Role Problem 
 
 So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
 
@@ -134,8 +135,8 @@ We can transform the generalized similarities to distances and plot:
 #| fig-height: 10
 #| fig-width: 10
    D <- as.dist(1- S)
-   h.res.pulp1 <- hclust(D, method = "ward.D2") #hierarchical clustering
-   plot(h.res.pulp1)
+   h.res1 <- hclust(D, method = "ward.D2") #hierarchical clustering
+   plot(h.res1)
 ```
 
 Note that the lowest levels of the dendrogram hierarchy some of the pairings make a lot of sense: The Gimp is most similar to Zed, Pumpkin is most similar to Honey Bunny (and other characters in the diner scene), Jimmie is most similar ot the Wolf, and Jules, Marsellus, Butch, Mia, and Vincent (the main characters) are most similar to one another. 
@@ -143,7 +144,7 @@ Note that the lowest levels of the dendrogram hierarchy some of the pairings mak
 The plot suggests a division into five major node clusters. We can obtain that as follows using the `cutree` function:
 
 ```{r}
-   blocks  <- cutree(h.res.pulp1, k = 5)
+   blocks  <- cutree(h.res1, k = 5)
    blocks
 ```
 
@@ -161,10 +162,11 @@ However, it is clear that nodes that have *completely disjoint* neighborhoods wo
 #| label: fig-be
 #| fig-height: 8
 #| fig-width: 8
+#| fig-cap: "Borgatti and Everett's Thinking Graph"
 #| fig-subcap: 
-#|   - "Borgatti and Everett's Thinking Graph"
-#|   - "An Automorphism of Borgatti and Everett's Thinking Graph"
-#| layout-ncol: 2
+#|   - "Original Graph"
+#|   - "An Automorphism of the Original Graph"
+#| layout-ncol: 1
 #| echo: false
    g <- make_empty_graph(10, directed = TRUE)
    V(g)$name <- LETTERS[1:10]
@@ -193,14 +195,14 @@ However, it is clear that nodes that have *completely disjoint* neighborhoods wo
    set.seed(123)
    plot(g, 
         vertex.size=12, vertex.frame.color="lightgray", 
-        layout = layout.fruchterman.reingold,
+        layout = layout.auto,
         vertex.label.cex = 1.5, edge.arrow.size = 1)
    h <- g
    V(h)$name <- c("J", "B", "H", "D", "E", "F", "G", "C", "I", "A")
    set.seed(123)
    plot(h, 
         vertex.size=12, vertex.frame.color="lightgray", 
-        layout = layout.fruchterman.reingold,
+        layout = layout.auto,
         vertex.label.cex = 1.5, edge.arrow.size = 1)
 ```
 
@@ -273,9 +275,15 @@ While automorphic equivalence is a terrible name coming from the depths of graph
 
 It is easy to see that nodes inside the set {A, C, J, H} pass this test in @fig-be-1. For instance, the graph in @fig-be-2 has all the same properties as @fig-be-1 even though now J is neighbors with B and D and A is neighbors with G and I. Such an evil twin graph is called an **automorphism** of the original graph.  
 
-So the basic problem is that `SimRank` (and any local similarity measure) is not sensitive to automorphic equivalence, and we need a measure that is. 
+Of course, this strict algebraic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be-1, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$) or they are not ($s_{ij} = 0$), with nothing in between. 
 
-Fortunately, such a measure exists and it's called `RoleSim` [@jin_etal14]. It can be seen as a generalization of `SimRank` with the difference being that rather than computing the similarity between $i$ and $j$ at iteration $t$ as equivalent to the *average* similarity of $i$ and $j$'s neighbors at iteration $t-1$, it instead computes the similarity between $i$ and $j$ at iteration $t$ as the *matching* between the most similar neighbor pairs at iteration $t-1$. Such a maximum matching is defined as finding top $k$ similarity scores between $i$ and $j$'s neighbors at $t-1$ (where $k$ is the minimum of the degrees of $i$ and $j$) and adding them up.  
+What we need instead is a metric of **automorphic similarity** that admits to gradations so that two nodes could be *more or less* automorphically similar, with the idea being that the more automorphically similar two nodes are the less disruption is there to the graph structure when they are exchanged, and with the Platonic ideal case being *no* disruption whatsoever for strictly automorphically equivalent nodes. 
+
+So the problem with a `SimRank` style measure is that it is not sensitive to automorphic similarity, as it is only sensitive to structural similarity, and we need a measure that is. 
+
+Fortunately, such a measure exists and it's called `RoleSim` [@jin_etal14]. It can be seen as a generalization of `SimRank` with the difference being that rather than computing the similarity between $i$ and $j$ at iteration $t$ as equivalent to the *average* similarity of $i$ and $j$'s neighbors at iteration $t-1$, it instead computes the similarity between $i$ and $j$ at iteration $t$ as the *matching* between the most similar neighbor pairs at iteration $t-1$. 
+
+Such a maximum matching is defined as finding top $k$ similarity scores between $i$ and $j$'s neighbors at $t-1$ (where $k$ is the minimum of the degrees of $i$ and $j$) and adding them up.  
 
 In formulese:
 
@@ -285,7 +293,9 @@ $$ {#eq-rolesim}
 
 Where $\beta$ is a parameter chosen by the researcher with the restriction that $0 \geq \beta \leq 1$. 
 
-Note that the sum of neighbor similarities in @eq-rolesim happens only among similarities in the matching set $M_{i, j}$. The idea of a matching set between two pairs of nodes is simple. Imagine a graph in which node A is connected to nodes ${B, C, D} and node H is connected to nodes {I, J, K, L}. Now imagine that the hypothetical matrix below is a running similarity matrix at some iteration $t$ between A's and H's neighbors:
+Note that the sum of neighbor similarities in @eq-rolesim happens only among similarities in the matching set $M_{i, j}$. The idea of a matching set between two pairs of nodes is simple. 
+
+Imagine a graph in which node A is connected to nodes {B, C, D} and node H is connected to nodes {I, J, K, L}. Now imagine that the hypothetical matrix below is a running similarity matrix at some iteration $t$ between A's and H's neighbors:
 
 ```{r}
 #| echo: false
@@ -296,7 +306,7 @@ Note that the sum of neighbor similarities in @eq-rolesim happens only among sim
    round(s, 2)
 ```
 
-A *maximal matching* then selects the minimum between the row and column dimensions, which in this case is the rows (either dimension works for a square matrix) and then finds the *maximum numbers* across that dimension of the matrix (the row maximum for each) and adds them up:
+A *maximal matching* selects the *maximum numbers* across the smallest dimension of the matrix (which in this case is the row dimension, as the matrix has three rows and four columns) and then adds them up. 
 
 ```{r}
    row.max <- apply(s, 1, max)
@@ -305,7 +315,7 @@ A *maximal matching* then selects the minimum between the row and column dimensi
    round(match.AH, 2)
 ```
 
-We can see that the row maximum in row one is 0.88 (the similarity between B and J), the row maximum in row two is 0.96 (the similarity between C and J) and the row maximum in row three is 0.55 (the similarity between D and K), so that the maximum matching for nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent to the numerator in the middle fraction of @eq-rolesim.  
+We can see that the maximum in row one is 0.88 (the similarity between B and J), the maximum in row two is 0.96 (the similarity between C and J) and the maximum in row three is 0.55 (the similarity between D and K). This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent to the numerator in the middle fraction of @eq-rolesim.  
 
 Because in a directed graph we have to worry about similarities between in and out neighbors, we modify @eq-rolesim like this:
 
@@ -313,12 +323,12 @@ $$
    s_{ij}(t) = \beta \frac{\sum_{(k,l) \in M^{out}_{i,j}} s_{kl}(t-1) + \sum_{(k,l) \in M^{in}_{i,j}} s_{kl}(t-1)}{max(d^{out}_i, d^{out}_j) + max(d^{in}_i, d^{in}_j)} + \left(1 - \beta\right)
 $$ {#eq-rolesimplus}
 
-Where $M^{out}_{ij}$ is the maximmatching set between $i$ and $j$'s out neighbors and $M^{in}_{ij}$ is the matching set between $i$ and $j$'s in-neighbors. This is the implementation of `RoleSim` found in @shao_etal19.
+Where $M^{out}_{ij}$ is the maximum matching set between $i$ and $j$'s out neighbors and $M^{in}_{ij}$ is the matching set between $i$ and $j$'s in-neighbors. This is the implementation of `RoleSim` found in @shao_etal19.
 
 Here's a modification of the `SimRank` function that does all of the above:
 
 ```{r}
-   RoleSim <- function(w, beta = 0.8) {
+   RoleSim <- function(w, beta = 0.5) {
       do <- rowSums(w) #outdegree vector
       di <- colSums(w) #indegree vector
       n <- nrow(w) #number of nodes in the graph
@@ -352,8 +362,8 @@ Here's a modification of the `SimRank` function that does all of the above:
                if (di[i] == 0 | di[j] == 0) {mu.i <- 0}
                if (do[i] == 0 | do[j] == 0) {mu.o <- 0}
                z[i,j] <- (beta * (mu.o + mu.i)/(max.do + max.di)) + (1-beta) #updating similarity matrix
-               } #end u for loop
-            } #end v for loop
+               } #end i for loop
+            } #end j for loop
          delta <- sum(abs(abs(z) - abs(z.o))) #difference between similarity matrices at t and t-1
          } #end while loop
       return(z) #return similarity matrix after convergence
@@ -372,14 +382,14 @@ And how we apply it to the Borgatti/Everett graph:
    plot(h.res)
 ```
 
-And we can see in @fig-rs that, indeed, the `RoleSim` algorithm groups nodes in terms of their automorphic similarity, and not their structural equivalence, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. Role problem solved!
+And we can see in @fig-rs that, indeed, the `RoleSim` algorithm groups nodes in terms of their automorphic similarity rather than their structural similarity, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. Role problem solved!
 
 ## CentSim
 As we noted, automorphically equivalent nodes in  a graph are completely exchangeable meaning that we can swap them without changing anything we can compute at the graph level. 
 
 The same goes for any quantity we can compute at the node level, which means that automorphically equivalent nodes have the property of being *graph-theoretically indistinguishable*. That means that they will have the same score on *any* centrality measure we could compute on them. 
 
-So another approach to finding automorphically equivalent sets of nodes in a graph is just to compute a bunch of node level quantities, such as centrality measures, and count nodes as similar if their centrality measures are similar. 
+So another approach to finding automorphically similar pairs of nodes in a graph is just to compute a bunch of node level quantities, such as centrality measures, and count nodes as similar if their centrality measures are similar. 
 
 @li_etal15 build on this observation to compute a role similarity measure called `CentSim` on each pair of nodes in the graph, by comparing their centrality scores across various measures. Li et al.'s [-@li_etal15] proposal is that the similarity between $i$ and $j$ is given by:
 
@@ -445,3 +455,21 @@ Can `CentSim` find the automorphically equivalent classes in @fig-be-1 that we a
 
 Indeed it does! As we can see in @fig-cs Nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
 
+Let us compare the clustering that we obtain in the *Pulp Fiction* network from a measure that is sensitive to automorphic similarity (like `RoleSim`) to the one we obtained using `SimRank`:
+
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+   g <- movie_559
+   V(g)$name <- str_to_title(V(g)$name)
+   V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+   g <- delete_vertices(g, degree(g) < 2) #deleting low degree vertices
+   A <- as.matrix(as_adjacency_matrix(g))
+   S <- RoleSim(A)
+   D <- as.dist(1-S)
+   h.res2 <- hclust(D, method = "ward.D") #hierarchical clustering
+   plot(h.res2)
+```
+
+We can see that the `RoleSim` partition is different from the one offered by `SimRank`. While the main clusters in the `SimRank` partition are organized by scene (e.g., all the characters in the diner scene appear together), the `RoleSim` partition actually organizes the characters according to more abstract roles. So the main characters {Jules, Vincent, Butch} form their own cluster, while {Marsellus, Mia, Pumpkin, Honey Bunny} are also assigned to a similarity cluster, despite not appearing in the same scenes. 

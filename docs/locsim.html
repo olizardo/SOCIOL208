@@ -354,7 +354,7 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./gensim.html" class="sidebar-item-text sidebar-link">Generalized Vertex Similarities</a>
+  <a href="./gensim.html" class="sidebar-item-text sidebar-link">Role Similarities</a>
   </div>
 </li>
       </ul>
@@ -530,6 +530,7 @@ div.csl-indent {
   <li><a href="#basic-ingredients-of-vertex-similarity-metrics" id="toc-basic-ingredients-of-vertex-similarity-metrics" class="nav-link active" data-scroll-target="#basic-ingredients-of-vertex-similarity-metrics">Basic Ingredients of Vertex Similarity Metrics</a></li>
   <li><a href="#normalized-similarity-metrics" id="toc-normalized-similarity-metrics" class="nav-link" data-scroll-target="#normalized-similarity-metrics">Normalized Similarity Metrics</a></li>
   <li><a href="#similarity-and-structural-equivalence" id="toc-similarity-and-structural-equivalence" class="nav-link" data-scroll-target="#similarity-and-structural-equivalence">Similarity and Structural Equivalence</a></li>
+  <li><a href="#local-vertex-similarities-in-directed-graphs" id="toc-local-vertex-similarities-in-directed-graphs" class="nav-link" data-scroll-target="#local-vertex-similarities-in-directed-graphs">Local Vertex Similarities in Directed Graphs</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/locsim.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
@@ -845,16 +846,16 @@ Morris        0.11   0.33</code></pre>
 <p>Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes.</p>
 <p>We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb15-2"><a href="#cb15-2"></a>      A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x))</span>
-<span id="cb15-3"><a href="#cb15-3"></a>      A.p <span class="ot">&lt;-</span> A <span class="sc">%*%</span> A </span>
-<span id="cb15-4"><a href="#cb15-4"></a>      A.q <span class="ot">&lt;-</span> A <span class="sc">%*%</span> (<span class="dv">1</span> <span class="sc">-</span> A) </span>
-<span id="cb15-5"><a href="#cb15-5"></a>      A.r <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">-</span> A) <span class="sc">%*%</span> A </span>
-<span id="cb15-6"><a href="#cb15-6"></a>      J <span class="ot">&lt;-</span> A.p <span class="sc">/</span> (A.p <span class="sc">+</span> A.q <span class="sc">+</span> A.r)</span>
-<span id="cb15-7"><a href="#cb15-7"></a>      C <span class="ot">&lt;-</span> A.p <span class="sc">/</span> (<span class="fu">sqrt</span>(A.p <span class="sc">+</span> A.q) <span class="sc">*</span> <span class="fu">sqrt</span>(A.p <span class="sc">+</span> A.r))</span>
-<span id="cb15-8"><a href="#cb15-8"></a>      D <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> A.p) <span class="sc">/</span> ((<span class="dv">2</span> <span class="sc">*</span> A.p) <span class="sc">+</span> A.q <span class="sc">+</span> A.r)</span>
-<span id="cb15-9"><a href="#cb15-9"></a>      L <span class="ot">&lt;-</span> A.p <span class="sc">/</span> ((A.p <span class="sc">+</span> A.q) <span class="sc">*</span> (A.p <span class="sc">+</span> A.r))</span>
-<span id="cb15-10"><a href="#cb15-10"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J =</span> J, <span class="at">C =</span> C, <span class="at">D =</span> D, <span class="at">L =</span> L))</span>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb15-2"><a href="#cb15-2"></a>      x <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(w))</span>
+<span id="cb15-3"><a href="#cb15-3"></a>      p <span class="ot">&lt;-</span> x <span class="sc">%*%</span> x </span>
+<span id="cb15-4"><a href="#cb15-4"></a>      q <span class="ot">&lt;-</span> x <span class="sc">%*%</span> (<span class="dv">1</span> <span class="sc">-</span> x) </span>
+<span id="cb15-5"><a href="#cb15-5"></a>      r <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">-</span> x) <span class="sc">%*%</span> x</span>
+<span id="cb15-6"><a href="#cb15-6"></a>      j <span class="ot">&lt;-</span> p <span class="sc">/</span> (p <span class="sc">+</span> q <span class="sc">+</span> r)</span>
+<span id="cb15-7"><a href="#cb15-7"></a>      c <span class="ot">&lt;-</span> p <span class="sc">/</span> (<span class="fu">sqrt</span>(p <span class="sc">+</span> q) <span class="sc">*</span> <span class="fu">sqrt</span>(p <span class="sc">+</span> r))</span>
+<span id="cb15-8"><a href="#cb15-8"></a>      d <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> p) <span class="sc">/</span> ((<span class="dv">2</span> <span class="sc">*</span> p) <span class="sc">+</span> q <span class="sc">+</span> r)</span>
+<span id="cb15-9"><a href="#cb15-9"></a>      l <span class="ot">&lt;-</span> p <span class="sc">/</span> ((p <span class="sc">+</span> q) <span class="sc">*</span> (p <span class="sc">+</span> r))</span>
+<span id="cb15-10"><a href="#cb15-10"></a>      <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J =</span> j, <span class="at">C =</span> c, <span class="at">D =</span> d, <span class="at">L =</span> l))</span>
 <span id="cb15-11"><a href="#cb15-11"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
@@ -949,6 +950,16 @@ I 1.00 0.33 0.33 0.75 0.75 0.75 1.00 0.25 0.00</code></pre>
 </div>
 </div>
 <p>This analysis puts <span class="math inline">\(\{\)</span> Barney, Betty, Fred, Lava, Mrs.&nbsp;Slate, Slate, Wilma <span class="math inline">\(\}\)</span> in the second block of equivalent actors (shown as the right-most cluster in the dendrogram). Which seems about right!</p>
+</section>
+<section id="local-vertex-similarities-in-directed-graphs" class="level2">
+<h2 class="anchored" data-anchor-id="local-vertex-similarities-in-directed-graphs">Local Vertex Similarities in Directed Graphs</h2>
+<p>As we have <a href="./basic-dir.html">seen before</a> when considering <strong>directed graphs</strong>, everything doubles. The same goes for vertex similarity measures.</p>
+<p>The basic problem is that when determining wether two vertices are similar or not in a directed graph, we need to choose between considering them similar if they have a lot of common <strong>in-neighbors</strong> (also referred to as <strong>co-citation</strong> in the information science literature) or whether they have lots of common <strong>out-neighbors</strong> (also referred to as <strong>coupling</strong> in the information science literature). This means that we will have a co-citation and a coupling version of each of the measures considered above.</p>
+<p>A solution to this issue is due to <span class="citation" data-cites="amsler72">Amsler (<a href="#ref-amsler72" role="doc-biblioref">1972</a>)</span>, who suggested that we combine both pieces of information in a generalized as follows:</p>
+<p><span id="eq-amsler"><span class="math display">\[
+s_{ij} = \lambda cc_{ij} + (1-\lambda) co_{ij}
+\tag{5}\]</span></span></p>
+<p>Where <span class="math inline">\(cc_{ij}\)</span> is the co-citation similarity between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>, <span class="math inline">\(co_{ij}\)</span> is the coupling similarity, and <span class="math inline">\(\lambda\)</span> is a researcher chosen parameter with the restriction <span class="math inline">\(0 \geq \lambda \leq 1\)</span>. When <span class="math inline">\(\lambda = 0\)</span> the similarity is driven only by co-citation, when <span class="math inline">\(\lambda = 1\)</span> the similarity is driven only by coupling, and when <span class="math inline">\(\lambda = 0.5\)</span> it is equally shared between the two.</p>
 
 
 
@@ -956,6 +967,9 @@ I 1.00 0.33 0.33 0.75 0.75 0.75 1.00 0.25 0.00</code></pre>
 
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+<div id="ref-amsler72" class="csl-entry" role="doc-biblioentry">
+Amsler, Robert A. 1972. <span>“Applications of Citation-Based Automatic Classification.”</span> University of Texas at Austin.
+</div>
 <div id="ref-kleinberg99" class="csl-entry" role="doc-biblioentry">
 Kleinberg, Jon M. 1999. <span>“Authoritative Sources in a Hyperlinked Environment.”</span> <em>Journal of the ACM (JACM)</em> 46 (5): 604–32.
 </div>

@@ -192,16 +192,16 @@ Which, once again, produces similar results to what we found before. Note, howev
 We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
 
 ```{r}
-   vertex.sim <- function(x) {
-      A <- as.matrix(as_adjacency_matrix(x))
-      A.p <- A %*% A 
-      A.q <- A %*% (1 - A) 
-      A.r <- (1 - A) %*% A 
-      J <- A.p / (A.p + A.q + A.r)
-      C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
-      D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
-      L <- A.p / ((A.p + A.q) * (A.p + A.r))
-      return(list(J = J, C = C, D = D, L = L))
+   vertex.sim <- function(w) {
+      x <- as.matrix(as_adjacency_matrix(w))
+      p <- x %*% x 
+      q <- x %*% (1 - x) 
+      r <- (1 - x) %*% x
+      j <- p / (p + q + r)
+      c <- p / (sqrt(p + q) * sqrt(p + r))
+      d <- (2 * p) / ((2 * p) + q + r)
+      l <- p / ((p + q) * (p + r))
+      return(list(J = j, C = c, D = d, L = l))
       }
 ```
 
@@ -288,5 +288,16 @@ We can then extract our blocks just like we did with the Euclidean distance hier
 
 This analysis puts $\{$ Barney, Betty,  Fred, Lava, Mrs. Slate, Slate, Wilma $\}$ in the second block of equivalent actors (shown as the right-most cluster in the dendrogram). Which seems about right!
 
+## Local Vertex Similarities in Directed Graphs
 
+As we have [seen before](basic-dir.qmd) when considering **directed graphs**, everything doubles. The same goes for vertex similarity measures. 
 
+The basic problem is that when determining wether two vertices are similar or not in a directed graph, we need to choose between considering them similar if they have a lot of common **in-neighbors** (also referred to as **co-citation** in the information science literature) or whether they have lots of common **out-neighbors** (also referred to as **coupling** in the information science literature). This means that we will have a co-citation and a coupling version of each of the measures considered above. 
+
+A solution to this issue is due to @amsler72, who suggested that we combine both pieces of information in a generalized as follows:
+
+$$
+s_{ij} = \lambda cc_{ij} + (1-\lambda) co_{ij}
+$$ {#eq-amsler}
+
+Where $cc_{ij}$ is the co-citation similarity between $i$ and $j$, $co_{ij}$ is the coupling similarity, and $\lambda$ is a researcher chosen parameter with the restriction $0 \geq \lambda \leq 1$. When $\lambda = 0$ the similarity is driven only by co-citation, when $\lambda = 1$ the similarity is driven only by coupling, and when $\lambda = 0.5$ it is equally shared between the two. 
