@@ -575,33 +575,50 @@ div.csl-indent {
 <p>A function that implements this idea looks like:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">alpha =</span> <span class="fl">0.8</span>, <span class="at">beta =</span> <span class="dv">1</span>) {</span>
-<span id="cb1-2"><a href="#cb1-2"></a>      d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree vector</span></span>
-<span id="cb1-3"><a href="#cb1-3"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w) <span class="co">#number of nodes in the graph</span></span>
-<span id="cb1-4"><a href="#cb1-4"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n) <span class="co">#diagonal matrix (nodes are maximally similar to themselves)</span></span>
-<span id="cb1-5"><a href="#cb1-5"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has row names</span></span>
-<span id="cb1-6"><a href="#cb1-6"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has column names</span></span>
-<span id="cb1-7"><a href="#cb1-7"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w) <span class="co">#naming similarity matrix rows</span></span>
-<span id="cb1-8"><a href="#cb1-8"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w) <span class="co">#naming similarity matrix columns</span></span>
-<span id="cb1-9"><a href="#cb1-9"></a>      onei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">1</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#out-neighbors list</span></span>
-<span id="cb1-10"><a href="#cb1-10"></a>      inei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">2</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#in-neighbors list</span></span>
-<span id="cb1-11"><a href="#cb1-11"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb1-12"><a href="#cb1-12"></a>      <span class="cf">while</span>(delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) { <span class="co">#run while delta is bigger than a tiny number</span></span>
-<span id="cb1-13"><a href="#cb1-13"></a>         z.o <span class="ot">&lt;-</span> z <span class="co">#old similarity matrix at t-1</span></span>
-<span id="cb1-14"><a href="#cb1-14"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb1-15"><a href="#cb1-15"></a>            <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb1-16"><a href="#cb1-16"></a>               <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>} <span class="co">#skip when i and j are the same</span></span>
-<span id="cb1-17"><a href="#cb1-17"></a>               a <span class="ot">&lt;-</span> alpha<span class="sc">/</span>(d[i] <span class="sc">*</span> d[j]) <span class="co">#degree weight</span></span>
-<span id="cb1-18"><a href="#cb1-18"></a>               b <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]])) <span class="co">#sum of similarity scores of in-neighbors in previous iteration</span></span>
-<span id="cb1-19"><a href="#cb1-19"></a>               c <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]])) <span class="co">#sum of similarity scores of out-neighbors in previous iteration</span></span>
-<span id="cb1-20"><a href="#cb1-20"></a>               z[i,j] <span class="ot">&lt;-</span> (beta <span class="sc">*</span> a<span class="sc">*</span>b) <span class="sc">+</span> ((<span class="dv">1</span><span class="sc">-</span>beta) <span class="sc">*</span> a<span class="sc">*</span>c) <span class="co">#updating current similarity matrix at t</span></span>
-<span id="cb1-21"><a href="#cb1-21"></a>               } <span class="co">#end j for loop</span></span>
-<span id="cb1-22"><a href="#cb1-22"></a>            } <span class="co">#end i for loop</span></span>
-<span id="cb1-23"><a href="#cb1-23"></a>            delta <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(z)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(z.o))) <span class="co">#difference between similarity matrices at t and t-1</span></span>
-<span id="cb1-24"><a href="#cb1-24"></a>            } <span class="co">#end while loop</span></span>
-<span id="cb1-25"><a href="#cb1-25"></a>      <span class="fu">return</span>(z) <span class="co">#return similarity matrix after convergence</span></span>
-<span id="cb1-26"><a href="#cb1-26"></a>      } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2"></a>      do <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#outdegree vector</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a>      di <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree vector</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w) <span class="co">#number of nodes in the graph</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n) <span class="co">#diagonal matrix (nodes are maximally similar to themselves)</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has row names</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has column names</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w) <span class="co">#naming similarity matrix rows</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w) <span class="co">#naming similarity matrix columns</span></span>
+<span id="cb1-10"><a href="#cb1-10"></a>      onei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">1</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#out-neighbors list</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a>      inei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">2</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#in-neighbors list</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb1-13"><a href="#cb1-13"></a>      <span class="cf">while</span>(delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) { <span class="co">#run while delta is bigger than a tiny number</span></span>
+<span id="cb1-14"><a href="#cb1-14"></a>         z.o <span class="ot">&lt;-</span> z <span class="co">#old similarity matrix at t-1</span></span>
+<span id="cb1-15"><a href="#cb1-15"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb1-16"><a href="#cb1-16"></a>            <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb1-17"><a href="#cb1-17"></a>               <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>} <span class="co">#skip when i and j are the same</span></span>
+<span id="cb1-18"><a href="#cb1-18"></a>               min.di <span class="ot">&lt;-</span> <span class="fu">min</span>(di[i], di[j])</span>
+<span id="cb1-19"><a href="#cb1-19"></a>               min.do <span class="ot">&lt;-</span> <span class="fu">min</span>(do[i], do[j])</span>
+<span id="cb1-20"><a href="#cb1-20"></a>               <span class="cf">if</span> (min.di <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#both nodes have in and out neighbors</span></span>
+<span id="cb1-21"><a href="#cb1-21"></a>                  a <span class="ot">&lt;-</span> alpha<span class="sc">/</span>(di[i] <span class="sc">*</span> di[j]) <span class="co">#indegree weight</span></span>
+<span id="cb1-22"><a href="#cb1-22"></a>                  b <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]])) <span class="co">#sum of similarity scores of in-neighbors in previous iteration</span></span>
+<span id="cb1-23"><a href="#cb1-23"></a>                  c <span class="ot">&lt;-</span> alpha<span class="sc">/</span>(do[i] <span class="sc">*</span> do[j]) <span class="co">#outdegree weight</span></span>
+<span id="cb1-24"><a href="#cb1-24"></a>                  d <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]])) <span class="co">#sum of similarity scores of out-neighbors in previous iteration</span></span>
+<span id="cb1-25"><a href="#cb1-25"></a>                  z[i,j] <span class="ot">&lt;-</span> beta<span class="sc">*</span>a<span class="sc">*</span>b <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>beta)<span class="sc">*</span>c<span class="sc">*</span>d <span class="co">#updating current similarity matrix at t</span></span>
+<span id="cb1-26"><a href="#cb1-26"></a>                  }</span>
+<span id="cb1-27"><a href="#cb1-27"></a>               <span class="cf">if</span> (min.di <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">==</span> <span class="dv">0</span>) { <span class="co">#one node has no out-neighbors</span></span>
+<span id="cb1-28"><a href="#cb1-28"></a>                  a <span class="ot">&lt;-</span> alpha<span class="sc">/</span>(di[i] <span class="sc">*</span> di[j]) <span class="co">#indegree weight</span></span>
+<span id="cb1-29"><a href="#cb1-29"></a>                  b <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]])) <span class="co">#sum of similarity scores of in-neighbors in previous iteration</span></span>
+<span id="cb1-30"><a href="#cb1-30"></a>                  z[i,j] <span class="ot">&lt;-</span> beta<span class="sc">*</span>a<span class="sc">*</span>b <span class="co">#updating current similarity matrix at t</span></span>
+<span id="cb1-31"><a href="#cb1-31"></a>                  }</span>
+<span id="cb1-32"><a href="#cb1-32"></a>               <span class="cf">if</span> (min.di <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#one node has no in-neighbors</span></span>
+<span id="cb1-33"><a href="#cb1-33"></a>                  c <span class="ot">&lt;-</span> alpha<span class="sc">/</span>(do[i] <span class="sc">*</span> do[j]) <span class="co">#outdegree weight</span></span>
+<span id="cb1-34"><a href="#cb1-34"></a>                  d <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]])) <span class="co">#sum of similarity scores of out-neighbors in previous iteration</span></span>
+<span id="cb1-35"><a href="#cb1-35"></a>                  z[i,j] <span class="ot">&lt;-</span> (<span class="dv">1</span><span class="sc">-</span>beta)<span class="sc">*</span>c<span class="sc">*</span>d <span class="co">#updating current similarity matrix at t</span></span>
+<span id="cb1-36"><a href="#cb1-36"></a>                  }</span>
+<span id="cb1-37"><a href="#cb1-37"></a>               } <span class="co">#end j for loop</span></span>
+<span id="cb1-38"><a href="#cb1-38"></a>            } <span class="co">#end i for loop</span></span>
+<span id="cb1-39"><a href="#cb1-39"></a>            delta <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(z)) <span class="sc">-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(z.o))) <span class="co">#difference between similarity matrices at t and t-1</span></span>
+<span id="cb1-40"><a href="#cb1-40"></a>            } <span class="co">#end while loop</span></span>
+<span id="cb1-41"><a href="#cb1-41"></a>      <span class="fu">return</span>(z) <span class="co">#return similarity matrix after convergence</span></span>
+<span id="cb1-42"><a href="#cb1-42"></a>      } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>This function takes an adjacency matrix as input (<code>w</code>) and returns a generalized similarity matrix between nodes (<code>z</code>) as output. It is an implementation of the generalized version of <code>SimRank</code> developed by <span class="citation" data-cites="zhao_etal09">Zhao, Han, and Sun (<a href="#ref-zhao_etal09" role="doc-biblioref">2009</a>)</span> called <code>P-Rank</code> which takes similarities between both in and out-neighbors into account (weighted by the <span class="math inline">\(\beta\)</span> parameter). Jeh and Widom’s <span class="citation" data-cites="jeh_widom02">(<a href="#ref-jeh_widom02" role="doc-biblioref">2002</a>)</span> original version of <code>SimRank</code> (which only takes into account in-neighbor similarities) is obtained when <span class="math inline">\(\beta = 1\)</span> (the default in the <code>SimRank</code> function above).</p>
+<p>This function takes an adjacency matrix as input (<code>w</code>) and returns a generalized similarity matrix between nodes (<code>z</code>) as output. Note that at the initial time step <span class="math inline">\(t = 0\)</span>, the similarity matrix <code>z</code> is initialized to the identity matrix <span class="math inline">\(\mathbf{I}_{n \times n}\)</span> of the same dimensions as the adjacency matrix, saying that initially all nodes are maximally similar to themselves (which makes sense).</p>
+<p>The above is an implementation of the generalized version of <code>SimRank</code> developed by <span class="citation" data-cites="zhao_etal09">Zhao, Han, and Sun (<a href="#ref-zhao_etal09" role="doc-biblioref">2009</a>)</span> called <code>P-Rank</code> which takes similarities between both in and out-neighbors into account (weighted by the <span class="math inline">\(\beta\)</span> parameter). Jeh and Widom’s <span class="citation" data-cites="jeh_widom02">(<a href="#ref-jeh_widom02" role="doc-biblioref">2002</a>)</span> original version of <code>SimRank</code> (which only takes into account in-neighbor similarities) is obtained when <span class="math inline">\(\beta = 1\)</span> (the default in the <code>SimRank</code> function above).</p>
 <p>Let us see how it works using the toy example that <span class="citation" data-cites="jeh_widom02">Jeh and Widom (<a href="#ref-jeh_widom02" role="doc-biblioref">2002, 540</a>, Figure 2)</span> used in their original paper, shown in <a href="#fig-jw">Figure&nbsp;1</a>, which is supposed to be a set of web pages in an university. There is a link from the main University page to that of the two professors, and a link from the professor to the student pages. In addition, “Student B” has a link on their webpage to the corresponding professor, and “Student A” has a link on their webpage to the main university page.</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -667,31 +684,7 @@ Ed Sullivan  0.17  0.47  0.17       0.27        1.00</code></pre>
 <p><img src="gensim_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="960"></p>
 </div>
 </div>
-<p>Note that the lowest levels of the dendrogram hierarchy some of the pairings make a lot of sense: The Gimp is most similar to Zed, Pumpkin is most similar to Honey Bunny (and other characters in the diner scene), Jimmie is most similar ot the Wolf, and Jules, Marsellus, Butch, Mia, and Vincent (the main characters) are most similar to one another.</p>
-<p>The plot suggests a division into five major node clusters. We can obtain that as follows using the <code>cutree</code> function:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   blocks  <span class="ot">&lt;-</span> <span class="fu">cutree</span>(h.res1, <span class="at">k =</span> <span class="dv">5</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>   blocks</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>          Brett           Buddy           Butch      Capt Koons     Ed Sullivan 
-              1               2               1               2               2 
-   English Dave        Fabienne      Fourth Man       Gawker #2     Honey Bunny 
-              2               1               3               1               4 
-         Jimmie            Jody           Jules           Lance         Manager 
-              3               2               1               2               4 
-      Marsellus          Marvin         Maynard             Mia          Mother 
-              1               1               5               1               2 
-         Patron      Pedestrian        Preacher         Pumpkin          Raquel 
-              4               1               2               4               3 
-          Roger Sportscaster #1        The Gimp        The Wolf         Vincent 
-              1               1               5               3               1 
-       Waitress         Winston           Woman       Young Man     Young Woman 
-              4               3               2               4               4 
-            Zed 
-              5 </code></pre>
-</div>
-</div>
-<p>We can see that the people in the diner scene all end up in the same cluster (4) which makes sense, as do Maynard, Zed, and the Gimp (5) which also makes sense. The main characters also end up in the same generalized similarity cluster (1), suggesting they play a similar role in the story.</p>
+<p>The plot suggests a division into five major node clusters. On the left we have the people in the diner scene (e.g., Pumpking and Honey Bunny), followed by a small cluster of people in the sex dungeon scene (Maynard, The Gimp, and Zed). The we have the main character cluster in the middle (Jules, Mia, Vincent, Butch, Marsellus), and then we have characters in the cleanup scene (Jimmie, The Wolf), followed by a cluster of smaller characters.</p>
 </section>
 <section id="does-simrank-escape-the-role-problem" class="level2">
 <h2 class="anchored" data-anchor-id="does-simrank-escape-the-role-problem">Does SimRank Escape the Role Problem?</h2>
@@ -701,7 +694,7 @@ Ed Sullivan  0.17  0.47  0.17       0.27        1.00</code></pre>
 <div id="fig-be" class="cell quarto-layout-panel">
 <figure class="figure">
 <div class="quarto-layout-row quarto-layout-valign-top">
-<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 100.0%;justify-content: center;">
+<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 50.0%;justify-content: center;">
 <div id="fig-be-1" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
 <p><img src="gensim_files/figure-html/fig-be-1.png" class="img-fluid figure-img" data-ref-parent="fig-be" width="768"></p>
@@ -709,9 +702,7 @@ Ed Sullivan  0.17  0.47  0.17       0.27        1.00</code></pre>
 </figure>
 </div>
 </div>
-</div>
-<div class="quarto-layout-row quarto-layout-valign-top">
-<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 100.0%;justify-content: center;">
+<div class="cell-output-display quarto-layout-cell quarto-layout-cell-subref" style="flex-basis: 50.0%;justify-content: center;">
 <div id="fig-be-2" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
 <p><img src="gensim_files/figure-html/fig-be-2.png" class="img-fluid figure-img" data-ref-parent="fig-be" width="768"></p>
@@ -726,32 +717,32 @@ Ed Sullivan  0.17  0.47  0.17       0.27        1.00</code></pre>
 <p>To build some intuition, consider the graph in <a href="#fig-be-1">Figure&nbsp;2 (a)</a>, which is a directed version of a toy example taken from <span class="citation" data-cites="borgatti_everett92">Borgatti and Everett (<a href="#ref-borgatti_everett92" role="doc-biblioref">1992, 14</a>, Figure 7 (a))</span>. Going by the standard of <em>structural equivalence</em> criterion (see <a href="./structequiv.html">here</a>) we would say that that set of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, {A, C}, and {E, F} because each pair in brackets has <em>identical</em> in and out neighborhoods.</p>
 <p>We can ascertain this by reviving our old Euclidean distance function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   d.euclid <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb10-2"><a href="#cb10-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w)</span>
-<span id="cb10-3"><a href="#cb10-3"></a>      z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n)</span>
-<span id="cb10-4"><a href="#cb10-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb10-5"><a href="#cb10-5"></a>         <span class="cf">for</span> (j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
-<span id="cb10-6"><a href="#cb10-6"></a>            <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>}</span>
-<span id="cb10-7"><a href="#cb10-7"></a>            d.ij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb10-8"><a href="#cb10-8"></a>            <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb10-9"><a href="#cb10-9"></a>               <span class="cf">if</span> (i <span class="sc">!=</span> k <span class="sc">&amp;</span> j <span class="sc">!=</span> k) {d.ij <span class="ot">&lt;-</span> d.ij <span class="sc">+</span> ((w[i,k] <span class="sc">-</span> w[j,k])<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> (w[k,i] <span class="sc">-</span> w[k,j])<span class="sc">^</span><span class="dv">2</span>)}</span>
-<span id="cb10-10"><a href="#cb10-10"></a>               }</span>
-<span id="cb10-11"><a href="#cb10-11"></a>            z[i,j] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
-<span id="cb10-12"><a href="#cb10-12"></a>            z[j,i] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
-<span id="cb10-13"><a href="#cb10-13"></a>            }</span>
-<span id="cb10-14"><a href="#cb10-14"></a>         }</span>
-<span id="cb10-15"><a href="#cb10-15"></a>   <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w)</span>
-<span id="cb10-16"><a href="#cb10-16"></a>   <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w)</span>
-<span id="cb10-17"><a href="#cb10-17"></a>   <span class="fu">return</span>(z)</span>
-<span id="cb10-18"><a href="#cb10-18"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   d.euclid <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb8-2"><a href="#cb8-2"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>      z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, n, n)</span>
+<span id="cb8-4"><a href="#cb8-4"></a>      <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb8-5"><a href="#cb8-5"></a>         <span class="cf">for</span> (j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
+<span id="cb8-6"><a href="#cb8-6"></a>            <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>}</span>
+<span id="cb8-7"><a href="#cb8-7"></a>            d.ij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb8-8"><a href="#cb8-8"></a>            <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb8-9"><a href="#cb8-9"></a>               <span class="cf">if</span> (i <span class="sc">!=</span> k <span class="sc">&amp;</span> j <span class="sc">!=</span> k) {d.ij <span class="ot">&lt;-</span> d.ij <span class="sc">+</span> ((w[i,k] <span class="sc">-</span> w[j,k])<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> (w[k,i] <span class="sc">-</span> w[k,j])<span class="sc">^</span><span class="dv">2</span>)}</span>
+<span id="cb8-10"><a href="#cb8-10"></a>               }</span>
+<span id="cb8-11"><a href="#cb8-11"></a>            z[i,j] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
+<span id="cb8-12"><a href="#cb8-12"></a>            z[j,i] <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(d.ij)</span>
+<span id="cb8-13"><a href="#cb8-13"></a>            }</span>
+<span id="cb8-14"><a href="#cb8-14"></a>         }</span>
+<span id="cb8-15"><a href="#cb8-15"></a>   <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w)</span>
+<span id="cb8-16"><a href="#cb8-16"></a>   <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w)</span>
+<span id="cb8-17"><a href="#cb8-17"></a>   <span class="fu">return</span>(z)</span>
+<span id="cb8-18"><a href="#cb8-18"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And then using it to cluster the nodes in the Borgatti-Everett graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb11-2"><a href="#cb11-2"></a>   E <span class="ot">&lt;-</span> <span class="fu">d.euclid</span>(A)</span>
-<span id="cb11-3"><a href="#cb11-3"></a>   E <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(E) <span class="co">#transforming E to a dist object</span></span>
-<span id="cb11-4"><a href="#cb11-4"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(E, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb11-5"><a href="#cb11-5"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb9-2"><a href="#cb9-2"></a>   E <span class="ot">&lt;-</span> <span class="fu">d.euclid</span>(A)</span>
+<span id="cb9-3"><a href="#cb9-3"></a>   E <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(E) <span class="co">#transforming E to a dist object</span></span>
+<span id="cb9-4"><a href="#cb9-4"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(E, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div id="fig-se" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -766,10 +757,10 @@ Ed Sullivan  0.17  0.47  0.17       0.27        1.00</code></pre>
 <p>However, standard approaches to structural equivalence like the Euclidean distance will not capture these higher level similarities, they will only capture the lower-level similarity based on local neighborhood overlap that the algorithms for structural equivalence are designed to extract.</p>
 <p>Can <code>SimRank</code> do better? Let’s see:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank</span>(A, <span class="at">beta =</span> <span class="fl">0.5</span>)</span>
-<span id="cb12-2"><a href="#cb12-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb12-3"><a href="#cb12-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb12-4"><a href="#cb12-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">SimRank</span>(A, <span class="at">beta =</span> <span class="fl">0.5</span>)</span>
+<span id="cb10-2"><a href="#cb10-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb10-3"><a href="#cb10-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb10-4"><a href="#cb10-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div id="fig-sr" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -808,14 +799,14 @@ D 0.41 0.05 0.55 0.45</code></pre>
 </div>
 <p>A <em>maximal matching</em> selects the <em>maximum numbers</em> across the smallest dimension of the matrix (which in this case is the row dimension, as the matrix has three rows and four columns) and then adds them up.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   row.max <span class="ot">&lt;-</span> <span class="fu">apply</span>(s, <span class="dv">1</span>, max)</span>
-<span id="cb14-2"><a href="#cb14-2"></a>   <span class="fu">round</span>(row.max, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>   row.max <span class="ot">&lt;-</span> <span class="fu">apply</span>(s, <span class="dv">1</span>, max)</span>
+<span id="cb12-2"><a href="#cb12-2"></a>   <span class="fu">round</span>(row.max, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   B    C    D 
 0.88 0.96 0.55 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   match.AH <span class="ot">&lt;-</span> <span class="fu">sum</span>(row.max)</span>
-<span id="cb16-2"><a href="#cb16-2"></a>   <span class="fu">round</span>(match.AH, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>   match.AH <span class="ot">&lt;-</span> <span class="fu">sum</span>(row.max)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>   <span class="fu">round</span>(match.AH, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 2.39</code></pre>
 </div>
@@ -828,53 +819,61 @@ D 0.41 0.05 0.55 0.45</code></pre>
 <p>Where <span class="math inline">\(M^{out}_{ij}\)</span> is the maximum matching set between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>’s out neighbors and <span class="math inline">\(M^{in}_{ij}\)</span> is the matching set between <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>’s in-neighbors. This is the implementation of <code>RoleSim</code> found in <span class="citation" data-cites="shao_etal19">Shao et al. (<a href="#ref-shao_etal19" role="doc-biblioref">2019</a>)</span>.</p>
 <p>Here’s a modification of the <code>SimRank</code> function that does all of the above:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   RoleSim <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">beta =</span> <span class="fl">0.5</span>) {</span>
-<span id="cb18-2"><a href="#cb18-2"></a>      do <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#outdegree vector</span></span>
-<span id="cb18-3"><a href="#cb18-3"></a>      di <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree vector</span></span>
-<span id="cb18-4"><a href="#cb18-4"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w) <span class="co">#number of nodes in the graph</span></span>
-<span id="cb18-5"><a href="#cb18-5"></a>      z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, n, n) <span class="co">#all ones matrix (nodes are maximally similar to themselves)</span></span>
-<span id="cb18-6"><a href="#cb18-6"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has row names</span></span>
-<span id="cb18-7"><a href="#cb18-7"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has column names</span></span>
-<span id="cb18-8"><a href="#cb18-8"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w) <span class="co">#naming similarity matrix rows</span></span>
-<span id="cb18-9"><a href="#cb18-9"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w) <span class="co">#naming similarity matrix columns</span></span>
-<span id="cb18-10"><a href="#cb18-10"></a>      onei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">1</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#out-neighbors list</span></span>
-<span id="cb18-11"><a href="#cb18-11"></a>      inei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">2</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#in-neighbors list</span></span>
-<span id="cb18-12"><a href="#cb18-12"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb18-13"><a href="#cb18-13"></a>      <span class="cf">while</span>(delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) { <span class="co">#run while delta is bigger than a tiny number</span></span>
-<span id="cb18-14"><a href="#cb18-14"></a>         z.o <span class="ot">&lt;-</span> z <span class="co">#old similarity matrix at t-1</span></span>
-<span id="cb18-15"><a href="#cb18-15"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb18-16"><a href="#cb18-16"></a>            <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb18-17"><a href="#cb18-17"></a>               <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>} <span class="co">#skip if i = j</span></span>
-<span id="cb18-18"><a href="#cb18-18"></a>               min.di <span class="ot">&lt;-</span> <span class="fu">min</span>(di[i], di[j])</span>
-<span id="cb18-19"><a href="#cb18-19"></a>               max.di <span class="ot">&lt;-</span> <span class="fu">max</span>(di[i], di[j])</span>
-<span id="cb18-20"><a href="#cb18-20"></a>               min.do <span class="ot">&lt;-</span> <span class="fu">min</span>(do[i], do[j])</span>
-<span id="cb18-21"><a href="#cb18-21"></a>               max.do <span class="ot">&lt;-</span> <span class="fu">max</span>(do[i], do[j])</span>
-<span id="cb18-22"><a href="#cb18-22"></a>               <span class="cf">if</span> (di[i] <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> di[j] <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb18-23"><a href="#cb18-23"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's in-neighbors</span></span>
-<span id="cb18-24"><a href="#cb18-24"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(di[i], di[j]) <span class="sc">==</span> min.di)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
-<span id="cb18-25"><a href="#cb18-25"></a>                  mu.i <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum in-neighbor similarity matching sum</span></span>
-<span id="cb18-26"><a href="#cb18-26"></a>                  }</span>
-<span id="cb18-27"><a href="#cb18-27"></a>               <span class="cf">if</span> (do[i] <span class="sc">&gt;</span> <span class="dv">0</span> <span class="sc">&amp;</span> do[j] <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
-<span id="cb18-28"><a href="#cb18-28"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's out-neighbors</span></span>
-<span id="cb18-29"><a href="#cb18-29"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(do[i], do[j]) <span class="sc">==</span> min.do)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
-<span id="cb18-30"><a href="#cb18-30"></a>                  mu.o <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum out-neighbor similarity matching sum</span></span>
-<span id="cb18-31"><a href="#cb18-31"></a>                  }</span>
-<span id="cb18-32"><a href="#cb18-32"></a>               <span class="cf">if</span> (di[i] <span class="sc">==</span> <span class="dv">0</span> <span class="sc">|</span> di[j] <span class="sc">==</span> <span class="dv">0</span>) {mu.i <span class="ot">&lt;-</span> <span class="dv">0</span>}</span>
-<span id="cb18-33"><a href="#cb18-33"></a>               <span class="cf">if</span> (do[i] <span class="sc">==</span> <span class="dv">0</span> <span class="sc">|</span> do[j] <span class="sc">==</span> <span class="dv">0</span>) {mu.o <span class="ot">&lt;-</span> <span class="dv">0</span>}</span>
-<span id="cb18-34"><a href="#cb18-34"></a>               z[i,j] <span class="ot">&lt;-</span> (beta <span class="sc">*</span> (mu.o <span class="sc">+</span> mu.i)<span class="sc">/</span>(max.do <span class="sc">+</span> max.di)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>beta) <span class="co">#updating similarity matrix</span></span>
-<span id="cb18-35"><a href="#cb18-35"></a>               } <span class="co">#end i for loop</span></span>
-<span id="cb18-36"><a href="#cb18-36"></a>            } <span class="co">#end j for loop</span></span>
-<span id="cb18-37"><a href="#cb18-37"></a>         delta <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(<span class="fu">abs</span>(z) <span class="sc">-</span> <span class="fu">abs</span>(z.o))) <span class="co">#difference between similarity matrices at t and t-1</span></span>
-<span id="cb18-38"><a href="#cb18-38"></a>         } <span class="co">#end while loop</span></span>
-<span id="cb18-39"><a href="#cb18-39"></a>      <span class="fu">return</span>(z) <span class="co">#return similarity matrix after convergence</span></span>
-<span id="cb18-40"><a href="#cb18-40"></a>      } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   RoleSim <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">beta =</span> <span class="fl">0.5</span>) {</span>
+<span id="cb16-2"><a href="#cb16-2"></a>      do <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(w) <span class="co">#outdegree vector</span></span>
+<span id="cb16-3"><a href="#cb16-3"></a>      di <span class="ot">&lt;-</span> <span class="fu">colSums</span>(w) <span class="co">#indegree vector</span></span>
+<span id="cb16-4"><a href="#cb16-4"></a>      n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(w) <span class="co">#number of nodes in the graph</span></span>
+<span id="cb16-5"><a href="#cb16-5"></a>      z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, n, n) <span class="co">#all ones matrix (nodes are maximally similar to themselves)</span></span>
+<span id="cb16-6"><a href="#cb16-6"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">rownames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">rownames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has row names</span></span>
+<span id="cb16-7"><a href="#cb16-7"></a>      <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">colnames</span>(w)) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">colnames</span>(w) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(w)} <span class="co">#checking if matrix has column names</span></span>
+<span id="cb16-8"><a href="#cb16-8"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(w) <span class="co">#naming similarity matrix rows</span></span>
+<span id="cb16-9"><a href="#cb16-9"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(w) <span class="co">#naming similarity matrix columns</span></span>
+<span id="cb16-10"><a href="#cb16-10"></a>      onei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">1</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#out-neighbors list</span></span>
+<span id="cb16-11"><a href="#cb16-11"></a>      inei <span class="ot">&lt;-</span> <span class="fu">apply</span>(w, <span class="dv">2</span>, <span class="cf">function</span>(x){<span class="fu">which</span>(x <span class="sc">==</span> <span class="dv">1</span>)}, <span class="at">simplify =</span> <span class="cn">FALSE</span>) <span class="co">#in-neighbors list</span></span>
+<span id="cb16-12"><a href="#cb16-12"></a>      delta <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb16-13"><a href="#cb16-13"></a>      <span class="cf">while</span>(delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) { <span class="co">#run while delta is bigger than a tiny number</span></span>
+<span id="cb16-14"><a href="#cb16-14"></a>         z.o <span class="ot">&lt;-</span> z <span class="co">#old similarity matrix at t-1</span></span>
+<span id="cb16-15"><a href="#cb16-15"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb16-16"><a href="#cb16-16"></a>            <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb16-17"><a href="#cb16-17"></a>               <span class="cf">if</span> (i <span class="sc">==</span> j) {<span class="cf">next</span>} <span class="co">#skip if i = j</span></span>
+<span id="cb16-18"><a href="#cb16-18"></a>               min.di <span class="ot">&lt;-</span> <span class="fu">min</span>(di[i], di[j])</span>
+<span id="cb16-19"><a href="#cb16-19"></a>               max.di <span class="ot">&lt;-</span> <span class="fu">max</span>(di[i], di[j])</span>
+<span id="cb16-20"><a href="#cb16-20"></a>               min.do <span class="ot">&lt;-</span> <span class="fu">min</span>(do[i], do[j])</span>
+<span id="cb16-21"><a href="#cb16-21"></a>               max.do <span class="ot">&lt;-</span> <span class="fu">max</span>(do[i], do[j])</span>
+<span id="cb16-22"><a href="#cb16-22"></a>               <span class="cf">if</span> (min.di <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#both nodes have in and out-neighbors</span></span>
+<span id="cb16-23"><a href="#cb16-23"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's in-neighbors</span></span>
+<span id="cb16-24"><a href="#cb16-24"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(di[i], di[j]) <span class="sc">==</span> min.di)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
+<span id="cb16-25"><a href="#cb16-25"></a>                  mu.i <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum in-neighbor similarity matching sum</span></span>
+<span id="cb16-26"><a href="#cb16-26"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's out-neighbors</span></span>
+<span id="cb16-27"><a href="#cb16-27"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(do[i], do[j]) <span class="sc">==</span> min.do)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
+<span id="cb16-28"><a href="#cb16-28"></a>                  mu.o <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum out-neighbor similarity matching sum</span></span>
+<span id="cb16-29"><a href="#cb16-29"></a>                  z[i,j] <span class="ot">&lt;-</span> (beta <span class="sc">*</span> (mu.o <span class="sc">+</span> mu.i)<span class="sc">/</span>(max.do <span class="sc">+</span> max.di)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>beta) <span class="co">#updating similarity matrix</span></span>
+<span id="cb16-30"><a href="#cb16-30"></a>                  }</span>
+<span id="cb16-31"><a href="#cb16-31"></a>               <span class="cf">if</span> (min.di <span class="sc">!=</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">==</span> <span class="dv">0</span>) { <span class="co">#one node has no out-neighbors</span></span>
+<span id="cb16-32"><a href="#cb16-32"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[inei[[i]], inei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's in-neighbors</span></span>
+<span id="cb16-33"><a href="#cb16-33"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(di[i], di[j]) <span class="sc">==</span> min.di)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
+<span id="cb16-34"><a href="#cb16-34"></a>                  mu.i <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum in-neighbor similarity matching sum</span></span>
+<span id="cb16-35"><a href="#cb16-35"></a>                  z[i,j] <span class="ot">&lt;-</span> (beta <span class="sc">*</span> (mu.i<span class="sc">/</span>max.di)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>beta) <span class="co">#updating similarity matrix</span></span>
+<span id="cb16-36"><a href="#cb16-36"></a>                  }</span>
+<span id="cb16-37"><a href="#cb16-37"></a>               <span class="cf">if</span> (min.di <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> min.do <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#one node has no in-neighbors</span></span>
+<span id="cb16-38"><a href="#cb16-38"></a>                  k <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(z.o[onei[[i]], onei[[j]]]) <span class="co">#creating sub-matrix of similarities between i and j's out-neighbors</span></span>
+<span id="cb16-39"><a href="#cb16-39"></a>                  d <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">which</span>(<span class="fu">c</span>(do[i], do[j]) <span class="sc">==</span> min.do)[<span class="dv">1</span>]) <span class="co">#selecting minimum of rows or columns of k</span></span>
+<span id="cb16-40"><a href="#cb16-40"></a>                  mu.o <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">apply</span>(k, d, max)) <span class="co">#maximum out-neighbor similarity matching sum</span></span>
+<span id="cb16-41"><a href="#cb16-41"></a>                  z[i,j] <span class="ot">&lt;-</span> (beta <span class="sc">*</span> (mu.o<span class="sc">/</span>max.do)) <span class="sc">+</span> (<span class="dv">1</span><span class="sc">-</span>beta) <span class="co">#updating similarity matrix</span></span>
+<span id="cb16-42"><a href="#cb16-42"></a>                  }</span>
+<span id="cb16-43"><a href="#cb16-43"></a>               } <span class="co">#end i for loop</span></span>
+<span id="cb16-44"><a href="#cb16-44"></a>            } <span class="co">#end j for loop</span></span>
+<span id="cb16-45"><a href="#cb16-45"></a>         delta <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">abs</span>(<span class="fu">abs</span>(z) <span class="sc">-</span> <span class="fu">abs</span>(z.o))) <span class="co">#difference between similarity matrices at t and t-1</span></span>
+<span id="cb16-46"><a href="#cb16-46"></a>         } <span class="co">#end while loop</span></span>
+<span id="cb16-47"><a href="#cb16-47"></a>      <span class="fu">return</span>(z) <span class="co">#return similarity matrix after convergence</span></span>
+<span id="cb16-48"><a href="#cb16-48"></a>      } <span class="co">#end function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And how we apply it to the Borgatti/Everett graph:</p>
+<p>And now we apply it to the Borgatti/Everett graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
-<span id="cb19-2"><a href="#cb19-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb19-3"><a href="#cb19-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb19-4"><a href="#cb19-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
+<span id="cb17-2"><a href="#cb17-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb17-3"><a href="#cb17-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb17-4"><a href="#cb17-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div id="fig-rs" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -903,41 +902,41 @@ s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
 <p>So the idea is to compute a bunch of different centrality scores on each node and the compute the average ratio between the minimum and the maximum scores for each pair.</p>
 <p>Here’s a function that does that, using degree, closeness, betweenness and eigenvector centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   cent.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb20-2"><a href="#cb20-2"></a>      <span class="fu">library</span>(igraph)</span>
-<span id="cb20-3"><a href="#cb20-3"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">degree</span>(x)</span>
-<span id="cb20-4"><a href="#cb20-4"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(x)</span>
-<span id="cb20-5"><a href="#cb20-5"></a>      c3 <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(x)</span>
-<span id="cb20-6"><a href="#cb20-6"></a>      c4 <span class="ot">&lt;-</span> <span class="fu">eigen_centrality</span>(x)<span class="sc">$</span>vector</span>
-<span id="cb20-7"><a href="#cb20-7"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(x)</span>
-<span id="cb20-8"><a href="#cb20-8"></a>      min.max <span class="ot">&lt;-</span> <span class="cf">function</span>(g, h) {</span>
-<span id="cb20-9"><a href="#cb20-9"></a>         <span class="cf">if</span> (<span class="fu">max</span>(g, h) <span class="sc">!=</span> <span class="dv">0</span>) {r <span class="ot">&lt;-</span> <span class="fu">min</span>(g, h)<span class="sc">/</span><span class="fu">max</span>(g, h)}</span>
-<span id="cb20-10"><a href="#cb20-10"></a>         <span class="cf">else</span> {r <span class="ot">&lt;-</span> <span class="dv">1</span>}</span>
-<span id="cb20-11"><a href="#cb20-11"></a>         <span class="fu">return</span>(r)</span>
-<span id="cb20-12"><a href="#cb20-12"></a>         }</span>
-<span id="cb20-13"><a href="#cb20-13"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
-<span id="cb20-14"><a href="#cb20-14"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
-<span id="cb20-15"><a href="#cb20-15"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
-<span id="cb20-16"><a href="#cb20-16"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb20-17"><a href="#cb20-17"></a>            <span class="cf">for</span>(j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
-<span id="cb20-18"><a href="#cb20-18"></a>               w1 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c1[i], c1[j])</span>
-<span id="cb20-19"><a href="#cb20-19"></a>               w2 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c2[i], c2[j])</span>
-<span id="cb20-20"><a href="#cb20-20"></a>               w3 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c3[i], c3[j])</span>
-<span id="cb20-21"><a href="#cb20-21"></a>               w4 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c4[i], c4[j])</span>
-<span id="cb20-22"><a href="#cb20-22"></a>               z[i,j] <span class="ot">&lt;-</span> (w1 <span class="sc">+</span> w2 <span class="sc">+</span> w3 <span class="sc">+</span> w4)<span class="sc">/</span><span class="dv">4</span></span>
-<span id="cb20-23"><a href="#cb20-23"></a>            }</span>
-<span id="cb20-24"><a href="#cb20-24"></a>         }</span>
-<span id="cb20-25"><a href="#cb20-25"></a>      z[<span class="fu">lower.tri</span>(z)] <span class="ot">&lt;-</span> <span class="fu">t</span>(z)[<span class="fu">lower.tri</span>(z)] <span class="co">#copying upper triangle into lower triangle</span></span>
-<span id="cb20-26"><a href="#cb20-26"></a>      <span class="fu">return</span>(z)</span>
-<span id="cb20-27"><a href="#cb20-27"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   cent.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb18-2"><a href="#cb18-2"></a>      <span class="fu">library</span>(igraph)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">degree</span>(x)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(x)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>      c3 <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(x)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>      c4 <span class="ot">&lt;-</span> <span class="fu">eigen_centrality</span>(x)<span class="sc">$</span>vector</span>
+<span id="cb18-7"><a href="#cb18-7"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(x)</span>
+<span id="cb18-8"><a href="#cb18-8"></a>      min.max <span class="ot">&lt;-</span> <span class="cf">function</span>(g, h) {</span>
+<span id="cb18-9"><a href="#cb18-9"></a>         <span class="cf">if</span> (<span class="fu">max</span>(g, h) <span class="sc">!=</span> <span class="dv">0</span>) {r <span class="ot">&lt;-</span> <span class="fu">min</span>(g, h)<span class="sc">/</span><span class="fu">max</span>(g, h)}</span>
+<span id="cb18-10"><a href="#cb18-10"></a>         <span class="cf">else</span> {r <span class="ot">&lt;-</span> <span class="dv">1</span>}</span>
+<span id="cb18-11"><a href="#cb18-11"></a>         <span class="fu">return</span>(r)</span>
+<span id="cb18-12"><a href="#cb18-12"></a>         }</span>
+<span id="cb18-13"><a href="#cb18-13"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb18-14"><a href="#cb18-14"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
+<span id="cb18-15"><a href="#cb18-15"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
+<span id="cb18-16"><a href="#cb18-16"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb18-17"><a href="#cb18-17"></a>            <span class="cf">for</span>(j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
+<span id="cb18-18"><a href="#cb18-18"></a>               w1 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c1[i], c1[j])</span>
+<span id="cb18-19"><a href="#cb18-19"></a>               w2 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c2[i], c2[j])</span>
+<span id="cb18-20"><a href="#cb18-20"></a>               w3 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c3[i], c3[j])</span>
+<span id="cb18-21"><a href="#cb18-21"></a>               w4 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c4[i], c4[j])</span>
+<span id="cb18-22"><a href="#cb18-22"></a>               z[i,j] <span class="ot">&lt;-</span> (w1 <span class="sc">+</span> w2 <span class="sc">+</span> w3 <span class="sc">+</span> w4)<span class="sc">/</span><span class="dv">4</span></span>
+<span id="cb18-23"><a href="#cb18-23"></a>            }</span>
+<span id="cb18-24"><a href="#cb18-24"></a>         }</span>
+<span id="cb18-25"><a href="#cb18-25"></a>      z[<span class="fu">lower.tri</span>(z)] <span class="ot">&lt;-</span> <span class="fu">t</span>(z)[<span class="fu">lower.tri</span>(z)] <span class="co">#copying upper triangle into lower triangle</span></span>
+<span id="cb18-26"><a href="#cb18-26"></a>      <span class="fu">return</span>(z)</span>
+<span id="cb18-27"><a href="#cb18-27"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>cent.sim</code> function takes an igraph graph object as input and returns a similarity matrix <code>z</code> as output.</p>
 <p>Can <code>CentSim</code> find the automorphically equivalent classes in <a href="#fig-be-1">Figure&nbsp;2 (a)</a> that we are looking for? Let’s find out:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">cent.sim</span>(g)</span>
-<span id="cb21-2"><a href="#cb21-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb21-3"><a href="#cb21-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb21-4"><a href="#cb21-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">cent.sim</span>(g)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb19-3"><a href="#cb19-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb19-4"><a href="#cb19-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div id="fig-cs" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -950,17 +949,17 @@ s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
 <p>Indeed it does! As we can see in <a href="#fig-cs">Figure&nbsp;6</a> Nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.</p>
 <p>Let us compare the clustering that we obtain in the <em>Pulp Fiction</em> network from a measure that is sensitive to automorphic similarity (like <code>RoleSim</code>) to the one we obtained using <code>SimRank</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   g <span class="ot">&lt;-</span> movie_559</span>
-<span id="cb22-2"><a href="#cb22-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
-<span id="cb22-3"><a href="#cb22-3"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
-<span id="cb22-4"><a href="#cb22-4"></a>   g <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g, <span class="fu">degree</span>(g) <span class="sc">&lt;</span> <span class="dv">2</span>) <span class="co">#deleting low degree vertices</span></span>
-<span id="cb22-5"><a href="#cb22-5"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb22-6"><a href="#cb22-6"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
-<span id="cb22-7"><a href="#cb22-7"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb22-8"><a href="#cb22-8"></a>   h.res2 <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb22-9"><a href="#cb22-9"></a>   <span class="fu">plot</span>(h.res2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   g <span class="ot">&lt;-</span> movie_559</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
+<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
+<span id="cb20-4"><a href="#cb20-4"></a>   g <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g, <span class="fu">degree</span>(g) <span class="sc">&lt;</span> <span class="dv">2</span>) <span class="co">#deleting low degree vertices</span></span>
+<span id="cb20-5"><a href="#cb20-5"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb20-6"><a href="#cb20-6"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
+<span id="cb20-7"><a href="#cb20-7"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb20-8"><a href="#cb20-8"></a>   h.res2 <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb20-9"><a href="#cb20-9"></a>   <span class="fu">plot</span>(h.res2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="gensim_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="960"></p>
+<p><img src="gensim_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="960"></p>
 </div>
 </div>
 <p>We can see that the <code>RoleSim</code> partition is different from the one offered by <code>SimRank</code>. While the main clusters in the <code>SimRank</code> partition are organized by scene (e.g., all the characters in the diner scene appear together), the <code>RoleSim</code> partition actually organizes the characters according to more abstract roles. So the main characters {Jules, Vincent, Butch} form their own cluster, while {Marsellus, Mia, Pumpkin, Honey Bunny} are also assigned to a similarity cluster, despite not appearing in the same scenes.</p>

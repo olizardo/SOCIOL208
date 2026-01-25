@@ -42,7 +42,8 @@ A function that implements this idea looks like:
 
 ```{r}
    SimRank <- function(w, alpha = 0.8, beta = 1) {
-      d <- colSums(w) #indegree vector
+      do <- rowSums(w) #outdegree vector
+      di <- colSums(w) #indegree vector
       n <- nrow(w) #number of nodes in the graph
       z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
       if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
@@ -57,10 +58,25 @@ A function that implements this idea looks like:
          for(i in 1:n) {
             for(j in 1:n) {
                if (i == j) {next} #skip when i and j are the same
-               a <- alpha/(d[i] * d[j]) #degree weight
-               b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
-               c <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
-               z[i,j] <- (beta * a*b) + ((1-beta) * a*c) #updating current similarity matrix at t
+               min.di <- min(di[i], di[j])
+               min.do <- min(do[i], do[j])
+               if (min.di != 0 & min.do != 0) { #both nodes have in and out neighbors
+                  a <- alpha/(di[i] * di[j]) #indegree weight
+                  b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
+                  c <- alpha/(do[i] * do[j]) #outdegree weight
+                  d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
+                  z[i,j] <- beta*a*b + (1-beta)*c*d #updating current similarity matrix at t
+                  }
+               if (min.di != 0 & min.do == 0) { #one node has no out-neighbors
+                  a <- alpha/(di[i] * di[j]) #indegree weight
+                  b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
+                  z[i,j] <- beta*a*b #updating current similarity matrix at t
+                  }
+               if (min.di == 0 & min.do != 0) { #one node has no in-neighbors
+                  c <- alpha/(do[i] * do[j]) #outdegree weight
+                  d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
+                  z[i,j] <- (1-beta)*c*d #updating current similarity matrix at t
+                  }
                } #end j for loop
             } #end i for loop
             delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
@@ -69,7 +85,9 @@ A function that implements this idea looks like:
       } #end function
 ```
 
-This function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output. It is an implementation of the generalized version of `SimRank` developed by @zhao_etal09 called `P-Rank` which takes similarities between both in and out-neighbors into account (weighted by the $\beta$ parameter). Jeh and Widom's [-@jeh_widom02] original version of `SimRank` (which only takes into account in-neighbor similarities) is obtained when $\beta = 1$ (the default in the `SimRank` function above).
+This function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output. Note that at the initial time step $t = 0$, the similarity matrix `z` is initialized to the identity matrix $\mathbf{I}_{n \times n}$ of the same dimensions as the adjacency matrix, saying that initially all nodes are maximally similar to themselves (which makes sense).
+
+The above is an implementation of the generalized version of `SimRank` developed by @zhao_etal09 called `P-Rank` which takes similarities between both in and out-neighbors into account (weighted by the $\beta$ parameter). Jeh and Widom's [-@jeh_widom02] original version of `SimRank` (which only takes into account in-neighbor similarities) is obtained when $\beta = 1$ (the default in the `SimRank` function above).
 
 Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in @fig-jw, which is supposed to be a set of web pages in an university. There is a link from the main University page to that of the two professors, and a link from the professor to the student pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link on their webpage to the main university page. 
 
@@ -139,16 +157,7 @@ We can transform the generalized similarities to distances and plot:
    plot(h.res1)
 ```
 
-Note that the lowest levels of the dendrogram hierarchy some of the pairings make a lot of sense: The Gimp is most similar to Zed, Pumpkin is most similar to Honey Bunny (and other characters in the diner scene), Jimmie is most similar ot the Wolf, and Jules, Marsellus, Butch, Mia, and Vincent (the main characters) are most similar to one another. 
-
-The plot suggests a division into five major node clusters. We can obtain that as follows using the `cutree` function:
-
-```{r}
-   blocks  <- cutree(h.res1, k = 5)
-   blocks
-```
-
-We can see that the people in the diner scene all end up in the same cluster (4) which makes sense, as do Maynard, Zed, and the Gimp (5) which also makes sense. The main characters also end up in the same generalized similarity cluster (1), suggesting they play a similar role in the story. 
+The plot suggests a division into five major node clusters. On the left we have the people in the diner scene (e.g., Pumpking and Honey Bunny), followed by a small cluster of people in the sex dungeon scene (Maynard, The Gimp, and Zed). The we have the main character cluster in the middle (Jules, Mia, Vincent, Butch, Marsellus), and then we have characters in the cleanup scene (Jimmie, The Wolf), followed by a cluster of smaller characters. 
 
 ## Does SimRank Escape the Role Problem?
 
@@ -166,7 +175,7 @@ However, it is clear that nodes that have *completely disjoint* neighborhoods wo
 #| fig-subcap: 
 #|   - "Original Graph"
 #|   - "An Automorphism of the Original Graph"
-#| layout-ncol: 1
+#| layout-ncol: 2
 #| echo: false
    g <- make_empty_graph(10, directed = TRUE)
    V(g)$name <- LETTERS[1:10]
@@ -275,7 +284,7 @@ While automorphic equivalence is a terrible name coming from the depths of graph
 
 It is easy to see that nodes inside the set {A, C, J, H} pass this test in @fig-be-1. For instance, the graph in @fig-be-2 has all the same properties as @fig-be-1 even though now J is neighbors with B and D and A is neighbors with G and I. Such an evil twin graph is called an **automorphism** of the original graph.  
 
-Of course, this strict algebraic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be-1, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$) or they are not ($s_{ij} = 0$), with nothing in between. 
+Of course, this strict graph theoretic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be-1, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$) or they are not ($s_{ij} = 0$), with nothing in between. 
 
 What we need instead is a metric of **automorphic similarity** that admits to gradations so that two nodes could be *more or less* automorphically similar, with the idea being that the more automorphically similar two nodes are the less disruption is there to the graph structure when they are exchanged, and with the Platonic ideal case being *no* disruption whatsoever for strictly automorphically equivalent nodes. 
 
@@ -315,7 +324,9 @@ A *maximal matching* selects the *maximum numbers* across the smallest dimension
    round(match.AH, 2)
 ```
 
-We can see that the maximum in row one is 0.88 (the similarity between B and J), the maximum in row two is 0.96 (the similarity between C and J) and the maximum in row three is 0.55 (the similarity between D and K). This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent to the numerator in the middle fraction of @eq-rolesim.  
+We can see that the maximum in row one, corresponding to node B is 0.88 (the similarity between B and J), the maximum in row two, corresponding to node C is 0.96 (the similarity between C and J) and the maximum in row three corresponding to node D is 0.55 (the similarity between D and K). 
+
+This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent to the numerator in the fraction of @eq-rolesim.  
 
 Because in a directed graph we have to worry about similarities between in and out neighbors, we modify @eq-rolesim like this:
 
@@ -345,23 +356,31 @@ Here's a modification of the `SimRank` function that does all of the above:
          for(i in 1:n) {
             for(j in 1:n) {
                if (i == j) {next} #skip if i = j
-               min.di <- min(di[i], di[j])
-               max.di <- max(di[i], di[j])
-               min.do <- min(do[i], do[j])
-               max.do <- max(do[i], do[j])
-               if (di[i] > 0 & di[j] > 0) {
+               min.di <- min(di[i], di[j]) #minimum indegree between i an j
+               max.di <- max(di[i], di[j]) #maximum indegree between i an j
+               min.do <- min(do[i], do[j]) #minimum outdegree between i an j
+               max.do <- max(do[i], do[j]) #maximum outdegree between i an j
+               if (min.di != 0 & min.do != 0) { #both nodes have in and out-neighbors
                   k <- as.matrix(z.o[inei[[i]], inei[[j]]]) #creating sub-matrix of similarities between i and j's in-neighbors
                   d <- as.numeric(which(c(di[i], di[j]) == min.di)[1]) #selecting minimum of rows or columns of k
                   mu.i <- sum(apply(k, d, max)) #maximum in-neighbor similarity matching sum
-                  }
-               if (do[i] > 0 & do[j] > 0) {
                   k <- as.matrix(z.o[onei[[i]], onei[[j]]]) #creating sub-matrix of similarities between i and j's out-neighbors
                   d <- as.numeric(which(c(do[i], do[j]) == min.do)[1]) #selecting minimum of rows or columns of k
                   mu.o <- sum(apply(k, d, max)) #maximum out-neighbor similarity matching sum
+                  z[i,j] <- (beta * (mu.o + mu.i)/(max.do + max.di)) + (1-beta) #updating similarity matrix
                   }
-               if (di[i] == 0 | di[j] == 0) {mu.i <- 0}
-               if (do[i] == 0 | do[j] == 0) {mu.o <- 0}
-               z[i,j] <- (beta * (mu.o + mu.i)/(max.do + max.di)) + (1-beta) #updating similarity matrix
+               if (min.di != 0 & min.do == 0) { #one node has no out-neighbors
+                  k <- as.matrix(z.o[inei[[i]], inei[[j]]]) #creating sub-matrix of similarities between i and j's in-neighbors
+                  d <- as.numeric(which(c(di[i], di[j]) == min.di)[1]) #selecting minimum of rows or columns of k
+                  mu.i <- sum(apply(k, d, max)) #maximum in-neighbor similarity matching sum
+                  z[i,j] <- (beta * (mu.i/max.di)) + (1-beta) #updating similarity matrix
+                  }
+               if (min.di == 0 & min.do != 0) { #one node has no in-neighbors
+                  k <- as.matrix(z.o[onei[[i]], onei[[j]]]) #creating sub-matrix of similarities between i and j's out-neighbors
+                  d <- as.numeric(which(c(do[i], do[j]) == min.do)[1]) #selecting minimum of rows or columns of k
+                  mu.o <- sum(apply(k, d, max)) #maximum out-neighbor similarity matching sum
+                  z[i,j] <- (beta * (mu.o/max.do)) + (1-beta) #updating similarity matrix
+                  }
                } #end i for loop
             } #end j for loop
          delta <- sum(abs(abs(z) - abs(z.o))) #difference between similarity matrices at t and t-1
@@ -370,7 +389,7 @@ Here's a modification of the `SimRank` function that does all of the above:
       } #end function
 ```
 
-And how we apply it to the Borgatti/Everett graph:
+And now we apply it to the Borgatti/Everett graph:
 ```{r}
 #| label: fig-rs 
 #| fig-height: 6
