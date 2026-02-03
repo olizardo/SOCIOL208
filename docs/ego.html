@@ -580,14 +580,16 @@ div.csl-indent {
 <p>Let’s see how it works. First we load up the <em>New Hope</em> Star Wars social network included in the <code>networkdata</code> package <span class="citation" data-cites="gabasova16">(<a href="#ref-gabasova16" role="doc-biblioref">Gabasova 2016</a>)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>   <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-2"><a href="#cb1-2"></a>   g <span class="ot">&lt;-</span> starwars[[<span class="dv">4</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2"></a>   <span class="fu">library</span>(igraph)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>   <span class="fu">library</span>(stringr) <span class="co">#using stringr to change names from all caps to title case</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>   g <span class="ot">&lt;-</span> starwars[[<span class="dv">4</span>]]</span>
+<span id="cb1-5"><a href="#cb1-5"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>starwars</code> object contain a <code>list</code> of igraph network data sets corresponding to seven of the Star Wars films (the three originals, three prequels, and <em>The Force Awakens</em>). They are ordered in terms of the film chronology, so Episode IV, <em>A New Hope</em> is the fourth element in the list.</p>
 <p>As we said an ego graph is just a subgraph centered on a particular actor. So R2-D2’s ego graph is just:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(igraph)</span>
-<span id="cb2-2"><a href="#cb2-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"R2-D2"</span>)</span>
-<span id="cb2-3"><a href="#cb2-3"></a>   r2 <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"R2-D2"</span>, <span class="fu">names</span>(N))) <span class="co">#ego graph</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"R2-D2"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2"></a>   r2 <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"R2-D2"</span>, <span class="fu">names</span>(N))) <span class="co">#ego graph</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And we can just plot it like we would any <code>igraph</code> object:</p>
 <div class="cell">
@@ -619,102 +621,98 @@ div.csl-indent {
 </div>
 <p>The clustering coefficient <span class="math inline">\(C_i\)</span> for an ego <span class="math inline">\(i\)</span> ranges from zero to one. <span class="math inline">\(C = 0\)</span> means that <em>none</em> of ego’s alters are connected to one another and <span class="math inline">\(C = 1\)</span> means that <em>all</em> of ego’s alters are connected to one another. In this case, <span class="math inline">\(C = 0.67\)</span> means that 67% of R2-D2’s alters are connected (e.g., co-appear in scenes) to one another.</p>
 <p>Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty <code>lapply</code> and <code>sapply</code> meta-functions.</p>
-<p>We proceed in three steps:</p>
-<p>First, we turn the code we used to find R2-D2’s ego graph into a function:</p>
+<p>First, we create a little function that creates the ego subgraph for node <code>x</code> from the <code>g</code> graph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   create.ego <span class="ot">&lt;-</span> <span class="cf">function</span>(x, w) {</span>
-<span id="cb6-2"><a href="#cb6-2"></a>      alter.net <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(w, <span class="fu">neighbors</span>(w, x))</span>
-<span id="cb6-3"><a href="#cb6-3"></a>      <span class="fu">return</span>(alter.net)</span>
-<span id="cb6-4"><a href="#cb6-4"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   get.ego <span class="ot">&lt;-</span> <span class="cf">function</span>(x){<span class="fu">subgraph</span>(g, <span class="fu">neighbors</span>(g, x))}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Then we <code>lapply</code> the function to each node in the network:</p>
+<p>Second, we use <code>lapply</code> to extract the ego subgraph for node in the network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   ego.graphs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, create.ego, <span class="at">w =</span> g)</span>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   ego.graphs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, get.ego)</span>
 <span id="cb7-2"><a href="#cb7-2"></a>   <span class="fu">head</span>(ego.graphs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
-IGRAPH ba071a2 UNW- 9 24 -- Episode IV – A New Hope
+IGRAPH eb59529 UNW- 9 24 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from ba071a2 (vertex names):
- [1] CHEWBACCA--C-3PO   CHEWBACCA--LUKE    C-3PO    --LUKE    C-3PO    --BIGGS  
- [5] LUKE     --BIGGS   CHEWBACCA--LEIA    C-3PO    --LEIA    LUKE     --LEIA   
- [9] BIGGS    --LEIA    C-3PO    --BERU    LUKE     --BERU    LEIA     --BERU   
-[13] C-3PO    --OWEN    LUKE     --OWEN    BERU     --OWEN    CHEWBACCA--OBI-WAN
-[17] C-3PO    --OBI-WAN LUKE     --OBI-WAN LEIA     --OBI-WAN CHEWBACCA--HAN    
-[21] C-3PO    --HAN     LUKE     --HAN     LEIA     --HAN     OBI-WAN  --HAN    
++ edges from eb59529 (vertex names):
+ [1] Chewbacca--C-3po   Chewbacca--Luke    C-3po    --Luke    C-3po    --Biggs  
+ [5] Luke     --Biggs   Chewbacca--Leia    C-3po    --Leia    Luke     --Leia   
+ [9] Biggs    --Leia    C-3po    --Beru    Luke     --Beru    Leia     --Beru   
+[13] C-3po    --Owen    Luke     --Owen    Beru     --Owen    Chewbacca--Obi-Wan
+[17] C-3po    --Obi-Wan Luke     --Obi-Wan Leia     --Obi-Wan Chewbacca--Han    
+[21] C-3po    --Han     Luke     --Han     Leia     --Han     Obi-Wan  --Han    
 
 [[2]]
-IGRAPH ba078bc UNW- 6 15 -- Episode IV – A New Hope
+IGRAPH eb59a21 UNW- 6 15 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from ba078bc (vertex names):
- [1] R2-D2  --C-3PO   R2-D2  --LUKE    C-3PO  --LUKE    R2-D2  --LEIA   
- [5] C-3PO  --LEIA    LUKE   --LEIA    R2-D2  --OBI-WAN C-3PO  --OBI-WAN
- [9] LUKE   --OBI-WAN LEIA   --OBI-WAN R2-D2  --HAN     C-3PO  --HAN    
-[13] LUKE   --HAN     LEIA   --HAN     OBI-WAN--HAN    
++ edges from eb59a21 (vertex names):
+ [1] R2-D2  --C-3po   R2-D2  --Luke    C-3po  --Luke    R2-D2  --Leia   
+ [5] C-3po  --Leia    Luke   --Leia    R2-D2  --Obi-Wan C-3po  --Obi-Wan
+ [9] Luke   --Obi-Wan Leia   --Obi-Wan R2-D2  --Han     C-3po  --Han    
+[13] Luke   --Han     Leia   --Han     Obi-Wan--Han    
 
 [[3]]
-IGRAPH ba07a25 UNW- 10 27 -- Episode IV – A New Hope
+IGRAPH eb59b83 UNW- 10 27 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from ba07a25 (vertex names):
- [1] R2-D2    --CHEWBACCA R2-D2    --LUKE      CHEWBACCA--LUKE     
- [4] R2-D2    --BIGGS     LUKE     --BIGGS     R2-D2    --LEIA     
- [7] CHEWBACCA--LEIA      LUKE     --LEIA      BIGGS    --LEIA     
-[10] R2-D2    --BERU      LUKE     --BERU      LEIA     --BERU     
-[13] R2-D2    --OWEN      LUKE     --OWEN      BERU     --OWEN     
-[16] R2-D2    --OBI-WAN   CHEWBACCA--OBI-WAN   LUKE     --OBI-WAN  
++ edges from eb59b83 (vertex names):
+ [1] R2-D2    --Chewbacca R2-D2    --Luke      Chewbacca--Luke     
+ [4] R2-D2    --Biggs     Luke     --Biggs     R2-D2    --Leia     
+ [7] Chewbacca--Leia      Luke     --Leia      Biggs    --Leia     
+[10] R2-D2    --Beru      Luke     --Beru      Leia     --Beru     
+[13] R2-D2    --Owen      Luke     --Owen      Beru     --Owen     
+[16] R2-D2    --Obi-Wan   Chewbacca--Obi-Wan   Luke     --Obi-Wan  
 + ... omitted several edges
 
 [[4]]
-IGRAPH ba07b88 UNW- 15 36 -- Episode IV – A New Hope
+IGRAPH eb59cd9 UNW- 15 36 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from ba07b88 (vertex names):
- [1] R2-D2    --CHEWBACCA R2-D2    --C-3PO     R2-D2    --BERU     
- [4] R2-D2    --OWEN      R2-D2    --OBI-WAN   R2-D2    --LEIA     
- [7] R2-D2    --BIGGS     R2-D2    --HAN       CHEWBACCA--OBI-WAN  
-[10] CHEWBACCA--C-3PO     CHEWBACCA--HAN       CHEWBACCA--LEIA     
-[13] CAMIE    --BIGGS     BERU     --OWEN      C-3PO    --BERU     
-[16] C-3PO    --OWEN      C-3PO    --LEIA      LEIA     --BERU     
++ edges from eb59cd9 (vertex names):
+ [1] R2-D2    --Chewbacca R2-D2    --C-3po     R2-D2    --Beru     
+ [4] R2-D2    --Owen      R2-D2    --Obi-Wan   R2-D2    --Leia     
+ [7] R2-D2    --Biggs     R2-D2    --Han       Chewbacca--Obi-Wan  
+[10] Chewbacca--C-3po     Chewbacca--Han       Chewbacca--Leia     
+[13] Camie    --Biggs     Beru     --Owen      C-3po    --Beru     
+[16] C-3po    --Owen      C-3po    --Leia      Leia     --Beru     
 + ... omitted several edges
 
 [[5]]
-IGRAPH ba07ceb UNW- 4 4 -- Episode IV – A New Hope
+IGRAPH eb59e2f UNW- 4 4 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edges from ba07ceb (vertex names):
-[1] LEIA --OBI-WAN LEIA --MOTTI   LEIA --TARKIN  MOTTI--TARKIN 
++ edges from eb59e2f (vertex names):
+[1] Leia --Obi-Wan Leia --Motti   Leia --Tarkin  Motti--Tarkin 
 
 [[6]]
-IGRAPH ba07e4d UNW- 2 1 -- Episode IV – A New Hope
+IGRAPH eb59f7c UNW- 2 1 -- Episode IV – A New Hope
 + attr: name (g/c), name (v/c), height (v/n), mass (v/n), hair_color
 | (v/c), skin_color (v/c), eye_color (v/c), birth_year (v/n), sex
 | (v/c), homeworld (v/c), species (v/c), weight (e/n)
-+ edge from ba07e4d (vertex names):
-[1] LUKE--BIGGS</code></pre>
++ edge from eb59f7c (vertex names):
+[1] Luke--Biggs</code></pre>
 </div>
 </div>
 <p>The result is a <code>list</code> object with <span class="math inline">\(|V| = 21\)</span> ego subgraphs composed of each node’s alters and their connections.</p>
-<p>Finally, to find out the clustering coefficient of each node, we just <code>sapply</code> the <code>igraph</code> function <code>edge_density</code> to each member of the <code>ego.graphs</code> list:</p>
+<p>Second, to find out the clustering coefficient of each node, we just <code>sapply</code> the <code>igraph</code> function <code>edge_density</code> to each member of the <code>ego.graphs</code> list:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   C <span class="ot">&lt;-</span> <span class="fu">sapply</span>(ego.graphs, edge_density)</span>
 <span id="cb9-2"><a href="#cb9-2"></a>   <span class="fu">names</span>(C) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
 <span id="cb9-3"><a href="#cb9-3"></a>   <span class="fu">round</span>(C, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        0.67        1.00        0.60        0.34        0.67        1.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        0.54        0.42        0.90        1.00        0.76        1.00 
-     TARKIN         HAN      GREEDO       JABBA     DODONNA GOLD LEADER 
+     Tarkin         Han      Greedo       Jabba     Dodonna Gold Leader 
        1.00        0.54         NaN         NaN        1.00        0.80 
-      WEDGE  RED LEADER     RED TEN 
+      Wedge  Red Leader     Red Ten 
        0.80        0.57        1.00 </code></pre>
 </div>
 </div>
@@ -723,44 +721,44 @@ IGRAPH ba07e4d UNW- 2 1 -- Episode IV – A New Hope
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   <span class="fu">degree</span>(g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
           9           6          10          15           4           2 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
           8          12           5           4           7           3 
-     TARKIN         HAN      GREEDO       JABBA     DODONNA GOLD LEADER 
+     Tarkin         Han      Greedo       Jabba     Dodonna Gold Leader 
           3           8           1           1           3           5 
-      WEDGE  RED LEADER     RED TEN 
+      Wedge  Red Leader     Red Ten 
           5           7           2 </code></pre>
 </div>
 </div>
-<p>Here we see the problem is that both Greedo and Jabba are singleton nodes (with degree equal to one), so it doesn’t make sense to analyze their clustering coefficients because their ego graph is just an isolated node!</p>
+<p>Here we see the problem is that both Greedo and Jabba are pendant nodes (with degree equal to one), so it doesn’t make sense to analyze their clustering coefficients because their ego graph is just an isolated node!</p>
 <p>We can just drop them and re-analyze:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g)<span class="sc">&gt;</span> <span class="dv">1</span>)</span>
-<span id="cb13-2"><a href="#cb13-2"></a>   ego.graphs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, create.ego, <span class="at">w =</span> g)</span>
+<span id="cb13-2"><a href="#cb13-2"></a>   ego.graphs <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, get.ego)</span>
 <span id="cb13-3"><a href="#cb13-3"></a>   C <span class="ot">&lt;-</span> <span class="fu">sapply</span>(ego.graphs, edge_density)</span>
 <span id="cb13-4"><a href="#cb13-4"></a>   <span class="fu">names</span>(C) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
 <span id="cb13-5"><a href="#cb13-5"></a>   <span class="fu">round</span>(C, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        0.67        1.00        0.60        0.34        0.67        1.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        0.54        0.42        0.90        1.00        0.76        1.00 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
        1.00        1.00        1.00        0.80        0.80        0.57 
-    RED TEN 
+    Red Ten 
        1.00 </code></pre>
 </div>
 </div>
 <p>Much better!</p>
-<p>Note that in this analysis, Luke has the lowest clustering coefficient (<span class="math inline">\(C = 0.34\)</span>) this usually indicates an ego whose alters are partitioned into distinct clusters (and hence they are not connected to one another), and ego is a mediator or <em>broker</em> between those clusters.</p>
+<p>Note that in this analysis, Luke has the lowest clustering coefficient (<span class="math inline">\(C = 0.34\)</span>) this usually indicates an ego whose alters are partitioned into distinct clusters (and hence they are not connected to one another), and ego is a mediator or <em>broker</em> between those clusters <span class="citation" data-cites="burt92">(<a href="#ref-burt92" role="doc-biblioref">Burt 1992</a>)</span>.</p>
 <p>Let’s see what that looks like:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>   <span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
-<span id="cb15-2"><a href="#cb15-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"LUKE"</span>)</span>
+<span id="cb15-2"><a href="#cb15-2"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"Luke"</span>)</span>
 <span id="cb15-3"><a href="#cb15-3"></a>   luke.alters <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, N)  </span>
 <span id="cb15-4"><a href="#cb15-4"></a>   <span class="fu">V</span>(luke.alters)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">cluster_leading_eigen</span>(luke.alters)<span class="sc">$</span>membership</span>
-<span id="cb15-5"><a href="#cb15-5"></a>   luke <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"LUKE"</span>, <span class="fu">names</span>(N)))</span>
+<span id="cb15-5"><a href="#cb15-5"></a>   luke <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"Luke"</span>, <span class="fu">names</span>(N)))</span>
 <span id="cb15-6"><a href="#cb15-6"></a>   luke <span class="ot">&lt;-</span> <span class="fu">simplify</span>(<span class="fu">union</span>(luke, luke.alters))</span>
 <span id="cb15-7"><a href="#cb15-7"></a>   <span class="fu">V</span>(luke)<span class="sc">$</span>color[<span class="fu">which</span>(<span class="fu">is.na</span>(<span class="fu">V</span>(luke)<span class="sc">$</span>color))] <span class="ot">&lt;-</span> <span class="st">"red"</span></span>
 <span id="cb15-8"><a href="#cb15-8"></a>   <span class="fu">plot</span>(luke, </span>
@@ -784,13 +782,13 @@ IGRAPH ba07e4d UNW- 2 1 -- Episode IV – A New Hope
 <span id="cb16-2"><a href="#cb16-2"></a>   A3 <span class="ot">&lt;-</span> A <span class="sc">%*%</span> A <span class="sc">%*%</span> A</span>
 <span id="cb16-3"><a href="#cb16-3"></a>   <span class="fu">diag</span>(A3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
          48          30          54          72           8           2 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
          30          56          18          12          32           6 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
           6          30           6          16          16          24 
-    RED TEN 
+    Red Ten 
           2 </code></pre>
 </div>
 </div>
@@ -800,13 +798,13 @@ IGRAPH ba07e4d UNW- 2 1 -- Episode IV – A New Hope
 <span id="cb18-2"><a href="#cb18-2"></a>   C <span class="ot">&lt;-</span> <span class="fu">diag</span>(A3)<span class="sc">/</span>(k<span class="sc">*</span>(k <span class="sc">-</span> <span class="dv">1</span>))</span>
 <span id="cb18-3"><a href="#cb18-3"></a>   <span class="fu">round</span>(C, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        0.67        1.00        0.60        0.34        0.67        1.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        0.54        0.42        0.90        1.00        0.76        1.00 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
        1.00        1.00        1.00        0.80        0.80        0.57 
-    RED TEN 
+    Red Ten 
        1.00 </code></pre>
 </div>
 </div>
@@ -828,13 +826,13 @@ C(G) = \frac{1}{N}\sum_iC_i
 <div class="cell">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a>   <span class="fu">round</span>(<span class="fu">transitivity</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>name, <span class="at">type =</span> <span class="st">"local"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        0.67        1.00        0.60        0.34        0.67        1.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        0.54        0.42        0.90        1.00        0.76        1.00 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
        1.00        1.00        1.00        0.80        0.80        0.57 
-    RED TEN 
+    Red Ten 
        1.00 </code></pre>
 </div>
 </div>
@@ -864,13 +862,13 @@ ES_i = k_i - \bar{k}_{j \in N(i)}
 <span id="cb26-3"><a href="#cb26-3"></a>   <span class="fu">names</span>(mk) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
 <span id="cb26-4"><a href="#cb26-4"></a>   <span class="fu">round</span>(mk, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        5.33        5.00        5.40        4.80        2.00        1.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        3.75        4.67        3.60        3.00        4.57        2.00 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
        2.00        5.00        2.00        3.20        3.20        3.43 
-    RED TEN 
+    Red Ten 
        1.00 </code></pre>
 </div>
 </div>
@@ -879,13 +877,13 @@ ES_i = k_i - \bar{k}_{j \in N(i)}
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1"></a>   ES <span class="ot">&lt;-</span> <span class="fu">degree</span>(g) <span class="sc">-</span> mk</span>
 <span id="cb28-2"><a href="#cb28-2"></a>   <span class="fu">round</span>(ES, <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
         3.7         1.0         4.6        10.2         2.0         1.0 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
         4.2         7.3         1.4         1.0         2.4         1.0 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
         1.0         1.0         1.0         1.8         1.8         3.6 
-    RED TEN 
+    Red Ten 
         1.0 </code></pre>
 </div>
 </div>
@@ -945,7 +943,7 @@ C_B(Ego) = \sum_{i &lt; j}\left[\mathbf{A}^2  \bullet (\mathbf{J} - \mathbf{A})\
 </div>
 <p>Let’s see how it works for Luke:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   <span class="fu">round</span>(<span class="fu">ego.bet</span>(g, <span class="st">"LUKE"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1"></a>   <span class="fu">round</span>(<span class="fu">ego.bet</span>(g, <span class="st">"Luke"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 45.92</code></pre>
 </div>
@@ -955,27 +953,27 @@ C_B(Ego) = \sum_{i &lt; j}\left[\mathbf{A}^2  \bullet (\mathbf{J} - \mathbf{A})\
 <div class="cell">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1"></a>   <span class="fu">round</span>(<span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, ego.bet, <span class="at">x =</span> g), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>      R2-D2   CHEWBACCA       C-3PO        LUKE DARTH VADER       CAMIE 
+<pre><code>      R2-D2   Chewbacca       C-3po        Luke Darth Vader       Camie 
        3.33        0.00        5.42       45.92        1.00        0.00 
-      BIGGS        LEIA        BERU        OWEN     OBI-WAN       MOTTI 
+      Biggs        Leia        Beru        Owen     Obi-Wan       Motti 
        5.58       25.83        0.25        0.00        2.50        0.00 
-     TARKIN         HAN     DODONNA GOLD LEADER       WEDGE  RED LEADER 
+     Tarkin         Han     Dodonna Gold Leader       Wedge  Red Leader 
        0.00        0.00        0.00        0.67        0.67        3.83 
-    RED TEN 
+    Red Ten 
        0.00 </code></pre>
 </div>
 </div>
 <p>Which confirms our original impression of Luke as the highest ego-network betweenness character with Leia in second place.</p>
 <p>What does it mean to have an ego-network betweenness of zero? Well, this is only possible if your clustering coefficient is 1.0, that is, when all of your alters are directly connected to one another. This is evident in Chewbacca’s ego network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"CHEWBACCA"</span>)</span>
-<span id="cb35-2"><a href="#cb35-2"></a>   chew <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"CHEWBACCA"</span>, <span class="fu">names</span>(N)))</span>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1"></a>   N <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(g, <span class="st">"Chewbacca"</span>)</span>
+<span id="cb35-2"><a href="#cb35-2"></a>   chew <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">c</span>(<span class="st">"Chewbacca"</span>, <span class="fu">names</span>(N)))</span>
 <span id="cb35-3"><a href="#cb35-3"></a>   <span class="fu">V</span>(chew)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">2</span>, <span class="fu">vcount</span>(chew))</span>
-<span id="cb35-4"><a href="#cb35-4"></a>   <span class="fu">V</span>(chew)<span class="sc">$</span>color[<span class="fu">which</span>(<span class="fu">V</span>(chew)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"CHEWBACCA"</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
+<span id="cb35-4"><a href="#cb35-4"></a>   <span class="fu">V</span>(chew)<span class="sc">$</span>color[<span class="fu">which</span>(<span class="fu">V</span>(chew)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Chewbacca"</span>)] <span class="ot">&lt;-</span> <span class="dv">1</span> </span>
 <span id="cb35-5"><a href="#cb35-5"></a>   <span class="fu">plot</span>(chew, </span>
 <span id="cb35-6"><a href="#cb35-6"></a>     <span class="at">vertex.size=</span><span class="dv">10</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
 <span id="cb35-7"><a href="#cb35-7"></a>     <span class="at">vertex.label.dist=</span><span class="dv">2</span>, </span>
-<span id="cb35-8"><a href="#cb35-8"></a>     <span class="at">layout =</span> <span class="fu">layout_as_star</span>(chew, <span class="at">center =</span> <span class="st">"CHEWBACCA"</span>),</span>
+<span id="cb35-8"><a href="#cb35-8"></a>     <span class="at">layout =</span> <span class="fu">layout_as_star</span>(chew, <span class="at">center =</span> <span class="st">"Chewbacca"</span>),</span>
 <span id="cb35-9"><a href="#cb35-9"></a>     <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -1009,7 +1007,8 @@ IQV = \frac{1 - \sum_{k=1}^m p_k^2}{1-\frac{1}{m}}
 <p>First, let’s switch to the <em>Attack of the Clones</em> Star Wars graph:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1"></a>   g <span class="ot">&lt;-</span> starwars[[<span class="dv">2</span>]]</span>
-<span id="cb36-2"><a href="#cb36-2"></a>   g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g)<span class="sc">&gt;</span> <span class="dv">1</span>) <span class="co">#removing singletons</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb36-2"><a href="#cb36-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
+<span id="cb36-3"><a href="#cb36-3"></a>   g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g)<span class="sc">&gt;</span> <span class="dv">1</span>) <span class="co">#removing singletons</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now, we will pick the vertex attribute <code>homeworld</code> and try to measure how diverse is each character’s ego network on this score.</p>
 <p>To do that, we need to get the proportion of characters from each homeworld in the network.</p>
@@ -1069,7 +1068,7 @@ IQV = \frac{1 - \sum_{k=1}^m p_k^2}{1-\frac{1}{m}}
 <p>This function takes three inputs: The name of the ego <code>n</code>, the graph object <code>w</code>, and the name of the attribute <code>a</code>. It returns the Blau diversity index score for that ego on that attribute by default; when <code>norm</code> is set to <code>TRUE</code> it returns the normalized Blau score (a.k.a. the <span class="math inline">\(IQV\)</span>).</p>
 <p>Let’s see Padme’s Home World ego network diversity score:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   <span class="fu">round</span>(<span class="fu">blau</span>(<span class="st">"PADME"</span>, g, <span class="st">"homeworld"</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1"></a>   <span class="fu">round</span>(<span class="fu">blau</span>(<span class="st">"Padme"</span>, g, <span class="st">"homeworld"</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.796</code></pre>
 </div>
@@ -1079,17 +1078,17 @@ IQV = \frac{1 - \sum_{k=1}^m p_k^2}{1-\frac{1}{m}}
 <div class="cell">
 <div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>   <span class="fu">round</span>(<span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, blau, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"homeworld"</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
           0.444           0.667           0.815           0.776           0.444 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
           0.820           0.840           0.750           0.776           0.780 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
           0.858           0.809           0.796           0.625           0.625 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
           0.625           0.625           0.500           0.667           0.625 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
           0.444           0.320           0.320           0.320           0.860 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
           0.833           0.833           0.833 </code></pre>
 </div>
 </div>
@@ -1112,20 +1111,19 @@ IQV = \frac{1 - \sum_{k=1}^m p_k^2}{1-\frac{1}{m}}
 </div>
 <p>And here are the corresponding <span class="math inline">\(IQV\)</span> scores for everyone in the network:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">round</span>(<span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, blau, <span class="at">w =</span> g, </span>
-<span id="cb48-2"><a href="#cb48-2"></a>                <span class="at">a =</span> <span class="st">"homeworld"</span>, <span class="at">norm =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1"></a>   <span class="fu">round</span>(<span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, blau, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"homeworld"</span>, <span class="at">norm =</span> <span class="cn">TRUE</span>), <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
           0.889           1.000           0.951           0.969           0.889 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
           0.957           0.960           1.000           0.969           0.936 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
           0.953           0.924           0.910           0.937           0.937 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
           0.937           0.937           1.000           1.000           0.937 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
           0.889           0.640           0.640           0.640           0.983 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
           1.000           1.000           1.000 </code></pre>
 </div>
 </div>
@@ -1191,17 +1189,17 @@ EI = \frac{E-I}{E+I}
 <div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1"></a>   EI <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, EI, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"sex"</span>)</span>
 <span id="cb55-2"><a href="#cb55-2"></a>   <span class="fu">round</span>(EI, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
            0.33           -1.00           -0.56            0.71            0.33 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
           -0.60           -0.60           -1.00           -0.71           -0.40 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
           -0.53           -0.11            0.88            0.00            0.00 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
            0.00            1.00            0.00           -0.33           -0.50 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
            0.67            0.20            0.60            0.20           -0.60 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
            1.00           -0.33           -0.33 </code></pre>
 </div>
 </div>
@@ -1274,11 +1272,11 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 </div>
 <p>Let’s re-check Mace Windu’s and Padme’s EI index using the normalized version:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   <span class="fu">round</span>(<span class="fu">NEI</span>(<span class="st">"MACE WINDU"</span>, g, <span class="st">"sex"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb60-1"><a href="#cb60-1"></a>   <span class="fu">round</span>(<span class="fu">NEI</span>(<span class="st">"Mace Windu"</span>, g, <span class="st">"sex"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] -0.44</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   <span class="fu">round</span>(<span class="fu">NEI</span>(<span class="st">"PADME"</span>, g, <span class="st">"sex"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb62-1"><a href="#cb62-1"></a>   <span class="fu">round</span>(<span class="fu">NEI</span>(<span class="st">"Padme"</span>, g, <span class="st">"sex"</span>), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.32</code></pre>
 </div>
@@ -1289,17 +1287,17 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 <div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb64-1"><a href="#cb64-1"></a>   NEI <span class="ot">&lt;-</span> <span class="fu">sapply</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name, NEI, <span class="at">w =</span> g, <span class="at">a =</span> <span class="st">"sex"</span>)</span>
 <span id="cb64-2"><a href="#cb64-2"></a>   <span class="fu">round</span>(NEI, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
           -0.73           -1.00           -0.39            0.24           -0.29 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
           -0.44           -0.44           -1.00           -0.59           -0.20 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
           -0.36            0.11            0.32           -0.57           -0.57 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
           -0.57            1.00            0.21           -0.13           -0.32 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
           -0.44            0.40           -0.35            0.40           -0.44 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
            1.00           -0.13           -0.13 </code></pre>
 </div>
 </div>
@@ -1330,7 +1328,7 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 <section id="other-ways-of-accounting-for-imbalanced-group-sizes-in-homophily-metrics" class="level3">
 <h3 class="anchored" data-anchor-id="other-ways-of-accounting-for-imbalanced-group-sizes-in-homophily-metrics">Other Ways of Accounting for Imbalanced Group Sizes in Homophily Metrics</h3>
 <p>As may already be evident, when constructing a homophily measure that takes into account the population (or local network) proportions of various types of alters, there are four pieces of information that we have to take into account:</p>
-<ol type="a">
+<ol type="1">
 <li>Number of alters linked to ego of the same category as ego.</li>
 <li>Number of alters linked to ego of a different category from ego.</li>
 <li>Number of alters not linked to ego of the same category as ego.</li>
@@ -1351,7 +1349,7 @@ NEI = \frac{E^*-I^*}{E^*+I^*}
 </div>
 <p>So for Count Dooku with respect to gender, this 2 X 2 table looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   <span class="fu">abcd</span>(<span class="st">"COUNT DOOKU"</span>, g, <span class="st">"sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1"></a>   <span class="fu">abcd</span>(<span class="st">"Count Dooku"</span>, g, <span class="st">"sex"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>       same
 tied    TRUE FALSE
@@ -1401,7 +1399,7 @@ r^{pb} = \frac{ad-bc}{\sqrt{(a+c)(b+d)(a+b)(c+d))}}
 </div>
 <p>For Dooku, <span class="math inline">\(r^{pb}\)</span> is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1"></a>   <span class="fu">round</span>(<span class="fu">pb.corr</span>(<span class="fu">abcd</span>(<span class="st">"COUNT DOOKU"</span>, g, <span class="st">"sex"</span>)), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1"></a>   <span class="fu">round</span>(<span class="fu">pb.corr</span>(<span class="fu">abcd</span>(<span class="st">"Count Dooku"</span>, g, <span class="st">"sex"</span>)), <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.29</code></pre>
 </div>
@@ -1419,31 +1417,31 @@ tied    TRUE FALSE
   TRUE     1     2
   FALSE    1    24
 
-$`CAPTAIN TYPHO`
+$`Captain Typho`
        same
 tied    TRUE FALSE
   TRUE     3     0
   FALSE   14    11
 
-$EMPEROR
+$Emperor
        same
 tied    TRUE FALSE
   TRUE     7     2
   FALSE   10     9
 
-$`SENATOR ASK AAK`
+$`Senator Ask Aak`
        same
 tied    TRUE FALSE
   TRUE     1     6
   FALSE    5    16
 
-$`ORN FREE TAA`
+$`Orn Free Taa`
        same
 tied    TRUE FALSE
   TRUE     1     2
   FALSE    5    20
 
-$`MACE WINDU`
+$`Mace Windu`
        same
 tied    TRUE FALSE
   TRUE     8     2
@@ -1455,17 +1453,17 @@ tied    TRUE FALSE
 <div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1"></a>   PBC <span class="ot">&lt;-</span> <span class="fu">sapply</span>(abcd.gender, pb.corr)</span>
 <span id="cb77-2"><a href="#cb77-2"></a>   <span class="fu">round</span>(PBC, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
            0.35            0.28            0.24           -0.10            0.10 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
            0.29            0.29            0.33            0.30            0.14 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
            0.40           -0.14           -0.19            0.28            0.28 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
            0.28           -0.14           -0.06            0.04            0.12 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
            0.19           -0.20            0.14           -0.20            0.29 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
           -0.27            0.06            0.06 </code></pre>
 </div>
 </div>
@@ -1511,17 +1509,17 @@ Q = \frac{ad-bc}{ad+bc}
 <div class="sourceCode cell-code" id="cb84"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb84-1"><a href="#cb84-1"></a>   Q <span class="ot">&lt;-</span> <span class="fu">sapply</span>(abcd.gender, y.Q)</span>
 <span id="cb84-2"><a href="#cb84-2"></a>   <span class="fu">round</span>(Q, <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>          R2-D2   CAPTAIN TYPHO         EMPEROR SENATOR ASK AAK    ORN FREE TAA 
+<pre><code>          R2-D2   Captain Typho         Emperor Senator Ask Aak    Orn Free Taa 
            0.85            1.00            0.52           -0.30            0.33 
-     MACE WINDU            YODA    KI-ADI-MUNDI     BAIL ORGANA         JAR JAR 
+     Mace Windu            Yoda    Ki-Adi-Mundi     Bail Organa         Jar Jar 
            0.60            0.60            1.00            0.69            0.30 
-        OBI-WAN          ANAKIN           PADME            SOLA           JOBAL 
+        Obi-Wan          Anakin           Padme            Sola           Jobal 
            0.70           -0.30           -0.56            0.67            0.67 
-          RUWEE         TAUN WE         LAMA SU       BOBA FETT      JANGO FETT 
+          Ruwee         Taun We         Lama Su       Boba Fett      Jango Fett 
            0.67           -1.00           -0.23            0.14            0.36 
-          C-3PO            OWEN            BERU          CLIEGG     COUNT DOOKU 
+          C-3po            Owen            Beru          Cliegg     Count Dooku 
            0.62           -0.48            0.45           -0.48            0.60 
-        SUN RIT          POGGLE     NUTE GUNRAY 
+        Sun Rit          Poggle     Nute Gunray 
           -1.00            0.16            0.16 </code></pre>
 </div>
 </div>
@@ -1569,7 +1567,7 @@ Q = \frac{ad-bc}{ad+bc}
 </div>
 </div>
 </div>
-<p>As we can see, Ki-Adi-Mundi and Captain Typhoo have an ego network that combine maximum homophily and homogeneity with respect to gender (both ego networks are composed of all men)–and therefore both receive the minimum score of <span class="math inline">\(Q=-1\)</span>.</p>
+<p>As we can see, Ki-Adi-Mundi and Captain Typho have an ego network that combine maximum homophily and homogeneity with respect to gender (both ego networks are composed of all men)–and therefore both receive the minimum score of <span class="math inline">\(Q=-1\)</span>.</p>
 <p>Taun We, on the other hand, has an ego network that combines maximum heterophily with maximum homogeneity of alters with respect to the same attribute (she has an all-men ego network), thus receiving the maximum <span class="math inline">\(Q=-1\)</span>. Sun Rit has some heterogeneity in their ego network, but because all alters are of a different gender category from them, they also receive a minimum score of <span class="math inline">\(Q=-1\)</span>.</p>
 <p>The average value of <span class="math inline">\(Q\)</span> for the whole network is:</p>
 <div class="cell">
@@ -1578,7 +1576,7 @@ Q = \frac{ad-bc}{ad+bc}
 <pre><code>[1] 0.24</code></pre>
 </div>
 </div>
-<p>Which also suggests a slight same-gender preference in the network after accounting for imbalanced group sizes.</p>
+<p>Which also suggests a slight same-gender preference in the network after accounting for unbalanced group sizes.</p>
 
 
 
