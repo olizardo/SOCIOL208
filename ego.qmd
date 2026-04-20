@@ -44,8 +44,7 @@ The `starwars` object contain a `list` of igraph network data sets corresponding
 As we said an ego graph is just a subgraph centered on a particular actor. So R2-D2's ego graph is just:
 
 ```{r}
-   N <- neighbors(g, "R2-D2")
-   r2 <- subgraph(g, c("R2-D2", names(N))) #ego graph
+   r2 <- subgraph(g, c("R2-D2", names(neighbors(g, "R2-D2")))) #R2-D2's ego graph
 ```
 
 And we can just plot it like we would any `igraph` object:
@@ -77,16 +76,17 @@ The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$
 
 Typically we would want to compute the clustering coefficient of every node in a graph. This can be done using our trusty `lapply` and `sapply` meta-functions. 
 
-First, we create a little function that creates the ego subgraph for node `x` from the `g` graph:
+First, we create a little function that creates the ego subgraph for node `v`:
 
 ```{r}
-   get.ego <- function(x){subgraph(g, neighbors(g, x))}
+   get.ego <- function(v, graph){subgraph(graph, c(v, names(neighbors(graph, v))))}
 ```
 
-Second, we use `lapply` to extract the ego subgraph for node in the network:
+Second, we use `lapply` to extract the ego subgraph for each node in the network:
 
 ```{r}
-   ego.graphs <- lapply(V(g)$name, get.ego)
+   ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
+   names(ego.graphs) <- V(g)$name #naming list
    head(ego.graphs)
 ```
 
@@ -114,7 +114,7 @@ We can just drop them and re-analyze:
 
 ```{r}
    g <- subgraph(g, degree(g)> 1)
-   ego.graphs <- lapply(V(g)$name, get.ego)
+   ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
    C <- sapply(ego.graphs, edge_density)
    names(C) <- V(g)$name
    round(C, 2)
@@ -280,13 +280,13 @@ Where $\mathbf{J}$ is a matrix full of ones of the same dimensions as $\mathbf{A
 A simple function that does this looks like:
 
 ```{r}
-   ego.bet <- function(x, n) {
-      N <- neighbors(x, n)
-      alter.net <- subgraph(x, c(n, names(N)))
-      A <- as.matrix(as_adjacency_matrix(alter.net))
-      A2 <- A %*% A
-      J <- matrix(1, nrow(A), ncol(A))
-      cb <- A2 * (J - A)
+   ego.bet <- function(v, graph) {
+      n <- neighbors(graph, v)
+      alters <- subgraph(graph, c(v, names(n)))
+      w <- as.matrix(as_adjacency_matrix(alters))
+      w2 <- w %*% w
+      j <- matrix(1, nrow(w), ncol(w))
+      cb <- w2 * (j - w)
       cb <- 1/cb
       cb[is.infinite(cb)] <- 0
       cb <- sum(cb[upper.tri(cb)])
@@ -297,7 +297,7 @@ A simple function that does this looks like:
 Let's see how it works for Luke:
 
 ```{r}
-   round(ego.bet(g, "Luke"), 2)
+   round(ego.bet("Luke", g), 2)
 ```
 
 Which says that Luke has pretty high ego-network betweenness.
@@ -305,7 +305,7 @@ Which says that Luke has pretty high ego-network betweenness.
 We can, of course, compute it for everyone in the network like before:
 
 ```{r}
-   round(sapply(V(g)$name, ego.bet, x = g), 2)
+   round(sapply(V(g)$name, ego.bet, graph = g), 2)
 ```
 
 Which confirms our original impression of Luke as the highest ego-network betweenness character with Leia in second place.
@@ -316,8 +316,7 @@ What does it mean to have an ego-network betweenness of zero? Well, this is only
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "Chewbacca's Ego Network."
-   N <- neighbors(g, "Chewbacca")
-   chew <- subgraph(g, c("Chewbacca", names(N)))
+   chew <- subgraph(g, c("Chewbacca", names(neighbors(g, "Chewbacca")))) #Chewbacca's ego graph
    V(chew)$color <- rep(2, vcount(chew))
    V(chew)$color[which(V(chew)$name == "Chewbacca")] <- 1 
    plot(chew, 

@@ -1,0 +1,222 @@
+---
+title: "Extending Ego Networks"
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+As we saw in the [lecture notes on ego network analysis](ego.qmd), the usual metrics for ego networks restrict themselves to the basic **ego graph** which is a graph composed of ego, their *one step* (direct) connections and the connections between those alters.
+
+There are ways of extending the analysis of ego networks to graphs beyond the basic ego graph that remain centered on a key node (or two key nodes) of interest. One approach is to relax the restriction that the ego graph should be kept to only the *one step* contacts of ego. The other is two relax the restriction that we are analyzing just one ego network at a time. 
+
+## Two Step Ego Graphs
+
+In the first extension we consider the **two-step ego graph**. This is a graph composed of ego (the focal node), their direct contacts, and the *neighbors of their direct contacts*. Let's see what that would look like. 
+
+First we load up the *New Hope* Star Wars social network included in the `networkdata` package [@gabasova16]:
+
+```{r}
+   library(networkdata)
+   library(igraph)
+   library(stringr) #using stringr to change names from all caps to title case
+   g <- starwars[[4]]
+   V(g)$name <- str_to_title(V(g)$name)
+```
+
+Let's try to see what R2-D2's and Luke's two-step ego graph looks like. 
+
+First, let's create a function that takes a given node as input and returns a subgraph of the larger graph containing the focal node, that node's neighbors, and those neighbors' neighbors: 
+
+```{r}
+   nei2 <- function(v, graph) {
+      n <- neighbors(graph, v)
+      n2 <- n
+      for (j in n) {
+         n2 <- c(n2, neighbors(graph, j)) #collecting the neighbors of neighbors
+         }
+      n2 <- unique(n2) #removing duplicates
+      s <- subgraph(graph, c(v, names(n2))) #two-step ego graph
+      return(s)
+      }
+```
+
+Now we can use `lapply` to apply that function to every node in the New Hope graph:
+
+```{r}
+   ego.graphs2 <- lapply(V(g)$name, nei2, graph = g)
+   names(ego.graphs2) <- V(g)$name #naming the list
+```
+
+And here are the three entries of the resulting list:
+
+```{r}
+   ego.graphs2[1:3]
+```
+
+@fig-twostep1 shows a point and line plot of R2-D2's two-step ego network:
+
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "R2-D2's Extended Ego Network"
+#| echo: false
+#| label: fig-twostep1
+   # install.packages("graphlayouts")
+   library("graphlayouts")
+   g2 <- ego.graphs2$`R2-D2`
+   V(g2)$color <- rep(2, vcount(g2)) #R2-D2's alters appear in green
+   V(g2)$color[which(V(g2)$name %in% "R2-D2")] <- 1 #ego appears in tan  
+   V(g2)$color[which(V(g2)$name %in% names(neighbors(g, "R2-D2")))] <- 3 #alters of R2-D2's alters appear in blue 
+   plot(g2, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=1.5, edge.width = 1.5,
+     layout = layout_with_focus(g2, v = which(V(g2)$name == "R2-D2"))$xy,
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
+Once we have the two-step ego graph we can compute some metrics that are unique for this type of network. One of them is the node **linchpin score**. A type of centrality measure that combines the logic of brokerage and homophily (or its opposite heterophily). The basic idea is that a node is a "linchpin" (e.g., plays a central role in the network) if they are the only one of its "kind" (as given by some vertex) attribute among its neighbors.
+
+Let us see how this works. @fig-stwostep2 shows Luke's extended ego network but this time with each node colored by home world.
+
+```{r}
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "Luke's Extended Ego Network"
+#| echo: false
+#| label: fig-twostep2
+   plot(g2, 
+     vertex.size=10, vertex.frame.color="lightgray", 
+     vertex.label.dist=1.5, edge.width = 1.5, 
+     vertex.color =  as.numeric(as.factor(V(g2)$homeworld)),
+     layout = layout_with_focus(g2, v = which(V(g2)$name == "Luke"))$xy,
+     vertex.label.cex = 1.25, edge.color = "lightgray")
+```
+
+Clearly if any of Luke's neighbors share the same attribute they should not contribute to the linchpin score. Secondly, if any of their neighbors has access to another node of the same attribute as ego (e.g., if there's a two-step neighbor that is the same as ego on that attribute) then they should also not count for the score.
+
+So the first thing we need to do is create a vector counting how many of ego's neighbor are the same as ego on the given attribute:
+
+```{r}
+   g2 <- ego.graphs2$`Luke`
+   V(g2)$homeworld[is.na(V(g2)$homeworld)] <- "Other"
+   ego.nei <- neighbors(g2, "Luke")
+   ego.pos <- which(V(g2)$name == "Luke")
+   ego.att <- vertex_attr(g2)$homeworld[ego.pos]
+   alter.att <- vertex_attr(g2)$homeworld[ego.nei]
+   a <- as.numeric(alter.att %in% ego.att)
+```
+
+Now we create another vector that counts the number of C-3PO's neighbors that have at least one neighbor of the same home world as C-3PO:
+
+```{r}
+   b <- 0
+   i <- 1
+   for (j in neighbors(g2, "Luke")) {
+      j.nei <- neighbors(g2, j)
+      j.nei <- j.nei[j.nei != ego.pos]
+      alter.att <- vertex_attr(g2)$homeworld[j.nei]
+      b[i] <- sum(as.numeric(alter.att %in% ego.att))
+      i <- i + 1
+      }
+   b <- as.numeric(b > 0)
+```
+
+And the node linchpin score is just:
+
+```{r}
+   l <- sum((1-a) * (1-b))/length(a)
+```
+
+
+
+
+## Coupled Ego Networks
+
+The second extension that we can use is to expand the idea of the ego network to the case of two-egos that share a certain number of neighbors. These are **coupled ego networks** (e.g., in the real world, two spouses or friends will typically have coupled ego networks).
+
+To see how this works let's bring back our `get-ego` function from [before](ego.qmd) to extract ego graphs:
+
+```{r}
+   get.ego <- function(v, graph){subgraph(graph, c(v, names(neighbors(graph, v))))}
+   ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
+   names(ego.graphs) <- V(g)$name
+```
+
+We can then visualize the coupled ego networks of R2-D2 and Luke as folows:
+
+```{r}
+#| fig-height: 10
+#| fig-width: 10
+#| fig-cap: "Coupled Ego Networks of Luke and Luke"  
+#| echo: false
+#| label: fig-coupled
+   g2 <- ego.graphs$`Luke` + ego.graphs$`Luke`
+   v <- V(g2)$name
+   n1 <- names(neighbors(g2, "Luke"))
+   n2 <- names(neighbors(g2, "Luke"))
+   n1 <- n1[-which(n1 == "Luke")]
+   n2 <- n2[-which(n2 == "Luke")]
+   ni <- intersect(n1, n2)
+   u1 <- setdiff(n1, ni)
+   u2 <- setdiff(n2, ni)
+   ll <- get_edge_ids(g2, vp = c("Luke", "Luke"))
+   V(g2)$color <- rep("red", vcount(g2)) #alters shared by both egos appear
+   V(g2)$color[which(v %in% "Luke")] <- "tan2" #ego1 appears in tan  
+   V(g2)$color[which(v %in% "Luke")] <- "tan2" #ego2 appears in tan  
+   V(g2)$color[which(v %in% u1)] <- "purple" #neighbors unique to ego1 appear in blue 
+   V(g2)$color[which(v %in% u2)] <- "blue" #neighbors unique to ego2 appear in yellow 
+   E(g2)$color <- rep("lightgray", ecount(g2))
+   E(g2)$color[ll] <- "red"
+   E(g2)$width <- rep(2, ecount(g2))
+   E(g2)$width[ll] <- 5
+   l <- layout_with_kk(g2)
+   rownames(l) <- v
+   l["Luke", ] <- c(-0.35, -0.35)
+   l["Luke", ] <- c(0.35, -0.35)
+   plot(g2, 
+     vertex.size=10, 
+     vertex.frame.color="lightgray", 
+     vertex.label.dist=2,
+     vertex.label.cex = 1.25,
+     layout = l
+     )
+```
+
+In @fig-coupled, the set formed by the union of Luke and Luke's alters splits into three disjoint subsets [@mattie_etal18]: Alters that are shared by Luke and Luke (in red), alters connected to Luke but not to Luke (in purple) and alters connected to Luke but not to Luke (in blue). 
+
+Typically, we are interested in figuring out how the local structural configuration of each of this set of alters affect the focal tie between the two egos that we are interested (pictured in @fig-coupled as a thicker red edge). The basic idea is that the more *cohesive* (clustered) is the subset of the coupled ego-network composed of shared partners, then the more durable the tie should be. Alternatively, the more cohesive the subset of the ego network composed of non-shared partners, the weaker and less durable the focal tie between the egos is. 
+
+Thus, the coupled clustering coefficient can be calculated as:
+
+$$
+C_{ij} = (n_{ij} \times cc_{ij}) - \left[(n_i+n_j) \times (cc_i + cc_j)\right]
+$$
+
+This says that the clustering coefficient of a coupled ego network is equivalent to the clustering coefficient in the subgraph composed of shared alters ($cc_{ij}$) minus the sum of the clustering coefficients for non-shared alters for each ego. 
+
+
+```{r}
+   coupled.cc <- function(v1, v2, graph) {
+      n1 <- names(neighbors(graph, v1))
+      n2 <- names(neighbors(graph, v2))
+      if (are_adjacent(graph, v1, v2) == TRUE) {
+         n1 <- n1[-which(n1 == v2)]
+         n2 <- n2[-which(n2 == v1)]
+         }
+      ni <- intersect(n1, n2)
+      u1 <- setdiff(n1, ni)
+      u2 <- setdiff(n2, ni)
+      ccij <- edge_density(subgraph(graph, ni))
+      cci <- edge_density(subgraph(graph, u1))
+      ccj <- edge_density(subgraph(graph, u2))
+      return(list(ccij=ccij, cci = cci, ccj = ccj))
+   }
+   coupled.cc("Luke", "Han", g)
+```
