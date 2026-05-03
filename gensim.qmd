@@ -13,21 +13,21 @@ format:
 
 ## The Role Problem 
 
-So far, we have defined distances and similarities mainly as a function of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
+So far, we have defined distances and similarities primarily as functions of the number of shared neighbors between two nodes. Structural equivalence is an idealized version of this, obtaining whenever people share exactly the same set of neighbors.
 
-Yet, similarities based on local neighborhood information only have been criticized (e.g., by @borgatti_everett92) for not quite capturing the sociological intuition behind the idea of a *role* which is usually what they are deployed for. 
+Yet, similarities based on local neighborhood information have only been criticized (e.g., by @borgatti_everett92) for not quite capturing the sociological intuition behind the idea of a *role*, which is usually what they are deployed for. 
 
 That is, two doctors don't occupy the same role because they treat the *same* set of patients (in fact, this would be weird); instead, the set of doctors occupy the same role to the extent they treat a set of actors in the same (or similar) role: Namely, patients, regardless of whether those actors are literally the same or not.  Note that all the similarity notions studied in the [local similarity lecture](locsim.qmd) have structural equivalence as the limiting case of maximum similarity. So they are still based on the idea that *nodes are similar to the extent they connect to the same others*. 
 
-This worry led social network analysts to try to generalize the concept of structural equivalence using less stringent algebraic definition, resulting in something of a proliferation of different equivalences such as **automorphic** or **regular equivalence** [@borgatti_everett92]. Unfortunately, none of this work led (unlike the work on structural equivalence) to useful or actionable tools for data analysis, with some even concluding that some definitions of equivalence (like regular equivalence) are unlikely to be found in any interesting substantive setting. 
+This worry led social network analysts to try to generalize the concept of structural equivalence using a less stringent algebraic definition, resulting in a proliferation of different equivalences, such as **automorphic** or **regular equivalence** [@borgatti_everett92]. Unfortunately, none of this work (unlike the work on structural equivalence) led to useful or actionable tools for data analysis, with some even concluding that certain definitions of equivalence (such as regular equivalence) are unlikely to be found in any interesting substantive setting. 
 
-A better approach here is to use the more relaxed notion of similarity to come up with a more general definition that can capture our role-based intuitions. One strategy is to define similarity in a more "generalized" way as follows: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff).
+A better approach here is to use a more relaxed notion of similarity to arrive at a more general definition that captures our role-based intuitions. One strategy is to define similarity in a more "generalized" way as follows: *nodes are similar to the extent they connect to similar others*, with the restriction that we can only use endogenous (structural connectivity) information---like with structural equivalence or common-neighbor approaches---to define everyone's similarity (no exogenous attribute stuff).
 
 ## Jeh and Widom's SimRank
 
 As @jeh_widom02 note, this approach does lead to a coherent generalization of the idea of similarity for nodes in graphs because we can just define similarity *recursively* and iterate through the graph until the similarity scores stop changing.^[Note the similarity (heh, heh) between this idea and the various status ranking algorithms for computing [prestige scores](tm-prestige.qmd).] 
 
-More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each iteration-step $t$ ($s_{ij}(t)$) using the formula:
+More specifically, they propose to measure the similarity between two nodes $i$ and $j$ at each iteration step $t$ ($s_{ij}(t)$) using the formula:
 
 
 $$
@@ -36,7 +36,7 @@ $$ {#eq-simrank}
 
 So the similarity between two nodes at step $t$ is just the sum of the pairwise similarities between each of their neighbors (computed in the previous step, $t-1$), weighted by the ratio of a free parameter $\alpha$ (a number between zero and one) to the product of their in-degrees (to take a weighted average). 
 
-This measure nicely captures the idea that nodes are similar to the extent they are both connected to people who are themselves similar. Note that it doesn't matter whether these in-neighbors are shared between the two nodes (the summation occurs over each pair of nodes formed by crossing the set $p$ + $q$ against $p$ + $r$ as defined in the [local similarity](locsim.qmd) lecture), whether they are themselves neighbors, which deals with the doctor/patient problem we referred to earlier. 
+This measure nicely captures the idea that nodes are similar to the extent that they are both connected to people who are themselves similar. Note that it doesn't matter whether these in-neighbors are shared between the two nodes (the summation occurs over each pair of nodes formed by crossing the set $p$ + $q$ against $p$ + $r$ as defined in the [local similarity](locsim.qmd) lecture), whether they are themselves neighbors, which deals with the doctor/patient problem we referred to earlier. 
 
 A function that implements this idea looks like:
 
@@ -85,11 +85,11 @@ A function that implements this idea looks like:
       } #end function
 ```
 
-This function takes an adjacency matrix as input (`w`) and returns a generalized similarity matrix between nodes (`z`) as output. Note that at the initial time step $t = 0$, the similarity matrix `z` is initialized to the identity matrix $\mathbf{I}_{n \times n}$ of the same dimensions as the adjacency matrix, saying that initially all nodes are maximally similar to themselves (which makes sense).
+This function takes an adjacency matrix (`w`) as input and returns a generalized similarity matrix (`z`) as output. Note that at the initial time step $t = 0$, the similarity matrix `z` is initialized to the identity matrix $\mathbf{I}_{n \times n}$ of the same dimensions as the adjacency matrix, saying that initially all nodes are maximally similar to themselves (which makes sense).
 
-The above is an implementation of the generalized version of `SimRank` developed by @zhao_etal09 called `P-Rank` which takes similarities between both in and out-neighbors into account (weighted by the $\beta$ parameter). Jeh and Widom's [-@jeh_widom02] original version of `SimRank` (which only takes into account in-neighbor similarities) is obtained when $\beta = 1$ (the default in the `SimRank` function above).
+The above is an implementation of the generalized version of `SimRank` developed by @zhao_etal09, called `P-Rank`, which accounts for similarities between in- and out-neighbors (weighted by the $\beta$ parameter). Jeh and Widom's [-@jeh_widom02] original version of `SimRank` (which only takes into account in-neighbor similarities) is obtained when $\beta = 1$ (the default in the `SimRank` function above).
 
-Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in @fig-jw, which is supposed to be a set of web pages in an university. There is a link from the main University page to that of the two professors, and a link from the professor to the student pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link on their webpage to the main university page. 
+Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in @fig-jw, which is intended to represent a set of web pages at a university. There is a link from the main University page to that of the two professors, and a link from the professor to the student pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link to the main university page on their webpage. 
 
 ```{r}
 #| label: fig-jw
@@ -157,13 +157,13 @@ We can transform the generalized similarities to distances and plot:
    plot(h.res1)
 ```
 
-The plot suggests a division into five major node clusters. On the left we have the people in the diner scene (e.g., Pumpking and Honey Bunny), followed by a small cluster of people in the sex dungeon scene (Maynard, The Gimp, and Zed). The we have the main character cluster in the middle (Jules, Mia, Vincent, Butch, Marsellus), and then we have characters in the cleanup scene (Jimmie, The Wolf), followed by a cluster of smaller characters. 
+The plot suggests a division into five major node clusters. On the left, we have the people from the diner scene (e.g., Pumpkin and Honey Bunny), followed by a small cluster from the sex dungeon scene (Maynard, The Gimp, and Zed). We have the main character cluster in the middle (Jules, Mia, Vincent, Butch, Marsellus), then the cleanup scene (Jimmie, The Wolf), followed by a cluster of smaller characters. 
 
 ## Does SimRank Escape the Role Problem?
 
 Recall that we turned to SimRank because it promised to solve Borgatti and Everett's [-@borgatti_everett92] *role problem*, or the idea that nodes can play the same role in the network even when they don't share *any* neighbors. 
 
-Now, we know from @eq-simrank that *SimRank* uses information on the neighborhoods of the two nodes, but relaxes the local structural similarity assumption that these neighbors need to be *shared*. 
+Now, we know from @eq-simrank that *SimRank* uses information about the neighborhoods of the two nodes, but relaxes the local structural-similarity assumption that these neighbors need to be *shared*. 
 
 However, it is clear that nodes that have *completely disjoint* neighborhoods would be considered by *SimRank* to be low similarity even though they could be playing the same *roles*.^[In fact, @kusumoto_etal14 show that the `SimRank` score of two nodes tends towards zero as their geodesic distance increases.] So maybe *SimRank* doesn't solve the doctor/patient problem after all. 
 
@@ -171,10 +171,10 @@ However, it is clear that nodes that have *completely disjoint* neighborhoods wo
 #| label: fig-be
 #| fig-height: 8
 #| fig-width: 8
-#| fig-cap: "Borgatti and Everett's Thinking Graph"
+#| fig-cap: "Borgatti and Everett's Thinking Graph."
 #| fig-subcap: 
-#|   - "Original Graph"
-#|   - "An Automorphism of the Original Graph"
+#|   - "Original Graph."
+#|   - "An Automorphism of the Original Graph."
 #| layout-ncol: 2
 #| echo: false
    g <- make_empty_graph(10, directed = TRUE)
@@ -215,7 +215,7 @@ However, it is clear that nodes that have *completely disjoint* neighborhoods wo
         vertex.label.cex = 1.5, edge.arrow.size = 1)
 ```
 
-To build some intuition, consider the graph in @fig-be-1, which is a directed version of a toy example taken from @borgatti_everett92 [p. 14, Figure 7 (a)]. Going by the standard of *structural equivalence* criterion (see [here](structequiv.qmd)) we would say that that set of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, {A, C}, and {E, F} because each pair in brackets has *identical* in and out neighborhoods.
+To build some intuition, consider the graph in @fig-be-1, which is a directed version of a toy example from @borgatti_everett92 [p. 14, Figure 7(a)]. Going by the standard of *structural equivalence* criterion (see [here](structequiv.qmd)) we would say that that set of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, {A, C}, and {E, F} because each pair in brackets has *identical* in and out neighborhoods.
 
 We can ascertain this by reviving our old Euclidean distance function:
 
@@ -256,9 +256,9 @@ And then using it to cluster the nodes in the Borgatti-Everett graph:
 
 We can see in @fig-se that indeed, the good old Euclidean distance finds the set of structurally equivalent nodes in the graph [@burt76].
 
-Yet, going by our intuitive idea that two nodes occupy the same position if they are structurally *similar* (regardless of whether they share the same set of neighbors) we want to say that nodes {J, H, A, C} occupy the same *role*, as do nodes {G, I, D, B} and nodes {E, F}. So going by this abstract idea of role, we would expect there to be *three* role positions in the graph, not five as suggested by the structural equivalence approach. 
+Yet, going by our intuitive idea that two nodes occupy the same position if they are structurally *similar* (regardless of whether they share the same set of neighbors) we want to say that nodes {J, H, A, C} occupy the same *role*, as do nodes {G, I, D, B} and nodes {E, F}. So, going by this abstract idea of role, we would expect there to be *three* role positions in the graph, not five as suggested by the structural equivalence approach. 
 
-However, standard approaches to structural equivalence like the Euclidean distance will not capture these higher level similarities, they will only capture the lower-level similarity based on local neighborhood overlap that the algorithms for structural equivalence are designed to extract. 
+However, standard approaches to structural equivalence, such as Euclidean distance, will not capture these higher-level similarities; they will only capture the lower-level similarity based on local neighborhood overlap that structural equivalence algorithms are designed to extract. 
 
 Can `SimRank` do better? Let's see:
 
@@ -266,32 +266,32 @@ Can `SimRank` do better? Let's see:
 #| label: fig-sr 
 #| fig-height: 6
 #| fig-width: 6  
-#| fig-cap: "SimRank Partition"
+#| fig-cap: "SimRank Partition."
    S <- SimRank(A, beta = 0.5)
    D <- as.dist(1-S)
    h.res <- hclust(D, method = "ward.D2")
    plot(h.res)
 ```
 
-We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in @fig-sr, that Zhao et al's [-@zhao_etal09] generalized version of `SimRank` does not discover the more general role classes in the Borgatti-Everett graph. It does correctly assign {E, F} to its own group, but then it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
+We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in @fig-sr that Zhao et al.'s [-@zhao_etal09] generalized version of `SimRank` does not identify the more general role classes in the Borgatti-Everett graph. It does correctly assign {E, F} to its own group, but then it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
 
 ## RoleSim
 
 We can see that the problem is that nodes like {J, H, A, C} in @fig-be-1 are not structurally equivalent (since J and H don't share any neighbors with A and C). Instead, they are **automorphically equivalent** (see @borgatti_everett92 for relevant discussion). 
 
-While automorphic equivalence is a terrible name coming from the depths of graph theory, it has a simple explanation. Two nodes are automorphically equivalent just in case we could swap the labels of any pair (e.g., J for A and A for J) in the relevant set in @fig-be-1 and *nothing* would change in the graph. That is, *every* graph theoretic quantity we could compute would remain the same (density, average shortest path length, diameter, etc.). 
+While automorphic equivalence is a terrible name coming from the depths of graph theory, it has a simple explanation. Two nodes are automorphically equivalent if we could swap the labels of any pair (e.g., J for A and A for J) in the relevant set in @fig-be-1, and *nothing* would change in the graph. That is, *every* graph theoretic quantity we could compute would remain the same (density, average shortest path length, diameter, etc.). 
 
-It is easy to see that nodes inside the set {A, C, J, H} pass this test in @fig-be-1. For instance, the graph in @fig-be-2 has all the same properties as @fig-be-1 even though now J is neighbors with B and D and A is neighbors with G and I. Such an evil twin graph is called an **automorphism** of the original graph.  
+It is easy to see that nodes inside the set {A, C, J, H} pass this test in @fig-be-1. For instance, the graph in @fig-be-2 has the same properties as @fig-be-1, even though J is now a neighbor of B and D, and A is a neighbor of G and I. Such an evil twin graph is called an **automorphism** of the original graph.  
 
-Of course, this strict graph theoretic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be-1, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$) or they are not ($s_{ij} = 0$), with nothing in between. 
+Of course, this strict graph theoretic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be-1, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$), or they are not ($s_{ij} = 0$), with nothing in between. 
 
-What we need instead is a metric of **automorphic similarity** that admits to gradations so that two nodes could be *more or less* automorphically similar, with the idea being that the more automorphically similar two nodes are the less disruption is there to the graph structure when they are exchanged, and with the Platonic ideal case being *no* disruption whatsoever for strictly automorphically equivalent nodes. 
+What we need instead is a metric of **automorphic similarity** that admits to gradations so that two nodes could be *more or less* automorphically similar, with the idea being that the more automorphically similar two nodes are, the less disruption there is to the graph structure when they are exchanged, and with the Platonic ideal case being *no* disruption whatsoever for strictly automorphically equivalent nodes. 
 
 So the problem with a `SimRank` style measure is that it is not sensitive to automorphic similarity, as it is only sensitive to structural similarity, and we need a measure that is. 
 
-Fortunately, such a measure exists and it's called `RoleSim` [@jin_etal14]. It can be seen as a generalization of `SimRank` with the difference being that rather than computing the similarity between $i$ and $j$ at iteration $t$ as equivalent to the *average* similarity of $i$ and $j$'s neighbors at iteration $t-1$, it instead computes the similarity between $i$ and $j$ at iteration $t$ as the *matching* between the most similar neighbor pairs at iteration $t-1$. 
+Fortunately, such a measure exists, and it's called `RoleSim` [@jin_etal14]. It can be seen as a generalization of `SimRank` with the difference being that rather than computing the similarity between $i$ and $j$ at iteration $t$ as equivalent to the *average* similarity of $i$ and $j$'s neighbors at iteration $t-1$, it instead computes the similarity between $i$ and $j$ at iteration $t$ as the *matching* between the most similar neighbor pairs at iteration $t-1$. 
 
-Such a maximum matching is defined as finding top $k$ similarity scores between $i$ and $j$'s neighbors at $t-1$ (where $k$ is the minimum of the degrees of $i$ and $j$) and adding them up.  
+Such a maximum matching is defined as finding the top $k$ similarity scores between $i$ and $j$'s neighbors at $t-1$ (where $k$ is the minimum of the degrees of $i$ and $j$) and adding them up.  
 
 In formulese:
 
@@ -323,9 +323,9 @@ A *maximal matching* selects the *maximum numbers* across the smallest dimension
    round(match.AH, 2)
 ```
 
-We can see that the maximum in row one, corresponding to node B is 0.88 (the similarity between B and J), the maximum in row two, corresponding to node C is 0.96 (the similarity between C and J) and the maximum in row three corresponding to node D is 0.55 (the similarity between D and K). 
+We can see that the maximum in row one, corresponding to node B, is 0.88 (the similarity between B and J), the maximum in row two, corresponding to node C, is 0.96 (the similarity between C and J), and the maximum in row three, corresponding to node D, is 0.55 (the similarity between D and K). 
 
-This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent to the numerator in the fraction of @eq-rolesim.  
+This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent of the numerator in the fraction of @eq-rolesim.  
 
 Because in a directed graph we have to worry about similarities between in and out neighbors, we modify @eq-rolesim like this:
 
@@ -393,7 +393,7 @@ And now we apply it to the Borgatti/Everett graph:
 #| label: fig-rs 
 #| fig-height: 6
 #| fig-width: 6  
-#| fig-cap: "RoleSim Partition"
+#| fig-cap: "RoleSim Partition."
    S <- RoleSim(A)
    D <- as.dist(1-S)
    h.res <- hclust(D, method = "ward.D") #hierarchical clustering
@@ -403,13 +403,13 @@ And now we apply it to the Borgatti/Everett graph:
 And we can see in @fig-rs that, indeed, the `RoleSim` algorithm groups nodes in terms of their automorphic similarity rather than their structural similarity, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. Role problem solved!
 
 ## CentSim
-As we noted, automorphically equivalent nodes in  a graph are completely exchangeable meaning that we can swap them without changing anything we can compute at the graph level. 
+As we noted, automorphically equivalent nodes in  a graph are completely exchangeable, meaning that we can swap them without changing anything we can compute at the graph level. 
 
 The same goes for any quantity we can compute at the node level, which means that automorphically equivalent nodes have the property of being *graph-theoretically indistinguishable*. That means that they will have the same score on *any* centrality measure we could compute on them. 
 
-So another approach to finding automorphically similar pairs of nodes in a graph is just to compute a bunch of node level quantities, such as centrality measures, and count nodes as similar if their centrality measures are similar. 
+So another approach to finding automorphically similar pairs of nodes in a graph is just to compute a bunch of node-level quantities, such as centrality measures, and count nodes as similar if their centrality measures are similar. 
 
-@li_etal15 build on this observation to compute a role similarity measure called `CentSim` on each pair of nodes in the graph, by comparing their centrality scores across various measures. Li et al.'s [-@li_etal15] proposal is that the similarity between $i$ and $j$ is given by:
+@li_etal15 built on this observation to compute a role similarity measure called `CentSim` on each pair of nodes in the graph, by comparing their centrality scores across various measures. Li et al.'s [-@li_etal15] proposal is that the similarity between $i$ and $j$ is given by:
 
 $$
 s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
@@ -423,9 +423,9 @@ $$ {#eq-li1}
 
 Where $c_k(i)$ is the $k^{th}$ centrality score computed on node $i$.
 
-So the idea is to compute a bunch of different centrality scores on each node and the compute the average ratio between the minimum and the maximum scores for each pair. 
+So the idea is to compute a bunch of different centrality scores for each node, then compute the average ratio of the minimum to the maximum score for each pair. 
 
-Here's a function that does that, using degree, closeness, betweenness and eigenvector centrality:
+Here's a function that does that, using degree, closeness, betweenness, and eigenvector centrality:
 
 ```{r}
    cent.sim <- function(x) {
@@ -464,14 +464,14 @@ Can `CentSim` find the automorphically equivalent classes in @fig-be-1 that we a
 #| label: fig-cs
 #| fig-height: 6
 #| fig-width: 6  
-#| fig-cap: "CentSim Partition"
+#| fig-cap: "CentSim Partition."
    S <- cent.sim(g)
    D <- as.dist(1-S)
    h.res <- hclust(D, method = "ward.D") #hierarchical clustering
    plot(h.res)
 ```
 
-Indeed it does! As we can see in @fig-cs Nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
+Indeed it does! As we can see in @fig-cs, nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
 
 Let us compare the clustering that we obtain in the *Pulp Fiction* network from a measure that is sensitive to automorphic similarity (like `RoleSim`) to the one we obtained using `SimRank`:
 
