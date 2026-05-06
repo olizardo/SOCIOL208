@@ -889,26 +889,23 @@ D 0.41 0.05 0.55 0.45</code></pre>
 </div>
 </div>
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a> g <span class="ot">&lt;-</span> <span class="fu">make_empty_graph</span>(<span class="dv">9</span>, <span class="at">directed =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb18-2"><a href="#cb18-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> LETTERS[<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>]</span>
-<span id="cb18-3"><a href="#cb18-3"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"A"</span>,<span class="st">"B"</span>)</span>
-<span id="cb18-4"><a href="#cb18-4"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"A"</span>,<span class="st">"C"</span>)</span>
-<span id="cb18-5"><a href="#cb18-5"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"A"</span>,<span class="st">"D"</span>)</span>
-<span id="cb18-6"><a href="#cb18-6"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"B"</span>,<span class="st">"E"</span>)</span>
-<span id="cb18-7"><a href="#cb18-7"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"B"</span>,<span class="st">"F"</span>)</span>
-<span id="cb18-8"><a href="#cb18-8"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"C"</span>,<span class="st">"G"</span>)</span>
-<span id="cb18-9"><a href="#cb18-9"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"D"</span>,<span class="st">"H"</span>)</span>
-<span id="cb18-10"><a href="#cb18-10"></a>   g <span class="ot">&lt;-</span> g <span class="sc">+</span> <span class="fu">edge</span>(<span class="st">"D"</span>,<span class="st">"I"</span>)</span>
-<span id="cb18-11"><a href="#cb18-11"></a>   B <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb18-12"><a href="#cb18-12"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(B)</span>
-<span id="cb18-13"><a href="#cb18-13"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb18-14"><a href="#cb18-14"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb18-15"><a href="#cb18-15"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gensim_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
+<!-- ```{r}
+ g <- make_empty_graph(9, directed = FALSE)
+   V(g)$name <- LETTERS[1:9]
+   g <- g + edge("A","B")
+   g <- g + edge("A","C")
+   g <- g + edge("A","D")
+   g <- g + edge("B","E")
+   g <- g + edge("B","F")
+   g <- g + edge("C","G")
+   g <- g + edge("D","H")
+   g <- g + edge("D","I")
+   B <- as.matrix(as_adjacency_matrix(g))
+   S <- RoleSim(B, beta = 0.9)
+   D <- as.dist(1-S)
+   h.res <- hclust(D, method = "ward.D") #hierarchical clustering
+   plot(h.res)
+``` -->
 <p>And we can see in <a href="#fig-rs">Figure&nbsp;5</a> that, indeed, the <code>RoleSim</code> algorithm groups nodes in terms of their automorphic similarity rather than their structural similarity, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. Role problem solved!</p>
 </section>
 <section id="centsim" class="level2">
@@ -928,41 +925,41 @@ s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
 <p>So the idea is to compute a bunch of different centrality scores for each node, then compute the average ratio of the minimum to the maximum score for each pair.</p>
 <p>Here’s a function that does that, using degree, closeness, betweenness, and eigenvector centrality:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   cent.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb19-2"><a href="#cb19-2"></a>      <span class="fu">library</span>(igraph)</span>
-<span id="cb19-3"><a href="#cb19-3"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">degree</span>(x)</span>
-<span id="cb19-4"><a href="#cb19-4"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(x)</span>
-<span id="cb19-5"><a href="#cb19-5"></a>      c3 <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(x)</span>
-<span id="cb19-6"><a href="#cb19-6"></a>      c4 <span class="ot">&lt;-</span> <span class="fu">eigen_centrality</span>(x)<span class="sc">$</span>vector</span>
-<span id="cb19-7"><a href="#cb19-7"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(x)</span>
-<span id="cb19-8"><a href="#cb19-8"></a>      min.max <span class="ot">&lt;-</span> <span class="cf">function</span>(g, h) {</span>
-<span id="cb19-9"><a href="#cb19-9"></a>         <span class="cf">if</span> (<span class="fu">max</span>(g, h) <span class="sc">!=</span> <span class="dv">0</span>) {r <span class="ot">&lt;-</span> <span class="fu">min</span>(g, h)<span class="sc">/</span><span class="fu">max</span>(g, h)}</span>
-<span id="cb19-10"><a href="#cb19-10"></a>         <span class="cf">else</span> {r <span class="ot">&lt;-</span> <span class="dv">1</span>}</span>
-<span id="cb19-11"><a href="#cb19-11"></a>         <span class="fu">return</span>(r)</span>
-<span id="cb19-12"><a href="#cb19-12"></a>         }</span>
-<span id="cb19-13"><a href="#cb19-13"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
-<span id="cb19-14"><a href="#cb19-14"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
-<span id="cb19-15"><a href="#cb19-15"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
-<span id="cb19-16"><a href="#cb19-16"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
-<span id="cb19-17"><a href="#cb19-17"></a>            <span class="cf">for</span>(j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
-<span id="cb19-18"><a href="#cb19-18"></a>               w1 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c1[i], c1[j])</span>
-<span id="cb19-19"><a href="#cb19-19"></a>               w2 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c2[i], c2[j])</span>
-<span id="cb19-20"><a href="#cb19-20"></a>               w3 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c3[i], c3[j])</span>
-<span id="cb19-21"><a href="#cb19-21"></a>               w4 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c4[i], c4[j])</span>
-<span id="cb19-22"><a href="#cb19-22"></a>               z[i,j] <span class="ot">&lt;-</span> (w1 <span class="sc">+</span> w2 <span class="sc">+</span> w3 <span class="sc">+</span> w4)<span class="sc">/</span><span class="dv">4</span></span>
-<span id="cb19-23"><a href="#cb19-23"></a>            }</span>
-<span id="cb19-24"><a href="#cb19-24"></a>         }</span>
-<span id="cb19-25"><a href="#cb19-25"></a>      z[<span class="fu">lower.tri</span>(z)] <span class="ot">&lt;-</span> <span class="fu">t</span>(z)[<span class="fu">lower.tri</span>(z)] <span class="co">#copying upper triangle into lower triangle</span></span>
-<span id="cb19-26"><a href="#cb19-26"></a>      <span class="fu">return</span>(z)</span>
-<span id="cb19-27"><a href="#cb19-27"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>   cent.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb18-2"><a href="#cb18-2"></a>      <span class="fu">library</span>(igraph)</span>
+<span id="cb18-3"><a href="#cb18-3"></a>      c1 <span class="ot">&lt;-</span> <span class="fu">degree</span>(x)</span>
+<span id="cb18-4"><a href="#cb18-4"></a>      c2 <span class="ot">&lt;-</span> <span class="fu">harmonic_centrality</span>(x)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>      c3 <span class="ot">&lt;-</span> <span class="fu">betweenness</span>(x)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>      c4 <span class="ot">&lt;-</span> <span class="fu">eigen_centrality</span>(x)<span class="sc">$</span>vector</span>
+<span id="cb18-7"><a href="#cb18-7"></a>      n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(x)</span>
+<span id="cb18-8"><a href="#cb18-8"></a>      min.max <span class="ot">&lt;-</span> <span class="cf">function</span>(g, h) {</span>
+<span id="cb18-9"><a href="#cb18-9"></a>         <span class="cf">if</span> (<span class="fu">max</span>(g, h) <span class="sc">!=</span> <span class="dv">0</span>) {r <span class="ot">&lt;-</span> <span class="fu">min</span>(g, h)<span class="sc">/</span><span class="fu">max</span>(g, h)}</span>
+<span id="cb18-10"><a href="#cb18-10"></a>         <span class="cf">else</span> {r <span class="ot">&lt;-</span> <span class="dv">1</span>}</span>
+<span id="cb18-11"><a href="#cb18-11"></a>         <span class="fu">return</span>(r)</span>
+<span id="cb18-12"><a href="#cb18-12"></a>         }</span>
+<span id="cb18-13"><a href="#cb18-13"></a>      z <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb18-14"><a href="#cb18-14"></a>      <span class="fu">rownames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
+<span id="cb18-15"><a href="#cb18-15"></a>      <span class="fu">colnames</span>(z) <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
+<span id="cb18-16"><a href="#cb18-16"></a>         <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>n) {</span>
+<span id="cb18-17"><a href="#cb18-17"></a>            <span class="cf">for</span>(j <span class="cf">in</span> i<span class="sc">:</span>n) {</span>
+<span id="cb18-18"><a href="#cb18-18"></a>               w1 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c1[i], c1[j])</span>
+<span id="cb18-19"><a href="#cb18-19"></a>               w2 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c2[i], c2[j])</span>
+<span id="cb18-20"><a href="#cb18-20"></a>               w3 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c3[i], c3[j])</span>
+<span id="cb18-21"><a href="#cb18-21"></a>               w4 <span class="ot">&lt;-</span> <span class="fu">min.max</span>(c4[i], c4[j])</span>
+<span id="cb18-22"><a href="#cb18-22"></a>               z[i,j] <span class="ot">&lt;-</span> (w1 <span class="sc">+</span> w2 <span class="sc">+</span> w3 <span class="sc">+</span> w4)<span class="sc">/</span><span class="dv">4</span></span>
+<span id="cb18-23"><a href="#cb18-23"></a>            }</span>
+<span id="cb18-24"><a href="#cb18-24"></a>         }</span>
+<span id="cb18-25"><a href="#cb18-25"></a>      z[<span class="fu">lower.tri</span>(z)] <span class="ot">&lt;-</span> <span class="fu">t</span>(z)[<span class="fu">lower.tri</span>(z)] <span class="co">#copying upper triangle into lower triangle</span></span>
+<span id="cb18-26"><a href="#cb18-26"></a>      <span class="fu">return</span>(z)</span>
+<span id="cb18-27"><a href="#cb18-27"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>cent.sim</code> function takes an igraph graph object as input and returns a similarity matrix <code>z</code> as output.</p>
 <p>Can <code>CentSim</code> find the automorphically equivalent classes in <a href="#fig-be-1">Figure&nbsp;2 (a)</a> that we are looking for? Let’s find out:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">cent.sim</span>(g)</span>
-<span id="cb20-2"><a href="#cb20-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb20-3"><a href="#cb20-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb20-4"><a href="#cb20-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>   S <span class="ot">&lt;-</span> <span class="fu">cent.sim</span>(g)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb19-3"><a href="#cb19-3"></a>   h.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb19-4"><a href="#cb19-4"></a>   <span class="fu">plot</span>(h.res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div id="fig-cs" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
@@ -975,17 +972,17 @@ s_{ij} = \frac{\sum_{k=1}^l \theta_k(i,j)}{l}
 <p>Indeed it does! As we can see in <a href="#fig-cs">Figure&nbsp;6</a>, nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.</p>
 <p>Let us compare the clustering that we obtain in the <em>Pulp Fiction</em> network from a measure that is sensitive to automorphic similarity (like <code>RoleSim</code>) to the one we obtained using <code>SimRank</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a>   g <span class="ot">&lt;-</span> movie_559</span>
-<span id="cb21-2"><a href="#cb21-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
-<span id="cb21-3"><a href="#cb21-3"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
-<span id="cb21-4"><a href="#cb21-4"></a>   g <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g, <span class="fu">degree</span>(g) <span class="sc">&lt;</span> <span class="dv">2</span>) <span class="co">#deleting low degree vertices</span></span>
-<span id="cb21-5"><a href="#cb21-5"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb21-6"><a href="#cb21-6"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
-<span id="cb21-7"><a href="#cb21-7"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
-<span id="cb21-8"><a href="#cb21-8"></a>   h.res2 <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
-<span id="cb21-9"><a href="#cb21-9"></a>   <span class="fu">plot</span>(h.res2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>   g <span class="ot">&lt;-</span> movie_559</span>
+<span id="cb20-2"><a href="#cb20-2"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
+<span id="cb20-3"><a href="#cb20-3"></a>   <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
+<span id="cb20-4"><a href="#cb20-4"></a>   g <span class="ot">&lt;-</span> <span class="fu">delete_vertices</span>(g, <span class="fu">degree</span>(g) <span class="sc">&lt;</span> <span class="dv">2</span>) <span class="co">#deleting low degree vertices</span></span>
+<span id="cb20-5"><a href="#cb20-5"></a>   A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb20-6"><a href="#cb20-6"></a>   S <span class="ot">&lt;-</span> <span class="fu">RoleSim</span>(A)</span>
+<span id="cb20-7"><a href="#cb20-7"></a>   D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span>S)</span>
+<span id="cb20-8"><a href="#cb20-8"></a>   h.res2 <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D"</span>) <span class="co">#hierarchical clustering</span></span>
+<span id="cb20-9"><a href="#cb20-9"></a>   <span class="fu">plot</span>(h.res2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="gensim_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="960"></p>
+<p><img src="gensim_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="960"></p>
 </div>
 </div>
 <p>We can see that the <code>RoleSim</code> partition is different from the one offered by <code>SimRank</code>. While the main clusters in the <code>SimRank</code> partition are organized by scene (e.g., all the characters in the diner scene appear together), the <code>RoleSim</code> partition actually organizes the characters according to more abstract roles. So the main characters {Jules, Vincent, Butch} form their own cluster, while {Marsellus, Mia, Pumpkin, Honey Bunny} are also assigned to a similarity cluster, despite not appearing in the same scenes.</p>
