@@ -273,7 +273,7 @@ Can `SimRank` do better? Let's see:
    plot(h.res)
 ```
 
-We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in @fig-sr that Zhao et al.'s [-@zhao_etal09] generalized version of `SimRank` does not identify the more general role classes in the Borgatti-Everett graph. It does correctly assign {E, F} to its own group, but then it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
+We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in @fig-sr that Zhao et al.'s [-@zhao_etal09] generalized version of `SimRank` does not identify the more general role classes in the Borgatti-Everett graph. It incorrectly assigns {E}, {F} to their separate group (when they should be a single class), and it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
 
 ## RoleSim
 
@@ -400,25 +400,65 @@ And now we apply it to the Borgatti/Everett graph:
    plot(h.res)
 ```
 
-<!-- ```{r}
- g <- make_empty_graph(9, directed = FALSE)
-   V(g)$name <- LETTERS[1:9]
-   g <- g + edge("A","B")
-   g <- g + edge("A","C")
-   g <- g + edge("A","D")
-   g <- g + edge("B","E")
-   g <- g + edge("B","F")
-   g <- g + edge("C","G")
-   g <- g + edge("D","H")
-   g <- g + edge("D","I")
-   B <- as.matrix(as_adjacency_matrix(g))
-   S <- RoleSim(B, beta = 0.9)
+And we can see in @fig-rs that, indeed, the `RoleSim` algorithm groups nodes in terms of their automorphic similarity rather than their structural similarity, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. 
+
+We can see this clearly if we cut the dendrogram to return three clusters:
+
+Here is the five cluster partition of the dendrogram in @fig-rs2:
+
+```{r}
+   blocks <- cutree(h.res, k = 3)
+   blocks
+```
+
+### Undirected Case
+
+[Hanneman & Riddle](https://faculty.ucr.edu/~hanneman/nettext/C14_Automorphic_Equivalence.html) use the undirected graph in @fig-wf as another example where automorphic equivalence is relevant (the graph is taken from @wasserman_faust94). Using a (costly) algorithm that identifies the "orbits" of a graph (sets of automorphically equivalent nodes) they note that there are five such positions in @fig-wf: Actors $\{A\}$ (the "top" node), $\{C\}$, and $\{G\}$ occupying unique (singleton) positions, with $\{B, D\}$ and $\{E, F, H, I\}$ being sets of automorphically equivalent (exchangeable) nodes.  
+
+```{r}
+#| label: fig-wf
+#| fig-height: 8
+#| fig-width: 8
+#| fig-cap: "An undirected graph."
+#| echo: false
+   h <- make_empty_graph(9, directed = FALSE)
+   V(h)$name <- LETTERS[1:9]
+   h <- h + edge("A", "B")
+   h <- h + edge("A", "C")
+   h <- h + edge("A", "D")
+   h <- h + edge("B", "E")
+   h <- h + edge("B", "F")
+   h <- h + edge("C", "G")
+   h <- h + edge("D", "H")
+   h <- h + edge("D", "I")
+   plot(h, 
+      vertex.size=18, vertex.frame.color="lightgray", 
+      layout = layout_as_tree(h, root = "A"),
+      vertex.label.cex = 1.5, edge.arrow.size = 1)
+   B <- as.matrix(as_adjacency_matrix(h))
+   S <- RoleSim(B, beta = 1)
    D <- as.dist(1-S)
    h.res <- hclust(D, method = "ward.D") #hierarchical clustering
-   plot(h.res)
-``` -->
+```
 
-And we can see in @fig-rs that, indeed, the `RoleSim` algorithm groups nodes in terms of their automorphic similarity rather than their structural similarity, with nodes {A, C, J, H} being put in the same class, as are nodes {B, D, G, I} and {E, F}. Role problem solved!
+Fig @fig-rs2 shows the dendrogram corresponding to the `rolesim` partition for @fig-wf, with $\beta = 1.0$ (since the graph is undirected). 
+
+```{r}
+#| label: fig-rs2
+#| fig-height: 6
+#| fig-width: 6  
+#| fig-cap: "RoleSim Partition of an undirected graph."
+   plot(h.res)
+```
+
+We can see that indeed, `rolesim` identifies the automorphically equivalent classes, assigning  $\{A, C, G\}$ to unique positions and grouping the relevant automorphically equivalent nodes into the expected classes. Here is the five cluster partition of the dendrogram in @fig-rs2:
+
+```{r}
+   blocks <- cutree(h.res, k = 5)
+   blocks
+```
+
+Role problem solved!
 
 ## CentSim
 As we noted, automorphically equivalent nodes in  a graph are completely exchangeable, meaning that we can swap them without changing anything we can compute at the graph level. 
@@ -453,8 +493,8 @@ Here's a function that does that, using degree, closeness, betweenness, and eige
       c3 <- betweenness(x)
       c4 <- eigen_centrality(x)$vector
       n <- vcount(x)
-      min.max <- function(g, h) {
-         if (max(g, h) != 0) {r <- min(g, h)/max(g, h)}
+      min.max <- function(a, b) {
+         if (max(a, b) != 0) {r <- min(a, b)/max(a, b)}
          else {r <- 1}
          return(r)
          }
