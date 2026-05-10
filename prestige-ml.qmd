@@ -15,7 +15,7 @@ It is possible to extend the prestige and status we considered in earlier lesson
 
 ## A "Supermatrix" Approach
 
-How would this work? Here we follow the approach outlined by @taylor_etal21. The basic idea is to create a "supermatrix" that simultaneously encodes the pairwise relations of each node in each layer and the dependency relations between the same nodes across layers (e.g., in a temporal network the same nodes are only connected in immediately adjacent layers; in multiplex networks they are connected across all layers). 
+How would this work? Here we follow the approach outlined by @taylor_etal21. The basic idea is to create a "supermatrix" that simultaneously encodes the pairwise relations of each node in each layer and the dependency relations between the same nodes across layers (e.g., in a temporal network, the same nodes are only connected in immediately adjacent layers; in multiplex networks, they are connected across all layers). 
 
 The "supermatrix" $\mathbf{S}$ is defined as follows:
 
@@ -25,7 +25,7 @@ $${#eq-super}
 
 Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \geq \alpha \leq \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). 
 
-The $\otimes$ symbol in @eq-super refers to the **kroenbercker product** between the $\tilde{\mathbf{A}}$ and  $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of $\mathbf{I}$ matrix multiplied by the value each cell of $\tilde{\mathbf{A}}$).^[[https://en.wikipedia.org/wiki/Kronecker_product](https://en.wikipedia.org/wiki/Kronecker_product)]
+The $\otimes$ symbol in @eq-super refers to the **Kronecker product** between the $\tilde{\mathbf{A}}$ and  $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of the $\mathbf{I}$ matrix multiplied by the value each cell of the $\tilde{\mathbf{A}}$ matrix).^[[https://en.wikipedia.org/wiki/Kronecker_product](https://en.wikipedia.org/wiki/Kronecker_product)]
 
 ## Krackhardt Managers Multilayer Network Example
 
@@ -79,7 +79,7 @@ And now, all we need to do is run our old status distribution game on the $\math
       d <- 1 #initial delta
       while (d > 1e-10) {
             o.x <- x #old status scores
-            x <- w %*% o.x #new scores a function of old scores and adjacency matrix
+            x <- w %*% o.x #new scores are a function of old scores and adjacency matrix
             x <- x/norm(x, type = "E") #normalizing new status scores
             d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
          }  #end while loop
@@ -99,16 +99,16 @@ We can arrange the long vector into an $N \times L$ rectangular martrix $\mathbf
     round(W, 3)
 ```
 
-Each column of the matrix is a network layer (friendship, advice, and reports to) and each row is an individual. The entries in the matrix is the (unnormalized) status score of individual $i$ on layer $l$. 
+Each column of the matrix is a network layer (friendship, advice, and reports to), and each row is an individual. The entries in the matrix is the (unnormalized) status score of individual $i$ on layer $l$. 
 
-The *marginal status* of each node is given by the sum of their scores across all layers:
+The *marginal status* of each node is given by the sum of its scores across all layers:
 
 ```{r}
     ml.node <- rowSums(W)
     round(ml.node/max(ml.node), 3)
 ```
 
-We can see that indeed, Manager 2 is the most central nodes across all three layers, followed by Manager 21. 
+We can see that indeed, Manager 2 is the most central node across all three layers, followed by Manager 21. 
 
 We can also do the same thing to figure out which *layer* is the most important, but this time we sum the columns and normalize:
 
@@ -117,7 +117,7 @@ We can also do the same thing to figure out which *layer* is the most important,
     round(ml.layer/max(ml.layer), 3)
 ```
 
-Which tell us that the advice layer is definitely the most important, and the "reports to" layer the least important in determining status across layers. 
+This indicates that the advice layer is the most important, and the "reports to" layer is the least important for determining status across layers. 
 
 The *conditional* status of each node in each layer can be obtained as follows:
 
@@ -135,11 +135,11 @@ We can also calculate the node-specific importance of each layer:
     round(cond.layer, 3)
 ```
 
-Which gives us the relative importance of each *layer* in determining each node's status. For instance, the friendship layer is pretty important for Manager 9, but relatively unimportant for manager 6. The reports to layer is relative unimportant for most managers, but it's definitely most important for manager 7. 
+Which gives us the relative importance of each *layer* in determining each node's status. For instance, the friendship layer is pretty important for Manager 9, but relatively unimportant for Manager 6. The reports-to layer is relatively unimportant for most managers, but it's definitely most important for Manager 7. 
 
 ## Changing Interlayer Dependency Assumptions
 
-As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that says that the advice layer does not affect the orders to layer. To encode this hypothesis into the status calculation we create a new $\mathbf{A}$ matrix:
+As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the orders-to-layer. To encode this hypothesis into the status calculation, we create a new $\mathbf{A}$ matrix:
 
 ```{r}
     A <- matrix(1, 3, 3)
@@ -166,4 +166,4 @@ We now create a new $\mathbf{S}$ matrix and compute the status scores:
     round(cond.node, 3)
 ```
 
-Note that this new set of assumptions about interlayer dependencies change our results. Node 17 is now the highest status node in the friendship and reports to layers, while node remains the highest status node but only in the advice layer. 
+Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node remains the highest-status node, but only in the advice layer. 
