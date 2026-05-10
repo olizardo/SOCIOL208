@@ -644,14 +644,14 @@ For instance, the function below implements a simple version of the Girvan-Newma
          set.seed(s)
          if(length(e) > 1) {e <- sample(e, 1)}      
          h <- delete_edges(h, e)
-         comm <- components(h)
-         d <- comm$no
+         comp <- components(h)
+         d <- comp$no
          }
-      return(comm$membership)
-   }
+      return(comp$membership)
+      }
 ```
 
-The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betwenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comps$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
+The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betwenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comp$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
 
 And here's the function in action in the law firm friendship nomination network, requesting a partition into eight groups:
 
@@ -691,9 +691,9 @@ A function that does that looks like this:
          set.seed(s) #setting seed
          if(length(e) > 1) {e <- sample(e, 1)} #grabbing an edge at random in case of tie
          h <- delete_edges(h, e) #deleting top betweenness edge
-         comm <- components(h) #computing number of components of edge-deleted graph
-         C[[k]] <- comm$membership #creating new community membership vector based on component membership
-         qv[k] <- modularity(og, comm$membership, directed = FALSE) #recomputing modularity of original graph
+         comp <- components(h) #computing number of components of edge-deleted graph
+         C[[k]] <- comp$membership #creating new community membership vector based on component membership
+         qv[k] <- modularity(og, comp$membership, directed = FALSE) #recomputing modularity of original graph
          k <- k + 1 #increasing counter
          }
       maxqpos <- min(which(qv == max(qv))) #picking partition with maximum modularity
@@ -781,8 +781,8 @@ Interestingly, even though the Girvan-Newman approach is clearly a divisive algo
 ```{r}
 #| label: fig-ebdendro
 #| fig-cap: "Dendrogram of Community Partition of the Law Friends Network Using the Edge-Betweenness."
-#| fig-height: 12
-#| fig-width: 12
+#| fig-height: 8
+#| fig-width: 8
    hc <- as.hclust(eb.res)
    par(cex = 0.5) #smaller labels
    plot(hc)

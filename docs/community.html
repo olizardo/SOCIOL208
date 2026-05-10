@@ -1308,13 +1308,13 @@ list()</code></pre>
 <span id="cb72-6"><a href="#cb72-6"></a>         <span class="fu">set.seed</span>(s)</span>
 <span id="cb72-7"><a href="#cb72-7"></a>         <span class="cf">if</span>(<span class="fu">length</span>(e) <span class="sc">&gt;</span> <span class="dv">1</span>) {e <span class="ot">&lt;-</span> <span class="fu">sample</span>(e, <span class="dv">1</span>)}      </span>
 <span id="cb72-8"><a href="#cb72-8"></a>         h <span class="ot">&lt;-</span> <span class="fu">delete_edges</span>(h, e)</span>
-<span id="cb72-9"><a href="#cb72-9"></a>         comm <span class="ot">&lt;-</span> <span class="fu">components</span>(h)</span>
-<span id="cb72-10"><a href="#cb72-10"></a>         d <span class="ot">&lt;-</span> comm<span class="sc">$</span>no</span>
+<span id="cb72-9"><a href="#cb72-9"></a>         comp <span class="ot">&lt;-</span> <span class="fu">components</span>(h)</span>
+<span id="cb72-10"><a href="#cb72-10"></a>         d <span class="ot">&lt;-</span> comp<span class="sc">$</span>no</span>
 <span id="cb72-11"><a href="#cb72-11"></a>         }</span>
-<span id="cb72-12"><a href="#cb72-12"></a>      <span class="fu">return</span>(comm<span class="sc">$</span>membership)</span>
-<span id="cb72-13"><a href="#cb72-13"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb72-12"><a href="#cb72-12"></a>      <span class="fu">return</span>(comp<span class="sc">$</span>membership)</span>
+<span id="cb72-13"><a href="#cb72-13"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The function takes two inputs: some graph <code>h</code> and the number of community partitions desired <code>c</code>. Line two initializes the counter <code>d</code> which keeps track of the number of <strong>components</strong> in the graph (the number of disconnected clumps). Then we enter a <code>while</code> loop on lines 3-11. In line 4 we compute the <strong>edge betweenness</strong> of each edge in the graph (using the <code>igraph</code> function <code>edge_betwenness</code>), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the <code>igraph</code> function <code>components</code> which returns a <code>list</code> of results), and line 10 sets the value of <code>d</code> to the number of components in the new <strong>edge-deleted subgraph</strong> (stored in the object <code>comps$no</code>). The <code>while</code> loop stops when the number of components <code>comm$no</code> is equal to the function argument <code>c</code>. Line 12 returns a vector of community membership assignments.</p>
+<p>The function takes two inputs: some graph <code>h</code> and the number of community partitions desired <code>c</code>. Line two initializes the counter <code>d</code> which keeps track of the number of <strong>components</strong> in the graph (the number of disconnected clumps). Then we enter a <code>while</code> loop on lines 3-11. In line 4 we compute the <strong>edge betweenness</strong> of each edge in the graph (using the <code>igraph</code> function <code>edge_betwenness</code>), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the <code>igraph</code> function <code>components</code> which returns a <code>list</code> of results), and line 10 sets the value of <code>d</code> to the number of components in the new <strong>edge-deleted subgraph</strong> (stored in the object <code>comp$no</code>). The <code>while</code> loop stops when the number of components <code>comm$no</code> is equal to the function argument <code>c</code>. Line 12 returns a vector of community membership assignments.</p>
 <p>And here’s the function in action in the law firm friendship nomination network, requesting a partition into eight groups:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1"></a>   c8 <span class="ot">&lt;-</span> <span class="fu">eb.comms</span>(ug, <span class="at">c =</span> <span class="dv">8</span>)</span>
@@ -1351,9 +1351,9 @@ list()</code></pre>
 <span id="cb77-10"><a href="#cb77-10"></a>         <span class="fu">set.seed</span>(s) <span class="co">#setting seed</span></span>
 <span id="cb77-11"><a href="#cb77-11"></a>         <span class="cf">if</span>(<span class="fu">length</span>(e) <span class="sc">&gt;</span> <span class="dv">1</span>) {e <span class="ot">&lt;-</span> <span class="fu">sample</span>(e, <span class="dv">1</span>)} <span class="co">#grabbing an edge at random in case of tie</span></span>
 <span id="cb77-12"><a href="#cb77-12"></a>         h <span class="ot">&lt;-</span> <span class="fu">delete_edges</span>(h, e) <span class="co">#deleting top betweenness edge</span></span>
-<span id="cb77-13"><a href="#cb77-13"></a>         comm <span class="ot">&lt;-</span> <span class="fu">components</span>(h) <span class="co">#computing number of components of edge-deleted graph</span></span>
-<span id="cb77-14"><a href="#cb77-14"></a>         C[[k]] <span class="ot">&lt;-</span> comm<span class="sc">$</span>membership <span class="co">#creating new community membership vector based on component membership</span></span>
-<span id="cb77-15"><a href="#cb77-15"></a>         qv[k] <span class="ot">&lt;-</span> <span class="fu">modularity</span>(og, comm<span class="sc">$</span>membership, <span class="at">directed =</span> <span class="cn">FALSE</span>) <span class="co">#recomputing modularity of original graph</span></span>
+<span id="cb77-13"><a href="#cb77-13"></a>         comp <span class="ot">&lt;-</span> <span class="fu">components</span>(h) <span class="co">#computing number of components of edge-deleted graph</span></span>
+<span id="cb77-14"><a href="#cb77-14"></a>         C[[k]] <span class="ot">&lt;-</span> comp<span class="sc">$</span>membership <span class="co">#creating new community membership vector based on component membership</span></span>
+<span id="cb77-15"><a href="#cb77-15"></a>         qv[k] <span class="ot">&lt;-</span> <span class="fu">modularity</span>(og, comp<span class="sc">$</span>membership, <span class="at">directed =</span> <span class="cn">FALSE</span>) <span class="co">#recomputing modularity of original graph</span></span>
 <span id="cb77-16"><a href="#cb77-16"></a>         k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#increasing counter</span></span>
 <span id="cb77-17"><a href="#cb77-17"></a>         }</span>
 <span id="cb77-18"><a href="#cb77-18"></a>      maxqpos <span class="ot">&lt;-</span> <span class="fu">min</span>(<span class="fu">which</span>(qv <span class="sc">==</span> <span class="fu">max</span>(qv))) <span class="co">#picking partition with maximum modularity</span></span>
@@ -1441,7 +1441,7 @@ $membership
 <div class="cell-output-display">
 <div id="fig-ebdendro" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
-<p><img src="community_files/figure-html/fig-ebdendro-1.png" class="img-fluid figure-img" width="1152"></p>
+<p><img src="community_files/figure-html/fig-ebdendro-1.png" class="img-fluid figure-img" width="768"></p>
 <p></p><figcaption class="figure-caption">Figure&nbsp;6: Dendrogram of Community Partition of the Law Friends Network Using the Edge-Betweenness.</figcaption><p></p>
 </figure>
 </div>
