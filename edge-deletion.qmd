@@ -11,7 +11,7 @@ format:
       code-line-numbers: true
 ---
 
-## Community Detection Using Edge-Betweenness
+## Community Detection Using the Edge-Betweenness
 
 Another approach to community detection with good sociological bona fides relies on **edge betweenness**, a concept we covered on the [lecture notes on betweenness centrality](betcent.qmd). An edge has high betweenness if many other pairs of nodes need to use it to reach one another via shortest paths. 
 
@@ -61,7 +61,7 @@ Note that edge betweenness provides a different picture of the network's communi
 
 In this respect, we can see that the edge-betweenness algorithm begins by selecting the edges, separating pendant nodes and other peripheral nodes into their own communities, which makes sense, since these are the easiest to disconnect (and the edges connecting them to the graph have the highest betweenness). To reach the "middle" or core of the graph, we need to request a partition into more communities. @fig-eb-2 shows the result of using the `eb.comms` function above to partition the network into sixteen communities. Which looks a bit better, uncovering some actual groups of nodes in the periphery of the network that nominate one another as friends.
 
-### Combining Modularity Maximization and Edge-Betweenness
+## Combining Modularity Maximization and Edge-Betweenness
 
 Of course, it is possible to combine the modularity maximization idea with the edge-betweenness partition idea. This is helpful because we usually do not know the actual number of communities in the network; we want the algorithm to tell us. So the trick is to modify the function `eb.comms` above to compute the modularity of a given partition at each step and record it in a vector. That way, we can pick the biggest number after going through all of the edges. 
 
@@ -132,9 +132,9 @@ Interestingly, even though the Girvan-Newman approach is clearly a divisive algo
 
 Another thing we can do with the `edge_betweenness` function output is highlight the edges identified as **bridges** during the divisive process, since this information is stored in the `bridges` object. We can use this vector of edge ids to create an edge color vector that will highlight the bridges in red. This is shown in @fig-eb-3. 
 
-## Finding Communities Using the Edge-Clustering
+## Community Detection Using the Edge Clustering Coefficient
 
-@radicchi_etal04 propose another version of an edge-deletion approach to community detection based on what they call the **edge clustering coefficient** ($C(e_{ij})$). This  is essentially a measure of the extent to which an edge connects nodes who themselves share a lot of neighbors, normalized by the minimum of the degrees of the nodes minus one:
+@radicchi_etal04 propose another version of an edge-deletion approach to community detection based on an edge-level metric they call the **edge clustering coefficient** ($C(e_{ij})$). This  is essentially a measure of the extent to which an edge connects nodes who themselves share a lot of neighbors, normalized by the minimum of the degrees of the nodes minus one:
 
 $$
 C(e_{ij}) = \frac{z_{ij} + 1}{min\left[(k_i - 1), (k_j - 1)\right]}
@@ -142,7 +142,13 @@ $$ {#eq-eclust}
 
 Where $z_{ij}$ is the number of common neighbors shared by nodes $i$ and $j$ incident to edge $e_{ij}$, and $k_i$ and $k_j$ are their respective degrees. @radicchi_etal04 add one to the numerator of @eq-eclust to account for the fact that some connected nodes may not share any neighbors.
 
-Here's a function to compute the edge clustering coefficient as defined by @radicchi_etal04:
+The logic of the @radicchi_etal04 approach is that edges that go between well-clustered communities should have a *low* edge clustering coefficient (e.g., connecting nodes who themselves don't share many neighbors and therefore belong to different communities). Meanwhile, edges with a high clustering coefficient should be more likely to link nodes that belong to the same community. 
+
+Ergo, deleting the edges with low edge clustering coefficient (like we did with the ones that had high edge betweenness) should partition a graph into well-defined communities. 
+
+To implement this approach we need (1) a function to compute the clustering coefficient for each edge according to @eq-eclust, and (2) a modification of the `eb.comms2` function above that incorporates the idea of removing edges with minimum edge clustering scores. 
+
+To complete step 1, here's a function to compute the edge clustering coefficient as defined by @radicchi_etal04:
 
 ```{r}
     edge.clust <- function(h) {
@@ -163,7 +169,7 @@ Here's a function to compute the edge clustering coefficient as defined by @radi
 
 This function takes some graph `h` as input and returns a vector of length $|E|$ (number of edges in the graph) containing the estimated clustering coefficient of each edge as components. Note that we compute the number of shared neighbors by taking the second power of the adjacency matrix in lines 4 and 5. The `for` loop then goes through each edge and computes the clustering coefficient in line 11. 
 
-And here's a modification of our edge-deletion function above to incorporate the edge clustering coefficient as the criterion for edge deletion:
+And to complete step 2, here's a modification of our edge-deletion function above to incorporate the edge clustering coefficient as the criterion for edge deletion:
 
 ```{r}
    ec.comms <- function(h) {
