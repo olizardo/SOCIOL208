@@ -699,11 +699,12 @@ A function that does that looks like this:
       maxqpos <- min(which(qv == max(qv))) #picking partition with maximum modularity
       q <- qv[maxqpos] #picking partition with maximum modularity
       membership <- C[[maxqpos]] #picking membership vector with maximum modularity
-      return(list(q = q, membership = membership))
+      nc <- max(membership)
+      return(list(q = q, nc = nc, membership = membership))
       }
 ```
 
-The main additions here are lines 14 and 15. Line 14 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 15 computes the modularity *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 6, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 18-20 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 21 returns both the membership vector and the modularity value as a list object. 
+The main additions here are lines 14 and 15. Line 14 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 15 computes the modularity (using the `igraph` function `modularity`) *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 6, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 18-21 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 22 returns the membership vector, a scalar recording the number of communities (the maximum number in the membership vector), and the modularity value as a list object. 
 
 Let's see the new and improved algorithm in action:
 
@@ -711,7 +712,7 @@ Let's see the new and improved algorithm in action:
    c.mod <- eb.comms2(ug)
    c.mod
 ```
-Which tells us that the optimal partition according to the edge betweenness is one that splits the graph into `r max(c.mod$membership)` communities, with a maximum modularity of Q = `r round(c.mod$q, 3)`. 
+Which tells us that the optimal partition according to the edge betweenness is one that splits the graph into `r c.mod$nc` communities, with a maximum modularity of Q = `r round(c.mod$q, 3)`. 
 
 Of course, all of these steps are packaged in the `igraph` function called `cluster_edge_betweenness`. Let's see how that works.
 
