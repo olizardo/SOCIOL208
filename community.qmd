@@ -651,13 +651,9 @@ For instance, the function below implements a simple version of the Girvan-Newma
    }
 ```
 
-<<<<<<< HEAD
 The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betwenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comps$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
-=======
-The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betweenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comps$no`). Line 12 returns a vector of community membership assignments. 
->>>>>>> a0b086076310e7d164c04971736b8187811d456c
 
-And here's the function in action in the law firm network, requesting a partition into eight groups:
+And here's the function in action in the law firm friendship nomination network, requesting a partition into eight groups:
 
 ```{r}
    c8 <- eb.comms(ug, c = 8)
@@ -707,7 +703,7 @@ A function that does that looks like this:
       }
 ```
 
-The main additions here are lines 14 and 15. Line 13 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized in line 4). Line 15 computes the modularity *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 6, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. Lines 18-20 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 21 returns both the membership vector and the modularity value as a list object. 
+The main additions here are lines 14 and 15. Line 14 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 15 computes the modularity *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 6, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 18-20 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 21 returns both the membership vector and the modularity value as a list object. 
 
 Let's see the new and improved algorithm in action:
 
@@ -773,17 +769,20 @@ Note that the `cluster_edge_betweenness` function takes a graph as input. We hav
      vertex.label.dist=1, edge.curved=0.2)   
 ```
 
-And as we can see, the results are exactly the same we obtained earlier:
+And as we can see, the results are exactly the same we obtained earlier, dividing the nodes in the network into `r max(eb.res$membership)` communities. 
+:
 
 ```{r}
    eb.res$membership
 ```
 
-This divides the nodes in the network into `r max(eb.res$membership)` communities. 
-
-Interestingly, even though the Girvan-Newman approach is clearly a divisive algorithm, the results can be presented as a dendrogram, but storing top-down divisions rather than bottom-up merges:
+Interestingly, even though the Girvan-Newman approach is clearly a divisive algorithm, the results can be presented as a dendrogram, but storing top-down divisions rather than bottom-up merges. This is shown in @fig-ebdendro
 
 ```{r}
+#| label: fig-ebdendro
+#| fig-cap: "Dendrogram of Community Partition of the Law Friends Network Using the Edge-Betweenness."
+#| fig-height: 12
+#| fig-width: 12
    hc <- as.hclust(eb.res)
    par(cex = 0.5) #smaller labels
    plot(hc)
