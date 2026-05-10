@@ -169,9 +169,9 @@ This last quantity is given by the product of the sum links in a the sub-adjacen
 
 In formulese:
 
-\begin{equation}
-Q = \sum_{k=1}^m \left[\frac{\sum_{i \in k} \sum_{j \in k} a_{ij}}{\sum_i \sum_j a_{ij}}  - \frac{(\sum_{i \in k} \sum_j a_{ij})(\sum_i \sum_{j \in k} a_{ij})}{(\sum_i \sum_j a_{ij})^2} \right]
-\end{equation}
+$$
+   Q = \sum_{k=1}^m \left[\frac{\sum_{i \in k} \sum_{j \in k} a_{ij}}{\sum_i \sum_j a_{ij}}  - \frac{(\sum_{i \in k} \sum_j a_{ij})(\sum_i \sum_{j \in k} a_{ij})}{(\sum_i \sum_j a_{ij})^2} \right]
+$$ {#eq-mod}
 
 Where $\sum_i \sum_ja_{ij}$ is the sum of all the entries in the network adjacency matrix, $\sum_{i \in k} \sum_{j \in k} a_{ij}$ is the sum of all the entries of the sub-adjacency matrix where *both* the row and column nodes come from community $k$, $\sum_{i \in k} \sum_j a_{ij}$ is the sum of all the entries in the sub-adjacency matrix where only the row nodes come from community $k$, and $\sum_i \sum_{j \in k} a_{ij}$ is the sum of all the entries in the sub-adjacency matrix where only the column nodes come from community $k$.
 
@@ -534,7 +534,7 @@ Which returns identical community assignments as above (but with the labels betw
 
 ## Communities versus Exogenous Attributes
 
-Remember, we began this handout using an exogenous criterion (law firm status as partner or associate) to examine the network's community structure (which performs pretty well according to modularity). But now we have also used a pure link-based approach to finding communities. How do they compare? Here's a way to find out:
+Remember, we began this discussion using an exogenous criterion (law firm status as partner or associate) to examine the network's community structure (which performs pretty well according to modularity). But now we have also used a pure link-based approach to finding communities. How do they compare? Here's a way to find out:
 
 ```{r}
    library(kableExtra)
@@ -593,8 +593,6 @@ Of course, this information was already stored in our results in the `membership
    fg.res$membership
 ```
 
-@fig-mod-3 visualizes the resulting three-community partition, which is pretty close to what we got using the leading eigenvector method. 
-
 
 ```{r}
 #| label: fig-mod
@@ -627,169 +625,9 @@ Of course, this information was already stored in our results in the `membership
      vertex.label.dist=1, edge.curved=0.2)
 ```
 
-## Community Detection Using Edge Betweenness
-
-A final approach to community detection with good sociological bona fides relies on **edge betweenness**, a concept we covered on the [lecture notes on betweenness centrality](betcent.qmd). An edge has high betweenness if many other pairs of nodes need to use it to reach one another via shortest paths. 
-
-It follows that if we iteratively identify high betweenness edges, removing the top one, recalculate the edge betweenness on the resulting edge-deleted subgraph, and remove *that* top one (or flip a coin if two are tied), we have an algorithm for identifying communities as those subgraphs that end up being disconnected after removing the bridges [@girvan_newman02]. Note that, like the leading eigenvector method, this approach is **divisive** with all nodes starting in a single cluster, then that cluster splits into two, and so forth.
-
-For instance, the function below implements a simple version of the Girvan-Newman edge-betweenness community partition algorithm.
-
-```{r}
-   eb.comms <- function(h, c, s = 123) {
-      d <- 1
-      while(d < c) {
-         eb <- edge_betweenness(h, directed = FALSE)
-         e <- which(eb == max(eb))
-         set.seed(s)
-         if(length(e) > 1) {e <- sample(e, 1)}      
-         h <- delete_edges(h, e)
-         comp <- components(h)
-         d <- comp$no
-         }
-      return(comp$membership)
-      }
-```
-
-The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betwenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comp$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
-
-And here's the function in action in the law firm friendship nomination network, requesting a partition into eight groups:
-
-```{r}
-   c8 <- eb.comms(ug, c = 8)
-   c8
-```
-
-We can check the modularity of this partition using the `igraph` function `modularity.`
-
-```{r}
-   modularity(ug, c8)
-```
-
-The resulting partition is shown in @fig-eb-1
-
-Note that edge betweenness provides a different picture of the network's community structure than the eigenvector-based partitioning method. This is not surprising, as it is based on graph-theoretic principles rather than null-model principles such as modularity. The picture here is of two broad communities (in the middle) surrounded by many smaller islands, including some singletons. 
-
-In this respect, we can see that the edge-betweenness algorithm begins by selecting the edges, separating pendant nodes and other peripheral nodes into their own communities, which makes sense, since these are the easiest to disconnect (and the edges connecting them to the graph have the highest betweenness). To reach the "middle" or core of the graph, we need to request a partition into more communities. @fig-eb-2 shows the result of using the `eb.comms` function above to partition the network into sixteen communities. Which looks a bit better, uncovering some actual groups of nodes in the periphery of the network that nominate one another as friends.
-
-### Combining Modularity Maximization and Edge-Betweenness
-
-Of course, it is possible to combine the modularity maximization idea with the edge-betweenness partition idea. This is helpful because we usually do not know the actual number of communities in the network; we want the algorithm to tell us. So the trick is to modify the function `eb.comms` above to compute the modularity of a given partition at each step and record it in a vector. That way, we can pick the biggest number after going through all of the edges. 
-
-A function that does that looks like this:
-
-```{r}
-   eb.comms2 <- function(h, s = 123) {
-      k <- 1 #initializing counter
-      qv <- 0 #initializing modularity vector
-      C <- list() #initializing membership vector list
-      E <- ecount(h) #number of edges
-      og <- h
-      while(k < E) { #do until there are no more edges to delete
-         eb <- edge_betweenness(h, directed = FALSE) #computing edge betweenness
-         e <- which(eb == max(eb)) #grabbing top betweenness edges
-         set.seed(s) #setting seed
-         if(length(e) > 1) {e <- sample(e, 1)} #grabbing an edge at random in case of tie
-         h <- delete_edges(h, e) #deleting top betweenness edge
-         comp <- components(h) #computing number of components of edge-deleted graph
-         C[[k]] <- comp$membership #creating new community membership vector based on component membership
-         qv[k] <- modularity(og, comp$membership, directed = FALSE) #recomputing modularity of original graph
-         k <- k + 1 #increasing counter
-         }
-      maxqpos <- min(which(qv == max(qv))) #picking partition with maximum modularity
-      q <- qv[maxqpos] #picking partition with maximum modularity
-      membership <- C[[maxqpos]] #picking membership vector with maximum modularity
-      nc <- max(membership)
-      return(list(q = q, nc = nc, membership = membership))
-      }
-```
-
-The main additions here are lines 14 and 15. Line 14 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 15 computes the modularity (using the `igraph` function `modularity`) *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 6, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 18-21 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 22 returns the membership vector, a scalar recording the number of communities (the maximum number in the membership vector), and the modularity value as a list object. 
-
-Let's see the new and improved algorithm in action:
-
-```{r}
-   c.mod <- eb.comms2(ug)
-   c.mod
-```
-Which tells us that the optimal partition according to the edge betweenness is one that splits the graph into `r c.mod$nc` communities, with a maximum modularity of Q = `r round(c.mod$q, 3)`. 
-
-Of course, all of these steps are packaged in the `igraph` function called `cluster_edge_betweenness`. Let's see how that works.
+@fig-mod-3 visualizes the resulting three-community partition, which is pretty close to what we got using the leading eigenvector method. 
 
 
-```{r}
-   eb.res <- cluster_edge_betweenness(ug, directed = FALSE)
-```
-
-Note that the `cluster_edge_betweenness` function takes a graph as input. We have to tell it that is an undirected graph by setting the argument `directed` to `FALSE`. 
-
-```{r}
-#| label: fig-eb
-#| fig-cap: "Undirected Law Firm Friendship Network."
-#| fig-height: 12
-#| fig-width: 12
-#| fig-subcap:
-#|   - "Community Partition According to the Edge Betweenness (C = 8)."
-#|   - "Community Partition According to the Edge Betweenness (C = 16)."
-#|   - "Community Partition According to the Edge Betweenness with Maximum Modularity (C = 23)."
-#|   - "Community Partition According to the Edge Betweenness with Maximum Modularity with Bridge Edges in Red (C = 23)."
-#| layout-ncol: 2
-#| echo: false
-   library(RColorBrewer)   
-   V(ug)$color <- c8
-   plot(ug, layout = ul, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
-
-   getPalette = colorRampPalette(categorical_pal(8))
-   c16 <- eb.comms(ug, c = 16)
-   pal = getPalette(max(c16))
-   V(ug)$color <- c16
-   ug$palette <- pal
-   plot(ug, layout = ul, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
-
-   getPalette = colorRampPalette(categorical_pal(8))
-   pal = getPalette(max(c.mod$membership))
-   V(ug)$color <- c.mod$membership
-   ug$palette <- pal
-   plot(ug, layout = ul, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)   
-
-   e.col <- rep("lightblue", ecount(ug))
-   e.col[eb.res$bridges] <- "red"
-   E(ug)$color <- e.col
-   plot(ug, layout = ul, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)   
-```
-
-And as we can see, the results are exactly the same we obtained earlier, dividing the nodes in the network into `r max(eb.res$membership)` communities. 
-:
-
-```{r}
-   eb.res$membership
-```
-
-Interestingly, even though the Girvan-Newman approach is clearly a divisive algorithm, the results can be presented as a dendrogram, but storing top-down divisions rather than bottom-up merges. This is shown in @fig-ebdendro
-
-```{r}
-#| label: fig-ebdendro
-#| fig-cap: "Dendrogram of Community Partition of the Law Friends Network Using the Edge-Betweenness."
-#| fig-height: 8
-#| fig-width: 8
-   hc <- as.hclust(eb.res)
-   par(cex = 0.5) #smaller labels
-   plot(hc)
-```
-
-Another thing we can do with the `edge_betweenness` function output is highlight the edges identified as **bridges** during the divisive process, since this information is stored in the `bridges` object. We can use this vector of edge ids to create an edge color vector that will highlight the bridges in red. This is shown in @fig-eb-4. 
 
 
 
