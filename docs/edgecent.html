@@ -150,7 +150,7 @@ div.csl-indent {
 
 <link rel="stylesheet" href="styles.css">
 <meta property="og:title" content="SOCIOL 208 - Edge Centralities">
-<meta property="og:description" content="Bröhl and Lehnertz (2022) define the closeness of an edge as a function of the closeness of the two nodes incident to it.">
+<meta property="og:description" content="Bröhl and Lehnertz (2022) propose to generalize the concept of degree centrality to the edge level.">
 <meta property="og:site-name" content="SOCIOL 208">
 </head>
 
@@ -540,7 +540,7 @@ div.csl-indent {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#edge-degree" id="toc-edge-degree" class="nav-link active" data-scroll-target="#edge-degree">Edge Degree</a></li>
+  <li><a href="#edge-degree-centrality" id="toc-edge-degree-centrality" class="nav-link active" data-scroll-target="#edge-degree-centrality">Edge Degree Centrality</a></li>
   <li><a href="#edge-closeness" id="toc-edge-closeness" class="nav-link" data-scroll-target="#edge-closeness">Edge Closeness</a></li>
   <li><a href="#edge-betweenness" id="toc-edge-betweenness" class="nav-link" data-scroll-target="#edge-betweenness">Edge Betweenness</a>
   <ul class="collapse">
@@ -569,8 +569,14 @@ div.csl-indent {
 
 </header>
 
-<section id="edge-degree" class="level2">
-<h2 class="anchored" data-anchor-id="edge-degree">Edge Degree</h2>
+<section id="edge-degree-centrality" class="level2">
+<h2 class="anchored" data-anchor-id="edge-degree-centrality">Edge Degree Centrality</h2>
+<p><span class="citation" data-cites="brohl_lehnertz22">Bröhl and Lehnertz (<a href="#ref-brohl_lehnertz22" role="doc-biblioref">2022</a>)</span> propose to generalize the concept of degree centrality to the edge level. The basic idea is to consider an edge to be central if (1) its incident nodes also have high degree centrality, and (2) if the difference between the degrees of the two nodes is relatively small (e.g., the centrality of the edge is not driven by only one of the two nodes). This leads to the measure:</p>
+<p><span id="eq-edeg"><span class="math display">\[
+C^{DEG}(e_{jk}) = \frac{C^{DEG}(v_j) + C^{DEG}(v_k) - 2}{|C^{DEG}(v_j) - C^{DEG}(v_k)| + 1}
+\tag{1}\]</span></span></p>
+<p>Where the numerator of <a href="#eq-edeg">Equation&nbsp;1</a> is just the sum of the degrees of nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> minus 2 and the denominator is the absolute value of the differences of the degrees plus 1.</p>
+<p>Let’s see how this works in real data. First, we load up our trusty <em>Pulp Fiction</em> network from the <code>networkdata</code> package</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
 <span id="cb1-2"><a href="#cb1-2"></a>    <span class="fu">library</span>(igraph)</span>
@@ -580,33 +586,114 @@ div.csl-indent {
 <span id="cb1-6"><a href="#cb1-6"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>name[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Esmarelda"</span>)] <span class="ot">&lt;-</span> <span class="st">"Esmeralda"</span> <span class="co">#fixing misspelled name</span></span>
 <span id="cb1-7"><a href="#cb1-7"></a>    <span class="fu">E</span>(g)<span class="sc">$</span>weight <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#setting edge weights to 1.0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>To compute edge degree centrality, we can use the same approach to data wrangling we used to <a href="./basic.html">compute the degree correlation</a>. The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the degree centralities of the two nodes in the edge, and the degree centrality of the edge calculated according to <a href="#eq-edeg">Equation&nbsp;1</a>.</p>
+<p>In the <em>Pulp Fiction</em> network this looks like:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(dplyr)</span>
+<span id="cb2-2"><a href="#cb2-2"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>   d <span class="ot">&lt;-</span> <span class="fu">degree</span>(g)  <span class="co">#degree centrality vector</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>   c.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> <span class="fu">names</span>(d), <span class="at">name2 =</span> <span class="fu">names</span>(d), d)</span>
+<span id="cb2-5"><a href="#cb2-5"></a>   el.temp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name2 =</span> g.el[, <span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-6"><a href="#cb2-6"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name2"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-7"><a href="#cb2-7"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name2"</span>, <span class="st">"d"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-8"><a href="#cb2-8"></a>      <span class="fu">rename</span>(<span class="at">d2 =</span> d) </span>
+<span id="cb2-9"><a href="#cb2-9"></a>   d.el <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> g.el[, <span class="dv">1</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-10"><a href="#cb2-10"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name1"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-11"><a href="#cb2-11"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"d"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-12"><a href="#cb2-12"></a>      <span class="fu">rename</span>(<span class="at">d1 =</span> d) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-13"><a href="#cb2-13"></a>      <span class="fu">cbind</span>(el.temp) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-14"><a href="#cb2-14"></a>      <span class="fu">mutate</span>(<span class="at">e.deg =</span> (d1 <span class="sc">+</span> d2 <span class="sc">-</span> <span class="dv">2</span>)<span class="sc">/</span>(<span class="fu">abs</span>(d1 <span class="sc">-</span> d2) <span class="sc">+</span> <span class="dv">1</span>))</span>
+<span id="cb2-15"><a href="#cb2-15"></a><span class="fu">head</span>(d.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  name1 d1     name2 d2    e.deg
+1 Brett  7 Marsellus 10 3.750000
+2 Brett  7    Marvin  6 5.500000
+3 Brett  7     Roger  6 5.500000
+4 Brett  7   Vincent 25 1.578947
+5 Buddy  2       Mia 11 1.100000
+6 Buddy  2   Vincent 25 1.041667</code></pre>
+</div>
+</div>
+<p>To create a table of the top five degree centrality edges, we just order the data frame by the last column and table it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb4-2"><a href="#cb4-2"></a>   d.el <span class="ot">&lt;-</span> d.el[<span class="fu">order</span>(d.el<span class="sc">$</span>e.deg, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ] <span class="sc">%&gt;%</span> </span>
+<span id="cb4-3"><a href="#cb4-3"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>, <span class="st">"e.deg"</span>))</span>
+<span id="cb4-4"><a href="#cb4-4"></a></span>
+<span id="cb4-5"><a href="#cb4-5"></a>   <span class="fu">kbl</span>(d.el[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ], <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb4-6"><a href="#cb4-6"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"Edge Degree"</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb4-7"><a href="#cb4-7"></a>       <span class="at">caption =</span> <span class="st">"Edges Sorted by Degree in the Pulp Fiction Network"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-8"><a href="#cb4-8"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+
+<table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>Edges Sorted by Degree in the Pulp Fiction Network</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> i </th>
+   <th style="text-align:left;"> j </th>
+   <th style="text-align:center;"> Edge Degree </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> Butch </td>
+   <td style="text-align:left;"> Jules </td>
+   <td style="text-align:center;"> 15.5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Honey Bunny </td>
+   <td style="text-align:left;"> Pumpkin </td>
+   <td style="text-align:center;"> 14.0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Marvin </td>
+   <td style="text-align:left;"> Roger </td>
+   <td style="text-align:center;"> 10.0 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Marsellus </td>
+   <td style="text-align:left;"> Mia </td>
+   <td style="text-align:center;"> 9.5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Capt Koons </td>
+   <td style="text-align:left;"> Mother </td>
+   <td style="text-align:center;"> 8.0 </td>
+  </tr>
+</tbody>
+</table>
+
+</div>
+</div>
+<p>Interestingly, the edge degree brings together the most important “couples” in the film; the main two characters, along with Pumpkin &amp; Honey Bunny, Marvin &amp; Roger, and Marsellus &amp; Mia.</p>
 </section>
 <section id="edge-closeness" class="level2">
 <h2 class="anchored" data-anchor-id="edge-closeness">Edge Closeness</h2>
 <p><span class="citation" data-cites="brohl_lehnertz22">Bröhl and Lehnertz (<a href="#ref-brohl_lehnertz22" role="doc-biblioref">2022</a>)</span> define the closeness of an edge as a function of the closeness of the two nodes incident to it. An edge <span class="math inline">\(e_{jk}\)</span> linking vertex <span class="math inline">\(v_j\)</span> to <span class="math inline">\(v_k\)</span> has high closeness whenever vertices <span class="math inline">\(v_j\)</span> and <span class="math inline">\(v_k\)</span> also have high closeness. m</p>
 <p>More specifically, the closeness centrality of an edge is proportional to the ratio of the product of the closeness of the two nodes incident to it divided by their sum:</p>
 <p><span id="eq-eclos"><span class="math display">\[
-C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
-\tag{1}\]</span></span></p>
+C^{CLOS}(e_{jk}) = (E - 1)\frac{C^{CLOS}(v_j) \times C^{CLOS}(v_k)}{C^{CLOS}(v_j) + C^{CLOS}(v_k)}
+\tag{2}\]</span></span></p>
 <p>Note that the equation normalizes the ratio of the product to the sum of the vertex closeness centralities by the number of edges minus one.</p>
-<p>To compute edge closeness in a real network, we can use the same approach to data wrangling we used to <a href="./basic.html">compute the degree correlation</a>. The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the closeness centralities of the two nodes in the edge, and the closeness centrality of the edge calculated according to the above equation.</p>
+<p>To compute edge closeness in a real network, we follow the same steps as we did with the edge degree above. The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the closeness centralities of the two nodes in the edge, and the closeness centrality of the edge calculated according to <a href="#eq-eclos">Equation&nbsp;2</a>.</p>
 <p>In the <em>Pulp Fiction</em> network this looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>   <span class="fu">library</span>(dplyr)</span>
-<span id="cb2-2"><a href="#cb2-2"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
-<span id="cb2-3"><a href="#cb2-3"></a>   c <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">closeness</span>(g), <span class="dv">3</span>)  <span class="co">#closeness centrality vector</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a>   c.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> <span class="fu">names</span>(c), <span class="at">name2 =</span> <span class="fu">names</span>(c), c)</span>
-<span id="cb2-5"><a href="#cb2-5"></a>   el.temp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name2 =</span> g.el[, <span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-6"><a href="#cb2-6"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name2"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-7"><a href="#cb2-7"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name2"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-8"><a href="#cb2-8"></a>      <span class="fu">rename</span>(<span class="at">c2 =</span> c) </span>
-<span id="cb2-9"><a href="#cb2-9"></a>   c.el <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> g.el[, <span class="dv">1</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-10"><a href="#cb2-10"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name1"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-11"><a href="#cb2-11"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-12"><a href="#cb2-12"></a>      <span class="fu">rename</span>(<span class="at">c1 =</span> c) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-13"><a href="#cb2-13"></a>      <span class="fu">cbind</span>(el.temp) <span class="sc">%&gt;%</span> </span>
-<span id="cb2-14"><a href="#cb2-14"></a>      <span class="fu">mutate</span>(<span class="at">e.clos =</span> <span class="fu">round</span>((<span class="fu">ecount</span>(g)<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>(c1<span class="sc">*</span>c2)<span class="sc">/</span>(c<span class="sc">+</span>c2), <span class="dv">3</span>))</span>
-<span id="cb2-15"><a href="#cb2-15"></a><span class="fu">head</span>(c.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   <span class="fu">library</span>(dplyr)</span>
+<span id="cb5-2"><a href="#cb5-2"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
+<span id="cb5-3"><a href="#cb5-3"></a>   c <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">closeness</span>(g), <span class="dv">3</span>)  <span class="co">#closeness centrality vector</span></span>
+<span id="cb5-4"><a href="#cb5-4"></a>   c.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> <span class="fu">names</span>(c), <span class="at">name2 =</span> <span class="fu">names</span>(c), c)</span>
+<span id="cb5-5"><a href="#cb5-5"></a>   el.temp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name2 =</span> g.el[, <span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-6"><a href="#cb5-6"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name2"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-7"><a href="#cb5-7"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name2"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-8"><a href="#cb5-8"></a>      <span class="fu">rename</span>(<span class="at">c2 =</span> c) </span>
+<span id="cb5-9"><a href="#cb5-9"></a>   c.el <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> g.el[, <span class="dv">1</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-10"><a href="#cb5-10"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name1"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-11"><a href="#cb5-11"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-12"><a href="#cb5-12"></a>      <span class="fu">rename</span>(<span class="at">c1 =</span> c) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-13"><a href="#cb5-13"></a>      <span class="fu">cbind</span>(el.temp) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-14"><a href="#cb5-14"></a>      <span class="fu">mutate</span>(<span class="at">e.clos =</span> <span class="fu">round</span>((<span class="fu">ecount</span>(g)<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>(c1<span class="sc">*</span>c2)<span class="sc">/</span>(c<span class="sc">+</span>c2), <span class="dv">3</span>))</span>
+<span id="cb5-15"><a href="#cb5-15"></a><span class="fu">head</span>(c.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  name1    c1     name2    c2 e.clos
 1 Brett 0.014 Marsellus 0.014  0.707
@@ -619,14 +706,14 @@ C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
 </div>
 <p>To create a table of the top five closeness centrality edges, we just order the data frame by the last column and table it:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">library</span>(kableExtra)</span>
-<span id="cb4-2"><a href="#cb4-2"></a>   c.el <span class="ot">&lt;-</span> c.el[<span class="fu">order</span>(c.el<span class="sc">$</span>e.clos, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ] <span class="sc">%&gt;%</span> </span>
-<span id="cb4-3"><a href="#cb4-3"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>, <span class="st">"e.clos"</span>))</span>
-<span id="cb4-4"><a href="#cb4-4"></a></span>
-<span id="cb4-5"><a href="#cb4-5"></a>   <span class="fu">kbl</span>(c.el[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ], <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb4-6"><a href="#cb4-6"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"Edge Clos."</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb4-7"><a href="#cb4-7"></a>       <span class="at">caption =</span> <span class="st">"Edges Sorted by Closeness in the Pulp Fiction Network"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb4-8"><a href="#cb4-8"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   <span class="fu">library</span>(kableExtra)</span>
+<span id="cb7-2"><a href="#cb7-2"></a>   c.el <span class="ot">&lt;-</span> c.el[<span class="fu">order</span>(c.el<span class="sc">$</span>e.clos, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ] <span class="sc">%&gt;%</span> </span>
+<span id="cb7-3"><a href="#cb7-3"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"name2"</span>, <span class="st">"e.clos"</span>))</span>
+<span id="cb7-4"><a href="#cb7-4"></a></span>
+<span id="cb7-5"><a href="#cb7-5"></a>   <span class="fu">kbl</span>(c.el[<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, ], <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb7-6"><a href="#cb7-6"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"Edge Clos."</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb7-7"><a href="#cb7-7"></a>       <span class="at">caption =</span> <span class="st">"Edges Sorted by Closeness in the Pulp Fiction Network"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-8"><a href="#cb7-8"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -681,36 +768,36 @@ C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
 <p>Like before, the edge betweenness with respect to a specific pair of nodes in the graph is a probability: Namely, that if you send something–using a shortest path–from any node <em>i</em> to any other node <em>j</em> it has to go through edge <em>e</em>. The resulting edge betweenness scores is the sum of these probabilities across every possible pair of nodes for each edge in the graph.</p>
 <p>For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an <strong>undirected</strong> graph. We use the <code>igraph</code> function <code>as.undirected</code> for that:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
-<span id="cb5-2"><a href="#cb5-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
-<span id="cb5-3"><a href="#cb5-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
-<span id="cb5-4"><a href="#cb5-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
-<span id="cb5-5"><a href="#cb5-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
-<span id="cb5-6"><a href="#cb5-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span>
-<span id="cb5-7"><a href="#cb5-7"></a>    wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
+<span id="cb8-2"><a href="#cb8-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
+<span id="cb8-3"><a href="#cb8-3"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, women)</span>
+<span id="cb8-4"><a href="#cb8-4"></a>    young <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(wg)<span class="sc">$</span>age <span class="sc">&lt;</span> <span class="dv">40</span>) <span class="co">#selecting women under forty</span></span>
+<span id="cb8-5"><a href="#cb8-5"></a>    wg <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(wg, young)</span>
+<span id="cb8-6"><a href="#cb8-6"></a>    <span class="fu">V</span>(wg)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(wg) <span class="co">#naming nodes</span></span>
+<span id="cb8-7"><a href="#cb8-7"></a>    wg <span class="ot">&lt;-</span> <span class="fu">as.undirected</span>(wg, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The “collapse” value in the “mode” argument tells <code>as.undirected</code> to link every connected dyad in the original directed graph using an undirected edge. It does that by removing the directional arrow of the single directed links and collapsing (hence the name) all the bi-directional links into a single undirected one.</p>
 <p>The resulting undirected graph looks like this:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="edgecent_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+<p><img src="edgecent_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Looking at this point and line plot of the women lawyers advice network, which edge do you think has the top betweenness?</p>
 <p>Well no need to figure that out via eyeballing! We can just use the <code>igraph</code> function <code>edge_betweenness</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   w.ebet <span class="ot">&lt;-</span> <span class="fu">edge_betweenness</span>(wg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>   w.ebet <span class="ot">&lt;-</span> <span class="fu">edge_betweenness</span>(wg)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>edge_betweenness</code> function takes the <code>igraph</code> graph object as input and produces a vector of edge betweenness values of the same length as the number of edges in the graph, which happens to be 20 in this case.</p>
 <p>Using this information, we can then create a table of the top ten edges ordered by betweenness:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>   edges <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(wg) <span class="co">#creating an edgelist</span></span>
-<span id="cb7-2"><a href="#cb7-2"></a>   etab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(edges, <span class="at">bet =</span> <span class="fu">round</span>(w.ebet, <span class="dv">2</span>)) <span class="co">#adding bet. scores to edgelist</span></span>
-<span id="cb7-3"><a href="#cb7-3"></a>   etab <span class="ot">&lt;-</span> etab[<span class="fu">order</span>(etab<span class="sc">$</span>bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ] <span class="co">#ordering by bet.</span></span>
-<span id="cb7-4"><a href="#cb7-4"></a>   <span class="fu">kbl</span>(etab[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, ], <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"l"</span>, <span class="st">"c"</span>),</span>
-<span id="cb7-5"><a href="#cb7-5"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"Edge Bet."</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb7-6"><a href="#cb7-6"></a>       <span class="at">caption =</span> <span class="st">"Edges Sorted by Betweenness in the Women Lawyers Advice Network"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb7-7"><a href="#cb7-7"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>   edges <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(wg) <span class="co">#creating an edgelist</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a>   etab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(edges, <span class="at">bet =</span> <span class="fu">round</span>(w.ebet, <span class="dv">2</span>)) <span class="co">#adding bet. scores to edgelist</span></span>
+<span id="cb10-3"><a href="#cb10-3"></a>   etab <span class="ot">&lt;-</span> etab[<span class="fu">order</span>(etab<span class="sc">$</span>bet, <span class="at">decreasing =</span> <span class="cn">TRUE</span>), ] <span class="co">#ordering by bet.</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a>   <span class="fu">kbl</span>(etab[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, ], <span class="at">format =</span> <span class="st">"pipe"</span>, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"l"</span>, <span class="st">"c"</span>),</span>
+<span id="cb10-5"><a href="#cb10-5"></a>       <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"i"</span>, <span class="st">"j"</span>, <span class="st">"Edge Bet."</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb10-6"><a href="#cb10-6"></a>       <span class="at">caption =</span> <span class="st">"Edges Sorted by Betweenness in the Women Lawyers Advice Network"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-7"><a href="#cb10-7"></a>   <span class="fu">kable_styling</span>(<span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 
 <table class="table table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -784,17 +871,18 @@ C(e_{jk}) = (E - 1)\frac{C(v_j) \times C(v_k)}{C(v_j)+C(v_k)}
 <p>High betweenness edges are likely to function as <strong>bridges</strong> being the only point of indirect connectivity between most nodes in the social structure. That means that an easy way to disconnect a connected graph is to remove the bridges <span class="citation" data-cites="girvan_newman02">(<a href="#ref-girvan_newman02" role="doc-biblioref">Girvan and Newman 2002</a>)</span>.</p>
 <p>In <code>igraph</code> we can produce an <strong>edge deleted subgraph</strong> of an original graph using the “minus” operator, along with the <code>edge</code> function like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>   del.g <span class="ot">&lt;-</span> wg <span class="sc">-</span> <span class="fu">edge</span>(<span class="st">"3|4"</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>   del.g <span class="ot">&lt;-</span> del.g <span class="sc">-</span> <span class="fu">edge</span>(<span class="st">"5|8"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>   del.g <span class="ot">&lt;-</span> wg <span class="sc">-</span> <span class="fu">edge</span>(<span class="st">"3|4"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2"></a>   del.g <span class="ot">&lt;-</span> del.g <span class="sc">-</span> <span class="fu">edge</span>(<span class="st">"5|8"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The first line creates a new graph object (a subgraph) which equals the original graph minus the edge linking nodes 3 and 4. The second line takes this last subgraph and further deletes the edge linking nodes 5 and 8.</p>
 <p>The resulting subgraph, minus the top two high-betweenness edges, looks like:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="edgecent_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+<p><img src="edgecent_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Which is indeed disconnected!</p>
+<p>We will see that this approach can be used as the basis for an algorithm to find <strong>communities</strong> (clusters of densely connected nodes) in networks in the <a href="./edge-deletion.html">lecture notes on community detection</a></p>
 
 
 
