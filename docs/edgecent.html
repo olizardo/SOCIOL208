@@ -571,11 +571,12 @@ div.csl-indent {
 
 <section id="edge-degree-centrality" class="level2">
 <h2 class="anchored" data-anchor-id="edge-degree-centrality">Edge Degree Centrality</h2>
-<p><span class="citation" data-cites="brohl_lehnertz22">Bröhl and Lehnertz (<a href="#ref-brohl_lehnertz22" role="doc-biblioref">2022</a>)</span> propose to generalize the concept of degree centrality to the edge level. The basic idea is to consider an edge to be central if (1) its incident nodes also have high degree centrality, and (2) if the difference between the degrees of the two nodes is relatively small (e.g., the centrality of the edge is not driven by only one of the two nodes). This leads to the measure:</p>
+<p><span class="citation" data-cites="brohl_lehnertz22">Bröhl and Lehnertz (<a href="#ref-brohl_lehnertz22" role="doc-biblioref">2022</a>)</span> propose to generalize the concept of degree centrality to the edge level. The basic idea is to consider an edge to be central if (1) its incident nodes also have high degree centrality, and (2) the difference between the degrees of the two nodes is relatively small (e.g., the centrality of the edge is not driven by only one of the two nodes).</p>
+<p>This leads to the measure:</p>
 <p><span id="eq-edeg"><span class="math display">\[
 C^{DEG}(e_{jk}) = \frac{C^{DEG}(v_j) + C^{DEG}(v_k) - 2}{|C^{DEG}(v_j) - C^{DEG}(v_k)| + 1}
 \tag{1}\]</span></span></p>
-<p>Where the numerator of <a href="#eq-edeg">Equation&nbsp;1</a> is just the sum of the degrees of nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> minus 2 and the denominator is the absolute value of the differences of the degrees plus 1.</p>
+<p>Where the numerator of <a href="#eq-edeg">Equation&nbsp;1</a> is just the sum of the degrees of nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> minus 2 and the denominator is the absolute value of the differences of the degrees plus 1 (to avoid dividing by zero in the case of nodes with equal degree).</p>
 <p>Let’s see how this works in real data. First, we load up our trusty <em>Pulp Fiction</em> network from the <code>networkdata</code> package</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -679,21 +680,20 @@ C^{CLOS}(e_{jk}) = (E - 1)\frac{C^{CLOS}(v_j) \times C^{CLOS}(v_k)}{C^{CLOS}(v_j
 <p>To compute edge closeness in a real network, we follow the same steps as we did with the edge degree above. The goal is to create an edge list data frame containing five columns. The ids of the two nodes in the edge, the closeness centralities of the two nodes in the edge, and the closeness centrality of the edge calculated according to <a href="#eq-eclos">Equation&nbsp;2</a>.</p>
 <p>In the <em>Pulp Fiction</em> network this looks like:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   <span class="fu">library</span>(dplyr)</span>
-<span id="cb5-2"><a href="#cb5-2"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
-<span id="cb5-3"><a href="#cb5-3"></a>   c <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">closeness</span>(g), <span class="dv">3</span>)  <span class="co">#closeness centrality vector</span></span>
-<span id="cb5-4"><a href="#cb5-4"></a>   c.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> <span class="fu">names</span>(c), <span class="at">name2 =</span> <span class="fu">names</span>(c), c)</span>
-<span id="cb5-5"><a href="#cb5-5"></a>   el.temp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name2 =</span> g.el[, <span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-6"><a href="#cb5-6"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name2"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-7"><a href="#cb5-7"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name2"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-8"><a href="#cb5-8"></a>      <span class="fu">rename</span>(<span class="at">c2 =</span> c) </span>
-<span id="cb5-9"><a href="#cb5-9"></a>   c.el <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> g.el[, <span class="dv">1</span>]) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-10"><a href="#cb5-10"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name1"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-11"><a href="#cb5-11"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-12"><a href="#cb5-12"></a>      <span class="fu">rename</span>(<span class="at">c1 =</span> c) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-13"><a href="#cb5-13"></a>      <span class="fu">cbind</span>(el.temp) <span class="sc">%&gt;%</span> </span>
-<span id="cb5-14"><a href="#cb5-14"></a>      <span class="fu">mutate</span>(<span class="at">e.clos =</span> <span class="fu">round</span>((<span class="fu">ecount</span>(g)<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>(c1<span class="sc">*</span>c2)<span class="sc">/</span>(c<span class="sc">+</span>c2), <span class="dv">3</span>))</span>
-<span id="cb5-15"><a href="#cb5-15"></a><span class="fu">head</span>(c.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>   g.el <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(g) <span class="co">#transforming graph to edgelist</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a>   c <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">closeness</span>(g), <span class="dv">3</span>)  <span class="co">#closeness centrality vector</span></span>
+<span id="cb5-3"><a href="#cb5-3"></a>   c.dat <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> <span class="fu">names</span>(c), <span class="at">name2 =</span> <span class="fu">names</span>(c), c)</span>
+<span id="cb5-4"><a href="#cb5-4"></a>   el.temp <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name2 =</span> g.el[, <span class="dv">2</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-5"><a href="#cb5-5"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name2"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-6"><a href="#cb5-6"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name2"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-7"><a href="#cb5-7"></a>      <span class="fu">rename</span>(<span class="at">c2 =</span> c) </span>
+<span id="cb5-8"><a href="#cb5-8"></a>   c.el <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">name1 =</span> g.el[, <span class="dv">1</span>]) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-9"><a href="#cb5-9"></a>      <span class="fu">left_join</span>(c.dat, <span class="at">by =</span> <span class="st">"name1"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-10"><a href="#cb5-10"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">c</span>(<span class="st">"name1"</span>, <span class="st">"c"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-11"><a href="#cb5-11"></a>      <span class="fu">rename</span>(<span class="at">c1 =</span> c) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-12"><a href="#cb5-12"></a>      <span class="fu">cbind</span>(el.temp) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-13"><a href="#cb5-13"></a>      <span class="fu">mutate</span>(<span class="at">e.clos =</span> <span class="fu">round</span>((<span class="fu">ecount</span>(g)<span class="sc">-</span><span class="dv">1</span>)<span class="sc">*</span>(c1<span class="sc">*</span>c2)<span class="sc">/</span>(c<span class="sc">+</span>c2), <span class="dv">3</span>))</span>
+<span id="cb5-14"><a href="#cb5-14"></a><span class="fu">head</span>(c.el)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  name1    c1     name2    c2 e.clos
 1 Brett 0.014 Marsellus 0.014  0.707
@@ -766,7 +766,7 @@ C^{CLOS}(e_{jk}) = (E - 1)\frac{C^{CLOS}(v_j) \times C^{CLOS}(v_k)}{C^{CLOS}(v_j
 \]</span></p>
 <p>Where <span class="math inline">\(\sigma_{i(e)j}\)</span> is a count of the number of shortest paths between <em>i</em> and <em>j</em> that feature edge <em>e</em> as an intermediary link. This tells us that the betweenness of an edge <em>e</em> is the sum of the ratios of the number of times that edge appears in the middle of a shortest path connecting every pair of nodes in the graph <em>i</em> and <em>j</em> divided by the total number of shortest paths linking each pair of nodes.</p>
 <p>Like before, the edge betweenness with respect to a specific pair of nodes in the graph is a probability: Namely, that if you send something–using a shortest path–from any node <em>i</em> to any other node <em>j</em> it has to go through edge <em>e</em>. The resulting edge betweenness scores is the sum of these probabilities across every possible pair of nodes for each edge in the graph.</p>
-<p>For this example, we will work with a simplified version of the women lawyers advice network, in which we transform it into an <strong>undirected</strong> graph. We use the <code>igraph</code> function <code>as.undirected</code> for that:</p>
+<p>For this example, we will work with a simplified version of the young women lawyers advice network, in which we transform it into an <strong>undirected</strong> graph. We use the <code>igraph</code> function <code>as.undirected</code> for that:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>    g <span class="ot">&lt;-</span> law_advice</span>
 <span id="cb8-2"><a href="#cb8-2"></a>    women <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>gender <span class="sc">==</span> <span class="dv">2</span>) <span class="co">#selecting women</span></span>
