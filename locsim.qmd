@@ -75,10 +75,12 @@ Let's look at an example:
 
 Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix $\left[\mathbf{A}(q)\right]^T$ in the undirected case. 
 
-So the most obvious measure of similarity between two nodes is simply the number of common neighbors [@leicht_etal06]:
+## Raw Number of Common Neighbors
+
+The most obvious measure of similarity between two nodes is simply the number of common neighbors [@leicht_etal06]:
 
 $$
-   s_{ij} = p_{ij}
+   s_{ij}^{CN} = p_{ij}
 $$
 
 We have already seen a version of this in the directed case when talking about the [HITS](hits.qmd) algorithm [@kleinberg99], which computes a spectral (eigenvector-based) ranking based on the matrices of common in and out-neighbors in a directed graph. 
@@ -105,15 +107,59 @@ In this case, similarity can be measured *either* by the number of common in-nei
 
 If the network under consideration is a (directed) **citation network** with nodes being papers and links between papers defined as a citation from paper $i$ to paper $j$, then the number of *common in-neighbors* between two papers is their **co-citation** similarity (the number of other papers that cite both papers), and the number of *common out-neighbors* is their **bibliographic coupling** similarity (the overlap in their list of references).
 
-One problem with using unbounded quantities like the sheer number of common (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network [@leicht_etal06]. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
+## Similarities Based on the Vertex Degrees
 
-## Normalized Similarity Metrics 
+### The Preferential Attachment Index
 
-Normalized similarity metrics deal with this issue by adjusting the raw similarity based on $p$ using the number of non-shared neighbors $q$ and $r$. 
+One approach is to count two nodes as similar if they are both connected to lots of other nodes. In terms of the quantities above, this **preferential attachment index**, proposed by @barabasi_albert99 is very simple to compute since it boils down to:
 
-The two most popular versions of normalized vertex similarity scores are the **Jaccard index** and the **cosine similarity** (sometimes also referred to as the **Salton Index**). 
+$$
+s_{ij}^{PA} = (p + q)(p + r) 
+$$ {#eq-ba}
 
-The Jacccard index is given by:
+Which is the just the products of the degrees of each of the nodes. In terms of the matrices defined earlier, the preferential attachment index can be calculated as follows:
+
+```{r}
+   P.a <- (A.p + A.q) * (A.p + A.r)
+   P.a <- P.a / max(P.a)
+   round(P.a[1:10, 1:10], 2)
+```
+
+Which shows Barney to be very similar to Betty and Fred as we would expect.
+
+One problem with using unbounded quantities like the sheer number of common of (in or out) neighbors to define node similarity is that they are only limited by the number of nodes in the network [@leicht_etal06]. Thus, an actor with many neighbors will end up having lots of other neighbors in common with lots of other nodes, which will mean we would count them as "similar" to almost everyone.
+
+## Degree-Discounted Common Neighbor Metrics
+
+### Adamic-Adar Index
+
+The raw number of common neighbors is a simple and intuitive measure of similarity, but it counts every common neighbor between two nodes as the same in determining the similarity between two nodes. 
+
+To deal with this issue, @adamic_adar03 propose a tweak on the raw number of common neighbors measure that is inspired by the PageRank style (see [here](pagerank.qmd)) degree-weighting approach. The basic idea is to discount a common connection to a high-degree neighbor and count a common connection to a more selective neighbor more in determining the pairwise similarity. 
+
+This metric, called the **Adamic-Adar index** can be computed as follows:
+
+$$
+s_{ij}^{AA} \sum_{k \in N(i) \cap N(j)}\frac{1}{log(d_k)}
+$$ {#eq-adamic}
+
+Where $d_k$ is the degree of common neighbor $k$. We normalize by the natural logarithm of degree to lower the discount as degree increases.
+
+### The Resource Allocation Index
+
+Another approach inspired by the same idea as @adamic_adar03 is that proposed by @zhou_etal09, which is the same as @adamic_adar03 but without using the log to lower the discount for high degree nodes as degree increases:
+
+$$
+s_{ij}^{RA} \sum_{k \in N(i) \cap N(j)}\frac{1}{log(d_k)}
+$$ {#eq-zhou}
+
+This is the **resource allocation index** of @zhou_etal09. 
+
+## Fullly Normalized Similarity Metrics 
+
+### Jaccard Index
+
+The most popular version  of a normalized vertex similarity scores are the **Jaccard index**, which is given by: 
 
 $$
    s_{ij}^J = \frac{p}{p + q + r}
@@ -130,10 +176,12 @@ In our example, we can compute the Jaccard similarity as follows:
 
 Here showing that Barney is more similar to Fred and Betty than he is to Bam-Bam.
 
-The cosine similarity is given by:
+### The Salton Index
+
+The **cosine similarity** (also called the **Salton index**) is given  by:
 
 $$
-   s_{ij}^C = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
+   s_{ij}^{SAL} = \frac{p}{\sqrt{p + q} \sqrt{p + r}}
 $$ {#eq-cos}
 
 Which is the ratio of the number of common neighbors divided by the product of the square root of the degrees of each node (or the square root of the product which is the same thing), since $p$ + $q$ is the degree of node $i$ and $p$ + $r$ is the degree of node $j$.
@@ -149,10 +197,12 @@ In our example, we can compute the Cosine similarity as follows:
 
 Showing results similar (pun intended) to those obtained using the Jaccard index. 
 
-A less commonly used option is the **Dice Coefficient** (sometimes called the **Sorensen Index** and other times called the ) given by:
+### The Sorensen Index
+
+A less commonly used option is the **Sorensen Index** (sometimes called the **Dice Coefficient**) is given by:
 
 $$
-   s_{ij}^D = \frac{2p}{(p + q) + (p + r)} = \frac{2p}{2p + q + r}
+   s_{ij}^{SOR} = \frac{2p}{(p + q) + (p + r)} = \frac{2p}{2p + q + r}
 $$ {#eq-dice}
 
 Which is given by the ratio of *twice* the number of common neighbors divided by the sum of the number of total neighbors of the two nodes (hence the number of common neighbors $p$ shows up twice also in the denominator). When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) then @eq-dice turns into $\frac{2p}{2p} = 1.0$. 
@@ -164,9 +214,11 @@ In our example, we can compute the Dice similarity as follows:
    round(D[1:10, 1:10], 2)
 ```
 
-Once again, showing results comparable to the previous.  
+Once again, showing results comparable to the previous. 
 
-Note, that all three of these pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).
+### The Leicht-Holme-Newman Index
+
+Note, that all three of the fully normalized pairwise measures of similarity are bounded between zero and one, with nodes being maximally similar to themselves and with pairs of distinct nodes being maximally similar when they have the same set of neighbors (e.g., they are structurally equivalent).
 
 @leicht_etal06 introduce a variation on the theme of normalized structural similarity scores. Their point is that maybe we should care about nodes that are *surprisingly* similar given some suitable null model. They propose the **configuration model** as such a null model. This model takes a graph with the same degree distribution as the original but with connections formed at random as reference. 
 
@@ -189,7 +241,7 @@ In our example, we can compute the LHN similarity as follows:
 
 Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
 
-We can package all that we said before into a handy function that takes a graph as input and returns all four normalized similarity metrics as output:
+We can package all that we said before into a handy function that takes a graph as input and returns all four fully normalized similarity metrics as output:
 
 ```{r}
    vertex.sim <- function(w) {
@@ -204,6 +256,31 @@ We can package all that we said before into a handy function that takes a graph 
       return(list(J = j, C = c, D = d, L = l))
       }
 ```
+
+## Partially Normalized Similarity Metrics 
+
+The fully normalized similarity metrics are designed to mute the influence of with high degree in determining the pairwise similarity of two nodes, because we normalize by some function of *both* the degrees of the nodes in question. 
+
+
+### Hub Promoted Index
+
+Sometimes, however, we may actually want to *magnify* the influence of high-degree nodes in determining the pairwise similarity. One approach due to @ravasz_etal02, is to normalize by the *minimum* of the two degrees. This is called the **hub promoted index** and is given by:
+
+$$
+   s_{ij}^{HP} = \frac{p}{min\left[(p + q), (p + r)\right]}
+$$ {#eq-hubp}
+
+Here, two nodes are maximally similar when the neighborhood of the smaller node is fully included in the neighborhood of the bigger node ($p = min\left[(p + q), (p + r)\right]$). This approach thus "promotes" high degree nodes by making them more similar to low degree nodes.
+
+### Hub Depressed Index
+
+We can, of course, follow the reverse approach and *suppress* the influence of high-degree nodes and count nodes as similar only when their degrees are also similar. This is the **hub depressed index** also proposed by @ravasz_etal02, and is computed as follows:
+
+$$
+   s_{ij}^{HD} = \frac{p}{max\left[(p + q), (p + r)\right]}
+$$ {#eq-hubd}
+
+Here by dividing by the maximum, pairings of high degree and low degree nodes are not counted as similar, while pairings of similar-degree nodes are.
 
 ## Similarity and Structural Equivalence
 
