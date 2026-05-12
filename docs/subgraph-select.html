@@ -548,20 +548,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <pre><code> [1] 29 34 39 48 51 57 59 60 61 67 69 71</code></pre>
 </div>
 </div>
-<p>Second, we need to collect the node ids of the people who point to these set of nodes; that is, each of these node’s <strong>in-neighbors</strong>. For that, we use the <code>igraph</code> function <code>neighbors</code>:</p>
+<p>Second, we need to collect the node ids of the people who point to these set of nodes in a <code>list</code> object; that is, each of these node’s <strong>in-neighbors</strong>. For that, we use the <code>igraph</code> function <code>neighbors</code>, wrapped into the handy dandy <code>lapply</code> meta-function in <code>R</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   yw_in <span class="ot">&lt;-</span> <span class="fu">list</span>() <span class="co">#creating empty list</span></span>
-<span id="cb3-2"><a href="#cb3-2"></a>   k <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co">#counter for list position</span></span>
-<span id="cb3-3"><a href="#cb3-3"></a>   <span class="cf">for</span> (i <span class="cf">in</span> yw) {</span>
-<span id="cb3-4"><a href="#cb3-4"></a>      nei <span class="ot">&lt;-</span> <span class="fu">neighbors</span>(law_advice, i, <span class="at">mode =</span> <span class="st">"in"</span>) </span>
-<span id="cb3-5"><a href="#cb3-5"></a>      nei <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(nei) <span class="co">#vector of in-neighbors ids</span></span>
-<span id="cb3-6"><a href="#cb3-6"></a>      yw_in[[k]] <span class="ot">&lt;-</span> nei <span class="co">#adding to list</span></span>
-<span id="cb3-7"><a href="#cb3-7"></a>      k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co">#incrementing counter</span></span>
-<span id="cb3-8"><a href="#cb3-8"></a>   }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>   yw_in <span class="ot">&lt;-</span> <span class="fu">lapply</span>(yw, <span class="cf">function</span>(x) {<span class="fu">neighbors</span>(law_advice, <span class="at">v =</span> x, <span class="at">mode =</span> <span class="st">"in"</span>)})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Line one creates an (empty) <code>list</code> object in <code>R</code>. The beauty of a list object is that it is an object that can hold other objects (vectors, matrices, <code>igraph</code> graph objects, etc.) as members (it can also have other lists as members, with lists all the way down). For a primer on how to work with <code>R</code> lists see <a href="https://rstudio.github.io/r-manuals/r-intro/Lists-and-data-frames.html">here</a></p>
-<p>The idea is to populate this initially empty list with the vectors of the in-neighbor ids of each node listed in the vector <code>yw</code>. Lines 2-8 do that using a simple <code>for</code> loop starring the <code>igraph</code> command <code>neighbors</code>, a function which takes two inputs: an <code>igraph</code> graph object, and a node id. The argument “mode” (“in” or “out” for directed graphs), tells it which kid of neighbors you want (not necessary for undirected graphs). Here we want the in-neighbors, so <code>mode</code> = “in”.</p>
-<p>Now we have a <code>list</code> object in <code>R</code> of length equal to the number of younger women (12 in this case) with each entry equal to the ids of those women’s in-neighbors.</p>
+<p>This creates a list of length equal to the number of nodes in the object <code>yw</code> containing vectors of the node ids of each of their in-neighbors as elements. The beauty of a list object is that it is an object that can hold other objects (vectors, matrices, <code>igraph</code> graph objects, etc.) as members (it can also have other lists as members, with lists all the way down).<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>The argument “mode” (“in” or “out” for directed graphs), tells the <code>igraph</code> function <code>neighbors</code> which <em>kind</em> neighbors you want (not necessary for undirected graphs). Here we want the in-neighbors, so <code>mode</code> = “in”.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a>   <span class="fu">length</span>(yw_in)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -570,21 +561,27 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>   <span class="fu">head</span>(yw_in)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
++ 17/71 vertices, from d1a9da7:
  [1]  4 10 12 15 16 17 19 26 27 28 34 36 41 42 45 48 70
 
 [[2]]
++ 25/71 vertices, from d1a9da7:
  [1]  7 10 12 13 14 15 16 17 19 22 26 27 28 29 33 36 42 44 45 46 48 56 60 61 64
 
 [[3]]
++ 17/71 vertices, from d1a9da7:
  [1] 13 17 30 40 41 42 48 51 52 55 56 57 65 66 67 69 71
 
 [[4]]
++ 4/71 vertices, from d1a9da7:
 [1] 16 17 39 42
 
 [[5]]
++ 2/71 vertices, from d1a9da7:
 [1] 58 59
 
 [[6]]
++ 11/71 vertices, from d1a9da7:
  [1] 27 39 41 51 55 56 62 65 66 67 71</code></pre>
 </div>
 </div>
@@ -670,7 +667,7 @@ $net_status
 <div class="cell">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>   <span class="fu">E</span>(g)[<span class="fu">V</span>(g)[net_status<span class="sc">==</span><span class="dv">1</span>] <span class="sc">%-&gt;%</span> <span class="fu">V</span>(g)[net_status<span class="sc">==</span><span class="dv">1</span>]] </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>+ 69/436 edges from 6665a94:
+<pre><code>+ 69/436 edges from 1ead9b5:
  [1]  1-&gt; 4  1-&gt; 5  1-&gt; 6  1-&gt; 9  1-&gt;10  1-&gt;11  1-&gt;12  2-&gt; 3  3-&gt; 8  3-&gt; 9
 [11]  3-&gt;12  4-&gt; 1  4-&gt; 3  4-&gt; 5  4-&gt; 6  4-&gt; 7  4-&gt; 8  4-&gt; 9  4-&gt;10  4-&gt;12
 [21]  5-&gt; 4  5-&gt; 7  5-&gt; 8  5-&gt; 9  5-&gt;12  6-&gt; 1  6-&gt; 4  6-&gt; 7  6-&gt; 8  6-&gt; 9
@@ -695,7 +692,13 @@ $net_status
 
 
 
-</main> <!-- /main -->
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>For a primer on how to work with <code>R</code> lists see <a href="https://rstudio.github.io/r-manuals/r-intro/Lists-and-data-frames.html">here</a><a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {

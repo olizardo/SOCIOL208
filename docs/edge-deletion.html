@@ -698,20 +698,20 @@ C(e_{ij}) = \frac{z_{ij} + 1}{min\left[(k_i - 1), (k_j - 1)\right]}
 <p>To implement this approach we need (1) a function to compute the clustering coefficient for each edge according to <a href="#eq-eclust">Equation&nbsp;1</a>, and (2) a modification of the <code>eb.comms2</code> function above that incorporates the idea of removing edges with minimum edge clustering scores.</p>
 <p>To complete step 1, here’s a function to compute the edge clustering coefficient as defined by <span class="citation" data-cites="radicchi_etal04">Radicchi et al. (<a href="#ref-radicchi_etal04" role="doc-biblioref">2004</a>)</span>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>    edge.clust <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
-<span id="cb13-2"><a href="#cb13-2"></a>        d <span class="ot">&lt;-</span> <span class="fu">degree</span>(h) <span class="co">#degree vector</span></span>
-<span id="cb13-3"><a href="#cb13-3"></a>        e <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(h, <span class="at">names =</span> <span class="cn">FALSE</span>) <span class="co">#graph edge list</span></span>
-<span id="cb13-4"><a href="#cb13-4"></a>        w <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(h)) <span class="co">#graph adjacency matrix</span></span>
-<span id="cb13-5"><a href="#cb13-5"></a>        m <span class="ot">&lt;-</span> w <span class="sc">%*%</span> w <span class="co">#commons neighbors matrix</span></span>
-<span id="cb13-6"><a href="#cb13-6"></a>        ec <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#initializing edge clustering coefficient vector</span></span>
-<span id="cb13-7"><a href="#cb13-7"></a>        <span class="cf">for</span> (r <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(e)) {</span>
-<span id="cb13-8"><a href="#cb13-8"></a>            i <span class="ot">&lt;-</span> e[r, <span class="dv">1</span>] <span class="co">#first node</span></span>
-<span id="cb13-9"><a href="#cb13-9"></a>            j <span class="ot">&lt;-</span> e[r, <span class="dv">2</span>] <span class="co">#second node</span></span>
-<span id="cb13-10"><a href="#cb13-10"></a>            z <span class="ot">&lt;-</span> m[i, j] <span class="co">#shared neighbors</span></span>
-<span id="cb13-11"><a href="#cb13-11"></a>            ec[r] <span class="ot">&lt;-</span> (z <span class="sc">+</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="fu">min</span>((d[i] <span class="sc">-</span> <span class="dv">1</span>), (d[j] <span class="sc">-</span> <span class="dv">1</span>)) <span class="co">#edge clustering coefficient</span></span>
-<span id="cb13-12"><a href="#cb13-12"></a>            }</span>
-<span id="cb13-13"><a href="#cb13-13"></a>        <span class="fu">return</span>(ec)</span>
-<span id="cb13-14"><a href="#cb13-14"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>   edge.clust <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
+<span id="cb13-2"><a href="#cb13-2"></a>      d <span class="ot">&lt;-</span> <span class="fu">degree</span>(h) <span class="co">#degree vector</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a>      e <span class="ot">&lt;-</span> <span class="fu">as_edgelist</span>(h, <span class="at">names =</span> <span class="cn">FALSE</span>) <span class="co">#graph edge list</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a>      w <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(h)) <span class="co">#graph adjacency matrix</span></span>
+<span id="cb13-5"><a href="#cb13-5"></a>      m <span class="ot">&lt;-</span> w <span class="sc">%*%</span> w <span class="co">#commons neighbors matrix</span></span>
+<span id="cb13-6"><a href="#cb13-6"></a>      ec <span class="ot">&lt;-</span> <span class="fu">apply</span>(e, <span class="dv">1</span>, <span class="cf">function</span>(x) { <span class="co">#applies function to each row of matrix e</span></span>
+<span id="cb13-7"><a href="#cb13-7"></a>         i <span class="ot">&lt;-</span> x[<span class="dv">1</span>] <span class="co">#first node</span></span>
+<span id="cb13-8"><a href="#cb13-8"></a>         j <span class="ot">&lt;-</span> x[<span class="dv">2</span>] <span class="co">#second node</span></span>
+<span id="cb13-9"><a href="#cb13-9"></a>         z <span class="ot">&lt;-</span> m[i, j] <span class="co">#common neighbors</span></span>
+<span id="cb13-10"><a href="#cb13-10"></a>         <span class="fu">return</span>((z <span class="sc">+</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="fu">min</span>((d[i] <span class="sc">-</span> <span class="dv">1</span>), (d[j] <span class="sc">-</span> <span class="dv">1</span>))) <span class="co">#edge clustering coefficient</span></span>
+<span id="cb13-11"><a href="#cb13-11"></a>         }</span>
+<span id="cb13-12"><a href="#cb13-12"></a>      )</span>
+<span id="cb13-13"><a href="#cb13-13"></a>      <span class="fu">return</span>(ec)</span>
+<span id="cb13-14"><a href="#cb13-14"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This function takes some graph <code>h</code> as input and returns a vector of length <span class="math inline">\(|E|\)</span> (number of edges in the graph) containing the estimated clustering coefficient of each edge as components. Note that we compute the number of shared neighbors by taking the second power of the adjacency matrix in lines 4 and 5. The <code>for</code> loop then goes through each edge and computes the clustering coefficient in line 11.</p>
 <p>And to complete step 2, here’s a modification of our edge-deletion function above to incorporate the edge clustering coefficient as the criterion for edge deletion:</p>

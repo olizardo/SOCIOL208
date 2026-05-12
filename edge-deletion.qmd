@@ -151,20 +151,20 @@ To implement this approach we need (1) a function to compute the clustering coef
 To complete step 1, here's a function to compute the edge clustering coefficient as defined by @radicchi_etal04:
 
 ```{r}
-    edge.clust <- function(h) {
-        d <- degree(h) #degree vector
-        e <- as_edgelist(h, names = FALSE) #graph edge list
-        w <- as.matrix(as_adjacency_matrix(h)) #graph adjacency matrix
-        m <- w %*% w #commons neighbors matrix
-        ec <- 0 #initializing edge clustering coefficient vector
-        for (r in 1:nrow(e)) {
-            i <- e[r, 1] #first node
-            j <- e[r, 2] #second node
-            z <- m[i, j] #shared neighbors
-            ec[r] <- (z + 1) / min((d[i] - 1), (d[j] - 1)) #edge clustering coefficient
-            }
-        return(ec)
-        }
+   edge.clust <- function(h) {
+      d <- degree(h) #degree vector
+      e <- as_edgelist(h, names = FALSE) #graph edge list
+      w <- as.matrix(as_adjacency_matrix(h)) #graph adjacency matrix
+      m <- w %*% w #commons neighbors matrix
+      ec <- apply(e, 1, function(x) { #applies function to each row of matrix e
+         i <- x[1] #first node
+         j <- x[2] #second node
+         z <- m[i, j] #common neighbors
+         return((z + 1) / min((d[i] - 1), (d[j] - 1))) #edge clustering coefficient
+         }
+      )
+      return(ec)
+      }
 ```
 
 This function takes some graph `h` as input and returns a vector of length $|E|$ (number of edges in the graph) containing the estimated clustering coefficient of each edge as components. Note that we compute the number of shared neighbors by taking the second power of the adjacency matrix in lines 4 and 5. The `for` loop then goes through each edge and computes the clustering coefficient in line 11. 
