@@ -17,19 +17,155 @@ There are ways of extending the analysis of ego networks to graphs beyond the ba
 
 ## Two Step Ego Graphs
 
-In the first extension we consider the **two-step ego graph**. This is a graph composed of ego (the focal node), their direct contacts, and the *neighbors of their direct contacts*. Let's see what that would look like. 
+The first extension we will consider is the **two-step ego graph**. This is a graph composed of ego (the focal node), their direct contacts, and the *neighbors of their direct contacts*. Let's see what that would look like. 
 
 First we load up the *New Hope* Star Wars social network included in the `networkdata` package [@gabasova16]:
 
 ```{r}
    library(networkdata)
    library(igraph)
-   library(stringr) #using stringr to change names from all caps to title case
-   g <- starwars[[4]]
-   V(g)$name <- str_to_title(V(g)$name)
+   g <- got[[1]]
 ```
 
-Let's try to see what R2-D2's and Luke's two-step ego graph looks like. 
+```{r}
+   # Create a named character vector classifying the provided Game of Thrones characters by gender
+   got_network_genders <- c(
+   "Ned" = "Male",
+   "Daenerys" = "Female",
+   "Jon" = "Male",
+   "Littlefinger" = "Male",
+   "Arya" = "Female",
+   "Catelyn" = "Female",
+   "Bronn" = "Male",
+   "Cersei" = "Female",
+   "Shae" = "Female",
+   "Joffrey" = "Male",
+   "Sansa" = "Female",
+   "Tyrion" = "Male",
+   "Jeor" = "Male",
+   "Robb" = "Male",
+   "Bran" = "Male",
+   "Jaime" = "Male",
+   "Loras" = "Male",
+   "Jory Cassel" = "Male",
+   "Jorah" = "Male",
+   "Ros" = "Female",
+   "Grenn" = "Male",
+   "Benjen" = "Male",
+   "Greatjon Umber" = "Male",
+   "Mord" = "Male",
+   "Doreah" = "Female",
+   "Lysa" = "Female",
+   "Pyp" = "Male",
+   "Renly" = "Male",
+   "Drogo" = "Male",
+   "Barristan" = "Male",
+   "Illyrio" = "Male",
+   "Osha" = "Female",
+   "Shagga" = "Male",
+   "Alliser Thorne" = "Male",
+   "Hound" = "Male",
+   "Theon" = "Male",
+   "Maester Luwin" = "Male",
+   "Robert" = "Male",
+   "Lancel" = "Male",
+   "Mirri Maz Duur" = "Female",
+   "Pycelle" = "Male",
+   "Kevan" = "Male",
+   "Janos Slynt" = "Male",
+   "Gendry" = "Male",
+   "Hot Pie" = "Male",
+   "Jon Arryn" = "Male",
+   "Irri" = "Female",
+   "Meryn Trant" = "Male",
+   "Mhaegen" = "Female",
+   "Robin Arryn" = "Male",
+   "Rodrik Cassel" = "Male",
+   "Aerys" = "Male",
+   "Baelor" = "Male",
+   "Dareon" = "Male",
+   "Ser Vardis" = "Male",
+   "Hugh Of The Vale" = "Male",
+   "Maester Aemon" = "Male",
+   "Othell Yarwyck" = "Male",
+   "Rast" = "Male",
+   "Gared" = "Male",
+   "Jonos Bracken" = "Male",
+   "Marillion" = "Male",
+   "Masha Heddle" = "Female",
+   "Mountain" = "Male",
+   "Ilyn Payne" = "Male",
+   "Lyanna" = "Female",
+   "Mycah" = "Male",
+   "Old Nan" = "Female",
+   "Royce" = "Male",
+   "Ryger Rivers" = "Male",
+   "Stevron Frey" = "Male",
+   "Waymar Royce" = "Male",
+   "Addam Marbrand" = "Male",
+   "Assassin" = "Male",
+   "Balon" = "Male",
+   "Beric" = "Male",
+   "Brandon Stark" = "Male",
+   "Cohollo" = "Male",
+   "Hodor" = "Male",
+   "Hoster" = "Male",
+   "Myrcella" = "Female",
+   "Qotho" = "Male",
+   "Rakharo" = "Male",
+   "Rickon" = "Male",
+   "Varys" = "Male",
+   "Aegon" = "Male",
+   "Borcas" = "Male",
+   "Bowen Marsh" = "Male",
+   "Galbart Glover" = "Male",
+   "High Septon" = "Male",
+   "Jaremy Rykker" = "Male",
+   "Joanna" = "Female",
+   "Joyeuse" = "Female",
+   "Leo Lefford" = "Male",
+   "Luke" = "Male",
+   "Melessa" = "Female",
+   "Othor" = "Male",
+   "Randyll" = "Male",
+   "Rhaegar" = "Male",
+   "Rhaego" = "Male",
+   "Rickard Karstark" = "Male",
+   "Stannis" = "Male",
+   "Sam" = "Male",
+   "Viserys" = "Male",
+   "Septa Mordane" = "Female",
+   "Tywin" = "Male",
+   "Syrio Forel" = "Male",
+   "Walder" = "Male",
+   "Yoren" = "Male",
+   "Wine Merchant" = "Male",
+   "Lommy Greenhands" = "Male",
+   "Vardis Egen" = "Male",
+   "Mago" = "Male",
+   "Tobho Mott" = "Male",
+   "Stable Boy" = "Male",
+   "Tomard" = "Male",
+   "Rickard Stark" = "Male",
+   "Will" = "Male",
+   "Jhiqui" = "Female",
+   "Irogenia" = "Female",
+   "Tysha" = "Female",
+   "Tommen" = "Male",
+   "Little Bird" = "Unknown", # Refers either to Sansa (Female) or Varys' spies (Mixed)
+   "Mace" = "Male",
+   "Roose Bolton" = "Male",
+   "Steffon" = "Male",
+   "Varly" = "Male"
+      )
+   # Convert to factor
+   got_network_genders_factor <- factor(got_network_genders)
+
+   # Assuming your graph object is named 'g', you can assign it directly to the vertices like this:
+   V(g)$gender <- got_network_genders_factor[V(g)$name]
+```
+
+Let's try to see what R2-D2's two-step ego graph looks like. 
 
 First, let's create a function that takes a given node as input and returns a subgraph of the larger graph containing the focal node, that node's neighbors, and those neighbors' neighbors: 
 
@@ -59,7 +195,7 @@ And here are the three entries of the resulting list:
    ego.graphs2[1:3]
 ```
 
-@fig-twostep1 shows a point and line plot of R2-D2's two-step ego network:
+@fig-twostep1 shows a point and line plot of R2-D2's two-step ego network. In the figure R2-D2, the focal node, appears in orange, their one-step neighbors in green and their two-step neighbors in blue. 
 
 
 ```{r}
@@ -70,20 +206,22 @@ And here are the three entries of the resulting list:
 #| label: fig-twostep1
    # install.packages("graphlayouts")
    library("graphlayouts")
-   g2 <- ego.graphs2$`R2-D2`
+   g2 <- ego.graphs2$"Sam"
    V(g2)$color <- rep(2, vcount(g2)) #R2-D2's alters appear in green
-   V(g2)$color[which(V(g2)$name %in% "R2-D2")] <- 1 #ego appears in tan  
-   V(g2)$color[which(V(g2)$name %in% names(neighbors(g, "R2-D2")))] <- 3 #alters of R2-D2's alters appear in blue 
+   V(g2)$color[which(V(g2)$name %in% "Sam")] <- 1 #ego appears in tan  
+   V(g2)$color[which(V(g2)$name %in% names(neighbors(g, "Sam")))] <- 3 #alters of R2-D2's alters appear in blue 
    plot(g2, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=1.5, edge.width = 1.5,
-     layout = layout_with_focus(g2, v = which(V(g2)$name == "R2-D2"))$xy,
+     layout = layout_with_focus(g2, v = which(V(g2)$name == "Sam"))$xy,
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-Once we have the two-step ego graph we can compute some metrics that are unique for this type of network. One of them is the node **linchpin score**. A type of centrality measure that combines the logic of brokerage and homophily (or its opposite heterophily). The basic idea is that a node is a "linchpin" (e.g., plays a central role in the network) if they are the only one of its "kind" (as given by some vertex) attribute among its neighbors.
+Once we have the two-step ego graph we can compute some metrics that are unique for this type of network. One of them is the node **linchpin score** [@nemesure_etal21]. This is a type of centrality measure that combines the logic of brokerage and homophily (or its opposite heterophily). 
 
-Let us see how this works. @fig-stwostep2 shows Luke's extended ego network but this time with each node colored by home world.
+The basic idea is that a node is a "linchpin" (e.g., plays a central role in the network) if they are the only one of its "kind" (as given by some vertex attribute) among its neighbors.
+
+Let us see how this works. @fig-stwostep2 shows Luke's extended ego network with each node colored by home world.
 
 ```{r}
 #| fig-height: 8
@@ -91,29 +229,36 @@ Let us see how this works. @fig-stwostep2 shows Luke's extended ego network but 
 #| fig-cap: "Luke's Extended Ego Network"
 #| echo: false
 #| label: fig-twostep2
+   library(RColorBrewer)  
+   g3 <- ego.graphs2$"R2-D2"
+   hw <- V(g2)$homeworld
+   hw <- as.numeric(as.factor(hw))
+   getPalette = colorRampPalette(categorical_pal(8))
+   pal = getPalette(max(hw))
+   V(g2)$color <- hw
+   g2$palette <- pal
    plot(g2, 
      vertex.size=10, vertex.frame.color="lightgray", 
      vertex.label.dist=1.5, edge.width = 1.5, 
-     vertex.color =  as.numeric(as.factor(V(g2)$homeworld)),
      layout = layout_with_focus(g2, v = which(V(g2)$name == "Luke"))$xy,
      vertex.label.cex = 1.25, edge.color = "lightgray")
 ```
 
-Clearly if any of Luke's neighbors share the same attribute they should not contribute to the linchpin score. Secondly, if any of their neighbors has access to another node of the same attribute as ego (e.g., if there's a two-step neighbor that is the same as ego on that attribute) then they should also not count for the score.
+Clearly if any of Luke's neighbors share the same attribute as he does (are from the same homeworld) they should not contribute to his linchpin score. Secondly, if any of their neighbors has access to another node of the same attribute as ego (e.g., if there's a two-step neighbor that is the same as ego on that attribute) then they should also not count for the score.
 
-So the first thing we need to do is create a vector counting how many of ego's neighbor are the same as ego on the given attribute:
+So the first thing we need to do is create a vector counting how many of Luke's neighbors are the same as ego on the given attribute:
 
 ```{r}
    g2 <- ego.graphs2$`Luke`
-   V(g2)$homeworld[is.na(V(g2)$homeworld)] <- "Other"
    ego.nei <- neighbors(g2, "Luke")
    ego.pos <- which(V(g2)$name == "Luke")
    ego.att <- vertex_attr(g2)$homeworld[ego.pos]
    alter.att <- vertex_attr(g2)$homeworld[ego.nei]
    a <- as.numeric(alter.att %in% ego.att)
+   a
 ```
 
-Now we create another vector that counts the number of C-3PO's neighbors that have at least one neighbor of the same home world as C-3PO:
+Now we create another vector that counts the number of Luke's neighbors that have at least one neighbor of the same home world as Luke:
 
 ```{r}
    b <- 0
@@ -126,12 +271,37 @@ Now we create another vector that counts the number of C-3PO's neighbors that ha
       i <- i + 1
       }
    b <- as.numeric(b > 0)
+   b
 ```
 
 And the node linchpin score is just:
 
 ```{r}
    l <- sum((1-a) * (1-b))/length(a)
+   l
+```
+
+We can package all of this into a single function:
+
+```{r}
+   linchpin <- function(ego, graph, attr) {
+      V(graph)$attr[is.na(V(graph)$attr)] <- "Other" 
+      ego.nei <- neighbors(graph, ego) #ego's neighbors
+      ego.pos <- which(V(graph)$name == ego)
+      ego.att <- vertex_attr(graph)$attr[ego.pos]
+      alter.att <- vertex_attr(graph)$attr[ego.nei]
+      a <- as.numeric(alter.att %in% ego.att)
+      b <- 0
+      i <- 1
+      for (j in neighbors(graph, ego)) {
+         j.nei <- neighbors(graph, j)
+         j.nei <- j.nei[j.nei != ego.pos]
+         alter.att <- vertex_attr(graph)$attr[j.nei]
+         b[i] <- sum(as.numeric(alter.att %in% ego.att))
+         i <- i + 1
+         }
+      b <- as.numeric(b > 0)
+   }
 ```
 
 
