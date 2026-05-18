@@ -132,31 +132,26 @@ The following function uses the dendrogram information to return a list of node 
 Let's see the list with twelve overlapping communities:
 
 ```{r}
-    C <- create.clus(hc.res, k = 12)
+    k <- 12
+    C <- create.clus(hc.res, k = k)
     C
 ```
 
 Because there are nodes that belong to multiple communities, the resulting actor by community ties form a **two-mode network**. 
 
-We can see re-construct this network from the list of community memberships for each node using this function:
+We can re-construct this network from the list of community memberships for each node like this:
 
 ```{r}
-    create.two <- function(x) {
-      v <- unique(unlist(x))
-      B <- as.numeric(v %in% x[[1]])
-      for(j in 2:length(x)) {
-        B <- cbind(B, as.numeric(v %in% x[[j]]))
-      }
-      rownames(B) <- v
-      colnames(B) <- paste("c", 1:12, sep = "")
-      return(B)
-      }
+    B <- matrix(0, vcount(g), k)
+    rownames(B) <- V(g)$name
+    for (i in 1:k) {
+        B[C[[i]], i] <- 1
+        }
 ```
 
 Here's the two mode matrix of characters by communities:
 
 ```{r}
-    B <- create.two(C)
     B
 ```
 
@@ -170,21 +165,44 @@ And the matrix of inter-community ties based on shared characters:
 And we can visualize the nodes connected to multiple communities as follows: 
 
 ```{r}
-#| fig-width: 12
+#| label: fig-overlap
+#| fig-cap: "Undirected Pulp Fiction Network Showing the Memberships of Each Node in Overlapping Communities (Nodes who Belong to Non-overlapping Communities Omitted)."
 #| fig-height: 12
-    library(RColorBrewer)
-    set.seed(45)
-    g <- graph_from_biadjacency_matrix(B)
-    V(g)$type <- bipartite_mapping(g)$type
-    V(g)$shape <- ifelse(V(g)$type, "square", "circle")
-    V(g)$color <- c(rep("orange", 38), 
-                    c(brewer.pal(8, "Paired"), brewer.pal(4, "Dark2"))) 
-    E(g)$color <- "lightgray"
-    plot(g, 
-    vertex.size=5, vertex.frame.color="lightgray", 
-    vertex.label = V(g)$name,
-    vertex.label.dist=1, vertex.label.cex = 1)
+#| fig-width: 12
+#| echo: false
+    one.comm <- which(rowSums(B) != 0)
+    M <- B[one.comm, ]
+    gc <- subgraph(g, one.comm)
+    W <- M/rowSums(M)
+    W <- split(W, seq(nrow(W)))
+    ccol <- lapply(W, function(x) {which(x != 0)})
+    W <- lapply(W, function(x) {x[which(x != 0)]})
+    names(W) <- V(gc)$name
+    library(RColorBrewer)   
+    getPalette = colorRampPalette(categorical_pal(8))
+    pal = getPalette(ncol(B))
+    V(gc)$shape <- "pie"
+    V(gc)$pie <- W
+    c.list <- lapply(ccol, function(x) {pal[x]})
+    V(gc)$pie.color <- c.list
+    set.seed(123456)
+    plot(gc, 
+        layout = layout_with_fr,       
+        vertex.size = 8,             
+        vertex.label.color = "black", 
+        vertex.label.font = 2,      
+        vertex.label.cex = 1.2,   
+        edge.width = 2,                
+        edge.color = "lightblue",
+        vertex.label.dist = 1.5
+        )
+    legend("bottomleft", 
+       legend = c(paste("C", 1:k, sep = "_")), 
+       fill = pal, 
+       bty = "n",  # No box around legend
+       cex = 1.2)  # Text size
 ```
+
 
 
 

@@ -399,12 +399,12 @@ div.csl-indent {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./comm-overlap-edge.html" class="sidebar-item-text sidebar-link active">Using Edge Clustering to Assign Nodes to Overlapping Communities</a>
+  <a href="./comm-overlap-clique.html" class="sidebar-item-text sidebar-link">Using Cliques to Assign Nodes to Overlapping Communities</a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./comm-overlap-clique.html" class="sidebar-item-text sidebar-link">Cliques to Assign Nodes to Overlapping Communities</a>
+  <a href="./comm-overlap-edge.html" class="sidebar-item-text sidebar-link active">Using Edge Clustering to Assign Nodes to Overlapping Communities</a>
   </div>
 </li>
       </ul>
@@ -658,8 +658,9 @@ div.csl-indent {
 </div>
 <p>Let’s see the list with twelve overlapping communities:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>    C <span class="ot">&lt;-</span> <span class="fu">create.clus</span>(hc.res, <span class="at">k =</span> <span class="dv">12</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>    C</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>    k <span class="ot">&lt;-</span> <span class="dv">12</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a>    C <span class="ot">&lt;-</span> <span class="fu">create.clus</span>(hc.res, <span class="at">k =</span> k)</span>
+<span id="cb8-3"><a href="#cb8-3"></a>    C</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
 [1] "Brett"      "Gawker #2"  "Jules"      "Marsellus"  "Marvin"    
@@ -713,63 +714,57 @@ div.csl-indent {
 </div>
 </div>
 <p>Because there are nodes that belong to multiple communities, the resulting actor by community ties form a <strong>two-mode network</strong>.</p>
-<p>We can see re-construct this network from the list of community memberships for each node using this function:</p>
+<p>We can re-construct this network from the list of community memberships for each node like this:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>    create.two <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb10-2"><a href="#cb10-2"></a>      v <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">unlist</span>(x))</span>
-<span id="cb10-3"><a href="#cb10-3"></a>      B <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(v <span class="sc">%in%</span> x[[<span class="dv">1</span>]])</span>
-<span id="cb10-4"><a href="#cb10-4"></a>      <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="fu">length</span>(x)) {</span>
-<span id="cb10-5"><a href="#cb10-5"></a>        B <span class="ot">&lt;-</span> <span class="fu">cbind</span>(B, <span class="fu">as.numeric</span>(v <span class="sc">%in%</span> x[[j]]))</span>
-<span id="cb10-6"><a href="#cb10-6"></a>      }</span>
-<span id="cb10-7"><a href="#cb10-7"></a>      <span class="fu">rownames</span>(B) <span class="ot">&lt;-</span> v</span>
-<span id="cb10-8"><a href="#cb10-8"></a>      <span class="fu">colnames</span>(B) <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"c"</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">12</span>, <span class="at">sep =</span> <span class="st">""</span>)</span>
-<span id="cb10-9"><a href="#cb10-9"></a>      <span class="fu">return</span>(B)</span>
-<span id="cb10-10"><a href="#cb10-10"></a>      }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a>    B <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(g), k)</span>
+<span id="cb10-2"><a href="#cb10-2"></a>    <span class="fu">rownames</span>(B) <span class="ot">&lt;-</span> <span class="fu">V</span>(g)<span class="sc">$</span>name</span>
+<span id="cb10-3"><a href="#cb10-3"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>k) {</span>
+<span id="cb10-4"><a href="#cb10-4"></a>        B[C[[i]], i] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb10-5"><a href="#cb10-5"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Here’s the two mode matrix of characters by communities:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    B <span class="ot">&lt;-</span> <span class="fu">create.two</span>(C)</span>
-<span id="cb11-2"><a href="#cb11-2"></a>    B</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    B</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12
-Brett            1  1  1  0  0  1  1  0  0   0   0   0
-Gawker #2        1  0  0  0  0  1  0  0  0   0   0   0
-Jules            1  1  1  0  0  1  1  0  0   0   0   0
-Marsellus        1  0  0  1  0  1  0  0  0   0   0   0
-Marvin           1  1  1  0  0  1  1  0  0   0   0   0
-Pedestrian       1  0  0  0  0  1  0  0  0   0   0   0
-Roger            1  1  1  0  0  1  1  0  0   0   0   0
-Vincent          1  0  1  1  1  1  0  0  0   0   0   0
-Fabienne         0  1  0  0  0  1  0  0  0   0   0   0
-Sportscaster #1  0  1  0  0  0  1  0  0  0   0   0   0
-Jimmie           0  1  1  0  0  0  1  0  0   0   0   0
-Raquel           0  1  1  0  0  0  1  0  0   0   0   0
-Sportscaster #2  0  1  0  0  0  0  0  0  0   0   0   0
-The Wolf         0  1  1  0  0  0  1  0  0   0   0   0
-Winston          0  1  1  0  0  0  1  0  0   0   0   0
-Fourth Man       0  0  1  0  0  0  1  0  0   0   0   0
-Honey Bunny      0  0  1  0  0  0  1  1  0   0   0   1
-Manager          0  0  1  0  0  0  1  1  0   0   0   0
-Patron           0  0  1  0  0  0  1  1  0   0   0   0
-Pumpkin          0  0  1  0  0  0  1  1  0   0   0   1
-Buddy            0  0  0  1  1  0  0  0  0   0   0   0
-Jody             0  0  0  1  1  0  0  0  1   0   0   0
-Lance            0  0  0  1  1  0  0  0  1   0   0   0
-Butch            0  0  0  1  0  1  0  0  0   0   0   0
-Capt Koons       0  0  0  1  1  1  0  0  0   0   1   0
-Ed Sullivan      0  0  0  1  1  0  0  0  0   0   0   0
-English Dave     0  0  0  1  1  1  0  0  0   0   0   0
-Mia              0  0  0  1  0  0  0  0  0   0   0   0
-Mother           0  0  0  1  1  1  0  0  0   0   1   0
-Woman            0  0  0  1  1  1  0  0  0   0   1   0
-Preacher         0  0  0  0  1  0  0  0  1   0   0   0
-Esmeralda        0  0  0  0  0  1  0  0  0   0   0   0
-Maynard          0  0  0  0  0  1  0  0  0   1   0   0
-The Gimp         0  0  0  0  0  0  0  0  0   1   0   0
-Zed              0  0  0  0  0  0  0  0  0   1   0   0
-Waitress         0  0  0  0  0  0  0  0  0   0   0   1
-Young Man        0  0  0  0  0  0  0  0  0   0   0   1
-Young Woman      0  0  0  0  0  0  0  0  0   0   0   1</code></pre>
+<pre><code>                [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12]
+Brett              1    1    1    0    0    1    1    0    0     0     0     0
+Buddy              0    0    0    1    1    0    0    0    0     0     0     0
+Butch              0    0    0    1    0    1    0    0    0     0     0     0
+Capt Koons         0    0    0    1    1    1    0    0    0     0     1     0
+Ed Sullivan        0    0    0    1    1    0    0    0    0     0     0     0
+English Dave       0    0    0    1    1    1    0    0    0     0     0     0
+Esmeralda          0    0    0    0    0    1    0    0    0     0     0     0
+Fabienne           0    1    0    0    0    1    0    0    0     0     0     0
+Fourth Man         0    0    1    0    0    0    1    0    0     0     0     0
+Gawker #2          1    0    0    0    0    1    0    0    0     0     0     0
+Honey Bunny        0    0    1    0    0    0    1    1    0     0     0     1
+Jimmie             0    1    1    0    0    0    1    0    0     0     0     0
+Jody               0    0    0    1    1    0    0    0    1     0     0     0
+Jules              1    1    1    0    0    1    1    0    0     0     0     0
+Lance              0    0    0    1    1    0    0    0    1     0     0     0
+Manager            0    0    1    0    0    0    1    1    0     0     0     0
+Marsellus          1    0    0    1    0    1    0    0    0     0     0     0
+Marvin             1    1    1    0    0    1    1    0    0     0     0     0
+Maynard            0    0    0    0    0    1    0    0    0     1     0     0
+Mia                0    0    0    1    0    0    0    0    0     0     0     0
+Mother             0    0    0    1    1    1    0    0    0     0     1     0
+Patron             0    0    1    0    0    0    1    1    0     0     0     0
+Pedestrian         1    0    0    0    0    1    0    0    0     0     0     0
+Preacher           0    0    0    0    1    0    0    0    1     0     0     0
+Pumpkin            0    0    1    0    0    0    1    1    0     0     0     1
+Raquel             0    1    1    0    0    0    1    0    0     0     0     0
+Roger              1    1    1    0    0    1    1    0    0     0     0     0
+Sportscaster #1    0    1    0    0    0    1    0    0    0     0     0     0
+Sportscaster #2    0    1    0    0    0    0    0    0    0     0     0     0
+The Gimp           0    0    0    0    0    0    0    0    0     1     0     0
+The Wolf           0    1    1    0    0    0    1    0    0     0     0     0
+Vincent            1    0    1    1    1    1    0    0    0     0     0     0
+Waitress           0    0    0    0    0    0    0    0    0     0     0     1
+Winston            0    1    1    0    0    0    1    0    0     0     0     0
+Woman              0    0    0    1    1    1    0    0    0     0     1     0
+Young Man          0    0    0    0    0    0    0    0    0     0     0     1
+Young Woman        0    0    0    0    0    0    0    0    0     0     0     1
+Zed                0    0    0    0    0    0    0    0    0     1     0     0</code></pre>
 </div>
 </div>
 <p>And the matrix of inter-community ties based on shared characters:</p>
@@ -777,37 +772,30 @@ Young Woman      0  0  0  0  0  0  0  0  0   0   0   1</code></pre>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>    M <span class="ot">&lt;-</span> <span class="fu">t</span>(B) <span class="sc">%*%</span> B</span>
 <span id="cb13-2"><a href="#cb13-2"></a>    M</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>    c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12
-c1   8  4  5  2  1  8  4  0  0   0   0   0
-c2   4 11  8  0  0  6  8  0  0   0   0   0
-c3   5  8 14  1  1  5 13  4  0   0   0   2
-c4   2  0  1 12  9  7  0  0  2   0   3   0
-c5   1  0  1  9 10  5  0  0  3   0   3   0
-c6   8  6  5  7  5 17  4  0  0   1   3   0
-c7   4  8 13  0  0  4 13  4  0   0   0   2
-c8   0  0  4  0  0  0  4  4  0   0   0   2
-c9   0  0  0  2  3  0  0  0  3   0   0   0
-c10  0  0  0  0  0  1  0  0  0   3   0   0
-c11  0  0  0  3  3  3  0  0  0   0   3   0
-c12  0  0  2  0  0  0  2  2  0   0   0   5</code></pre>
+<pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12]
+ [1,]    8    4    5    2    1    8    4    0    0     0     0     0
+ [2,]    4   11    8    0    0    6    8    0    0     0     0     0
+ [3,]    5    8   14    1    1    5   13    4    0     0     0     2
+ [4,]    2    0    1   12    9    7    0    0    2     0     3     0
+ [5,]    1    0    1    9   10    5    0    0    3     0     3     0
+ [6,]    8    6    5    7    5   17    4    0    0     1     3     0
+ [7,]    4    8   13    0    0    4   13    4    0     0     0     2
+ [8,]    0    0    4    0    0    0    4    4    0     0     0     2
+ [9,]    0    0    0    2    3    0    0    0    3     0     0     0
+[10,]    0    0    0    0    0    1    0    0    0     3     0     0
+[11,]    0    0    0    3    3    3    0    0    0     0     3     0
+[12,]    0    0    2    0    0    0    2    2    0     0     0     5</code></pre>
 </div>
 </div>
 <p>And we can visualize the nodes connected to multiple communities as follows:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>    <span class="fu">library</span>(RColorBrewer)</span>
-<span id="cb15-2"><a href="#cb15-2"></a>    <span class="fu">set.seed</span>(<span class="dv">45</span>)</span>
-<span id="cb15-3"><a href="#cb15-3"></a>    g <span class="ot">&lt;-</span> <span class="fu">graph_from_biadjacency_matrix</span>(B)</span>
-<span id="cb15-4"><a href="#cb15-4"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>type <span class="ot">&lt;-</span> <span class="fu">bipartite_mapping</span>(g)<span class="sc">$</span>type</span>
-<span id="cb15-5"><a href="#cb15-5"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>shape <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="fu">V</span>(g)<span class="sc">$</span>type, <span class="st">"square"</span>, <span class="st">"circle"</span>)</span>
-<span id="cb15-6"><a href="#cb15-6"></a>    <span class="fu">V</span>(g)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="st">"orange"</span>, <span class="dv">38</span>), </span>
-<span id="cb15-7"><a href="#cb15-7"></a>                    <span class="fu">c</span>(<span class="fu">brewer.pal</span>(<span class="dv">8</span>, <span class="st">"Paired"</span>), <span class="fu">brewer.pal</span>(<span class="dv">4</span>, <span class="st">"Dark2"</span>))) </span>
-<span id="cb15-8"><a href="#cb15-8"></a>    <span class="fu">E</span>(g)<span class="sc">$</span>color <span class="ot">&lt;-</span> <span class="st">"lightgray"</span></span>
-<span id="cb15-9"><a href="#cb15-9"></a>    <span class="fu">plot</span>(g, </span>
-<span id="cb15-10"><a href="#cb15-10"></a>    <span class="at">vertex.size=</span><span class="dv">5</span>, <span class="at">vertex.frame.color=</span><span class="st">"lightgray"</span>, </span>
-<span id="cb15-11"><a href="#cb15-11"></a>    <span class="at">vertex.label =</span> <span class="fu">V</span>(g)<span class="sc">$</span>name,</span>
-<span id="cb15-12"><a href="#cb15-12"></a>    <span class="at">vertex.label.dist=</span><span class="dv">1</span>, <span class="at">vertex.label.cex =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="comm-overlap-edge_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="1152"></p>
+<div id="fig-overlap" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="comm-overlap-edge_files/figure-html/fig-overlap-1.png" class="img-fluid figure-img" width="1152"></p>
+<p></p><figcaption class="figure-caption">Figure&nbsp;1: Undirected Pulp Fiction Network Showing the Memberships of Each Node in Overlapping Communities (Nodes who Belong to Non-overlapping Communities Omitted).</figcaption><p></p>
+</figure>
+</div>
 </div>
 </div>
 
