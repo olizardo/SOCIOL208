@@ -11,20 +11,24 @@ format:
       code-line-numbers: true
 ---
 
-In the previous handout, we examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
+We have examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
 
 ## Detecting Overlapping Communities
 
-Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan's edge betweenness), we compute pairwise *similarities* between links like we did in handout 5. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
+Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan's edge betweenness), we compute pairwise *similarities* between links. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
 
 Let's see how it works.
 
-First we load data from an undirected graph:
+First we load data from an undirected graph, like our trusty *Pulp Fiction* movie network:
 
 ```{r}
-   library(igraph)
-   library(networkdata)
-   g <- movie_559 #Pulp Fiction
+    library(networkdata)
+    library(igraph)
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0
 ```
 
 And we plot:
@@ -56,7 +60,7 @@ The key idea behind link clustering is that *similar* links should be assigned t
 
 ## Measuring Edge Similarity
 
-According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_k$) are themselves similar. To measure the similarity between these two nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action, like Jaccard, cosine, or Dice.
+According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_j$) are themselves similar. To measure the similarity between this pair of nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action (see lecture notes on [local similarity metrics](sim-loc.qmd)), like Jaccard, cosine, or Dice.
 
 The first step is thus to build a link by link similarity matrix based on this idea. The following function loops through each *pair of links* in the graph and computes the similarity between two links featuring a common node $v_k$  based on the Jaccard vertex similarity of the two other nodes:
 

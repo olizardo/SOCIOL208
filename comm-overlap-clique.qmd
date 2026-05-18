@@ -1,0 +1,151 @@
+---
+title: "Cliques to Assign Nodes to Overlapping Communities "
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+@palla_etal05 provide a simple and intuitive way to partition a network into overlapping communities. The basic idea is to take advantage of the fact that **cliques** within a network (fully connected subgraphs of a given size $k$) are likely to share nodes. Communiities can then be defined as concatenation of cliques, where the linkages between cliques are defined by some set shared number of members $q$.
+
+Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:
+
+```{r}
+    library(networkdata)
+    library(igraph)
+    g <- law_friends
+    g <- subgraph(g, degree(g) >= 2)
+    ug <- as_undirected(g, mode = "collapse")
+    V(ug)$name <- as.character(1:vcount(ug))
+```
+
+What @palla_etal05 propose is to build communities from a set of **maximal cliques** (fully connected subgraphs of a given size $k$ that are themselves not subsets of a larger fully connected subgraph). 
+
+So the first thing we need to do is settle on a value of $k$, here we use $k = 6$. 
+
+```{r}
+    k <- 6
+```
+
+And now we can use the `igraph` function `max_cliques` to find all of the maximal cliques of that size:
+
+```{r}
+    cliques <- max_cliques(ug, min = k, max = k)
+    length(cliques)
+```
+
+We can see that there are 24 maximal cliques of size `r k` by querying the length of the list returned by the `max_cliques` function (containing the node ids of the members of each clique as entries). We now have all of the information necessary to create our clique overlap matrix. 
+
+The first step is to create a **bi-adjacency** matrix to represent the affiliation network composed of people and the cliques they belong to (see [here](basic-tm.qmd)). To do that, we first create an empty bi-adjacency matrix full of zeros called `m`,  loop through the list of maximal cliques we created earlier called `cliques`, and insert a one in the corresponding row/column combination:
+
+```{r}
+    n <- vcount(ug) #number of nodes
+    c <- length(cliques) #number of cliques
+    m <- matrix(0, nrow = n, ncol = c) #all zeros bi-adjacency matrix
+    for (i in 1:c) {
+        m[cliques[[i]], i] <- 1 #filling in bi-adjancy matrix
+        }
+    m[1:10, 1:10]
+```
+
+The matrix `m` now has a one one in the corresponding cell if the row person belongs to the column clique and zero otherwise. 
+
+We can now use the standard projection trick due to @breiger74 to create a clique by clique overlap matrix (see [here](basic-tm-duality.qmd)):
+
+```{r}
+    co <- t(m) %*% m
+    co[1:8, 1:8]
+```
+
+And now we binarize the clique overlap matrix `co` in three steps. First, we set the overlap matrix diagonals to zero. Second, we set to zero the entries corresponding to pairs of cliques that have an overlap equal to less than $q = k-1$. Finally, we set to one all the remaining non-zero entries:
+
+```{r}
+    q <- k - 1
+    diag(co) <- 0
+    co[co < q] <- 0
+    co[co != 0] <- 1
+```
+
+Our overlapping communities are the connected components of the resulting binarized clique graph:
+
+```{r}
+    cg <- graph_from_adjacency_matrix(co, mode = "undirected")
+    comps <- components(cg)$membership
+    names(comps) <- as.character(1:length(comps))
+    comps
+    max(comps)
+```
+
+We can see that the analysis resulted in `r max(comps)` overlapping clique communities. 
+
+Now, we create a `list` object containing the node ids for each of the twelve communities, merging together (using the native `R` function `union`) the nodes of the overlapping cliques that belong to the same component of the clique overlap graph: 
+
+```{r}
+    communities <- list() 
+    for (i in 1:max(comps)) {
+        communities[[i]] <- Reduce(union, cliques[which(comps == as.character(i))])
+        }
+```
+
+And here are the node ids of each the `r max(comps)` communities:
+
+```{r}
+    communities
+```
+
+Next we create a two-mode bi-adjacency matrix containing the membership of each node in each of the twelve communities:
+
+```{r}
+    cmat <- matrix(0, vcount(ug), length(communities))
+    for (i in 1:length(communities)) {
+        cmat[as.numeric(communities[[i]]), i] <- 1
+        }
+```
+
+And we can use some fancy `igraph` pie chart plotting to visualize the mixed memberships of each node in each community:
+
+
+```{r}
+#| label: fig-overlap
+#| fig-cap: "Undirected Law Firm Friendship Network Showing the Memberships of Each Node in Overlapping Communities (Nodes who Belong to Non-overlapping Communities Omitted)."
+#| fig-height: 12
+#| fig-width: 12
+#| echo: false
+    one.comm <- which(rowSums(cmat) != 0)
+    cmat <- cmat[one.comm, ]
+    gc <- subgraph(ug, one.comm)
+    cmat <- cmat/rowSums(cmat)
+    cmat <- split(cmat, seq(nrow(cmat)))
+    ccol <- lapply(cmat, function(x) {which(x != 0)})
+    cmat <- lapply(cmat, function(x) {x[which(x != 0)]})
+    library(RColorBrewer)   
+    getPalette = colorRampPalette(categorical_pal(8))
+    pal = getPalette(length(communities))
+    V(gc)$shape <- "pie"
+    V(gc)$pie <- cmat
+    c.list <- lapply(ccol, function(x) {pal[x]})
+    V(gc)$pie.color <- c.list
+    set.seed(123456)
+    plot(gc, 
+        layout = layout_with_fr,       
+        vertex.size = 12,             
+        vertex.label.color = "white", 
+        vertex.label.font = 2,      
+        vertex.label.cex = 1.5,   
+        edge.width = 2,                
+        edge.color = "lightblue"
+        )
+    legend("bottomleft", 
+       legend = c(paste("C", 1:12, sep = "_")), 
+       fill = pal, 
+       bty = "n",  # No box around legend
+       cex = 1.2)  # Text size
+```
+
+We can see for instance that some sets of nodes (e.g., {64, 65, 66, 67, 68}) belong to communities with minimal overlap with others (closer to classical communities), while other nodes (e.g., 31) stand in the middle of multiple communities, centrally located at their intersection. 
+
