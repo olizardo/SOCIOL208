@@ -17,50 +17,62 @@ We have examined various approaches to community and dense subgraph detection. W
 
 Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan's edge betweenness), we compute pairwise *similarities* between links. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
 
-Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:
+Let's see how this works. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
 ```{r}
     library(networkdata)
     library(igraph)
-    g <- law_friends
-    g <- subgraph(g, degree(g) >= 2)
-    g <- as_undirected(g, mode = "collapse")
-    V(g)$name <- as.character(1:vcount(g))
+    library(stringr) #using stringr to change names from all caps to title case
+    g <- movie_559
+    V(g)$name <- str_to_title(V(g)$name)
+    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
+    E(g)$weight <- 1 #setting edge weights to 1.0 (relevant for betweenness calculation)
+    g <- subgraph(g, which(degree(g) > 1))
 ```
 
 The key idea behind link clustering is that *similar* links should be assigned to the same clusters. How do we compute the similarity between links? 
 
 ## Measuring Edge Similarity
 
-According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_j$) are themselves similar. To measure the similarity between this pair of nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action (see lecture notes on [local similarity metrics](sim-loc.qmd)), like Jaccard, cosine, or Dice.
+According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_j$) are themselves similar. To measure the similarity between this pair of nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action (see lecture notes on [local similarity metrics](sim-loc.qmd)), like Jaccard, cosine, or Dice. @ahn_etal10 use the Jaccard, so that is what we will use.
 
 The first step is thus to build a link by link similarity matrix based on this idea. The following function loops through each *pair of links* in the graph and computes the similarity between two links featuring a common node $v_k$  based on the Jaccard vertex similarity of the two other nodes:
 
+
 ```{r}
-    edge.sim <- function(x) {
-      el <- as_edgelist(x) #edgelist representation
-      A <- as.matrix(as_adjacency_matrix(x))
-      S <- A %*% A #shared neighbors
-      d <- degree(x)
-      E <- nrow(el)
-      E.sim <- matrix(0, E, E) #initializing link similarity matrix
-      for (e1 in 1:E) {
-        for (e2 in 1:E) {
-            if (e1 < e2 & length(intersect(el[e1, ], el[e2])) != 0) {
-                v <- setdiff(union(el[e1,], el[e2,]), intersect(el[e1,], el[e2,]))
-                p <- S[v[1], v[2]]
-                q <- d[v[1]] - p
-                r <- d[v[2]] - p
-                E.sim[e1, e2] <- p / sqrt((p + q) * (p + r))
-                E.sim[e2, e1] <- E.sim[e1, e2]          
+    edge.sim <- function(h) {
+        E <- ecount(h) #number of edges
+        V <- vcount(h) #number of nodes
+        if(is.null(V(h)$name) == TRUE) {V(h)$name <- as.character(seq_len(V))} #checking if graph has node names
+        edgemat <- ends(h, E(h)) #edge list
+        E.sim <- diag(1, E, E) #initializing link similarity matrix to identity matrix
+        nlist <- lapply(V(h)$name, function(x) {c(as.vector(names(neighbors(h, x))), x)}) #neighbors list for each node
+        names(nlist) <- V(h)$name #naming neighbors list using graph node names
+        for (j in 2:E) {
+            for (i in 1:(j-1)) { #looping through upper triangle only
+                ei <- edgemat[i, ] #nodes incident to first edge
+                ej <- edgemat[j, ] #nodes incident to second edge
+                if (length(intersect(ei, ej)) != 0) { #do only if pair of edges share a node
+                    v <- setdiff(union(ei, ej), intersect(ei, ej))#extracting nodes attached to shared node
+                    n1 <- nlist[[v[1]]] #neighbors of first node
+                    n2 <- nlist[[v[2]]] #neighbors of second node
+                    E.sim[j, i] <- length(intersect(n1, n2)) / length(union(n1, n2)) #Jaccard similarity
+                    E.sim[i, j] <- E.sim[j, i] #symmetric score
+                    }
                 }
             }
-          }
         return(E.sim)
         }
 ```
 
-The function takes the graph as input and returns an inter-link similarity matrix of dimensions $E \times E$ where $E$ is the number of edges in the graph:
+The function takes the graph as input and returns an inter-link similarity matrix of dimensions $E \times E$ where $E$ is the number of edges in the graph. It works like this:
+
+- In line 5, we extract the end nodes incident to each edge in the graph using the `igraph` function `ends` (which creates an $E \times 2$ matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column). 
+- In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges maximally similar to themselves and have initial similarity zero to other edges). 
+- Lines 7 and 8 create a `list` object called `nlist` using the `lapply` shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called **inclusive neighborhood**).
+- Then lines 9-21 enter a double `for` loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the `nlist` object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).
+
+Here's the function in action in the *Pulp Fiction* network:
 
 ```{r}
     E.sim <- edge.sim(g)
@@ -88,10 +100,10 @@ The leaves of the dendrogram (bottom-most objects) represent each link in the gr
 
 As we noted, because it is the links that got clustered, the nodes incident to each link can go to more than one cluster (because nodes with degree $k>1$ will be incident to multiple links). 
 
-We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with twelve overlapping communities:
+We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with ten overlapping communities:
 
 ```{r}
-    k <- 30
+    k <- 10
     lc <- cutree(hc.res, k)
     ld <- data.frame(as_edgelist(g), lc)
     node.clus <- list() 
@@ -102,9 +114,9 @@ We can then use the dendrogram information to return a list of node assignments 
     node.clus
 ```
 
-Because there are nodes that belong to multiple communities, the resulting actor by community ties form a **two-mode network**. 
+Because there are nodes that belong to multiple communities, the resulting actor by community ties form a **two-mode network** (see [here](basic-tm.qmd)). 
 
-We can re-construct the bi-adjacency matrix corresponding to this network from the list of community memberships for each node like this:
+We can re-construct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node like this:
 
 ```{r}
     B <- matrix(0, vcount(g), k)
@@ -127,39 +139,37 @@ And we can visualize the nodes connected to multiple communities as follows:
 ```{r}
 #| label: fig-overlap
 #| fig-cap: "Undirected Pulp Fiction Network Showing the Memberships of Each Node in Overlapping Communities (Nodes who Belong to Non-overlapping Communities Omitted)."
-#| fig-height: 12
-#| fig-width: 12
+#| fig-height: 13
+#| fig-width: 13
 #| echo: false
-    one.comm <- which(rowSums(B) != 0)
-    M <- B[one.comm, ]
-    gc <- subgraph(g, one.comm)
-    W <- M/rowSums(M)
+    W <- B/rowSums(B)
     W <- split(W, seq(nrow(W)))
     ccol <- lapply(W, function(x) {which(x != 0)})
     W <- lapply(W, function(x) {x[which(x != 0)]})
-    names(W) <- V(gc)$name
     library(RColorBrewer)   
     getPalette = colorRampPalette(categorical_pal(8))
     pal = getPalette(ncol(B))
-    V(gc)$shape <- "pie"
-    V(gc)$pie <- W
+    V(g)$shape <- "pie"
+    V(g)$pie <- W
     c.list <- lapply(ccol, function(x) {pal[x]})
-    V(gc)$pie.color <- c.list
-    set.seed(123456)
-    plot(gc, 
-        layout = layout_with_kk,       
-        vertex.size = 12,             
-        vertex.label.color = "white", 
+    V(g)$pie.color <- c.list
+    set.seed(123)
+    plot(g, 
+        layout = layout_with_fr,       
+        vertex.size = 8,             
+        vertex.label.color = "black", 
         vertex.label.font = 2,      
         vertex.label.cex = 1.5,   
         edge.width = 2,                
         edge.color = "lightblue",
+        vertex.label.dist = 1.2,
+        vertex.label.degree = 180
         )
-    legend("bottomleft", 
-       legend = c(paste("C", 1:k, sep = "_")), 
+    legend("bottomright", 
+       legend = c(paste("Commnunity", 1:k, sep = "_")), 
        fill = pal, 
        bty = "n",  # No box around legend
-       cex = 1.2)  # Text size
+       cex = 1.5)  # Text size
 ```
 
 
