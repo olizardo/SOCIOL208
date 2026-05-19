@@ -13,11 +13,11 @@ format:
 
 We have examined various approaches to community and dense subgraph detection (see [here](comm-mod.qmd), [here](comm-spectral.qmd), and [here](comm-edge.qmd)). 
 
-What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
+What they all have in common is that they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense in many substantive settings, it might not make sense in others where multiple group memberships are common (e.g., high school). 
 
 ## Detecting Overlapping Communities
 
-Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a similarity metric on the links, but instead of using a rank order metric like the edge-betweenness [@girvan_newman02] or the edge clustering [@radicchi_etal04] to delete edges, we compute pairwise *similarities* between links. We then *cluster* the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multi-group clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
+Methodologically, overlapping community detection methods are less well developed than classical community detection methods. Here, we review a simple and intuitive approach that clusters nodes by computing a similarity metric on the links; instead of using a rank-order metric like edge betweenness [@girvan_newman02] or edge clustering [@radicchi_etal04] to delete edges, we compute pairwise *similarities* between links. We then *cluster* the links using standard hierarchical clustering methods, which, because nodes are incident to many links, results in a multi-group clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
 
 Let's see how this works. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -36,9 +36,9 @@ The key idea behind link clustering is that *similar* links should be assigned t
 
 ## Measuring Edge Similarity
 
-According to @ahn_etal10 two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_j$) are themselves similar. To measure the similarity between this pair of nodes, we can use any of the off-the-shelf vertex similarity measures that we have seen in action (see lecture notes on [local similarity metrics](sim-loc.qmd)), like Jaccard, cosine, or Dice. @ahn_etal10 use the Jaccard, so that is what we will use.
+According to @ahn_etal10, two links $e_{ik}$ and $e_{jk}$ are similar if they share a node $v_k$ *and* the other two nodes incident to each link ($v_i, v_j$) are themselves similar. To measure the similarity between this pair of nodes, we can use any of the off-the-shelf vertex similarity measures we have seen in action (see the lecture notes on [local similarity metrics](sim-loc.qmd)), such as Jaccard, cosine, or Dice. @ahn_etal10 use the Jaccard, so that is what we will use.
 
-The first step is thus to build a link by link similarity matrix based on this idea. The following function loops through each *pair of links* in the graph and computes the similarity between two links featuring a common node $v_k$  based on the Jaccard vertex similarity of the two other nodes:
+The first step is thus to build a link-by-link similarity matrix based on this idea. The following function loops through each *pair of links* in the graph and computes the similarity between two links featuring a common node $v_k$  based on the Jaccard vertex similarity of the two other nodes:
 
 
 ```{r}
@@ -71,8 +71,8 @@ The function takes the graph as input and returns an inter-link similarity matri
 
 It works like this:
 
-- In line 5, we extract the end nodes incident to each edge in the graph using the `igraph` function `ends` (which returns an $E \times 2$ matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column). 
-- In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges maximally similar to themselves and have initial similarity zero to other edges). 
+- In line 5, we extract the end nodes incident to each edge in the graph using the `igraph` function `ends` (which returns an $E \times 2$ matrix, the nodes at the end of the edges in one column and the nodes at the other end of the edges in the other column). 
+- In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges are maximally similar to themselves and have an initial similarity of zero with other edges). 
 - Lines 7 and 8 create a `list` object called `nlist` using the `lapply` shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called **inclusive neighborhood**).
 - Then lines 9-21 enter a double `for` loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the `nlist` object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).
 
@@ -102,7 +102,7 @@ The leaves of the dendrogram (bottom-most objects) represent each link in the gr
 
 ## Clustering Nodes
 
-As we noted, because it is the links that got clustered, the nodes incident to each link can go to more than one cluster (because nodes with degree $k>1$ will be incident to multiple links). 
+As we noted, because the links are the ones that get clustered, nodes incident to each link can belong to more than one cluster (since nodes with degree $k>1$ are incident to multiple links). 
 
 We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with ten overlapping communities:
 
@@ -118,9 +118,9 @@ We can then use the dendrogram information to return a list of node assignments 
     node.clus
 ```
 
-Because there are nodes that belong to multiple communities, the resulting actor by community ties form a **two-mode network** (see [here](basic-tm.qmd)). 
+Because nodes belong to multiple communities, the resulting actor-by-community ties form a **two-mode network** (see [here](basic-tm.qmd)). 
 
-We can re-construct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node like this:
+We can reconstruct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node, like this:
 
 ```{r}
     B <- matrix(0, vcount(g), k)
