@@ -11,11 +11,13 @@ format:
       code-line-numbers: true
 ---
 
-We have examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
+We have examined various approaches to community and dense subgraph detection (see [here](comm-mod.qmd), [here](comm-spectral.qmd), and [here](comm-edge.qmd)). 
+
+What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school). 
 
 ## Detecting Overlapping Communities
 
-Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan's edge betweenness), we compute pairwise *similarities* between links. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
+Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a similarity metric on the links, but instead of using a rank order metric like the edge-betweenness [@girvan_newman02] or the edge clustering [@radicchi_etal04] to delete edges, we compute pairwise *similarities* between links. We then *cluster* the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multi-group clustering of the nodes for free. This approach is called **link clustering** [@ahn_etal10].
 
 Let's see how this works. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
@@ -65,9 +67,11 @@ The first step is thus to build a link by link similarity matrix based on this i
         }
 ```
 
-The function takes the graph as input and returns an inter-link similarity matrix of dimensions $E \times E$ where $E$ is the number of edges in the graph. It works like this:
+The function takes the graph as input and returns an inter-link similarity matrix---of dimensions $E \times E$ where $E$ is the number of edges in the graph---as output. 
 
-- In line 5, we extract the end nodes incident to each edge in the graph using the `igraph` function `ends` (which creates an $E \times 2$ matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column). 
+It works like this:
+
+- In line 5, we extract the end nodes incident to each edge in the graph using the `igraph` function `ends` (which returns an $E \times 2$ matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column). 
 - In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges maximally similar to themselves and have initial similarity zero to other edges). 
 - Lines 7 and 8 create a `list` object called `nlist` using the `lapply` shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called **inclusive neighborhood**).
 - Then lines 9-21 enter a double `for` loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the `nlist` object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).
@@ -94,7 +98,7 @@ The resulting dendrogram looks like this:
     plot(hc.res)
 ```
 
-The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E = 102$ in this case), and the clusters are "link communities" [@ahn_etal10].
+The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E =$ `r ecount(g)` in this case), and the clusters are "link communities" [@ahn_etal10].
 
 ## Clustering Nodes
 

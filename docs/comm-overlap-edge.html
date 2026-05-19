@@ -147,7 +147,7 @@ div.csl-indent {
 
 <link rel="stylesheet" href="styles.css">
 <meta property="og:title" content="SOCIOL 208 - Using Edge Clustering to Assign Nodes to Overlapping Communities">
-<meta property="og:description" content="We have examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups.">
+<meta property="og:description" content="We have examined various approaches to community and dense subgraph detection (see here, here, and here).">
 <meta property="og:site-name" content="SOCIOL 208">
 </head>
 
@@ -538,10 +538,11 @@ div.csl-indent {
 
 </header>
 
-<p>We have examined various approaches to community and dense subgraph detection. What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school).</p>
+<p>We have examined various approaches to community and dense subgraph detection (see <a href="./comm-mod.html">here</a>, <a href="./comm-spectral.html">here</a>, and <a href="./comm-edge.html">here</a>).</p>
+<p>What they all have in common is they assign nodes into non-overlapping groups. That is, nodes are either in one group or another but cannot belong to multiple groups at once. While this may make sense for a lot of substantive settings, it might not make sense for other ones, where multiple group memberships are normal (e.g., think of high school).</p>
 <section id="detecting-overlapping-communities" class="level2">
 <h2 class="anchored" data-anchor-id="detecting-overlapping-communities">Detecting Overlapping Communities</h2>
-<p>Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a quantity on the links but instead of computing a rank order (like Newman and Girvan’s edge betweenness), we compute pairwise <em>similarities</em> between links. We then cluster the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multigroup clustering of the nodes for free. This approach is called <strong>link clustering</strong> <span class="citation" data-cites="ahn_etal10">(<a href="#ref-ahn_etal10" role="doc-biblioref">Ahn, Bagrow, and Lehmann 2010</a>)</span>.</p>
+<p>Methodologically, overlapping community detection methods are not as well-developed as classical community detection methods. Here, we review one simple an intuitive approach that combines the idea of clustering nodes by computing a similarity metric on the links, but instead of using a rank order metric like the edge-betweenness <span class="citation" data-cites="girvan_newman02">(<a href="#ref-girvan_newman02" role="doc-biblioref">Girvan and Newman 2002</a>)</span> or the edge clustering <span class="citation" data-cites="radicchi_etal04">(<a href="#ref-radicchi_etal04" role="doc-biblioref">Radicchi et al. 2004</a>)</span> to delete edges, we compute pairwise <em>similarities</em> between links. We then <em>cluster</em> the links using standard hierarchical clustering methods, which because nodes are incident to many links results in a multi-group clustering of the nodes for free. This approach is called <strong>link clustering</strong> <span class="citation" data-cites="ahn_etal10">(<a href="#ref-ahn_etal10" role="doc-biblioref">Ahn, Bagrow, and Lehmann 2010</a>)</span>.</p>
 <p>Let’s see how this works. We first load our trusty <em>Pulp Fiction</em> data set from the <code>networkdata</code> package, which is an <strong>undirected</strong> graph of character scene co-appearances in the film:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -584,9 +585,10 @@ div.csl-indent {
 <span id="cb2-22"><a href="#cb2-22"></a>        <span class="fu">return</span>(E.sim)</span>
 <span id="cb2-23"><a href="#cb2-23"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The function takes the graph as input and returns an inter-link similarity matrix of dimensions <span class="math inline">\(E \times E\)</span> where <span class="math inline">\(E\)</span> is the number of edges in the graph. It works like this:</p>
+<p>The function takes the graph as input and returns an inter-link similarity matrix—of dimensions <span class="math inline">\(E \times E\)</span> where <span class="math inline">\(E\)</span> is the number of edges in the graph—as output.</p>
+<p>It works like this:</p>
 <ul>
-<li>In line 5, we extract the end nodes incident to each edge in the graph using the <code>igraph</code> function <code>ends</code> (which creates an <span class="math inline">\(E \times 2\)</span> matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column).</li>
+<li>In line 5, we extract the end nodes incident to each edge in the graph using the <code>igraph</code> function <code>ends</code> (which returns an <span class="math inline">\(E \times 2\)</span> matrix the nodes at end of the edges in one column and the nodes at the other end of the edges in the other column).</li>
 <li>In line 6, we initialize the <span class="math inline">\(E \times E\)</span> matrix of edge similarities to the identity matrix (all edges maximally similar to themselves and have initial similarity zero to other edges).</li>
 <li>Lines 7 and 8 create a <code>list</code> object called <code>nlist</code> using the <code>lapply</code> shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called <strong>inclusive neighborhood</strong>).</li>
 <li>Then lines 9-21 enter a double <code>for</code> loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the <code>nlist</code> object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).</li>
@@ -623,7 +625,7 @@ div.csl-indent {
 <p><img src="comm-overlap-edge_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>The leaves of the dendrogram (bottom-most objects) represent each link in the graph (<span class="math inline">\(E = 102\)</span> in this case), and the clusters are “link communities” <span class="citation" data-cites="ahn_etal10">(<a href="#ref-ahn_etal10" role="doc-biblioref">Ahn, Bagrow, and Lehmann 2010</a>)</span>.</p>
+<p>The leaves of the dendrogram (bottom-most objects) represent each link in the graph (<span class="math inline">\(E =\)</span> 100 in this case), and the clusters are “link communities” <span class="citation" data-cites="ahn_etal10">(<a href="#ref-ahn_etal10" role="doc-biblioref">Ahn, Bagrow, and Lehmann 2010</a>)</span>.</p>
 </section>
 <section id="clustering-nodes" class="level2">
 <h2 class="anchored" data-anchor-id="clustering-nodes">Clustering Nodes</h2>
@@ -768,6 +770,12 @@ Ahn, Yong-Yeol, James P Bagrow, and Sune Lehmann. 2010. <span>“Link Communitie
 </div>
 <div id="ref-breiger74" class="csl-entry" role="doc-biblioentry">
 Breiger, Ronald L. 1974. <span>“The Duality of Persons and Groups.”</span> <em>Social Forces</em> 53 (2): 181–90.
+</div>
+<div id="ref-girvan_newman02" class="csl-entry" role="doc-biblioentry">
+Girvan, Michelle, and Mark EJ Newman. 2002. <span>“Community Structure in Social and Biological Networks.”</span> <em>Proceedings of the National Academy of Sciences</em> 99 (12): 7821–26.
+</div>
+<div id="ref-radicchi_etal04" class="csl-entry" role="doc-biblioentry">
+Radicchi, Filippo, Claudio Castellano, Federico Cecconi, Vittorio Loreto, and Domenico Parisi. 2004. <span>“Defining and Identifying Communities in Networks.”</span> <em>Proceedings of the National Academy of Sciences</em> 101 (9): 2658–63.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
