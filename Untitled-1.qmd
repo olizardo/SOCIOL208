@@ -1,0 +1,60 @@
+---
+title: "Using Prestige Ranking to Assign Nodes to Overlapping Communities "
+execute: 
+  eval: true
+  echo: true
+  output: true
+  warning: false
+  message: false
+format: 
+   html:
+      code-line-numbers: true
+---
+
+One approach to assign nodes to overlapping communities is called RaRe (standing for **Ra**nk **Re**moval). The basic idea is to use a prestige (or centrality) ranking approach (like the [PageRank](prest-pagerank.qmd) prestige) to order the nodes in the graph from most to least important. We then iteratively remove the nodes in the graph starting with the most important. This approach will create densely connected disconnected components in the graph (called "cores"). 
+
+We then go through each removed node in the graph, and re-add to a core group if (1) that node was adjacent to any node in the core group to begin with or (2) if adding that node increases the density of the core group. This approach will generate overlapping communities because the removed nodes will likely be added to multiple core groups. 
+
+Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:
+
+```{r}
+    library(networkdata)
+    library(igraph)
+    g <- law_friends
+    g <- subgraph(g, degree(g) >= 2)
+    ug <- as_undirected(g, mode = "collapse")
+    V(ug)$name <- as.character(1:vcount(ug))
+```
+
+Next let's compute the **PageRank** prestige score of each node:
+
+
+```{r}
+    pr <- page_rank(g, damping = 1, algo = "arpack")$vector
+    names(pr) <- V(ug)$name
+```
+
+And here's a function that implements PageRank RaRe:
+
+
+```{r}
+    RaRe <- function(graph, prest, min = 4) {
+        oprest <- as.character(order(prest, decreasing = TRUE))
+        rem <- NULL
+        new.graph <- graph
+        for (v in oprest) {
+            old.graph <- new.graph
+            new.graph <- delete_vertices(old.graph, v)
+            rem <- c(rem, v)
+            comps <- components(new.graph)
+            sizecomps <- table(comps$membership)
+            if (max(sizecomps <= min)) {
+                new.graph <- old.graph
+                rem <- rem[!rem %in% c(v)]
+                }
+            }
+        final.comps <- comps$membership
+        return(list(core = final.comps, no = max(final.comps)))
+        }
+    RaRe(ug, pr)
+```
