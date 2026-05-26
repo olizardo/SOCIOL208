@@ -21,21 +21,20 @@ For instance, the function below implements a simple version of the Girvan-Newma
 
 ```{r}
    eb.comms <- function(h, c, s = 123) {
-      d <- 1
+      d <- components(h)$no #computing graph components
+      set.seed(s)
       while(d < c) {
-         eb <- edge_betweenness(h, directed = FALSE)
-         e <- which(eb == max(eb))
-         set.seed(s)
-         if(length(e) > 1) {e <- sample(e, 1)}      
-         h <- delete_edges(h, e)
-         comp <- components(h)
-         d <- comp$no
+         eb <- edge_betweenness(h, directed = FALSE) #computing edge-betweenness vector
+         e <- which(eb == max(eb)) #picking largest value
+         if(length(e) > 1) {e <- sample(e, 1)} #grabbing an edge at random in case of tie     
+         h <- delete_edges(h, e) #deleting to betwenness edge
+         d <- components(h)$no #computing graph components
          }
       return(comp$membership)
       }
 ```
 
-The function takes two inputs: some graph `h` and the number of community partitions desired `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4 we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betwenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comp$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
+The function takes two inputs: a graph `h` and the desired number of community partitions, `c`. Line two initializes the counter `d` which keeps track of the number of **components** in the graph (the number of disconnected clumps). Then we enter a `while` loop on lines 3-11. In line 4, we compute the **edge betweenness** of each edge in the graph (using the `igraph` function `edge_betweenness`), line 5 checks to see which one is the biggest, and lines 6-7 are designed to keep a random one in case of a tie (hence we need to set the seed for reproducibility). Line 8 deletes the selected edge, line 9 computes the number of components in the graph (using the `igraph` function `components` which returns a `list` of results), and line 10 sets the value of `d` to the number of components in the new **edge-deleted subgraph** (stored in the object `comp$no`). The `while` loop stops when the number of components `comm$no` is equal to the function argument `c`. Line 12 returns a vector of community membership assignments. 
 
 And here's the function in action in the law firm friendship nomination network, requesting a partition into eight groups:
 
@@ -72,13 +71,13 @@ A function that does that looks like this:
       k <- 1 #initializing counter
       qv <- 0 #initializing modularity vector
       C <- list() #initializing membership vector list
-      og <- h
+      og <- h #original graph before deleting edges
       set.seed(s) #setting seed
       while(ecount(h) > 0) { #do until there are no more edges to delete
          eb <- edge_betweenness(h, directed = FALSE) #computing edge betweenness
-         e <- which(eb == max(eb)) #grabbing top betweenness edges
-         if(length(e) > 1) {e <- sample(e, 1)} #grabbing an edge at random in case of tie
-         h <- delete_edges(h, e) #deleting top betweenness edge
+         top.e <- which(eb == max(eb)) #grabbing top betweenness edges
+         if(length(top.e) > 1) {top.e <- sample(top.e, 1)} #grabbing an edge at random in case of multi-way tie
+         h <- delete_edges(h, top.e) #deleting top betweenness edge
          comp <- components(h) #computing number of components of edge-deleted graph
          C[[k]] <- comp$membership #creating new community membership vector based on component membership
          qv[k] <- modularity(og, comp$membership, directed = FALSE) #recomputing modularity of original graph
@@ -92,7 +91,7 @@ A function that does that looks like this:
       }
 ```
 
-The main additions here are lines 13 and 14. Line 13 puts the membership vector for the components of the graph in a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 14 computes the modularity (using the `igraph` function `modularity`) *on the original graph* (not the vertex-deleted one), called `og` (get it?) initialized in line 5, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 17-20 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 21 returns a list containing membership vector stored in the object `membership`, a scalar recording the number of communities (the maximum number in the membership vector) stored in the object `nc`, and a scalar recording the maximum modularity value stored in the object `q`. 
+The main additions here are lines 13 and 14. Line 13 puts the membership vector for the graph's components into a list object called `C` at each step (the list is initialized to an empty list in line 4). Line 14 computes the modularity (using the `igraph` function `modularity`) *on the original graph* (not the vertex-deleted one), called `og` (get it?), initialized in line 5, but using the membership vector from the components of the vertex-deleted subgraph at a given step as community assignments. After the `while` loop ends (going through all the edges), lines 17-20 grab the community assignments corresponding to the maximum number stored in the modularity vector `qv`, and line 21 returns a list containing membership vector stored in the object `membership`, a scalar recording the number of communities (the maximum number in the membership vector) stored in the object `nc`, and a scalar recording the maximum modularity value stored in the object `q`. 
 
 Let's see the new and improved algorithm in action:
 
@@ -109,7 +108,7 @@ Of course, all of these steps are packaged in the `igraph` function called `clus
    eb.res <- cluster_edge_betweenness(ug, directed = FALSE)
 ```
 
-Note that the `cluster_edge_betweenness` function takes a graph as input. We have to tell it that is an undirected graph by setting the argument `directed` to `FALSE`. 
+Note that the `cluster_edge_betweenness` function takes a graph as input. We have to tell it that it is an undirected graph by setting the argument `directed` to `FALSE`. 
 
 And as we can see, the results are exactly the same we obtained earlier, dividing the nodes in the network into `r max(eb.res$membership)` communities. 
 :
@@ -118,7 +117,7 @@ And as we can see, the results are exactly the same we obtained earlier, dividin
    eb.res$membership
 ```
 
-Interestingly, even though the Girvan-Newman approach is clearly a divisive algorithm, the results can be presented as a dendrogram, but storing top-down divisions rather than bottom-up merges. This is shown in @fig-ebdendro
+Interestingly, even though the Girvan-Newman approach is clearly a divisive algorithm, the results can be presented as a dendrogram that stores top-down divisions rather than bottom-up merges. This is shown in @fig-ebdendro
 
 ```{r}
 #| label: fig-ebdendro
@@ -130,11 +129,11 @@ Interestingly, even though the Girvan-Newman approach is clearly a divisive algo
    plot(hc)
 ```
 
-Another thing we can do with the `edge_betweenness` function output is highlight the edges identified as **bridges** during the divisive process, since this information is stored in the `bridges` object. We can use this vector of edge ids to create an edge color vector that will highlight the bridges in red. This is shown in @fig-eb-3. 
+Another thing we can do with the `edge_betweenness` function output is highlight the edges identified as **bridges** during the divisive process, since this information is stored in the `bridges` object. We can use this vector of edge IDs to create an edge-color vector that highlights the bridges in red. This is shown in @fig-eb-3. 
 
 ## Community Detection Using the Edge Clustering Coefficient
 
-@radicchi_etal04 propose another version of an edge-deletion approach to community detection based on an edge-level metric they call the **edge clustering coefficient** ($C(e_{ij})$). This  is essentially a measure of the extent to which an edge connects nodes who themselves share a lot of neighbors, normalized by the minimum of the degrees of the nodes minus one:
+@radicchi_etal04 propose another version of an edge-deletion approach to community detection based on an edge-level metric they call the **edge clustering coefficient** ($C(e_{ij})$). This  is essentially a measure of the extent to which an edge connects nodes that themselves share a lot of neighbors, normalized by the minimum of the degrees of the nodes minus one:
 
 $$
 C(e_{ij}) = \frac{z_{ij} + 1}{min\left[(k_i - 1), (k_j - 1)\right]}
@@ -142,23 +141,23 @@ $$ {#eq-eclust}
 
 Where $z_{ij}$ is the number of common neighbors shared by nodes $i$ and $j$ incident to edge $e_{ij}$, and $k_i$ and $k_j$ are their respective degrees. @radicchi_etal04 add one to the numerator of @eq-eclust to account for the fact that some connected nodes may not share any neighbors.
 
-The logic of the @radicchi_etal04 approach is that edges that go between well-clustered communities should have a *low* edge clustering coefficient (e.g., connecting nodes who themselves don't share many neighbors and therefore belong to different communities). Meanwhile, edges with a high clustering coefficient should be more likely to link nodes that belong to the same community. 
+The logic of the @radicchi_etal04 approach is that edges between well-clustered communities should have a *low* edge clustering coefficient (e.g., connecting nodes that themselves don't share many neighbors and therefore belong to different communities). Meanwhile, edges with a high clustering coefficient should be more likely to link nodes that belong to the same community. 
 
 Ergo, deleting the edges with low edge clustering coefficient (like we did with the ones that had high edge betweenness) should partition a graph into well-defined communities. 
 
-To implement this approach we need (1) a function to compute the clustering coefficient for each edge according to @eq-eclust, and (2) a modification of the `eb.comms2` function above that incorporates the idea of removing edges with minimum edge clustering scores. 
+To implement this approach, we need (1) a function to compute the clustering coefficient for each edge according to @eq-eclust, and (2) a modification of the `eb.comms2` function above that incorporates the idea of removing edges with minimum edge clustering scores. 
 
 To complete step 1, here's a function to compute the edge clustering coefficient as defined by @radicchi_etal04:
 
 ```{r}
    edge.clust <- function(h) {
       d <- degree(h) #degree vector
-      e <- as_edgelist(h, names = FALSE) #graph edge list
+      edgemat <- ends(h, E(h)) #edge list matrix
       w <- as.matrix(as_adjacency_matrix(h)) #graph adjacency matrix
       m <- w %*% w #commons neighbors matrix
-      ec <- apply(e, 1, function(x) { #applies function to each row of matrix e
-         i <- x[1] #first node
-         j <- x[2] #second node
+      ec <- apply(edgemat, 1, function(row) { #applies function to each row of matrix edgemat
+         i <- row[1] #first node
+         j <- row[2] #second node
          z <- m[i, j] #common neighbors
          return((z + 1) / min((d[i] - 1), (d[j] - 1))) #edge clustering coefficient
          }
@@ -167,23 +166,23 @@ To complete step 1, here's a function to compute the edge clustering coefficient
       }
 ```
 
-This function takes some graph `h` as input and returns a vector of length $|E|$ (number of edges in the graph) containing the estimated clustering coefficient of each edge as components. Note that we compute the number of shared neighbors by taking the second power of the adjacency matrix in lines 4 and 5. The `apply` call then goes through each row of the edgelist (second argument set to `1`) and implements the custom specified custom edge clustering coefficient function in the third argument. 
+This function takes some graph `h` as input and returns a vector of length $|E|$ (number of edges in the graph) containing the estimated clustering coefficient of each edge as components. Note that we compute the number of shared neighbors by taking the second power of the adjacency matrix in lines 4 and 5. The `apply` call then iterates over each row of the edgelist (with the second argument set to `1`) and applies the custom edge clustering coefficient function in the third argument. 
 
 And to complete step 2, here's a modification of our edge-deletion function above to incorporate the edge clustering coefficient as the criterion for edge deletion:
 
 ```{r}
    ec.comms <- function(h) {
-      k <- 1 #initializing counter
       qv <- 0 #initializing modularity vector
       C <- list() #initializing membership vector list
-      og <- h
+      og <- h #original graph before deleting edges
+      k <- 1 #initializing counter
       while(ecount(h) > 0) { #do until there are no more edges to delete
          ec <- edge.clust(h) #computing edge clustering coefficient vector
-         e <- which(ec == min(ec)) #grabbing minimum clustering edges
-         h <- delete_edges(h, e) #deleting minimum clustering edges
-         comp <- components(h) #computing number of components of edge-deleted graph
-         C[[k]] <- comp$membership #creating new community membership vector based on component membership
-         qv[k] <- modularity(og, comp$membership, directed = FALSE) #recomputing modularity of original graph
+         min.e <- which(ec == min(ec)) #grabbing minimum clustering edges
+         h <- delete_edges(h, min.e) #deleting minimum clustering edges
+         comp.vec <- components(h)$membership #component membership vector of edge-deleted graph
+         C[[k]] <- comp.vec #storing membership vector on list
+         qv[k] <- modularity(og, comp.vec, directed = FALSE) #recomputing modularity of original graph using membership vector
          k <- k + 1 #increasing counter
          }
       maxqpos <- min(which(qv == max(qv))) #picking partition with maximum modularity
