@@ -543,7 +543,7 @@ div.csl-indent {
 
 </header>
 
-<p><span class="citation" data-cites="palla_etal05">Palla et al. (<a href="#ref-palla_etal05" role="doc-biblioref">2005</a>)</span> provide a simple and intuitive way to partition a network into overlapping communities. The basic idea is to take advantage of the fact that <strong>cliques</strong> within a network (fully connected subgraphs of a given size <span class="math inline">\(k\)</span>) are likely to share nodes. Communiities can then be defined as concatenation of cliques, where the linkages between cliques are defined by some set shared number of members <span class="math inline">\(q\)</span>.</p>
+<p><span class="citation" data-cites="palla_etal05">Palla et al. (<a href="#ref-palla_etal05" role="doc-biblioref">2005</a>)</span> provide a simple and intuitive way to partition a network into overlapping communities. The basic idea is to leverage the fact that <strong>cliques</strong> in a network (fully connected subgraphs of size <span class="math inline">\(k\)</span>) are likely to share nodes (hence this approach is commonly referred to as the <strong>clique percolation</strong> method). Communities can then be defined as a clique-concatenation, with linkages between cliques determined by a set of shared members <span class="math inline">\(q\)</span>, typically set to <span class="math inline">\(k-1\)</span>.</p>
 <p>Let’s see how this works. First, let’s load up the friendship nomination network from <span class="citation" data-cites="lazega01">Lazega (<a href="#ref-lazega01" role="doc-biblioref">2001</a>)</span>, constrained to be undirected:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>    <span class="fu">library</span>(networkdata)</span>
@@ -569,7 +569,7 @@ div.csl-indent {
 </div>
 </div>
 <p>We can see that there are 24 maximal cliques of size 6 by querying the length of the list returned by the <code>max_cliques</code> function (containing the node ids of the members of each clique as entries). We now have all of the information necessary to create our clique overlap matrix.</p>
-<p>The first step is to create a <strong>bi-adjacency</strong> matrix to represent the <strong>two-mode network</strong> composed of people and the cliques they belong to (see <a href="./basic-tm.html">here</a>). To do that, we first create an empty bi-adjacency matrix full of zeros called <code>B</code> of dimensions 68 by 24, loop through the list of maximal cliques we created earlier called <code>cliques</code>, and insert a one in the corresponding row/column combination:</p>
+<p>The first step is to create a <strong>bi-adjacency</strong> matrix representing the <strong>two-mode network</strong> of people and the cliques they belong to (see <a href="./basic-tm.html">here</a>). To do that, we first create an empty bi-adjacency matrix full of zeros called <code>B</code> of dimensions 68 by 24, loop through the list of maximal cliques we created earlier called <code>cliques</code>, and insert a one in the corresponding row/column combination:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(ug) <span class="co">#number of nodes</span></span>
 <span id="cb5-2"><a href="#cb5-2"></a>    c <span class="ot">&lt;-</span> <span class="fu">length</span>(cliques) <span class="co">#number of cliques</span></span>
@@ -592,8 +592,8 @@ div.csl-indent {
 [10,]    0    0    0    0    0    0    0    0    0     0</code></pre>
 </div>
 </div>
-<p>The matrix <code>B</code> now has a one one in the corresponding cell if the row person belongs to the column clique and zero otherwise.</p>
-<p>We can now use the standard projection approach due to <span class="citation" data-cites="breiger74">Breiger (<a href="#ref-breiger74" role="doc-biblioref">1974</a>)</span> to create a clique by clique overlap matrix (see <a href="./basic-tm-duality.html">here</a>):</p>
+<p>The matrix <code>B</code> now has a 1 in the corresponding cell if the row person belongs to the column clique, and 0 otherwise.</p>
+<p>We can now use the standard projection approach due to <span class="citation" data-cites="breiger74">Breiger (<a href="#ref-breiger74" role="doc-biblioref">1974</a>)</span> to create a clique-by-clique overlap matrix (see <a href="./basic-tm-duality.html">here</a>):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>    M <span class="ot">&lt;-</span> <span class="fu">t</span>(B) <span class="sc">%*%</span> B</span>
 <span id="cb7-2"><a href="#cb7-2"></a>    M[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -614,7 +614,7 @@ div.csl-indent {
 </section>
 <section id="binarizing-the-clique-overlap-matrix" class="level2">
 <h2 class="anchored" data-anchor-id="binarizing-the-clique-overlap-matrix">Binarizing the Clique Overlap Matrix</h2>
-<p>Next, we binarize the clique overlap matrix <code>M</code> in three steps. First, we set the overlap matrix diagonals to zero. Second, we set to zero the entries corresponding to pairs of cliques that have an overlap equal to or less than <span class="math inline">\(q = k-1\)</span>. Finally, we set to one all the remaining non-zero entries:</p>
+<p>Next, we binarize the clique overlap matrix <code>M</code> in three steps. First, we set the diagonal elements of the overlap matrix to zero. Second, we set to zero the entries corresponding to pairs of cliques that have overlap at most <span class="math inline">\(q = k-1\)</span>. Finally, we set to one all the remaining non-zero entries:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>    q <span class="ot">&lt;-</span> k <span class="sc">-</span> <span class="dv">1</span></span>
 <span id="cb9-2"><a href="#cb9-2"></a>    <span class="fu">diag</span>(M) <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co">#setting diagonals to zero</span></span>
@@ -644,56 +644,56 @@ div.csl-indent {
 <span id="cb14-3"><a href="#cb14-3"></a>        communities[[i]] <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(union, cliques[<span class="fu">which</span>(comps <span class="sc">==</span> <span class="fu">as.character</span>(i))])</span>
 <span id="cb14-4"><a href="#cb14-4"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And here are the node ids of each the 12 communities:</p>
+<p>And here are the node IDs of each of the 12 communities:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>    communities</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 68 63 67 66 65 64
 
 [[2]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 46 40 41 62 53 49
 
 [[3]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 35 28 31 55 48 32
 
 [[4]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 23 4  27 24 13 31
 
 [[5]]
-+ 8/68 vertices, named, from 79843db:
++ 8/68 vertices, named, from 89eddd9:
 [1] 16 12 17 4  21 13 22 2 
 
 [[6]]
-+ 8/68 vertices, named, from 79843db:
++ 8/68 vertices, named, from 89eddd9:
 [1] 51 49 62 31 53 63 61 54
 
 [[7]]
-+ 9/68 vertices, named, from 79843db:
++ 9/68 vertices, named, from 89eddd9:
 [1] 54 13 24 49 62 40 63 31 26
 
 [[8]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 2  12 26 24 17 10
 
 [[9]]
-+ 7/68 vertices, named, from 79843db:
++ 7/68 vertices, named, from 89eddd9:
 [1] 20 17 27 39 11 21 42
 
 [[10]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 17 27 24 26 13 42
 
 [[11]]
-+ 6/68 vertices, named, from 79843db:
++ 6/68 vertices, named, from 89eddd9:
 [1] 13 24 27 11 62 4 
 
 [[12]]
-+ 9/68 vertices, named, from 79843db:
++ 9/68 vertices, named, from 89eddd9:
 [1] 13 24 27 26 31 37 29 4  25</code></pre>
 </div>
 </div>
