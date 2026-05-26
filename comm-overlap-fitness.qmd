@@ -22,8 +22,6 @@ format:
     V(ug)$name <- as.character(1:vcount(ug))
 ```
 
-A point-and-line plot of the network is shown in @fig-fitness-1. 
-
 ## The Local Fitness Function
 
 @lancichinetti_etal09 propose that we optimize the following function at the subgraph level:
@@ -87,7 +85,7 @@ We can see that node 58's fitness relative to this subgraph is positive, indicat
 
 ## The Natural Community of Each Node
 
-    @lancichinetti_etal09 describe an algorithm to determine what they call the "natural community" of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining subgraph neighbors have a node fitness less than $\epsilon$ where $\epsilon$ is a small number (e.g., $\epsilon = 0.01$). The final subgraph thus constructed is the seed neighbor's "natural community." 
+@lancichinetti_etal09 describe an algorithm to determine what they call the "natural community" of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining subgraph neighbors have a node fitness less than $\epsilon$ where $\epsilon$ is a small number (e.g., $\epsilon = 0.01$). The final subgraph thus constructed is the seed neighbor's "natural community." 
 
 How do we do that? First, let's write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all unique neighbors of those nodes as output.
 
@@ -138,48 +136,7 @@ And here are the nodes that belong to node 31's natural community:
     nc31
 ```
 
-We can see from @fig-fitness-2 that indeed this set of nodes (pictured in blue) belongs to a cohesive subgroup proximate to node 31 (pictured in red). 
-
-```{r}
-#| label: fig-fitness
-#| fig-height: 12
-#| fig-width: 12
-#| fig-subcap:
-#|   - "Law Firm Friendship Network."
-#|   - "Law Firm Friendship Network Showing Characteristic Community (Blue Nodes) of Node 31 (Red Node)."
-#| layout-ncol: 2
-#| echo: false
-   set.seed(123)
-   ul <- layout_with_kk(ug)
-   c <- rep("tan", vcount(ug))
-   V(ug)$color <- c
-   plot(ug, 
-        layout = ul, 
-        vertex.size=6, 
-        vertex.frame.color="lightgray", 
-        vertex.label = V(ug)$name, 
-        edge.arrow.size = 0.25,
-        vertex.label.dist = 1.2,
-        vertex.label.degree = 180,        
-        edge.curved=0.2,
-        vertex.label.cex = 1.5
-     )
-   c <- rep("tan", vcount(ug))
-   c[as.numeric(nc31)] <- "blue"
-   c[31] <- "red"
-   V(ug)$color <- c
-   plot(ug, 
-        layout = ul, 
-        vertex.size=6, 
-        vertex.frame.color="lightgray", 
-        vertex.label = V(ug)$name, 
-        edge.arrow.size = 0.25,
-        vertex.label.dist = 1.2,
-        vertex.label.degree = 180,        
-        edge.curved=0.2,
-        vertex.label.cex = 1.5
-     )
-```
+We can see from @fig-fitness-1 that indeed this set of nodes (pictured in blue) belongs to a cohesive subgroup proximate to node 31 (pictured in red). 
 
 ## An Algorithm to Detect Overlapping Communities
 
@@ -220,27 +177,35 @@ We can now create the bi-adjacency matrix corresponding to the two-mode person b
         }
 ```
 
-Here are the entries for the first 10 people:
-
 ```{r}
-    Z[1:10, ]
-```
-
-And here's the community overlap matrix:
-
-```{r}
-    t(Z) %*% Z
-```
-
-And now we can use fancy `igraph` pie-chart plotting to visualize the overlapping communities:
-
-
-```{r}
-#| label: fig-overlap
-#| fig-cap: "Undirected Law Firm Friendship Network Showing the Memberships of Each Node in Overlapping Communities."
+#| label: fig-fitness
+#| fig-cap: "Undirected Law Firm Friendship Network."
+#| fig-subcap:
+#|   - "Plot showing Characteristic Community (Blue Nodes) of Node 31 (Red Node)."
+#|   - "Node Pie Chart Plot Showing Overlapping Community Memberships."
+#| layout-ncol: 2
 #| fig-height: 12
 #| fig-width: 12
 #| echo: false
+
+   c <- rep("tan", vcount(ug))
+   c[as.numeric(nc31)] <- "blue"
+   c[31] <- "red"
+   V(ug)$color <- c
+   set.seed(123)
+   ul <- layout_with_kk(ug)
+   plot(ug, 
+        layout = ul, 
+        vertex.size=6, 
+        vertex.frame.color="lightgray", 
+        vertex.label = V(ug)$name, 
+        edge.arrow.size = 0.25,
+        vertex.label.dist = 1.2,
+        vertex.label.degree = 180,        
+        edge.curved=0.2,
+        vertex.label.cex = 1.5
+     )
+
     W_raw <- split(Z/rowSums(Z), seq(nrow(Z)))
     W <- lapply(W_raw, function(x) {x[which(x != 0)]})
     ccol <- lapply(W_raw, function(x) {which(x != 0)})
@@ -271,6 +236,21 @@ And now we can use fancy `igraph` pie-chart plotting to visualize the overlappin
        cex = 1.5
        )  # Text size
 ```
+
+Here are the entries for the first 10 people:
+
+```{r}
+    Z[1:10, ]
+```
+
+And here's the community overlap matrix:
+
+```{r}
+    t(Z) %*% Z
+```
+
+And now we can use fancy `igraph` pie-chart plotting to visualize the overlapping communities. This is shown in @fig-fitness-2
+
 
 We can se that community 5 (in blue) is the second largest community with little overlap with other communities (except 8). Community 8 (in gray) is the largest but has high levels of overlap with others. Community 6 (in dark orange) is a small self-contained community. 
 
