@@ -22,6 +22,8 @@ format:
     V(ug)$name <- as.character(1:vcount(ug))
 ```
 
+A point-and-line plot of the network is shown in @fig-fitness-1. 
+
 ## The Local Fitness Function
 
 @lancichinetti_etal09 propose that we optimize the following function at the subgraph level:
@@ -32,21 +34,21 @@ $$ {#eq-fitness}
 
 Where $k^{in}$ is the internal degree of nodes in the subgraph (the sum of the degrees of each node in the subgraph, counting only intra-community neighbors) and $k^{out}$ is the external degree (the sum of the degrees of each node in the subgraph, only counting links to nodes outside the subgraph).
 
-And here's an `R` function that computes @eq-fitness for any subgraph:
+Here's an `R` function that computes @eq-fitness for any subgraph:
 
 ```{r}
-    sg.fitness <- function(graph, sub.nodes, alpha = 1) {
+    sg.fitness <- function(graph, sub.nodes) {
         degrees.fg <- degree(graph)
         subgraph <- subgraph(graph, sub.nodes)
         degrees.sg <- degree(subgraph)
         k.i <- sum(degrees.sg)
         k.o <- sum(degrees.fg[sub.nodes] - degrees.sg[sub.nodes])
-        fsg <- k.i / (k.i + k.o)^alpha
+        fsg <- k.i / (k.i + k.o)
         return(fsg)
         }
 ```
 
-And here it is in action:
+And here is the `sg.fitness` function in action:
 
 ```{r}
     fg <- sg.fitness(ug, c("61", "62", "65", "67"))
@@ -55,7 +57,7 @@ And here it is in action:
 
 Which says that the fitness of the subgraph formed by nodes 61, 62, 65, and 67 is `r round(fg, 2)`.
 
-## Node Fitness 
+## Relative Node Fitness 
 
 @lancichinetti_etal09 define the fitness of a node $v$ relative to a given subgraph $G'$ as the difference in the subgraph's fitness with that node included versus the subgraph's fitness with that node excluded:
 
@@ -85,9 +87,9 @@ We can see that node 58's fitness relative to this subgraph is positive, indicat
 
 ## The Natural Community of Each Node
 
-@lancichinetti_etal09 describe an algorithm to determine what they call the "natural community" of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining neighbors have a fitness less than $\epsilon$ where $\epsilon$ is a small number (e.g., $\epsilon = 0.01$). The final subgraph thus constructed is the seed neighbor's natural community. 
+    @lancichinetti_etal09 describe an algorithm to determine what they call the "natural community" of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining subgraph neighbors have a node fitness less than $\epsilon$ where $\epsilon$ is a small number (e.g., $\epsilon = 0.01$). The final subgraph thus constructed is the seed neighbor's "natural community." 
 
-First, let's write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all unique neighbors of those nodes as output.
+How do we do that? First, let's write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all unique neighbors of those nodes as output.
 
 ```{r}
     sub.nei <- function(graph, subgraph) {
@@ -157,7 +159,8 @@ We can see from @fig-fitness-2 that indeed this set of nodes (pictured in blue) 
         vertex.frame.color="lightgray", 
         vertex.label = V(ug)$name, 
         edge.arrow.size = 0.25,
-        vertex.label.dist=1.25, 
+        vertex.label.dist = 1.2,
+        vertex.label.degree = 180,        
         edge.curved=0.2,
         vertex.label.cex = 1.5
      )
@@ -166,14 +169,15 @@ We can see from @fig-fitness-2 that indeed this set of nodes (pictured in blue) 
    c[31] <- "red"
    V(ug)$color <- c
    plot(ug, 
-   layout = ul, 
-     vertex.size=6, 
-     vertex.frame.color="lightgray", 
-     vertex.label = V(ug)$name, 
-     edge.arrow.size = 0.25,
-     vertex.label.dist=1.5, 
-     edge.curved=0.2, 
-     vertex.label.cex = 1.25
+        layout = ul, 
+        vertex.size=6, 
+        vertex.frame.color="lightgray", 
+        vertex.label = V(ug)$name, 
+        edge.arrow.size = 0.25,
+        vertex.label.dist = 1.2,
+        vertex.label.degree = 180,        
+        edge.curved=0.2,
+        vertex.label.cex = 1.5
      )
 ```
 
@@ -186,11 +190,13 @@ To build overlapping communities, @lancichinetti_etal09 recommend that we pick a
         node.list <- V(graph)$name #initial node list
         comm.list <- list() #initializing the overlapping communities list
         set.seed(s) #setting the seed
+        k <- 1
         while(length(node.list) != 0) {
             v <- sample(node.list, 1) #randomly selecting a node from the list
             nc <- node.comm(graph, v) #determining the natural community of the node
             comm.list[[k]] <- c(nc, v) #adding nodes to the list
             node.list <- node.list[!node.list %in% unique(c(unlist(comm.list)))] #deleting the nodes already assigned to a community from the list
+            k <- k + 1
             }
         return(comm.list)   
         }
@@ -220,6 +226,12 @@ Here are the entries for the first 10 people:
     Z[1:10, ]
 ```
 
+And here's the community overlap matrix:
+
+```{r}
+    t(Z) %*% Z
+```
+
 And now we can use fancy `igraph` pie-chart plotting to visualize the overlapping communities:
 
 
@@ -240,9 +252,8 @@ And now we can use fancy `igraph` pie-chart plotting to visualize the overlappin
     c.list <- lapply(ccol, function(x) {pal[x]})
     names(c.list) <- V(ug)$name
     V(ug)$pie.color <- c.list
-    set.seed(123)
     plot(ug, 
-        layout = layout_with_kk,       
+        layout = ul,       
         vertex.size = 8,             
         vertex.label.color = "black", 
         vertex.label.font = 2,      
@@ -260,6 +271,9 @@ And now we can use fancy `igraph` pie-chart plotting to visualize the overlappin
        cex = 1.5
        )  # Text size
 ```
+
+We can se that community 5 (in blue) is the second largest community with little overlap with other communities (except 8). Community 8 (in gray) is the largest but has high levels of overlap with others. Community 6 (in dark orange) is a small self-contained community. 
+
 
 
 

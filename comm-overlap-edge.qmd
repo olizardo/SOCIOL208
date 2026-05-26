@@ -24,12 +24,10 @@ Let's see how this works. We first load our trusty *Pulp Fiction* data set from 
 ```{r}
     library(networkdata)
     library(igraph)
-    library(stringr) #using stringr to change names from all caps to title case
-    g <- movie_559
-    V(g)$name <- str_to_title(V(g)$name)
-    V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
-    E(g)$weight <- 1 #setting edge weights to 1.0 (relevant for betweenness calculation)
-    g <- subgraph(g, which(degree(g) > 1))
+    g <- law_friends
+    g <- subgraph(g, degree(g) >= 2)
+    ug <- as_undirected(g, mode = "collapse")
+    V(ug)$name <- as.character(1:vcount(ug))
 ```
 
 The key idea behind link clustering is that *similar* links should be assigned to the same clusters. How do we compute the similarity between links? 
@@ -79,7 +77,7 @@ It works like this:
 Here's the function in action in the *Pulp Fiction* network:
 
 ```{r}
-    E.sim <- edge.sim(g)
+    E.sim <- edge.sim(ug)
     round(E.sim[1:10, 1:10], 3)
 ```
 
@@ -94,11 +92,11 @@ We can then transform the link similarities into distances, and cluster them:
 The resulting dendrogram looks like this:
 
 ```{r}
-    par(cex = 0.5)
+    par(cex = 0.25)
     plot(hc.res)
 ```
 
-The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E =$ `r ecount(g)` in this case), and the clusters are "link communities" [@ahn_etal10].
+The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E =$ `r ecount(ug)` in this case), and the clusters are "link communities" [@ahn_etal10].
 
 ## Clustering Nodes
 
@@ -107,15 +105,15 @@ As we noted, because the links are the ones that get clustered, nodes incident t
 We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with ten overlapping communities:
 
 ```{r}
-    k <- 10
+    k <- 20
     lc <- cutree(hc.res, k)
-    ld <- data.frame(as_edgelist(g), lc)
-    node.clus <- list() 
+    ld <- data.frame(as_edgelist(ug), lc)
+    communities <- list() 
     for (k in 1:max(lc)) {
         sub.dat <- dplyr::filter(ld, lc == k)
-        node.clus[[k]] <- unique(c(sub.dat[, 1], sub.dat[, 2]))
+        communities[[k]] <- unique(c(sub.dat[, 1], sub.dat[, 2]))
         }
-    node.clus
+    communities
 ```
 
 Because nodes belong to multiple communities, the resulting actor-by-community ties form a **two-mode network** (see [here](basic-tm.qmd)). 
@@ -123,43 +121,40 @@ Because nodes belong to multiple communities, the resulting actor-by-community t
 We can reconstruct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node, like this:
 
 ```{r}
-    B <- matrix(0, vcount(g), k)
-    rownames(B) <- V(g)$name
-    for (i in 1:k) {
-        B[node.clus[[i]], i] <- 1
+    Z <- matrix(0, vcount(ug), length(communities))
+    for (i in seq_len(length(communities))) {
+        Z[as.numeric(communities[[i]]), i] <- 1
         }
-    B
 ```
 
 And the matrix of inter-community ties based on shared characters can be obtained via the usual @breiger74 projection:
 
 ```{r}
-    M <- t(B) %*% B
-    M
+    t(Z) %*% Z
 ```
 
 And we can visualize the nodes connected to multiple communities as follows: 
 
 ```{r}
 #| label: fig-overlap
-#| fig-cap: "Undirected Pulp Fiction Network Showing the Memberships of Each Node in Overlapping Communities (Nodes who Belong to Non-overlapping Communities Omitted)."
+#| fig-cap: "Undirected Law Firm Friendship Network Showing the Memberships of Each Node in Overlapping Communities."
 #| fig-height: 12
 #| fig-width: 12
 #| echo: false
-    W_raw <- split(B/rowSums(B), seq(nrow(B)))
-    W <- lapply(W_raw, function(x) { x[x != 0] })
-    ccol <- lapply(W_raw, function(x) { which(x != 0) })
+    W_raw <- split(Z/rowSums(Z), seq(nrow(Z)))
+    W <- lapply(W_raw, function(x) {x[which(x != 0)]})
+    ccol <- lapply(W_raw, function(x) {which(x != 0)})
     library(RColorBrewer)   
     getPalette = colorRampPalette(categorical_pal(8))
-    pal <- getPalette(ncol(B))
-    V(g)$shape <- "pie"
-    V(g)$pie <- W
+    pal = getPalette(ncol(Z))
+    V(ug)$shape <- "pie"
+    V(ug)$pie <- W
     c.list <- lapply(ccol, function(x) {pal[x]})
-    names(c.list) <- V(g)$name
-    V(g)$pie.color <- c.list
+    names(c.list) <- V(ug)$name
+    V(ug)$pie.color <- c.list
     set.seed(123)
-    plot(g, 
-        layout = layout_with_fr,       
+    plot(ug, 
+        layout = layout_with_kk,       
         vertex.size = 8,             
         vertex.label.color = "black", 
         vertex.label.font = 2,      
@@ -167,17 +162,15 @@ And we can visualize the nodes connected to multiple communities as follows:
         edge.width = 2,                
         edge.color = "lightblue",
         vertex.label.dist = 1.2,
-        vertex.label.degree = 180  
+        vertex.label.degree = 180,
+        edge.curved=0.2
         )
-    legend("bottomright", 
-       legend = c(paste("Commnunity", 1:ncol(B), sep = "_")), 
+    legend("bottomleft", 
+       legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")), 
        fill = pal, 
        bty = "n",  # No box around legend
-       cex = 1.5)  # Text size
+       cex = 1.5
+       )  # Text size
 ```
-
-
-
-
 
 

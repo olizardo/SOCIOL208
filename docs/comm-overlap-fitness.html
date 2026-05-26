@@ -513,7 +513,16 @@ div.csl-indent {
 </nav>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#the-local-fitness-function" id="toc-the-local-fitness-function" class="nav-link active" data-scroll-target="#the-local-fitness-function">The Local Fitness Function</a></li>
+  <li><a href="#relative-node-fitness" id="toc-relative-node-fitness" class="nav-link" data-scroll-target="#relative-node-fitness">Relative Node Fitness</a></li>
+  <li><a href="#the-natural-community-of-each-node" id="toc-the-natural-community-of-each-node" class="nav-link" data-scroll-target="#the-natural-community-of-each-node">The Natural Community of Each Node</a></li>
+  <li><a href="#an-algorithm-to-detect-overlapping-communities" id="toc-an-algorithm-to-detect-overlapping-communities" class="nav-link" data-scroll-target="#an-algorithm-to-detect-overlapping-communities">An Algorithm to Detect Overlapping Communities</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/olizardo/SOCIOL208/blob/main/comm-overlap-fitness.qmd" class="toc-action">View source</a></p></div></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -544,24 +553,27 @@ div.csl-indent {
 <span id="cb1-5"><a href="#cb1-5"></a>    ug <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
 <span id="cb1-6"><a href="#cb1-6"></a>    <span class="fu">V</span>(ug)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(ug))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>A point-and-line plot of the network is shown in <a href="#fig-fitness-1">Figure&nbsp;1</a>.</p>
+<section id="the-local-fitness-function" class="level2">
+<h2 class="anchored" data-anchor-id="the-local-fitness-function">The Local Fitness Function</h2>
 <p><span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> propose that we optimize the following function at the subgraph level:</p>
 <p><span id="eq-fitness"><span class="math display">\[
 f(G') = \frac{k^{in}}{k^{in} + k^{out}}
 \tag{1}\]</span></span></p>
-<p>Where <span class="math inline">\(k^{in}\)</span> is the internal degree of nodes in the subgraph (the sum of the degrees of each node in the subgraph counting only intra-community neighbors) and <span class="math inline">\(k^{out}\)</span> is the external degree (the sum of the degrees of each node in the subgraph only counting links to nodes outside the subgraph).</p>
-<p>And here’s an <code>R</code> function that computes <a href="#eq-fitness">Equation&nbsp;1</a> for any subgraph:</p>
+<p>Where <span class="math inline">\(k^{in}\)</span> is the internal degree of nodes in the subgraph (the sum of the degrees of each node in the subgraph, counting only intra-community neighbors) and <span class="math inline">\(k^{out}\)</span> is the external degree (the sum of the degrees of each node in the subgraph, only counting links to nodes outside the subgraph).</p>
+<p>Here’s an <code>R</code> function that computes <a href="#eq-fitness">Equation&nbsp;1</a> for any subgraph:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>    sg.fitness <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, sub.nodes, <span class="at">alpha =</span> <span class="dv">1</span>) {</span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>    sg.fitness <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, sub.nodes) {</span>
 <span id="cb2-2"><a href="#cb2-2"></a>        degrees.fg <span class="ot">&lt;-</span> <span class="fu">degree</span>(graph)</span>
 <span id="cb2-3"><a href="#cb2-3"></a>        subgraph <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(graph, sub.nodes)</span>
 <span id="cb2-4"><a href="#cb2-4"></a>        degrees.sg <span class="ot">&lt;-</span> <span class="fu">degree</span>(subgraph)</span>
 <span id="cb2-5"><a href="#cb2-5"></a>        k.i <span class="ot">&lt;-</span> <span class="fu">sum</span>(degrees.sg)</span>
 <span id="cb2-6"><a href="#cb2-6"></a>        k.o <span class="ot">&lt;-</span> <span class="fu">sum</span>(degrees.fg[sub.nodes] <span class="sc">-</span> degrees.sg[sub.nodes])</span>
-<span id="cb2-7"><a href="#cb2-7"></a>        fsg <span class="ot">&lt;-</span> k.i <span class="sc">/</span> (k.i <span class="sc">+</span> k.o)<span class="sc">^</span>alpha</span>
+<span id="cb2-7"><a href="#cb2-7"></a>        fsg <span class="ot">&lt;-</span> k.i <span class="sc">/</span> (k.i <span class="sc">+</span> k.o)</span>
 <span id="cb2-8"><a href="#cb2-8"></a>        <span class="fu">return</span>(fsg)</span>
 <span id="cb2-9"><a href="#cb2-9"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>And here it is in action:</p>
+<p>And here is the <code>sg.fitness</code> function in action:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>    fg <span class="ot">&lt;-</span> <span class="fu">sg.fitness</span>(ug, <span class="fu">c</span>(<span class="st">"61"</span>, <span class="st">"62"</span>, <span class="st">"65"</span>, <span class="st">"67"</span>))</span>
 <span id="cb3-2"><a href="#cb3-2"></a>    fg</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -569,12 +581,15 @@ f(G') = \frac{k^{in}}{k^{in} + k^{out}}
 <pre><code>[1] 0.1333333</code></pre>
 </div>
 </div>
-<p>Which says that the fitness of the subgraph formed by nodes 61, 62, 65 and 67 is 0.13.</p>
-<p><span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> define the fitness of a node <span class="math inline">\(v\)</span> relative to a given subgraph <span class="math inline">\(G'\)</span> as the difference in the subgraph’s fitness with that node included versus the subgraph fitness with that node excluded:</p>
+<p>Which says that the fitness of the subgraph formed by nodes 61, 62, 65, and 67 is 0.13.</p>
+</section>
+<section id="relative-node-fitness" class="level2">
+<h2 class="anchored" data-anchor-id="relative-node-fitness">Relative Node Fitness</h2>
+<p><span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> define the fitness of a node <span class="math inline">\(v\)</span> relative to a given subgraph <span class="math inline">\(G'\)</span> as the difference in the subgraph’s fitness with that node included versus the subgraph’s fitness with that node excluded:</p>
 <p><span id="eq-nodefit"><span class="math display">\[
 f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 \tag{2}\]</span></span></p>
-<p>We can write a function to determine the fitness of node relative to a subgraph according to <a href="#eq-nodefit">Equation&nbsp;2</a> using our previous <code>sg.fitness</code> function like this:</p>
+<p>We can write a function to determine the fitness of a node relative to a subgraph according to <a href="#eq-nodefit">Equation&nbsp;2</a> using our previous <code>sg.fitness</code> function like this:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>    node.fit <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, subgraph, node) {</span>
 <span id="cb5-2"><a href="#cb5-2"></a>        plus <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(subgraph, node))</span>
@@ -584,16 +599,19 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 <span id="cb5-6"><a href="#cb5-6"></a>        <span class="fu">return</span>(fit.i <span class="sc">-</span> fit.o)</span>
 <span id="cb5-7"><a href="#cb5-7"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>So if we wanted to figure out the fitness of node 58 relative to the subgraph formed by nodes 61, 62, 65 and 67 we can just type:</p>
+<p>So if we wanted to figure out the fitness of node 58 relative to the subgraph formed by nodes 61, 62, 65, and 67 we can just type:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>    <span class="fu">node.fit</span>(ug, <span class="fu">c</span>(<span class="st">"65"</span>, <span class="st">"67"</span>, <span class="st">"61"</span>, <span class="st">"62"</span>), <span class="st">"58"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.02539683</code></pre>
 </div>
 </div>
-<p>We can see that node 58’s fitness relative to this subgraph is positive, indicating that including them in the subgraph increases that subgraph’s fitness.</p>
-<p><span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> describe an algorithm to determine what the call the “natural community” of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining neighbors have a fitness less than <span class="math inline">\(\epsilon\)</span> where <span class="math inline">\(\epsilon\)</span> is a small number. The final subgraph thus constructed is the seed neighbor’s natural community.</p>
-<p>Let’s see how this would work. First let’s write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all the unique neighbors of the nodes in that subgraph as output.</p>
+<p>We can see that node 58’s fitness relative to this subgraph is positive, indicating that including it increases the subgraph’s fitness.</p>
+</section>
+<section id="the-natural-community-of-each-node" class="level2">
+<h2 class="anchored" data-anchor-id="the-natural-community-of-each-node">The Natural Community of Each Node</h2>
+<p><span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> describe an algorithm to determine what they call the “natural community” of a given node. The idea is to start with that node as its own subgraph, add the neighbor with the highest fitness relative to the starting subgraph, and continue adding subgraph neighbors with the highest fitness relative to the growing subgraph until the remaining subgraph neighbors have a node fitness less than <span class="math inline">\(\epsilon\)</span> where <span class="math inline">\(\epsilon\)</span> is a small number (e.g., <span class="math inline">\(\epsilon = 0.01\)</span>). The final subgraph thus constructed is the seed neighbor’s “natural community.”</p>
+<p>How do we do that? First, let’s write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all unique neighbors of those nodes as output.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>    sub.nei <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, subgraph) {</span>
 <span id="cb8-2"><a href="#cb8-2"></a>        nei.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(subgraph, <span class="cf">function</span>(x) {<span class="fu">neighbors</span>(graph, x)})</span>
@@ -602,7 +620,7 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 <span id="cb8-5"><a href="#cb8-5"></a>        <span class="fu">return</span>(nei.list)</span>
 <span id="cb8-6"><a href="#cb8-6"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>So for instance, if we wanted to see all the neighbors of the earlier subgraph, we would type:</p>
+<p>So, for instance, if we wanted to see all the neighbors of the earlier subgraph, we would type:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>    <span class="fu">sub.nei</span>(ug, <span class="fu">c</span>(<span class="st">"65"</span>, <span class="st">"67"</span>, <span class="st">"61"</span>, <span class="st">"62"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -610,7 +628,7 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 [26] 24 26 27 31 36 46</code></pre>
 </div>
 </div>
-<p>Great. Now that we have this, all we need to do is loop through each of node’s neighbors, figure out which one increases the fitness of the subgraph composed of the union of the original node and that neighbor the most, and keep going until the remaining nodes don’t add much to the fitness.</p>
+<p>Great. Now that we have this, all we need to do is loop through each of the focal node’s neighbors, figure out which one increases the fitness of the subgraph composed of the union of the original node and that neighbor the most, and keep adding neighbors (and neighbors of neighbors), until the remaining nodes don’t add much to the fitness.</p>
 <p>Here’s a function that does that:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>    node.comm <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, node, <span class="at">s =</span> <span class="dv">123456</span>, <span class="at">e =</span> <span class="fl">0.01</span>) {</span>
@@ -640,7 +658,7 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 <pre><code> [1] "60" "33" "32" "35" "28" "48" "18" "47" "55" "56" "30"</code></pre>
 </div>
 </div>
-<p>We can see from <a href="#fig-fitness-2">Figure&nbsp;2</a> than indeed this set of nodes (pictured in blue) belong to a cohesive subgroup proximate to node 31 (pictured in red).</p>
+<p>We can see from <a href="#fig-fitness-2">Figure&nbsp;2</a> that indeed this set of nodes (pictured in blue) belongs to a cohesive subgroup proximate to node 31 (pictured in red).</p>
 <div class="cell quarto-layout-panel">
 <div class="quarto-layout-row quarto-layout-valign-top">
 <div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
@@ -661,25 +679,25 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 </div>
 </div>
 </div>
-<p>To build overlapping communities, <span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> recommend that we pick a node at random, compute its natural community, then pick another node at random not yet assigned to a community and do the same until each node has been assigned to at least one community. In <code>R</code> we can do that by gradually building a <code>list</code> object containing the nodes assigned to another’s node’s natural community through the various iterations. Here’s a function that does that:</p>
+</section>
+<section id="an-algorithm-to-detect-overlapping-communities" class="level2">
+<h2 class="anchored" data-anchor-id="an-algorithm-to-detect-overlapping-communities">An Algorithm to Detect Overlapping Communities</h2>
+<p>To build overlapping communities, <span class="citation" data-cites="lancichinetti_etal09">Lancichinetti, Fortunato, and Kertész (<a href="#ref-lancichinetti_etal09" role="doc-biblioref">2009</a>)</span> recommend that we pick a node at random, compute its natural community, then pick another node at random that is not yet assigned to a community, and repeat until each node has been assigned to at least one community. In <code>R</code>, we can do that by gradually building a <code>list</code> object that contains the nodes assigned to a randomly chosen node’s “natural community” as determined by the <code>node.comm</code> function above across the various iterations. Here’s a function that does that:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>    fit.comm <span class="ot">&lt;-</span> <span class="cf">function</span>(graph, <span class="at">s =</span> <span class="dv">123</span>) {</span>
-<span id="cb14-2"><a href="#cb14-2"></a>        node.list <span class="ot">&lt;-</span> <span class="fu">V</span>(graph)<span class="sc">$</span>name</span>
-<span id="cb14-3"><a href="#cb14-3"></a>        comm.list <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
-<span id="cb14-4"><a href="#cb14-4"></a>        k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb14-5"><a href="#cb14-5"></a>        <span class="fu">set.seed</span>(s)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>        node.list <span class="ot">&lt;-</span> <span class="fu">V</span>(graph)<span class="sc">$</span>name <span class="co">#initial node list</span></span>
+<span id="cb14-3"><a href="#cb14-3"></a>        comm.list <span class="ot">&lt;-</span> <span class="fu">list</span>() <span class="co">#initializing the overlapping communities list</span></span>
+<span id="cb14-4"><a href="#cb14-4"></a>        <span class="fu">set.seed</span>(s) <span class="co">#setting the seed</span></span>
+<span id="cb14-5"><a href="#cb14-5"></a>        k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
 <span id="cb14-6"><a href="#cb14-6"></a>        <span class="cf">while</span>(<span class="fu">length</span>(node.list) <span class="sc">!=</span> <span class="dv">0</span>) {</span>
-<span id="cb14-7"><a href="#cb14-7"></a>            old.node.list <span class="ot">&lt;-</span> node.list</span>
-<span id="cb14-8"><a href="#cb14-8"></a>            v <span class="ot">&lt;-</span> <span class="fu">sample</span>(node.list, <span class="dv">1</span>)</span>
-<span id="cb14-9"><a href="#cb14-9"></a>            node.list</span>
-<span id="cb14-10"><a href="#cb14-10"></a>            nc <span class="ot">&lt;-</span> <span class="fu">node.comm</span>(graph, v)</span>
-<span id="cb14-11"><a href="#cb14-11"></a>            comm.list[[k]] <span class="ot">&lt;-</span> <span class="fu">c</span>(nc, v)</span>
-<span id="cb14-12"><a href="#cb14-12"></a>            assigned <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(<span class="fu">unlist</span>(comm.list)))</span>
-<span id="cb14-13"><a href="#cb14-13"></a>            node.list <span class="ot">&lt;-</span> node.list[<span class="sc">!</span>node.list <span class="sc">%in%</span> assigned]</span>
-<span id="cb14-14"><a href="#cb14-14"></a>            k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb14-15"><a href="#cb14-15"></a>            }</span>
-<span id="cb14-16"><a href="#cb14-16"></a>        <span class="fu">return</span>(comm.list)   </span>
-<span id="cb14-17"><a href="#cb14-17"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb14-7"><a href="#cb14-7"></a>            v <span class="ot">&lt;-</span> <span class="fu">sample</span>(node.list, <span class="dv">1</span>) <span class="co">#randomly selecting a node from the list</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a>            nc <span class="ot">&lt;-</span> <span class="fu">node.comm</span>(graph, v) <span class="co">#determining the natural community of the node</span></span>
+<span id="cb14-9"><a href="#cb14-9"></a>            comm.list[[k]] <span class="ot">&lt;-</span> <span class="fu">c</span>(nc, v) <span class="co">#adding nodes to the list</span></span>
+<span id="cb14-10"><a href="#cb14-10"></a>            node.list <span class="ot">&lt;-</span> node.list[<span class="sc">!</span>node.list <span class="sc">%in%</span> <span class="fu">unique</span>(<span class="fu">c</span>(<span class="fu">unlist</span>(comm.list)))] <span class="co">#deleting the nodes already assigned to a community from the list</span></span>
+<span id="cb14-11"><a href="#cb14-11"></a>            k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb14-12"><a href="#cb14-12"></a>            }</span>
+<span id="cb14-13"><a href="#cb14-13"></a>        <span class="fu">return</span>(comm.list)   </span>
+<span id="cb14-14"><a href="#cb14-14"></a>        }</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And here’s the function in action:</p>
 <div class="cell">
@@ -715,7 +733,7 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 </div>
 </div>
 <p>We can see that the algorithm returns a <code>list</code> object containing 8 communities.</p>
-<p>We can now create the bi-adjacency matrix corresponding to the two-mode person by community network like we did in the case of the <a href="./comm-overlap-clique.html">clique percolation method</a> for overlapping community detection:</p>
+<p>We can now create the bi-adjacency matrix corresponding to the two-mode person by community network, as we did in the case of the <a href="./comm-overlap-clique.html">clique percolation method</a> for overlapping community detection:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a>    Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(ug), <span class="fu">length</span>(fc))</span>
 <span id="cb17-2"><a href="#cb17-2"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(fc))) {</span>
@@ -739,6 +757,21 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 [10,]    0    0    0    0    1    0    0    0</code></pre>
 </div>
 </div>
+<p>And here’s the community overlap matrix:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>    <span class="fu">t</span>(Z) <span class="sc">%*%</span> Z</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8]
+[1,]   12    8    2    1    0    1    1    2
+[2,]    8   11    2    2    1    0    1    2
+[3,]    2    2    7    2    0    0    6    1
+[4,]    1    2    2   20    0    0    4   15
+[5,]    0    1    0    0   24    0    0    6
+[6,]    1    0    0    0    0    4    0    0
+[7,]    1    1    6    4    0    0   10    4
+[8,]    2    2    1   15    6    0    4   27</code></pre>
+</div>
+</div>
 <p>And now we can use fancy <code>igraph</code> pie-chart plotting to visualize the overlapping communities:</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -750,9 +783,11 @@ f^v_{G'} = f^v_{G' + v} - f^v_{G' - v}
 </div>
 </div>
 </div>
+<p>We can se that community 5 (in blue) is the second largest community with little overlap with other communities (except 8). Community 8 (in gray) is the largest but has high levels of overlap with others. Community 6 (in dark orange) is a small self-contained community.</p>
 
 
 
+</section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
 <div id="ref-lancichinetti_etal09" class="csl-entry" role="doc-biblioentry">
