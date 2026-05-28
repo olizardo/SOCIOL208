@@ -94,6 +94,7 @@ Now, we create a `list` object containing the node ids for each of the `r max(co
     for (i in 1:max(comps)) {
         communities[[i]] <- Reduce(union, cliques[which(comps == as.character(i))])
         }
+    # communities[[length(communities) + 1]] <- setdiff(as.numeric(V(ug)$name), unique(unlist(communities)))
 ```
 
 And here are the node IDs of each of the `r max(comps)` communities:
@@ -138,7 +139,7 @@ This retains `r nrow(Z)` out of the original `r vcount(ug)` nodes in the network
 We can now create a subgraph of the original graph containing only those nodes 
 
 ```{r}
-    sug <- subgraph(ug, non.zero)
+    ug <- subgraph(ug, non.zero)
 ```
 
 Finally, we can use some fancy `igraph` pie chart plotting to visualize the mixed memberships of each node in each community:
@@ -155,14 +156,14 @@ Finally, we can use some fancy `igraph` pie chart plotting to visualize the mixe
     library(RColorBrewer)   
     getPalette = colorRampPalette(categorical_pal(8))
     pal = getPalette(ncol(Z))
-    V(sug)$shape <- "pie"
-    V(sug)$pie <- W
+    V(ug)$shape <- "pie"
+    V(ug)$pie <- W
     c.list <- lapply(ccol, function(x) {pal[x]})
-    names(c.list) <- V(sug)$name
-    V(sug)$pie.color <- c.list
+    names(c.list) <- V(ug)$name
+    V(ug)$pie.color <- c.list
     set.seed(123)
-    plot(sug, 
-        layout = layout_with_fr,       
+    plot(ug, 
+        layout = layout_with_kk,       
         vertex.size = 8,             
         vertex.label.color = "black", 
         vertex.label.font = 2,      
@@ -170,16 +171,15 @@ Finally, we can use some fancy `igraph` pie chart plotting to visualize the mixe
         edge.width = 2,                
         edge.color = "lightblue",
         vertex.label.dist = 1.2,
-        vertex.label.degree = 180
+        vertex.label.degree = 180,
+        edge.curved=0.2
         )
-    legend("topleft", 
+    legend("topright", 
        legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")), 
        fill = pal, 
        bty = "n",  # No box around legend
-       cex = 1.5,
-       inset = c(0.2, 0)
+       cex = 1.5
        )  # Text size
 ```
 
 We can see for instance that some sets of nodes (e.g., {64, 65, 66, 67, 68} and {28, 32, 35, 48, 55}) belong to communities with minimal overlap with others (closer to classical communities), while other nodes (e.g., 31 and 13) stand in the middle of multiple communities, centrally located at their intersection. 
-
