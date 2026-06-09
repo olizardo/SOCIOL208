@@ -21,7 +21,7 @@ The resulting graph looks like:
 
 The basic innovation behind the centrality cube is to store the intermediation information among every node triplet in the graph $s$, $r$, $b$ (standing for "**s**ender," **r**eceiver," and "**b**roker") in a three dimensional *array* rather than the usual two dimensional matrix. 
 
-The three dimensional array can be thought of as a "cube" by stacking multiple reachability matrices between every pair $s$ and $r$ along a three dimensional dimension $b$. So each "b-slice" of the cube will contain the number of times node $b$ stands in a shortest path between $s$ and $r$ divided by the total number of paths between $s$ and $r$ which as you [recall](cent-bet.qmd) computes the pairwise dependence of $s$ and $r$ with respect to $b$.
+The three dimensional array can be thought of as a "cube" by stacking multiple reachability matrices between every pair of nodes $s$ and $r$ along a three dimensional dimension $b$. So each "b-slice" of the cube will contain the number of times node $b$ stands in a shortest path between $s$ and $r$ divided by the total number of paths between $s$ and $r$ which as you [recall from our discussion of betweenness centrality](cent-bet.qmd) computes the **pairwise dependence** [@brandes08] of $s$ and $r$ with respect to $b$.
 
 Let's see how that works. 
 
@@ -31,47 +31,57 @@ We begin by writing a simple user-defined function to compute the number of shor
 
 ```{r}
     nsp <- function(w) {
-    n <- vcount(w)
-    S <- matrix(1, n, n)
-    for (i in 1:n) {
-        j <- setdiff(i:n, c(i, as.numeric(neighbors(w, i)))) # non-neighbors in upper triangle
-        if (length(j) > 0) {
-            S[i, j] <- 0 # Set sij to 0 for disconnected nodes
-            vpaths <- all_shortest_paths(w, from = i, to = j)$vpaths
-            if (length(vpaths) > 0) {
-                dests <- unlist(lapply(vpaths, function(x) as.numeric(x[length(x)])))
-                counts <- table(dests)
-                S[i, as.numeric(names(counts))] <- as.numeric(counts)
-                }
+      n <- vcount(w) #number of nodes in the graph
+      nodes <- 1:n #vector of node ids
+      P <- matrix(1, nrow = n, ncol = n) #initializing the matrix of paths with ones
+      for (s in nodes) {
+        r <- setdiff(nodes, c(s, as.numeric(neighbors(w, s)))) # non-neighbors in upper triangle
+        if (length(r) > 0) {
+          P[s, r] <- 0 # Set sr to 0 for disconnected nodes
+          vpaths <- all_shortest_paths(w, from = s, to = r)$vpaths
+          if (length(vpaths) > 0) {
+            dests <- unlist(lapply(vpaths, function(x) as.numeric(x[length(x)])))
+            counts <- table(dests)
+            P[s, as.numeric(names(counts))] <- as.numeric(counts)
             }
+          }
         }
-    S[lower.tri(S)] <- t(S)[lower.tri(S)] # copying upper triangle into lower triangle
-    return(S)
+      P[lower.tri(P)] <- t(P)[lower.tri(P)] # copying upper triangle into lower triangle
+      return(P)
     }
 ```
 
-The function is called `nsp` and takes a graph `w` as input and returns and matrix called $\mathbf{S}$ with entries $s_{ij}$ equal to the total number of shortest paths between $i$ and $j$. This is done in three steps:
+The function is called `nsp` and takes a graph `w` as input and returns and matrix called $\mathbf{P}$ with entries $p_{sr}$ equal to the total number of shortest paths between $s$ and $r$. This is done in four steps:
 
-- First, we initialize an $n \times n$ matrix of ones called $S$ in line 3 to the all ones matrix. We will update the entries of this matrix with the actual number of shortest paths between each pair of nodes in the graph.
+- First, we initialize an $n \times n$ matrix of ones called $P$ in line 4 to the all ones matrix. We will update the entries of this matrix with the actual number of shortest paths between each pair of nodes in the graph.
 
-- Next, we loop through each node $i$ in the graph in line 4. For each node $i$, we identify the set of target nodes that are not neighbors of $i$ and are in the upper triangle of the matrix using the `neighbors` function in `igraph` and the `setdiff` function in base `R` in line 5. We then check if there are any target nodes to process. If there are, we set the default value of the number of paths to zero for those target nodes in line 6.
+- Next, we loop through each node $s$ in the graph starting in line 5. For each node $s$, we find the set of target nodes that are not neighbors of $s$ using the `neighbors` function in `igraph` and the `setdiff` function in base `R` in line 6. We then check if the set of receiver nodes is not empty using the base `R` `length` function in line 7, setting the initial value of $p_{sr}$ to zero for all non-neighboring pairs in line 8.
 
-- Next, we compute the shortest paths from node $i$ to the target nodes using the `all_shortest_paths` function in `igraph` in line 7. This function returns a list of paths, where each path is represented as a vector of node ids. We check if there are any paths to process in line 7. If there are, we extract the destination nodes from the paths using `lapply` and `unlist` in line 8, and then count the number of paths to each destination node using the `table` function in line 9. Finally, we update the corresponding entries in the $S$ matrix with the counts of paths in line 10. After processing all nodes, we copy the upper triangle of the $S$ matrix to the lower triangle to ensure symmetry in line 12, and return the $S$ matrix.
+- Next, we compute the shortest paths from node $s$ to the receiver nodes using the `all_shortest_paths` function in `igraph` in line 9. This function returns a list of paths in the object `vpaths`, where each path is represented as a vector of node ids. We check if this list is empty or not in line 10. If the list is not empty, we extract the destination nodes from the paths using `lapply` and `unlist` in line 11, and then count the number of paths to each destination node using the base `R` function `table` in line 12. 
 
-Now we are ready to write a user defined function to build the cube. Here's a not-so-efficient (programming wise) but working example:
+- Finally, we update the corresponding entries in the $P$ matrix with the counts of paths in line 13. After going through all nodes, we copy the upper triangle of the $P$ matrix to the lower triangle to ensure symmetry in line 17, and return the final $P$ matrix.
+
+Let's see the function in action: 
+
+```{r}
+    nsp(g)
+```
+
+Great! Looks like it works.
+
+Now we are ready to write a user defined function to build the cube. Here's a working example:
 
 ```{r}
  cube <- function(w) {
-   n <- vcount(w)
-   c <- array(0, dim = c(n, n, n))
-   S <- nsp(w)
+   n <- vcount(w) #number of nodes
+   c <- array(0, dim = c(n, n, n)) #initializing the cube with zeros
+   S <- nsp(w) #computing number of shortest paths between nodes
    for (s in 1:n) {
      neigh_s <- neighbors(w, s) # pre-fetch neighbors
      for (r in 1:n) {
        if (s != r && !(r %in% neigh_s)) {
          p.sr <- all_shortest_paths(w, s, r)$vpaths
          brokers <- unlist(lapply(p.sr, function(x) as.numeric(x[-c(1, length(x))])))
-         
          if (length(brokers) > 0) {
            b_counts <- table(brokers)
            b_idx <- as.numeric(names(b_counts))
@@ -85,19 +95,15 @@ Now we are ready to write a user defined function to build the cube. Here's a no
  }
 ```
 
-In line 1, we name the function `cube`. Line 3 initializes the `array` in `R`. It takes a string of zeros of length $n^3$ where $n$ is the number of nodes and crams them into an $n \times n \times n$ array. In this case, since $n = 8$, this means eight empty matrices of dimensions $8 \times 8$ stacked together to form our cube full of zeros. The $ijk^{th}$ cell of the array corresponds to sender $i$, receiver $j$ and broker node $k$. Line 4 computes the matrix $S$ using the `nsp` function above containing the number of shortest paths between every sender and receiver node in the graph.
+The function `cube` takes a graph `w` as input and returns a three-dimensional array `c` with dimensions $n \times n \times n$ where $n$ is the number of nodes in the graph. The entries of the array correspond to the pairwise dependence of sender node $s$ and receiver node $r$ on broker node $b$ for all triplets of nodes in the graph. 
 
-Lines 5-16 populate the cube with the required information using an (inefficient) triple `for` loop. As noted some, useful `igraph` functions come into play here:
+The function works as follows:
 
-- In line 8 the `if` conditional inside the triple loop uses the `neighbors` function in `igraph` and checks that node $r$ is not a neighbor of $s$ (if they are directly connected then node $b$ cannot be a broker). 
+- First, we initialize the cube as a three-dimensional array of zeros with dimensions $n \times n \times n$ in line 3. In line 4, we also compute the matrix $S$ containing the number of shortest paths between every pair of nodes in the graph using the `nsp` function defined earlier.
 
-- After we check that $s$ and $r$ are not neighbors, we use the `all_shortest_paths` function in `igraph` to get all the shortest paths between $s$ and $r$ in line 9. 
+- Next, we loop through each sender node $s$ in line 5. For each sender node, we pre-fetch its neighbors to speed up the check for non-neighboring receiver nodes in line 6. We then loop through each potential receiver node $r$ in line 7. We check if $s$ and $r$ are different and not neighbors in line 8. If they are valid sender-receiver pairs, we compute all shortest paths from $s$ to $r$ using the `all_shortest_paths` function in line 9. We then extract the broker nodes from these paths by removing the source and destination nodes using `lapply` and `unlist` in line 10. If there are any broker nodes, we count how many times each broker node appears in the paths using `table` in line 11, and then update the corresponding entries in the cube with the ratio of the counts to the total number of shortest paths $S[s, r]$ in line 12.
 
-- Line 10 uses some `lapply` magic to drop the source and receiver nodes from the list of node ids vectors returned by the `all_shortest_paths` function.
-
-- Line 11 uses additional `sapply` magic and the base `R` function `%in%` to check how many times each broker node $b$ shows up in that list of shortest paths as an inner node between $s$ and $r$; we put that number in the $ijk^{th}$ cell of the array, and loop through all triplets until we are done.
-
-- Line 12 takes the number computed in line 11 and divides by the total number of shortest paths between $s$ and $r$ which is the betweenness ratio we are seeking.
+- Finally, we replace any `NA` values in the cube with zeros in line 13 (this can happen if there are no paths between $s$ and $r$), and return the cube in line 14.
 
 ## Exploring the Cube
 
