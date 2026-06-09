@@ -1,19 +1,19 @@
 ---
 title: "Graph Ensembles in Two-Mode Networks"
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 As we saw in the [graph ensemble lesson](swap.qmd), there are many approaches to randomizing the structure of one-mode networks when the aim is to create **graph ensembles** preserving selected properties. These ensembles, in turn, can be used to do **null hypothesis testing** in networks. 
 
-Not surprisingly, a similar suite of techniques exist for the two-mode case, but until recently various approaches were scattered (and reduplicated) across a bunch of literatures in social network analysis, ecology, network physics, and  computer science [@neal_etal24]. 
+Not surprisingly, a similar suite of techniques exist for the two-mode case, but until recently various approaches were scattered (and reduplicated) across a bunch of literatures in social network analysis, ecology, network physics, and computer science [@neal_etal24]. 
 
 ## Two-Mode Erdos-Renyi Model
 
@@ -22,46 +22,46 @@ Like with one-mode networks, the simplest null model for two-mode networks is on
 Let's load up the *Southern Women* (SW) data and see how it works:
 
 ```{r}
-   library(igraph)
-   library(networkdata)
-   A <- as_biadjacency_matrix(southern_women)
+ library(igraph)
+ library(networkdata)
+ A <- as_biadjacency_matrix(southern_women)
 ```
 
 Let's compute some [basic two-mode network statistics](tm-basic.qmd):
 
 ```{r}
-   d <- sum(A)/(nrow(A)*ncol(A)) #density
-   ad.p <- mean(rowSums(A)) #average degree of people
-   ad.g <- mean(colSums(A)) #average degree of groups
-   d
-   ad.p
-   ad.g
+ d <- sum(A)/(nrow(A)*ncol(A)) #density
+ ad.p <- mean(rowSums(A)) #average degree of people
+ ad.g <- mean(colSums(A)) #average degree of groups
+ d
+ ad.p
+ ad.g
 ```
 
-We can see that the density of the SW network is $d=$ `r round(d, 2)`, the average degree of people $\bar{k_p}=$ `r round(ad.p, 2)` and the average degree of groups $\bar{k_g}=$ `r round(ad.g, 2)`.  
+We can see that the density of the SW network is $d=$ `r round(d, 2)`, the average degree of people $\bar{k_p}=$ `r round(ad.p, 2)` and the average degree of groups $\bar{k_g}=$ `r round(ad.g, 2)`. 
 
-Now, let's compute something on this network, like the **degree correlation** between people and groups, answering  the question: Do people with lots of memberships tend to join larger groups?
+Now, let's compute something on this network, like the **degree correlation** between people and groups, answering the question: Do people with lots of memberships tend to join larger groups?
 
 We already know the answer to this question for the SW data from the [two-mode network analysis lecture notes](tm-basic.qmd), which is negative. In this network people with a lot of memberships connect to smaller groups. 
 
 Here's a version of that function that takes the biadjacency matrix as input, creates the bipartite matrix from it and returns the two-mode degree correlation:
 
 ```{r}
-   tm.deg.corr <- function(x) {
-      B <- rbind(
-                  cbind(matrix(0, nrow = nrow(x), ncol = nrow(x)), x),
-                  cbind(t(x), matrix(0, nrow = ncol(x), ncol = ncol(x)))
-                  ) #creating bipartite matrix
-      d <- data.frame(e = as.vector(B), 
-                      rd = rep(rowSums(B), ncol(B)), 
-                      cd = rep(colSums(B), each = nrow(B))
-                      )
-      return(cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd))
-   }
+ tm.deg.corr <- function(x) {
+ B <- rbind(
+ cbind(matrix(0, nrow = nrow(x), ncol = nrow(x)), x),
+ cbind(t(x), matrix(0, nrow = ncol(x), ncol = ncol(x)))
+ ) #creating bipartite matrix
+ d <- data.frame(e = as.vector(B), 
+ rd = rep(rowSums(B), ncol(B)), 
+ cd = rep(colSums(B), each = nrow(B))
+ )
+ return(cor(d[d$e == 1, ]$rd, d[d$e == 1, ]$cd))
+ }
 ```
 
 ```{r}
-   tm.deg.corr(A)
+ tm.deg.corr(A)
 ```
 
 Which is the same number we got before. 
@@ -71,8 +71,8 @@ Now let's see how we can generate an Erdos-Renyi two-mode network with a specifi
 First, let's create a vectorized version of the adjacency matrix:
 
 ```{r}
-   v.a <- as.vector(A)
-   v.a
+ v.a <- as.vector(A)
+ v.a
 ```
 
 These are just the biadjacency matrix entries stretched out into a long vector of length equal to the number of rows multiplied by the number of columns of the matrix (`r nrow(A)` $\times$ `r ncol(A)` $=$ `r nrow(A)*ncol(A)`). 
@@ -80,92 +80,92 @@ These are just the biadjacency matrix entries stretched out into a long vector o
 Then we just reshuffle the values of this vector by reassigning vector positions across the entire length of the vector at random:
 
 ```{r}
-   v.shuff <- v.a[sample(1:length(v.a))]
+ v.shuff <- v.a[sample(1:length(v.a))]
 ```
 
 Now we can just generate a new biadjacency matrix `A.perm` from the reshuffled vector `v.shuff`:
 
 ```{r}
-   A.perm <- matrix(v.shuff, nrow = nrow(A)) #creating permuted biadjacency matrix
-   rownames(A.perm) <- rownames(A)
-   colnames(A.perm) <- colnames(A)
-   A.perm
+ A.perm <- matrix(v.shuff, nrow = nrow(A)) #creating permuted biadjacency matrix
+ rownames(A.perm) <- rownames(A)
+ colnames(A.perm) <- colnames(A)
+ A.perm
 ```
 
 We can verify that `A.perm` has the same basic network statistics as `A`:
 
 ```{r}
-   d <- sum(A.perm)/(nrow(A.perm)*ncol(A.perm)) #density
-   ad.p <- mean(rowSums(A.perm)) #average degree of people
-   ad.g <- mean(colSums(A.perm)) #average degree of groups
-   d
-   ad.p
-   ad.g
+ d <- sum(A.perm)/(nrow(A.perm)*ncol(A.perm)) #density
+ ad.p <- mean(rowSums(A.perm)) #average degree of people
+ ad.g <- mean(colSums(A.perm)) #average degree of groups
+ d
+ ad.p
+ ad.g
 ```
 
 But *not* the same degree distributions:
 
 ```{r}
-   rowSums(A)
-   rowSums(A.perm)
-   colSums(A)
-   colSums(A.perm)
+ rowSums(A)
+ rowSums(A.perm)
+ colSums(A)
+ colSums(A.perm)
 ```
 
 We can now package the two-mode permutation steps into a function called `tm.perm`:
 
 ```{r}
-   tm.perm <- function(x) {
-      w <- matrix(as.vector(x)[sample(1:length(v.a))], nrow = nrow(x))
-      rownames(w) <- rownames(x)
-      colnames(w) <- colnames(x)
-      return(w)
-   }
+ tm.perm <- function(x) {
+ w <- matrix(as.vector(x)[sample(1:length(v.a))], nrow = nrow(x))
+ rownames(w) <- rownames(x)
+ colnames(w) <- colnames(x)
+ return(w)
+ }
 ```
 
 And generate a 500 strong two-mode Erdos-Renyi graph ensemble for the SW data:
 
 ```{r}
-   set.seed(4567)
-   G <- replicate(500, tm.perm(A), simplify = FALSE)
+ set.seed(4567)
+ G <- replicate(500, tm.perm(A), simplify = FALSE)
 ```
 
 We can now `sapply` the `tm.deg.corr` function from before across our ensemble to get 500 degree correlations:
 
 ```{r}
-   corrs <- sapply(G, tm.deg.corr)
-   corrs[1:100] #first hundred entries
+ corrs <- sapply(G, tm.deg.corr)
+ corrs[1:100] #first hundred entries
 ```
 
 So let's see how our observed value stacks up in the grand scheme:
 
 ```{r}
-   library(ggplot2)
-   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
-   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
-                       color = "red", linetype = 1, linewidth = 1.5)
-   p <- p + geom_vline(xintercept = 0, linetype = 1, 
-                       color = "purple", linewidth = 1.5)
-   p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
-   p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.04, y=45, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.3, y=45, label= "Obs. Value", color = "red")
-   p
+ library(ggplot2)
+ p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+ p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+ p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+ color = "red", linetype = 1, linewidth = 1.5)
+ p <- p + geom_vline(xintercept = 0, linetype = 1, 
+ color = "purple", linewidth = 1.5)
+ p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
+ p <- p + theme(axis.text = element_text(size = 12))
+ p <- p + annotate("text", x=-0.04, y=45, label= "Zero Point", color = "purple")
+ p <- p + annotate("text", x=-0.3, y=45, label= "Obs. Value", color = "red")
+ p
 ```
 
 It looks like our observed value is close to the tail end of the negative spectrum, suggesting it is statistically improbable to have been obvserved by chance. We can compute the value that corresponds to the 1st percentile of the assortativity distribution from the ensemble and then see if what observe is below that value ($p < 0.01$). 
 
 ```{r}
-   quantile(corrs, probs = 0.01)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.01)
+ quantile(corrs, probs = 0.01)
+ tm.deg.corr(A) < quantile(corrs, probs = 0.01)
 ```
 
 Whoops. Looks like the observed value is not extreme enough using a $p <0.01$ criterion of statistical significance. Let's try a less stringent one:
 
 ```{r}
-   quantile(corrs, probs = 0.05)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+ quantile(corrs, probs = 0.05)
+ tm.deg.corr(A) < quantile(corrs, probs = 0.05)
 ```
 
 Aha! A test of the hypothesis that the observed value is smaller than the value at the 95th percentile of the distribution of values in this null graph ensemble returns a positive answer, suggesting that degree anti-correlation is present in the SW data, at statistically significant levels, net of density. 
@@ -173,7 +173,7 @@ Aha! A test of the hypothesis that the observed value is smaller than the value 
 As before, if we wanted a more stringent **two-tailed test** we would need to create a vector with the *absolute value* of the two-mode degree correlation: 
 
 ```{r}
-   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+ 1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
 Which is still statistically significant at conventional levels ($p <0.05$). 
@@ -190,96 +190,96 @@ Let's begin with the simplest case, in which we fix *either* the row or column d
 To fix the row degrees, we need to randomize the entries in each row of the biadjacency matrix, while preserving the number of ones in that row. One way to do this is to write a function that takes an observed row of the matrix, randomizes it and then substitutes it for the observed row:
 
 ```{r}
-   rand.row <- function(r) {
-      return(r[sample(1:length(r))])
-      }
+ rand.row <- function(r) {
+ return(r[sample(1:length(r))])
+ }
 ```
 
 Now we can just `apply` the `rand.row` function to each row of the biadjacency matrix `A` to generate a new matrix `A.r`:
 
 ```{r}
-   A.r <- apply(A, 1, rand.row)
-   A.r <- t(A.r)
-   rownames(A.r) <- rownames(A)
-   colnames(A.r) <- colnames(A)
+ A.r <- apply(A, 1, rand.row)
+ A.r <- t(A.r)
+ rownames(A.r) <- rownames(A)
+ colnames(A.r) <- colnames(A)
 ```
 
 Here's the original matrix `A`:
 
 ```{r}
-   A
+ A
 ```
 
 And the reshuffled matrix `A.r`
 
 ```{r}
-   A.r
+ A.r
 ```
 
 Note that the new matrix `A.r` preserves the person degrees of the original:
 
 ```{r}
-   rowSums(A)
-   rowSums(A.r)
+ rowSums(A)
+ rowSums(A.r)
 ```
 
 But not the group degrees, because each person's memberships are randomly distributed across groups:
 
 ```{r}
-   colSums(A)
-   colSums(A.r)
+ colSums(A)
+ colSums(A.r)
 ```
 
 All the other lower order statistics like density are preserved:
 
 ```{r}
-   sum(A.r)/(nrow(A.r)*ncol(A.r))
+ sum(A.r)/(nrow(A.r)*ncol(A.r))
 ```
 
 Now we package everything into a function:
 
 ```{r}
-   fix.deg <- function(x, mode = 1) {
-      w <- apply(x, mode, function(r) {r[sample(1:length(r))]})
-      if (mode == 1) {
-         w <- t(w)
-         }
-      rownames(w) <- rownames(x)
-      colnames(w) <- colnames(x)
-      return(w)
-      }
+ fix.deg <- function(x, mode = 1) {
+ w <- apply(x, mode, function(r) {r[sample(1:length(r))]})
+ if (mode == 1) {
+ w <- t(w)
+ }
+ rownames(w) <- rownames(x)
+ colnames(w) <- colnames(x)
+ return(w)
+ }
 ```
 
 We then generate a graph ensemble of reshuffled matrices that preserve the person degrees, and compute our degree correlations in that set of networks:
 
 ```{r}
-   set.seed(4567)
-   G <- replicate(500, fix.deg(A), simplify = FALSE)
-   corrs <- sapply(G, tm.deg.corr)
+ set.seed(4567)
+ G <- replicate(500, fix.deg(A), simplify = FALSE)
+ corrs <- sapply(G, tm.deg.corr)
 ```
 
 Let's compute the degree correlations across this ensemble and see how our observed value stacks up in the grand scheme:
 
 ```{r, echo=FALSE}
-   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
-   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
-                       color = "red", linetype = 1, linewidth = 1.5)
-   p <- p + geom_vline(xintercept = 0, linetype = 1, 
-                       color = "purple", linewidth = 1.5)
-   p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
-   p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.3, y=47, label= "Obs. Value", color = "red")
-   p
+ p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+ p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+ p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+ color = "red", linetype = 1, linewidth = 1.5)
+ p <- p + geom_vline(xintercept = 0, linetype = 1, 
+ color = "purple", linewidth = 1.5)
+ p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
+ p <- p + theme(axis.text = element_text(size = 12))
+ p <- p + annotate("text", x=-0.05, y=47, label= "Zero Point", color = "purple")
+ p <- p + annotate("text", x=-0.3, y=47, label= "Obs. Value", color = "red")
+ p
 ```
 
 Looking pretty good! Let's check the p-value:
 
 ```{r}
-   quantile(corrs, probs = 0.05)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
-   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+ quantile(corrs, probs = 0.05)
+ tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+ 1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
 Neat! Our result can continue to be defended at the $p < 0.05$ level. Still a chance of getting published.
@@ -290,57 +290,57 @@ We can fix the column degrees using the same `fix.deg` function as earlier, but 
 For instance:
 
 ```{r}
-   A.c <- fix.deg(A, mode = 2)
-   A.c
+ A.c <- fix.deg(A, mode = 2)
+ A.c
 ```
 
 Which generates a reshuffled adjacency matrix that preserves the group degrees:
 
 ```{r}
-   colSums(A)
-   colSums(A.c)
+ colSums(A)
+ colSums(A.c)
 ```
 
 But *not* the person degrees:
 
 ```{r}
-   rowSums(A)
-   rowSums(A.c)
+ rowSums(A)
+ rowSums(A.c)
 ```
 
 And now we test our hypothesis that there is degree anti-correlation in the SW data on an ensemble of graphs with fixed group degrees:
 
 
 ```{r}
-   set.seed(4567)
-   G <- replicate(500, fix.deg(A, mode = 2), simplify = FALSE)
-   corrs <- sapply(G, tm.deg.corr)
+ set.seed(4567)
+ G <- replicate(500, fix.deg(A, mode = 2), simplify = FALSE)
+ corrs <- sapply(G, tm.deg.corr)
 ```
 
 Let's see how things look:
 
 ```{r, echo=FALSE}
-   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
-   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
-                       color = "red", linetype = 1, linewidth = 1.5)
-   p <- p + geom_vline(xintercept = 0, linetype = 1, 
-                       color = "purple", linewidth = 1.5)
-   p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
-   p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.05, y=85, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.31, y=85, label= "Obs. Value", color = "red")
-   p
+ p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+ p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+ p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+ color = "red", linetype = 1, linewidth = 1.5)
+ p <- p + geom_vline(xintercept = 0, linetype = 1, 
+ color = "purple", linewidth = 1.5)
+ p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
+ p <- p + theme(axis.text = element_text(size = 12))
+ p <- p + annotate("text", x=-0.05, y=85, label= "Zero Point", color = "purple")
+ p <- p + annotate("text", x=-0.31, y=85, label= "Obs. Value", color = "red")
+ p
 ```
 
-Uh oh, adjusting for group degrees seems to have made our conclusions a bit more shaky. All of the estimated degree correlations are negative (below zero) and our observed value does not seem to be as extreme as before.   
+Uh oh, adjusting for group degrees seems to have made our conclusions a bit more shaky. All of the estimated degree correlations are negative (below zero) and our observed value does not seem to be as extreme as before. 
 
 Let' see what the p-values say:
 
 ```{r}
-   quantile(corrs, probs = 0.05)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
-   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+ quantile(corrs, probs = 0.05)
+ tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+ 1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
 Still significant at $p < 0.05$! 
@@ -354,75 +354,75 @@ Below is a function called `make.swap` that implements this algorithm, called "c
 
 
 ```{r}
-   make.swap <- function(x, k = 100) {
-      z <- 1 #initializing counter
-      while(z <= k) {
-         n <- sample(rownames(x), 2) #sampling two people at random
-         a <- n[1] #person a
-         b <- n[2] #person b
-         a.m <- names(which(x[a, ] == 1)) #person a's memberships
-         b.m <- names(which(x[b, ] == 1)) #person b's memberships
-         ab <- setdiff(a.m, b.m) #memberships that a has that b does not
-         ba <- setdiff(b.m, a.m) #memberships that b has that a does not
-         w <- sample(0:min(length(ab), length(ba)), size = 1) #number of rounds of trade
-         if (w > 0) {
-            for (i in 1:w) {
-               ab.m <- sample(ab, 1) #membership that a will transfer to b
-               ba.m <- sample(ba, 1) #membership that b will transfer to a
-               x[a, ab.m] <- 0 #a loses membership
-               x[b, ab.m] <- 1 #b gains membership
-               x[b, ba.m] <- 0 #b loses membership
-               x[a, ba.m] <- 1 #a gains membership
-               a.m <- names(which(x[a, ] == 1)) #updating a's memberships
-               b.m <- names(which(x[b, ] == 1)) #updating b's memberships
-               ab <- setdiff(a.m, b.m) #updating differences between a and b's memberships
-               ba <- setdiff(b.m, a.m) #updating differences between b and a's memberships
-               }
-            }
-         z <- z + 1 #incrementing counter
-         }
-      return(x)
-   }
+ make.swap <- function(x, k = 100) {
+ z <- 1 #initializing counter
+ while(z <= k) {
+ n <- sample(rownames(x), 2) #sampling two people at random
+ a <- n[1] #person a
+ b <- n[2] #person b
+ a.m <- names(which(x[a, ] == 1)) #person a's memberships
+ b.m <- names(which(x[b, ] == 1)) #person b's memberships
+ ab <- setdiff(a.m, b.m) #memberships that a has that b does not
+ ba <- setdiff(b.m, a.m) #memberships that b has that a does not
+ w <- sample(0:min(length(ab), length(ba)), size = 1) #number of rounds of trade
+ if (w > 0) {
+ for (i in 1:w) {
+ ab.m <- sample(ab, 1) #membership that a will transfer to b
+ ba.m <- sample(ba, 1) #membership that b will transfer to a
+ x[a, ab.m] <- 0 #a loses membership
+ x[b, ab.m] <- 1 #b gains membership
+ x[b, ba.m] <- 0 #b loses membership
+ x[a, ba.m] <- 1 #a gains membership
+ a.m <- names(which(x[a, ] == 1)) #updating a's memberships
+ b.m <- names(which(x[b, ] == 1)) #updating b's memberships
+ ab <- setdiff(a.m, b.m) #updating differences between a and b's memberships
+ ba <- setdiff(b.m, a.m) #updating differences between b and a's memberships
+ }
+ }
+ z <- z + 1 #incrementing counter
+ }
+ return(x)
+ }
 ```
 
 Here's an example:
 
 ```{r}
-   A.s <- make.swap(A)
-   A.s
+ A.s <- make.swap(A)
+ A.s
 ```
 
 We can see that while the specifc entries of the swapped biadjacency matrix `A.s` are different from those of the original matrix `A` both the row and column degrees are preserved:
  
 ```{r}
-   rowSums(A.s)
-   rowSums(A)
-   colSums(A.s)
-   colSums(A)
+ rowSums(A.s)
+ rowSums(A)
+ colSums(A.s)
+ colSums(A)
 ```
 
 And now we create our graph ensemble with fixed row *and* column degrees, and test our degree anti-correlation hypothesis:
 
 ```{r}
-   set.seed(4567)
-   G <- replicate(500, make.swap(A), simplify = FALSE)
-   corrs <- sapply(G, tm.deg.corr)
+ set.seed(4567)
+ G <- replicate(500, make.swap(A), simplify = FALSE)
+ corrs <- sapply(G, tm.deg.corr)
 ```
 
 Plotting the results gives us:
 
 ```{r, echo=FALSE}
-   p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
-   p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
-   p <- p + geom_vline(xintercept = tm.deg.corr(A), 
-                       color = "red", linetype = 1, linewidth = 1.5)
-   p <- p + geom_vline(xintercept = 0, linetype = 1, 
-                       color = "purple", linewidth = 1.5)
-   p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
-   p <- p + theme(axis.text = element_text(size = 12))
-   p <- p + annotate("text", x=-0.03, y=70, label= "Zero Point", color = "purple")
-   p <- p + annotate("text", x=-0.31, y=70, label= "Obs. Value", color = "red")
-   p
+ p <- ggplot(data = data.frame(round(corrs, 2)), aes(x = corrs))
+ p <- p + geom_histogram(binwidth = 0.015, stat = "bin", fill = "darkblue")
+ p <- p + geom_vline(xintercept = tm.deg.corr(A), 
+ color = "red", linetype = 1, linewidth = 1.5)
+ p <- p + geom_vline(xintercept = 0, linetype = 1, 
+ color = "purple", linewidth = 1.5)
+ p <- p + theme_minimal() + labs(x = "Degree Correlation", y = "Freq.")
+ p <- p + theme(axis.text = element_text(size = 12))
+ p <- p + annotate("text", x=-0.03, y=70, label= "Zero Point", color = "purple")
+ p <- p + annotate("text", x=-0.31, y=70, label= "Obs. Value", color = "red")
+ p
 ```
 
 Like before, all of the estimated degree correlations are below zero, and also like before, the observed value does not look as extreme as with the Erdos-Renyi or fixed degree model for either rows or columns separately. 
@@ -430,14 +430,14 @@ Like before, all of the estimated degree correlations are below zero, and also l
 Let's check the p-value at $p < 0.05$:
 
 ```{r}
-   quantile(corrs, probs = 0.05)
-   tm.deg.corr(A) < quantile(corrs, probs = 0.05)
+ quantile(corrs, probs = 0.05)
+ tm.deg.corr(A) < quantile(corrs, probs = 0.05)
 ```
 
 No longer significant! What's the actual p-value? 
 
 ```{r}
-   1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
+ 1 - ecdf(abs(corrs))(abs(tm.deg.corr(A)))
 ```
 
 As suspected, the two-tailed test indicates that the hypothesis of degree anti-correlation is no longer justified in these data even using a criterion of $p < 0.05$. 

@@ -1,14 +1,14 @@
 ---
 title: "Exponential Random Graphs Models II"
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 In the previous handout we saw how to fit exponential random graph models (ergms) for simple undirected networks. As noted, these models are useful for *multivariate null hypothesis testing* using network data, answering questions of the form: Is this network statistic larger or smaller than I would expect by chance, after conditioning (e.g., "controling for") these *other* network statistics? 
@@ -26,21 +26,21 @@ The key network statistic that we need to think about in the directed case is **
 In an ergm, we use the `mutual` term to condition on the number of dyads featuring arcs going on both directions (e.g., from $i$ to $j$ *and* from $j$ to $i$).
 
 Let's see an example using Krackhardt's High-Tech Managers:
-   
+ 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   library(ergm)
-   library(intergraph)
-   set.seed(123)
-   g1 <- ht_friends
-   n1 <- asNetwork(g1)
-   g2 <- ht_advice
-   n2 <- asNetwork(g2)
-   m1 <- ergm(n1 ~ edges + mutual)
-   summary(m1)
-   m2 <- ergm(n2 ~ edges + mutual)
-   summary(m2)
+ library(networkdata)
+ library(igraph)
+ library(ergm)
+ library(intergraph)
+ set.seed(123)
+ g1 <- ht_friends
+ n1 <- asNetwork(g1)
+ g2 <- ht_advice
+ n2 <- asNetwork(g2)
+ m1 <- ergm(n1 ~ edges + mutual)
+ summary(m1)
+ m2 <- ergm(n2 ~ edges + mutual)
+ summary(m2)
 ```
 
 Here we see strong evidence for mutuality effects in *friendship* nominations ($\theta_m = 1.33, p < 0.01$), consistent with the social meaning of the relation, but not in advice relations ($\theta_m = 0.17, p = 0.57$), suggesting that these ties are more hierarchical).
@@ -51,18 +51,18 @@ Next we may also want to fit models that condition on the different types of dep
 
 - *Nodes that receive a tie are more likely to receive another tie*. This is a rich get richer effect for indegree.
 
-- *Nodes that send/receive a tie are more like to receive/send a tie*. This fits the correlation between in and outdegree at the node level. If positive, nodes that send ties also receive ties.   
+- *Nodes that send/receive a tie are more like to receive/send a tie*. This fits the correlation between in and outdegree at the node level. If positive, nodes that send ties also receive ties. 
 
 The respective ergm terms for these three effects are `ostar(2)`, `istar(2)` and `twopath`. 
 
 Let's test for a twopath effect in the friendship and advice networks:
 
 ```{r}
-   set.seed(123)
-   m3 <- ergm(n1 ~ edges + mutual + twopath)
-   summary(m3)
-   m4 <- ergm(n2 ~ edges + mutual + twopath)
-   summary(m4)
+ set.seed(123)
+ m3 <- ergm(n1 ~ edges + mutual + twopath)
+ summary(m3)
+ m4 <- ergm(n2 ~ edges + mutual + twopath)
+ summary(m4)
 ```
 
 We can see that in the friendship network, there is no two path effect ($p = 0.76$); that is, people who send friendship nominations are not more or less likely to receive them. 
@@ -72,11 +72,11 @@ However, in the advice network, we see a significant and *negative* two path eff
 Now let's look at rich get richer effects by indegree: Are people who are nominated as friends byy one person more likely to be nominated as friends by others? Are people who are sought after for advice by one person more likely to be sought after for advice by others?
 
 ```{r}
-   set.seed(123)
-   m5 <- ergm(n1 ~ edges + mutual + istar(2))
-   summary(m5)
-   m6 <- ergm(n2 ~ edges + mutual + twopath + istar(2))
-   summary(m6)
+ set.seed(123)
+ m5 <- ergm(n1 ~ edges + mutual + istar(2))
+ summary(m5)
+ m6 <- ergm(n2 ~ edges + mutual + twopath + istar(2))
+ summary(m6)
 ```
 
 We can that friendship network displays not cumulative advantage by indegree, but that they advice network does ($\theta_{is} = 0.13$), consistent with the idea that the latter is more unequal and hierarchical. Note also that once we adjust for the two path and the rich get richer indegree effect, we can see a strong *mutuality* effect in advice relations ($\theta_{m} = 0.77$). 
@@ -84,43 +84,43 @@ We can that friendship network displays not cumulative advantage by indegree, bu
 Now, let's adjust for the tendency of people who send one tie, to send other ties:
 
 ```{r}
-   set.seed(123)
-   m7 <- ergm(n1 ~ edges + mutual + ostar(2), 
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m7)
-   m8 <- ergm(n2 ~ edges + mutual + twopath  
-                 + istar(2) + ostar(2),  
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m8)
+ set.seed(123)
+ m7 <- ergm(n1 ~ edges + mutual + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m7)
+ m8 <- ergm(n2 ~ edges + mutual + twopath 
+ + istar(2) + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m8)
 ```
 
 We can now see that in contrast to the previous null results, there is outdegree dependency between nominations sent by the same node in the friendship network: People who nominate one person as a friend tend to nominate others ($\theta_{os} = 0.27, p < 0.01$). 
 
-In the advice network, we can see that all tendencies are operative, as the network displays all forms of degree dependence at the node level, along with mutuality.  
+In the advice network, we can see that all tendencies are operative, as the network displays all forms of degree dependence at the node level, along with mutuality. 
 
 We can also incorporate homophily based non attributes into our analysis of reciprocity. That is, we can test hypotheses of the form: Is mutuality weaker or stronger for dyads that match on a certain characteristic?
 
 For instance, we may suspect that friendship ties among high-tech managers are influenced by formal organizational position, so that there is more mutuality within levels (e.g., mid-manager to mid-manager) than across levels (mid to lower-level). This is what @lusher_etal13 [p. 18] call "reciprocated homophily."
 
 We can test this hypothesis as using the `same` argument in the `mutual` ergm term:
-   
+ 
 ```{r}
-   set.seed(123)
-   m9 <- ergm(n1 ~ edges 
-              + mutual(same = "level", diff = TRUE, levels = 2)
-              + ostar(2), 
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m9)
-   
-   m10 <- ergm(n2 ~ edges 
-              + mutual(same = "level", diff = TRUE, levels = 2)
-              + twopath  + istar(2) + ostar(2), 
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m10)
+ set.seed(123)
+ m9 <- ergm(n1 ~ edges 
+ + mutual(same = "level", diff = TRUE, levels = 2)
+ + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m9)
+ 
+ m10 <- ergm(n2 ~ edges 
+ + mutual(same = "level", diff = TRUE, levels = 2)
+ + twopath + istar(2) + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m10)
 ```
 
 Recall than in this network there are three managerial levels but only one top manager, so we here, we compare the middle level to the rest. And indeed, we find that compared to lower level managers, tendencies toward mutuality in friendship choices are stronger among mid-level managers. Note also that once we adjust for this attribute-specific mutuality effect, the two path effect in the advice network is no longer significant. 
@@ -128,24 +128,23 @@ Recall than in this network there are three managerial levels but only one top m
 We can also test hypotheses of the form: Are nodes with certain characteristics more likely to be involved in mutual dyads *regardless of the characteristics of the node at the other end of the tie*? That is, this tests for differential tendencies toward mutuality with other people in the network based on an actor attribute.
 
 We can do this using the `by` argument in the `mutual` term, this time using department as the relevant attribute:
-   
+ 
 ```{r}
-   set.seed(123)
-   m11 <- ergm(n1 ~ edges 
-              + mutual(by = "dept", levels = 2:4)
-              + ostar(2), 
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m11)
-   
-   m12 <- ergm(n2 ~ edges 
-              + mutual(by = "dept", levels = 2:4)
-              + istar(2) + ostar(2), 
-              estimate = "MPLE",
-              control = control.ergm(MPLE.covariance.method = "Godambe"))
-   summary(m12)
+ set.seed(123)
+ m11 <- ergm(n1 ~ edges 
+ + mutual(by = "dept", levels = 2:4)
+ + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m11)
+ 
+ m12 <- ergm(n2 ~ edges 
+ + mutual(by = "dept", levels = 2:4)
+ + istar(2) + ostar(2), 
+ estimate = "MPLE",
+ control = control.ergm(MPLE.covariance.method = "Godambe"))
+ summary(m12)
 ```
 
 The results show that, in the friendship network, nodes in Dept 2 tend to have more mutual ties compared to nodes in Dept 1 (the reference), in the advice network, both nodes in Dept 2 and and Dept 4 tend to have more mutual ties, while nodes in Dept 3 are not statistically different from nodes in Dept 1. 
-
 

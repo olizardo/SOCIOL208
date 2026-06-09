@@ -1,14 +1,14 @@
 ---
 title: "Using Cliques to Assign Nodes to Overlapping Communities "
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 @palla_etal05 provide a simple and intuitive way to partition a network into overlapping communities. The basic idea is to leverage the fact that **cliques** in a network (fully connected subgraphs of size $k$) are likely to share nodes (hence this approach is commonly referred to as the **clique percolation** method). Communities can then be defined as a clique-concatenation, with linkages between cliques determined by a set of shared members $q$, typically set to $k-1$.
@@ -16,12 +16,12 @@ format:
 Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:
 
 ```{r}
-    library(networkdata)
-    library(igraph)
-    g <- law_friends
-    g <- subgraph(g, degree(g) >= 2)
-    ug <- as_undirected(g, mode = "collapse")
-    V(ug)$name <- as.character(1:vcount(ug))
+ library(networkdata)
+ library(igraph)
+ g <- law_friends
+ g <- subgraph(g, degree(g) >= 2)
+ ug <- as_undirected(g, mode = "collapse")
+ V(ug)$name <- as.character(1:vcount(ug))
 ```
 
 What @palla_etal05 propose is to build communities from a set of **maximal cliques** (fully connected subgraphs of a given size $k$ that are themselves not subsets of a larger fully connected subgraph). 
@@ -29,7 +29,7 @@ What @palla_etal05 propose is to build communities from a set of **maximal cliqu
 So the first thing we need to do is settle on a value of $k$, here we use $k = 6$. 
 
 ```{r}
-    k <- 6
+ k <- 6
 ```
 
 ## Finding Maximal Cliques and Creating a Bi-Adjacency Matrix
@@ -37,22 +37,22 @@ So the first thing we need to do is settle on a value of $k$, here we use $k = 6
 And now we can use the `igraph` function `max_cliques` to find all of the maximal cliques of that size:
 
 ```{r}
-    cliques <- max_cliques(ug, min = k, max = k)
-    length(cliques)
+ cliques <- max_cliques(ug, min = k, max = k)
+ length(cliques)
 ```
 
 We can see that there are 24 maximal cliques of size `r k` by querying the length of the list returned by the `max_cliques` function (containing the node ids of the members of each clique as entries). We now have all of the information necessary to create our clique overlap matrix. 
 
-The first step is to create a **bi-adjacency** matrix representing the **two-mode network** of people and the cliques they belong to (see [here](basic-tm.qmd)). To do that, we first create an empty bi-adjacency matrix full of zeros called `B` of dimensions `r vcount(ug)` by `r length(cliques)`,  loop through the list of maximal cliques we created earlier called `cliques`, and insert a one in the corresponding row/column combination:
+The first step is to create a **bi-adjacency** matrix representing the **two-mode network** of people and the cliques they belong to (see [here](basic-tm.qmd)). To do that, we first create an empty bi-adjacency matrix full of zeros called `B` of dimensions `r vcount(ug)` by `r length(cliques)`, loop through the list of maximal cliques we created earlier called `cliques`, and insert a one in the corresponding row/column combination:
 
 ```{r}
-    n <- vcount(ug) #number of nodes
-    c <- length(cliques) #number of cliques
-    B <- matrix(0, nrow = n, ncol = c) #all zeros bi-adjacency matrix
-    for (i in seq_len(c)) {
-        B[cliques[[i]], i] <- 1 #filling in bi-adjacency matrix
-        }
-    B[1:10, 1:10]
+ n <- vcount(ug) #number of nodes
+ c <- length(cliques) #number of cliques
+ B <- matrix(0, nrow = n, ncol = c) #all zeros bi-adjacency matrix
+ for (i in seq_len(c)) {
+ B[cliques[[i]], i] <- 1 #filling in bi-adjacency matrix
+ }
+ B[1:10, 1:10]
 ```
 
 The matrix `B` now has a 1 in the corresponding cell if the row person belongs to the column clique, and 0 otherwise. 
@@ -60,8 +60,8 @@ The matrix `B` now has a 1 in the corresponding cell if the row person belongs t
 We can now use the standard projection approach due to @breiger74 to create a clique-by-clique overlap matrix (see [here](basic-tm-duality.qmd)):
 
 ```{r}
-    M <- t(B) %*% B
-    M[1:10, 1:10]
+ M <- t(B) %*% B
+ M[1:10, 1:10]
 ```
 
 ## Binarizing the Clique Overlap Matrix
@@ -69,20 +69,20 @@ We can now use the standard projection approach due to @breiger74 to create a cl
 Next, we binarize the clique overlap matrix `M` in three steps. First, we set the diagonal elements of the overlap matrix to zero. Second, we set to zero the entries corresponding to pairs of cliques that have overlap at most $q = k-1$. Finally, we set to one all the remaining non-zero entries:
 
 ```{r}
-    q <- k - 1
-    diag(M) <- 0 #setting diagonals to zero
-    M[M < q] <- 0 #setting overlaps less than q to zero
-    M[M != 0] <- 1 #setting remaining non-zero entries to one
+ q <- k - 1
+ diag(M) <- 0 #setting diagonals to zero
+ M[M < q] <- 0 #setting overlaps less than q to zero
+ M[M != 0] <- 1 #setting remaining non-zero entries to one
 ```
 
 Our overlapping communities are the connected components of the resulting binarized clique graph:
 
 ```{r}
-    cg <- graph_from_adjacency_matrix(M, mode = "undirected")
-    comps <- components(cg)$membership
-    names(comps) <- as.character(1:length(comps))
-    comps
-    max(comps)
+ cg <- graph_from_adjacency_matrix(M, mode = "undirected")
+ comps <- components(cg)$membership
+ names(comps) <- as.character(1:length(comps))
+ comps
+ max(comps)
 ```
 
 We can see that the analysis resulted in `r max(comps)` overlapping clique communities. 
@@ -90,17 +90,17 @@ We can see that the analysis resulted in `r max(comps)` overlapping clique commu
 Now, we create a `list` object containing the node ids for each of the `r max(comps)` communities, merging together (using the native `R` function `union`) the nodes of the overlapping cliques that belong to the same component of the clique overlap graph: 
 
 ```{r}
-    communities <- list() 
-    for (i in 1:max(comps)) {
-        communities[[i]] <- Reduce(union, cliques[which(comps == as.character(i))])
-        }
-    # communities[[length(communities) + 1]] <- setdiff(as.numeric(V(ug)$name), unique(unlist(communities)))
+ communities <- list() 
+ for (i in 1:max(comps)) {
+ communities[[i]] <- Reduce(union, cliques[which(comps == as.character(i))])
+ }
+ # communities[[length(communities) + 1]] <- setdiff(as.numeric(V(ug)$name), unique(unlist(communities)))
 ```
 
 And here are the node IDs of each of the `r max(comps)` communities:
 
 ```{r}
-    communities
+ communities
 ```
 
 ## Creating the Community Membership Bi-Adjacency Matrix
@@ -108,30 +108,30 @@ And here are the node IDs of each of the `r max(comps)` communities:
 Next, we create a two-mode bi-adjacency matrix `Z` containing the membership of each node in each of the twelve communities:
 
 ```{r}
-    Z <- matrix(0, vcount(ug), length(communities))
-    for (i in seq_len(length(communities))) {
-        Z[as.numeric(communities[[i]]), i] <- 1
-        }
+ Z <- matrix(0, vcount(ug), length(communities))
+ for (i in seq_len(length(communities))) {
+ Z[as.numeric(communities[[i]]), i] <- 1
+ }
 ```
 
 The column sums of the `Z` matrix give us the size of each community:
 
 ```{r}
-    colSums(Z)
+ colSums(Z)
 ```
 
 The row sums of the `Z` matrix give us the number of communities each node belongs to:
 
 ```{r}
-    rowSums(Z)
+ rowSums(Z)
 ```
 
 We can see that some nodes do not belong to any of the communities (they are isolates in the two-mode node-by-community network), so we reduce the `Z` matrix to get rid of them:
 
 ```{r}
-    non.zero <- which(rowSums(Z) != 0)
-    Z <- Z[non.zero, ]
-    dim(Z)
+ non.zero <- which(rowSums(Z) != 0)
+ Z <- Z[non.zero, ]
+ dim(Z)
 ```
 
 This retains `r nrow(Z)` out of the original `r vcount(ug)` nodes in the network.
@@ -139,7 +139,7 @@ This retains `r nrow(Z)` out of the original `r vcount(ug)` nodes in the network
 We can now create a subgraph of the original graph containing only those nodes 
 
 ```{r}
-    ug <- subgraph(ug, non.zero)
+ ug <- subgraph(ug, non.zero)
 ```
 
 Finally, we can use some fancy `igraph` pie chart plotting to visualize the mixed memberships of each node in each community:
@@ -150,36 +150,36 @@ Finally, we can use some fancy `igraph` pie chart plotting to visualize the mixe
 #| fig-height: 12
 #| fig-width: 12
 #| echo: false
-    W_raw <- split(Z/rowSums(Z), seq(nrow(Z)))
-    W <- lapply(W_raw, function(x) {x[which(x != 0)]})
-    ccol <- lapply(W_raw, function(x) {which(x != 0)})
-    library(RColorBrewer)   
-    getPalette = colorRampPalette(categorical_pal(8))
-    pal = getPalette(ncol(Z))
-    V(ug)$shape <- "pie"
-    V(ug)$pie <- W
-    c.list <- lapply(ccol, function(x) {pal[x]})
-    names(c.list) <- V(ug)$name
-    V(ug)$pie.color <- c.list
-    set.seed(123)
-    plot(ug, 
-        layout = layout_with_kk,       
-        vertex.size = 8,             
-        vertex.label.color = "black", 
-        vertex.label.font = 2,      
-        vertex.label.cex = 1.5,   
-        edge.width = 2,                
-        edge.color = "lightblue",
-        vertex.label.dist = 1.2,
-        vertex.label.degree = 180,
-        edge.curved=0.2
-        )
-    legend("topright", 
-       legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")), 
-       fill = pal, 
-       bty = "n",  # No box around legend
-       cex = 1.5
-       )  # Text size
+ W_raw <- split(Z/rowSums(Z), seq(nrow(Z)))
+ W <- lapply(W_raw, function(x) {x[which(x != 0)]})
+ ccol <- lapply(W_raw, function(x) {which(x != 0)})
+ library(RColorBrewer) 
+ getPalette = colorRampPalette(categorical_pal(8))
+ pal = getPalette(ncol(Z))
+ V(ug)$shape <- "pie"
+ V(ug)$pie <- W
+ c.list <- lapply(ccol, function(x) {pal[x]})
+ names(c.list) <- V(ug)$name
+ V(ug)$pie.color <- c.list
+ set.seed(123)
+ plot(ug, 
+ layout = layout_with_kk, 
+ vertex.size = 8, 
+ vertex.label.color = "black", 
+ vertex.label.font = 2, 
+ vertex.label.cex = 1.5, 
+ edge.width = 2, 
+ edge.color = "lightblue",
+ vertex.label.dist = 1.2,
+ vertex.label.degree = 180,
+ edge.curved=0.2
+ )
+ legend("topright", 
+ legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")), 
+ fill = pal, 
+ bty = "n", # No box around legend
+ cex = 1.5
+ ) # Text size
 ```
 
 We can see for instance that some sets of nodes (e.g., {64, 65, 66, 67, 68} and {28, 32, 35, 48, 55}) belong to communities with minimal overlap with others (closer to classical communities), while other nodes (e.g., 31 and 13) stand in the middle of multiple communities, centrally located at their intersection. 

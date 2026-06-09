@@ -1,14 +1,14 @@
 ---
 title: "Status and Prestige in Two Mode Networks"
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 ## Two-Mode Networks as Prisms
@@ -26,32 +26,32 @@ For this reason, measures of status and prestige are particularly applicable to 
 Let's see an example using the classic Southern Women dataset. We can load it from the trusty `networkdata` package, and extract the bi-adjacency matrix from the `igraph` object:
 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   g <- southern_women
-   A <- as.matrix(as_biadjacency_matrix(g))
+ library(networkdata)
+ library(igraph)
+ g <- southern_women
+ A <- as.matrix(as_biadjacency_matrix(g))
 ```
 
 Below is a quick function that plays a two-mode version of the status distribution game that we described in the [status and prestige lesson](prest-eigen.qmd), and which is really just a modification of the one-mode HITS algorithm:
 
 ```{r}
-   tm.status <- function(w, z) {
-      y <- matrix(1/ncol(w), ncol(w), 1) #initial group status column vector set to a constant
-      delta <- 1 
-      k <- 0
-      while (delta > 1e-10) {
-         o.y <- y #old group status scores
-         x <- w %*% o.y #new people scores a function of people matrix and old group scores 
-         x <- x/norm(x, type = "E") #normalizing new people status scores 
-         y <- z %*% x #new group scores a function of group matrix and new people scores
-         y <- y/norm(y, type = "E") #normalizing new group status scores 
-         if (k > 1) {
-            delta <- abs(sum(abs(y) - abs(o.y))) #diff. between new and old group status scores
-            }
-         k <- k + 1
-         }
-   return(list(p.s = x, g.s = y))
-   }
+ tm.status <- function(w, z) {
+ y <- matrix(1/ncol(w), ncol(w), 1) #initial group status column vector set to a constant
+ delta <- 1 
+ k <- 0
+ while (delta > 1e-10) {
+ o.y <- y #old group status scores
+ x <- w %*% o.y #new people scores a function of people matrix and old group scores 
+ x <- x/norm(x, type = "E") #normalizing new people status scores 
+ y <- z %*% x #new group scores a function of group matrix and new people scores
+ y <- y/norm(y, type = "E") #normalizing new group status scores 
+ if (k > 1) {
+ delta <- abs(sum(abs(y) - abs(o.y))) #diff. between new and old group status scores
+ }
+ k <- k + 1
+ }
+ return(list(p.s = x, g.s = y))
+ }
 ```
 
 The function takes the two-mode **biadjacency matrix** $\mathbf{A}$ and its **transpose** $\mathbf{A}^T$ as input and returns a vector of row-mode nodes (e.g., persons) scores `p.s`, a vector of column-mode (e.g., groups) status scores `g.s`.
@@ -61,24 +61,24 @@ The function works like this:
 - Line 2 initializes the original status scores for each group stored in the `y` object, which are just set to $|G|^{-1}$ where $|G|$ is the number of groups (the number of columns of the bi-adjacency matrix $\mathbf{A}$). 
 - Line 3 initializes the $\delta$ value, which determines when the `while` loop stops. Then, inside the `while` loop starting on line 5, we assign status scores to the people equal to the sum of the status scores of the groups they belong to in line 7, which is just $\mathbf{A}$ (`w`) post-multiplied by the group status vector $\mathbf{y}$, then we normalize the people status score vector in line 8 using the Euclidean vector norm. 
 - In line 9 we calculate the new group status vector (`y`), which, for each group, is given by the sum of the status scores of the people that belong them that we computed in line 7 (the transpose of the matrix `z` post-multiplied by the vector `x`). 
-- Finally, we normalize the new  group status scores in line 10 and compute the difference between these new group scores and the old one to calculate $\delta$. When $\delta$ is small ($\delta \leq 10^{-10}$) the `while` loop stops as the old and new scores have achieved convergence.
+- Finally, we normalize the new group status scores in line 10 and compute the difference between these new group scores and the old one to calculate $\delta$. When $\delta$ is small ($\delta \leq 10^{-10}$) the `while` loop stops as the old and new scores have achieved convergence.
 
 We can now use the `tm.status` function to estimate the status scores for people and groups:
 
 ```{r}
-   tm.hits <- tm.status(A, t(A))
+ tm.hits <- tm.status(A, t(A))
 ```
 
 Here are the scores for the people:
 
 ```{r}
-   round(tm.hits$p.s/max(tm.hits$p.s), 3)
+ round(tm.hits$p.s/max(tm.hits$p.s), 3)
 ```
 
 And for the groups:
 
 ```{r}
-   round(tm.hits$g.s/max(tm.hits$g.s), 3)
+ round(tm.hits$g.s/max(tm.hits$g.s), 3)
 ```
 
 Here, we can see that Theresa is the top person (attending the most central events) closely followed by Evelyn, with Flora and Nora toward the bottom. The event held at 9/16 is the top event (attended by the most central people).
@@ -90,37 +90,37 @@ When we use the usual affiliation matrix `A` and its transpose `t(A)` as inputs,
 Interestingly as @bonacich91 noted in that paper, the eigenvector status scores can *also* be obtained by playing the one-mode version of the status game over the Breiger-style one-mode projections of the two-mode network. 
 
 ```{r}
-   status1 <- function(w) {
-      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
-      d <- 1 #initial delta
-      k <- 0 #initializing counter
-      while (d > 1e-10) {
-          o.x <- x #old status scores
-          x <- w %*% o.x #new scores a function of old scores and adjacency matrix
-          x <- x/norm(x, type = "E") #normalizing new status scores
-          d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
-          k <- k + 1 #incrementing while counter
-      }
-   return(as.vector(x))
-   }
+ status1 <- function(w) {
+ x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+ d <- 1 #initial delta
+ k <- 0 #initializing counter
+ while (d > 1e-10) {
+ o.x <- x #old status scores
+ x <- w %*% o.x #new scores a function of old scores and adjacency matrix
+ x <- x/norm(x, type = "E") #normalizing new status scores
+ d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
+ k <- k + 1 #incrementing while counter
+ }
+ return(as.vector(x))
+ }
 ```
 
 To see this, let's play the usual status game defined by the function `status1` over the one mode projections `P` and `G`. For people this would be:
 
 ```{r}
-   P <- A %*% t(A)
-   p.s <- status1(P)
-   names(p.s) <- rownames(A)
-   round(p.s/max(p.s), 3)
+ P <- A %*% t(A)
+ p.s <- status1(P)
+ names(p.s) <- rownames(A)
+ round(p.s/max(p.s), 3)
 ```
 
 And for groups:
 
 ```{r}
-   G <- t(A) %*% A 
-   g.s <- status1(G)
-   names(g.s) <- colnames(A)
-   round(g.s/max(g.s), 3)
+ G <- t(A) %*% A 
+ g.s <- status1(G)
+ names(g.s) <- colnames(A)
+ round(g.s/max(g.s), 3)
 ```
 
 Lo and behold, these are the same status scores we obtained via the biHITS approach. 
@@ -137,9 +137,9 @@ $$
 \lambda \mathbf{y} = \mathbf{A}^T\mathbf{x}
 $$
 
-Which says that the status scores of persons  $\mathbf{x}$ are just the sums of the status scores of the groups each person is connected to, and the status scores of groups $\mathbf{y}$ are just the sum of the scores of the people that join them.  
+Which says that the status scores of persons $\mathbf{x}$ are just the sums of the status scores of the groups each person is connected to, and the status scores of groups $\mathbf{y}$ are just the sum of the scores of the people that join them. 
 
-Just like we saw in the discussion of [prestige scoring for one-mode networks](prest-eigen.qmd), this is the usual cat chasing its own tail circular equation problem. To know the person status scores $\mathbf{x}$ we need to know the group status scores  $\mathbf{y}$ and vice versa.
+Just like we saw in the discussion of [prestige scoring for one-mode networks](prest-eigen.qmd), this is the usual cat chasing its own tail circular equation problem. To know the person status scores $\mathbf{x}$ we need to know the group status scores $\mathbf{y}$ and vice versa.
 
 This is also a classic eigenvector/eigenvaue problem, which means that we can find the person and groups status scores using the [eigendecomposition](eigen.qmd) approach. 
 
@@ -148,18 +148,18 @@ Since we have a rectangular biadjacency matrix, we can proceed in two ways. We c
 Let's see the first approach in action first, using the `R` function `svd`:
 
 ```{r}
-   eig <- svd(A) #singular value decomposition of biadjacency matrix
-   eig.p <- eig$u[, 1] *-1  #vector of person prestige scores
-   eig.g <- eig$v[, 1] *-1 #vector of group prestige scores
-   names(eig.p) <- rownames(A)
-   names(eig.g) <- colnames(A)
+ eig <- svd(A) #singular value decomposition of biadjacency matrix
+ eig.p <- eig$u[, 1] *-1 #vector of person prestige scores
+ eig.g <- eig$v[, 1] *-1 #vector of group prestige scores
+ names(eig.p) <- rownames(A)
+ names(eig.g) <- colnames(A)
 ```
 
 And for the big reveal:
 
 ```{r}
-   round(eig.p/max(eig.p), 3)
-   round(eig.g/max(eig.g), 3)
+ round(eig.p/max(eig.p), 3)
+ round(eig.g/max(eig.g), 3)
 ```
 
 Which are the same scores we obtained earlier. 
@@ -177,19 +177,19 @@ $$
 In `R` we can do this using the `eigen` function:
 
 ```{r}
-   eig.p <- eigen(P)
-   eig.g <- eigen(G)
-   p.s <- eig.p$vector[, 1] * -1
-   g.s <- eig.g$vector[, 1] * -1
-   names(p.s) <- rownames(A)
-   names(g.s) <- colnames(A)
+ eig.p <- eigen(P)
+ eig.g <- eigen(G)
+ p.s <- eig.p$vector[, 1] * -1
+ g.s <- eig.g$vector[, 1] * -1
+ names(p.s) <- rownames(A)
+ names(g.s) <- colnames(A)
 ```
 
 And for the big reveal:
 
 ```{r}
-   round(p.s/max(p.s), 3)
-   round(g.s/max(g.s), 3)
+ round(p.s/max(p.s), 3)
+ round(g.s/max(g.s), 3)
 ```
 
 Neat! These are the same scores we obtained by playing our status game on the affiliation matrix (biHITS) using `tm.status`, playing the same game on the one-mode projection (Bonacich) using the `status1` function, or using `svd` to obtain the leading eigenvector of the biadjacency matrix. 
@@ -203,14 +203,14 @@ Another way of thinking of the eigenvector status score of each node in this con
 For instance the unnormalized eigenvector status scores for persons and groups are:
 
 ```{r}
-   p.s
-   g.s
+ p.s
+ g.s
 ```
 
 So for any person, let's say {EVELYN}, their eigenvector centrality is equal to:
 
 ```{r}
-   sum(A["EVELYN", ] * g.s) * 1/sqrt(eig.p$values[1])
+ sum(A["EVELYN", ] * g.s) * 1/sqrt(eig.p$values[1])
 ```
 
 Which is indeed Evelyn's Eigenvector score. 
@@ -218,7 +218,7 @@ Which is indeed Evelyn's Eigenvector score.
 The same goes for the eigenvector score of groups, which are just a weighted sum of the Eigenvector centralities of the people who belong to them:
 
 ```{r}
-   sum(A[, "6/27"] * p.s) * 1/sqrt(eig.p$values[1])
+ sum(A[, "6/27"] * p.s) * 1/sqrt(eig.p$values[1])
 ```
 
 Which is indeed the eigenvector score for the event held on 6/27. 
@@ -236,8 +236,8 @@ To do that, we create new versions of the affiliation matrix $\mathbf{A}$ and it
 To do this, imagine that $\mathbf{D}_p$ is a matrix containing the *inverse* of the degrees of each person (number of memberships) along the diagonals. This matrix can be created in `R` as follows:
 
 ```{r}
-   D.p <- diag(1/rowSums(A))
-   round(D.p, 2)
+ D.p <- diag(1/rowSums(A))
+ round(D.p, 2)
 ```
 
 Recalling that the row sums of $\mathbf{A}$ give us the person degrees.
@@ -245,8 +245,8 @@ Recalling that the row sums of $\mathbf{A}$ give us the person degrees.
 And then we do the same for groups by creating a matrix $\mathbf{D}_g$ containing the *inverse* of the degrees of each group (number of members) along the diagonals.
 
 ```{r}
-   D.g <- diag(1/colSums(A))
-   round(D.g, 2)
+ D.g <- diag(1/colSums(A))
+ round(D.g, 2)
 ```
 
 Recalling that the column sums of $\mathbf{A}$ give us the group degrees.
@@ -254,16 +254,16 @@ Recalling that the column sums of $\mathbf{A}$ give us the group degrees.
 Now we can construct degree-normalized versions of the original bi-adjacency matrix and its transpose like this:
 
 ```{r}
-   P.n <- A %*% D.g 
-   colnames(P.n) <- colnames(A)
-   G.n <- t(A) %*% D.p
-   colnames(G.n) <- rownames(A)
+ P.n <- A %*% D.g 
+ colnames(P.n) <- colnames(A)
+ G.n <- t(A) %*% D.p
+ colnames(G.n) <- rownames(A)
 ```
 
 Let's see what's in the matrix `P.n`:
 
 ```{r}
-   round(P.n, 2)
+ round(P.n, 2)
 ```
 
 The `P.n` matrix is of the same dimensions as the original affiliation matrix `A`. However, the ${ij}^{th}$ cell is now equal to $1/k_j$ where $k_j$ is the number of members of group $j$. That means that if group $j$ has a lot of members then the ${ij}^{th}$ cell will contain a small number (as in column in the non-zero entries in the column corresponding to event `9-16`) but when the group is small, the ${ij}^{th}$ cell will contain a bigger number (as in the non-zero entries in the column corresponding to event `11-21`). This means the people who belong to smaller groups will have more centrality points to distribute. 
@@ -271,20 +271,20 @@ The `P.n` matrix is of the same dimensions as the original affiliation matrix `A
 The same goes for groups, as we can see by checking out the `G.n` matrix:
 
 ```{r}
-   round(G.n, 2)
+ round(G.n, 2)
 ```
 
 Note that both matrices `P.n` and `G.n` are **column stochastic** which means that its columns sum to one. We can check for this property as follows:
 
 ```{r}
-   colSums(P.n)
-   colSums(G.n)
+ colSums(P.n)
+ colSums(G.n)
 ```
 
 So now, to calculate the two-mode PageRank status score, we just play our two-mode status game on these matrices: 
 
 ```{r}
-   tm.pr <- tm.status(P.n, G.n)
+ tm.pr <- tm.status(P.n, G.n)
 ```
 
 Note that because the bi-adjacency matrices that go into the `tm.status` function are already normalized, we can set the `norm` argument of the function to `FALSE`.
@@ -292,13 +292,13 @@ Note that because the bi-adjacency matrices that go into the `tm.status` functio
 Here are the resulting scores for the people:
 
 ```{r}
-   round(tm.pr$p.s/max(tm.pr$p.s), 3)
+ round(tm.pr$p.s/max(tm.pr$p.s), 3)
 ```
 
 And for the groups:
 
 ```{r}
-   round(tm.pr$g.s/max(tm.pr$g.s), 3)
+ round(tm.pr$g.s/max(tm.pr$g.s), 3)
 ```
 
 The resulting scores are the same ones returned by the "co-HITS" algorithm of @deng_etal09. 
@@ -308,14 +308,14 @@ On this ranking, the top persons are Theresa and Nora (who wasn't as highly rank
 We can of course obtain the same two-mode PageRank scores using different approaches. One alternative is to use the "PageRank" projections and play the regular (one-mode) status game on them:
 
 ```{r}
-   P.pr <- P.n %*% G.n
-   G.pr <- G.n %*% P.n
-   pr.p <- status1(P.pr)
-   pr.g <- status1(G.pr)
-   names(pr.p) <- rownames(A)
-   names(pr.g) <- colnames(A)
-   round(pr.p/max(pr.p), 3)
-   round(pr.p/max(pr.g), 3)
+ P.pr <- P.n %*% G.n
+ G.pr <- G.n %*% P.n
+ pr.p <- status1(P.pr)
+ pr.g <- status1(G.pr)
+ names(pr.p) <- rownames(A)
+ names(pr.g) <- colnames(A)
+ round(pr.p/max(pr.p), 3)
+ round(pr.p/max(pr.g), 3)
 ```
 
 Neat!
@@ -325,13 +325,13 @@ Neat!
 Another approach is to compute the leading eigenvector of the PageRank normalized projections using the `eigen` function:
 
 ```{r}
-   pr.p <- abs(Re(eigen(P.pr)$vectors[, 1]))
-   names(pr.p) <- rownames(A)
-   round(pr.p/max(pr.p), 3)
+ pr.p <- abs(Re(eigen(P.pr)$vectors[, 1]))
+ names(pr.p) <- rownames(A)
+ round(pr.p/max(pr.p), 3)
 
-   pr.g <- abs(Re(eigen(G.pr)$vectors[, 1]))
-   names(pr.g) <- colnames(A)
-   round(pr.g/max(pr.g), 3)
+ pr.g <- abs(Re(eigen(G.pr)$vectors[, 1]))
+ names(pr.g) <- colnames(A)
+ round(pr.g/max(pr.g), 3)
 ```
 
 Which gives us the same solutions as before. 
@@ -347,15 +347,15 @@ To do that, it would be useful to come up with versions of `P.n` and `G.n` that 
 For people we can proceed as follows:
 
 ```{r}
-   P.n2 <- D.p %*% A %*% D.g
-   rownames(P.n2) <- rownames(A)
-   colnames(P.n2) <- colnames(A)
+ P.n2 <- D.p %*% A %*% D.g
+ rownames(P.n2) <- rownames(A)
+ colnames(P.n2) <- colnames(A)
 ```
 
 Let's see what's inside the new `P.n2` matrix:
 
 ```{r}
-   round(P.n2, 2)
+ round(P.n2, 2)
 ```
 
 We can see that now, people with lots of memberships (like Evelyn) get their centrality points reduced relative to people with not that many memberships like Charlotte. 
@@ -363,8 +363,8 @@ We can see that now, people with lots of memberships (like Evelyn) get their cen
 This is easy to see if we compare the row sums of the two matrices, which give us the total amount of centrality points each person has to distribute:
 
 ```{r}
-   rowSums(P.n)
-   rowSums(P.n2)
+ rowSums(P.n)
+ rowSums(P.n2)
 ```
 
 Note that while in the original `P.n` matrix Evelyn has way more centrality points to distribute than Charlotte (a ratio of `r round(rowSums(P.n)[1]/rowSums(P.n)[5], 2)`), this discrepancy is much smaller in the new `P.n2` double-normalized matrix (a ratio of `r round(rowSums(P.n2)[1]/rowSums(P.n2)[5], 2)`). 
@@ -372,29 +372,29 @@ Note that while in the original `P.n` matrix Evelyn has way more centrality poin
 We can now the same normalization for groups:
 
 ```{r}
-   G.n2 <- D.g %*% t(A) %*% D.p
-   rownames(G.n2) <- colnames(A)
-   colnames(G.n2) <- rownames(A)
+ G.n2 <- D.g %*% t(A) %*% D.p
+ rownames(G.n2) <- colnames(A)
+ colnames(G.n2) <- rownames(A)
 ```
 
 
 Now to compute our double-normalized PageRank status scores, we just play the status game on these degree-normalized matrices:
 
 ```{r}
-   tm.bgrm <- tm.status(P.n2, G.n2)
+ tm.bgrm <- tm.status(P.n2, G.n2)
 ```
 Which implements the "BGRM" algorithm of @rui_etal07 [589, eq. 8].^[The acronym stands for "Bipartite Graph Reinforcement Model."] 
 
 Here are the resulting scores for the people:
 
 ```{r}
-   round(tm.bgrm$p.s/max(tm.bgrm$p.s), 3)
+ round(tm.bgrm$p.s/max(tm.bgrm$p.s), 3)
 ```
 
 And for the groups:
 
 ```{r}
-   round(tm.bgrm$g.s/max(tm.bgrm$g.s), 3)
+ round(tm.bgrm$g.s/max(tm.bgrm$g.s), 3)
 ```
 
 We can see that the most highly ranked women are now Olivia and Flora (in contrast to Evelyn, Theresa, and Nora in the standard PageRank scores), who used to be toward the bottom when using the traditional Bonacich prestige or PageRank scoring. In the same way, the top event is now the one held on 2/23, which wasn't particularly distinguished using the other ranking algorithms. 
@@ -404,35 +404,35 @@ We can see that the most highly ranked women are now Olivia and Flora (in contra
 Here's how it works. First, we create our new $\mathbf{P}$ matrix for people:
 
 ```{r}
-   P.n3 <- diag(1/sqrt(rowSums(A))) %*% A %*% diag(1/sqrt(colSums(A)))
-   rownames(P.n3) <- rownames(A)
-   colnames(P.n3) <- colnames(A)
+ P.n3 <- diag(1/sqrt(rowSums(A))) %*% A %*% diag(1/sqrt(colSums(A)))
+ rownames(P.n3) <- rownames(A)
+ colnames(P.n3) <- colnames(A)
 ```
 
 And another for the groups:
 
 ```{r}
-   G.n3 <- diag(1/sqrt(colSums(A))) %*% t(A) %*% diag(1/sqrt(rowSums(A)))
-   rownames(G.n3) <- colnames(A)
-   colnames(G.n3) <- rownames(A)
+ G.n3 <- diag(1/sqrt(colSums(A))) %*% t(A) %*% diag(1/sqrt(rowSums(A)))
+ rownames(G.n3) <- colnames(A)
+ colnames(G.n3) <- rownames(A)
 ```
 
 And now we run our status game on these matrices:
 
 ```{r}
-   tm.birank <- tm.status(P.n3, G.n3)
+ tm.birank <- tm.status(P.n3, G.n3)
 ```
 
 And here are the resulting scores for people:
 
 ```{r}
-   round(tm.birank$p.s/max(tm.birank$p.s), 3)
+ round(tm.birank$p.s/max(tm.birank$p.s), 3)
 ```
 
 And for the groups:
 
 ```{r}
-   round(tm.birank$g.s/max(tm.birank$g.s), 3)
+ round(tm.birank$g.s/max(tm.birank$g.s), 3)
 ```
 
 A summary of the four prestige ranking models for two-mode networks goes as follows:
@@ -442,30 +442,29 @@ A summary of the four prestige ranking models for two-mode networks goes as foll
 #| label: tbl-tmranks
 #| tbl-cap: "Prestige Scores for the Southern Women Data According to Four Algorithms"
 #| tbl-subcap: 
-#|   - "Persons"
-#|   - "Groups"
+#| - "Persons"
+#| - "Groups"
 #| layout-ncol: 2
 
-   p.tab <- data.frame(hits = round(tm.hits$p.s/max(tm.hits$p.s), 3), 
-                       pr = round(tm.pr$p.s/max(tm.pr$p.s), 3), 
-                       bgrm = round(tm.bgrm$p.s/max(tm.bgrm$p.s), 3),
-                       birank = round(tm.birank$p.s/max(tm.birank$p.s), 3),
-                       k = rowSums(A))
-   p.tab <- p.tab[order(p.tab$k, decreasing = TRUE), ]
-   g.tab <- data.frame(hits = round(tm.hits$g.s/max(tm.hits$g.s), 3), 
-                       pr = round(tm.pr$g.s/max(tm.pr$g.s), 3), 
-                       bgrm = round(tm.bgrm$g.s/max(tm.bgrm$g.s), 3),
-                       birank = round(tm.birank$g.s/max(tm.birank$g.s), 3),
-                       k = colSums(A))
-   g.tab <- g.tab[order(g.tab$k, decreasing = TRUE), ]
-   library(kableExtra)
-   kbl(p.tab, 
-       format = "html", align = "c",
-       caption = "Person Prestige Scores Ordered by Degree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
-   kbl(g.tab, 
-       format = "html", align = "c",
-       caption = "Group Prestige Scores Ordered by Degree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
+ p.tab <- data.frame(hits = round(tm.hits$p.s/max(tm.hits$p.s), 3), 
+ pr = round(tm.pr$p.s/max(tm.pr$p.s), 3), 
+ bgrm = round(tm.bgrm$p.s/max(tm.bgrm$p.s), 3),
+ birank = round(tm.birank$p.s/max(tm.birank$p.s), 3),
+ k = rowSums(A))
+ p.tab <- p.tab[order(p.tab$k, decreasing = TRUE), ]
+ g.tab <- data.frame(hits = round(tm.hits$g.s/max(tm.hits$g.s), 3), 
+ pr = round(tm.pr$g.s/max(tm.pr$g.s), 3), 
+ bgrm = round(tm.bgrm$g.s/max(tm.bgrm$g.s), 3),
+ birank = round(tm.birank$g.s/max(tm.birank$g.s), 3),
+ k = colSums(A))
+ g.tab <- g.tab[order(g.tab$k, decreasing = TRUE), ]
+ library(kableExtra)
+ kbl(p.tab, 
+ format = "html", align = "c",
+ caption = "Person Prestige Scores Ordered by Degree") %>% kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+ column_spec(1, bold = TRUE)
+ kbl(g.tab, 
+ format = "html", align = "c",
+ caption = "Group Prestige Scores Ordered by Degree") %>% kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+ column_spec(1, bold = TRUE)
 ``` 
-

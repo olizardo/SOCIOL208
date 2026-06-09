@@ -1,14 +1,14 @@
 ---
 title: "Community Detection Using Spectral Clustering"
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 ## Spectral Clustering
@@ -44,33 +44,33 @@ We then normalize the node-specific row-vector of values of the$\mathbf{U}$ matr
 Let's see how that would work. Let's load the `law_friends` data from the `networkdata` package containing information on the friendship nominations of 68 lawyers in a firm. We have already analyzed these data using other community detection algorithms in a previous handout. The original data are directed, so we constrain them to be undirected and remove nodes with degree less than two:
 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   g <- law_friends
-   g <- as_undirected(g, mode = "collapse")
-   g <- subgraph(g, degree(g)>=2) #removing low degree nodes
+ library(networkdata)
+ library(igraph)
+ g <- law_friends
+ g <- as_undirected(g, mode = "collapse")
+ g <- subgraph(g, degree(g)>=2) #removing low degree nodes
 ```
 
 We can then write a function called `ratio.cut` that accomplishes the eigendecomposition of the graph Laplacian matrix described earlier. It looks like this:
 
 ```{r}
-   ratio.cut <- function(x, k = 6) {
-         A <- as.matrix(as_adjacency_matrix(x))
-         D <- diag(degree(x))
-         n <- vcount(x)
-         L <- D - A
-         eig.L <- eigen(L)
-         b <- n - k
-         e <- n - 1
-         U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
-         if (k > 1) {
-            U <- U[, k:1] #re-ordering columns from smallest to biggest
-            }
-         for (i in 1:nrow(U)) {
-            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
-            }
-      return(U)
-   }
+ ratio.cut <- function(x, k = 6) {
+ A <- as.matrix(as_adjacency_matrix(x))
+ D <- diag(degree(x))
+ n <- vcount(x)
+ L <- D - A
+ eig.L <- eigen(L)
+ b <- n - k
+ e <- n - 1
+ U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
+ if (k > 1) {
+ U <- U[, k:1] #re-ordering columns from smallest to biggest
+ }
+ for (i in 1:nrow(U)) {
+ U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+ }
+ return(U)
+ }
 ```
 
 This function takes a graph as input and produces the $\mathbf{U}$ matrix with $n$ rows and $k$ columns, with $k=6$ by default. It first computes the adjacency matrix (line 2), then the degree matrix (line 3), then the Laplacian matrix (line 5). It then computes the eigendecomposition of the Laplacian (line 6), row normalizes the values taken by the eigenvectors corresponding to the $k$ smallest eigenvalues in lines 10-13 (reverse-ordered from smallest to biggest in line 9), and returns the resulting matrix $\mathbf{U}$ in line 14.
@@ -78,8 +78,8 @@ This function takes a graph as input and produces the $\mathbf{U}$ matrix with $
 Let's see the function at work:
 
 ```{r}
-   U <- ratio.cut(g)
-   round(U, 2)[1:10, ]
+ U <- ratio.cut(g)
+ round(U, 2)[1:10, ]
 ```
 
 Which shows the corresponding values of $\mathbf{U}$ for each node across the six eigenvectors of the Laplacian we selected. 
@@ -92,15 +92,15 @@ The following function computes cluster assignments of the nodes in the graph up
 
 
 ```{r}
-   k.cuts <- function(x, max = 9) {
-      clus <- list()
-      for (i in 1:max) {
-         set.seed(456) #setting seed because kmeans uses random starting nodes for cluster centroids
-         k <- i + 1
-         clus[[i]] <- kmeans(x, k)$cluster
-         }
-      return(clus)
-   }
+ k.cuts <- function(x, max = 9) {
+ clus <- list()
+ for (i in 1:max) {
+ set.seed(456) #setting seed because kmeans uses random starting nodes for cluster centroids
+ k <- i + 1
+ clus[[i]] <- kmeans(x, k)$cluster
+ }
+ return(clus)
+ }
 ```
 
 This function takes the $\mathbf{U}$ matrix as input and returns a nine-element list (with vectors of length $n$ as its elements) of cluster assignments for each node in the graph, corresponding to partitions $k = \{2, 3, \ldots 10\}$ respectively. 
@@ -108,8 +108,8 @@ This function takes the $\mathbf{U}$ matrix as input and returns a nine-element 
 Let's see the clustering function at work:
 
 ```{r}
-   clus <- k.cuts(U)
-   clus
+ clus <- k.cuts(U)
+ clus
 ```
 
 Great! Now that we have our partitions, we need to check the modularity corresponding to each one of them. 
@@ -117,15 +117,15 @@ Great! Now that we have our partitions, we need to check the modularity correspo
 We can do this with the following quick function:
 
 ```{r}
-   mod.check <- function(x, c) {
-      k <- length(c)
-      m <- rep(0, k)
-      for (i in 1:k) {
-         m[i] <- modularity(x, c[[i]])
-         }
-      names(m) <- 2:(k+1)
-      return(m)
-      }
+ mod.check <- function(x, c) {
+ k <- length(c)
+ m <- rep(0, k)
+ for (i in 1:k) {
+ m[i] <- modularity(x, c[[i]])
+ }
+ names(m) <- 2:(k+1)
+ return(m)
+ }
 ```
 
 Which takes an `igraph` graph object and the list of cluster assignments as input and produces a vector of the same length as the list of cluster assignments with the modularity corresponding to that assignment.
@@ -133,68 +133,68 @@ Which takes an `igraph` graph object and the list of cluster assignments as inpu
 Let's see this function at work in our running example:
 
 ```{r}
-   mod.res <- mod.check(g, clus)
-   round(mod.res, 3)
+ mod.res <- mod.check(g, clus)
+ round(mod.res, 3)
 ```
 
-Which suggests that the three-cluster partition of the network (shown in @fig-friends-2) does pretty well in separating densely connected subgraphs ($Q = 0.36$). 
+Which suggests that the three-cluster partition of the network (shown in -2) does pretty well in separating densely connected subgraphs ($Q = 0.36$). 
 
 Note that this partition looks a lot like the one we settled on using Newman's divisive leading eigenvector approach based on the modularity matrix: One core dense group of lawyers surrounded by a looser couple of communities.
 
 
-```{r}  
+```{r} 
 #| label: fig-friends
 #| fig-height: 12
 #| fig-width: 12
 #| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Ratio Cut"
 #| fig-subcap:
-#|   - "Original Network"
-#|   - "Maximum Modularity Solution)"
-#|   - "Four Community Solution"
-#|   - "Five Community Solution"
-#|   - "Six Community Solution"
-#|   - "Seven Community Solution"
+#| - "Original Network"
+#| - "Maximum Modularity Solution)"
+#| - "Four Community Solution"
+#| - "Five Community Solution"
+#| - "Six Community Solution"
+#| - "Seven Community Solution"
 #| layout-ncol: 2
 #| echo: false
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 k <- max(which(mod.res == max(mod.res))) #maximum modularity solution
 V(g)$color <- clus[[2]]
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[3]] #four cluster solution
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[4]] #five cluster solution
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[5]] #four cluster solution
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[6]] #five cluster solution
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 ```
 
-Note also that the four, five, six and even seven-community partitions are not too shabby either. We can see those in @fig-friends-3-@fig-friends-6 as they reveal further insights into the group structure of the network beyond the main three-community division. 
+Note also that the four, five, six and even seven-community partitions are not too shabby either. We can see those in -3- -6 as they reveal further insights into the group structure of the network beyond the main three-community division. 
 
 Note that further subdivisions of the network split the more loosely structured community in the upper-right, while the more densely linked community in the lower-left remains largely undisturbed. 
 
@@ -212,24 +212,24 @@ Where everything else is as before and $\mathbf{I}$ is the identity matrix (an $
 We can just adapt our previous `ratio.cut` function code to perform this new job:
 
 ```{r}
-   norm.ratio.cut <- function(x, k = 6) {
-         A <- as.matrix(as_adjacency_matrix(x))
-         n <- vcount(x)
-         I <- diag(1, n, n)
-         D <- diag(1/sqrt(degree(x)))
-         L <- I - (D %*% A %*% D)
-         eig.L <- eigen(L)
-         b <- n - k
-         e <- n - 1
-         U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
-         if (k > 1) {
-            U <- U[, k:1] #re-ordering columns from smallest to biggest
-            }         
-         for (i in 1:nrow(U)) {
-            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
-            }
-      return(U)
-   }
+ norm.ratio.cut <- function(x, k = 6) {
+ A <- as.matrix(as_adjacency_matrix(x))
+ n <- vcount(x)
+ I <- diag(1, n, n)
+ D <- diag(1/sqrt(degree(x)))
+ L <- I - (D %*% A %*% D)
+ eig.L <- eigen(L)
+ b <- n - k
+ e <- n - 1
+ U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
+ if (k > 1) {
+ U <- U[, k:1] #re-ordering columns from smallest to biggest
+ } 
+ for (i in 1:nrow(U)) {
+ U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+ }
+ return(U)
+ }
 ```
 
 Where we just have to modify the way we define the $\mathbf{D}$ and $\mathbf{L}$ matrices in lines 5 and 6 respectively, after creating the $\mathbf{I}$ matrix in line 4. 
@@ -237,41 +237,41 @@ Where we just have to modify the way we define the $\mathbf{D}$ and $\mathbf{L}$
 Now let's see if the normalized cut can help us finds some communities:
 
 ```{r}
-   U <- norm.ratio.cut(g)
-   clus <- k.cuts(U)
-   mod.res <- mod.check(g, clus)
-   round(mod.res, 3)
+ U <- norm.ratio.cut(g)
+ clus <- k.cuts(U)
+ mod.res <- mod.check(g, clus)
+ round(mod.res, 3)
 ```
 
 
-```{r}  
+```{r} 
 #| label: fig-friends2
 #| fig-height: 12
 #| fig-width: 12
 #| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Normalized Ratio Cut"
 #| fig-subcap:
-#|   - "Five Community Solution"
-#|   - "Six Community Solution"
+#| - "Five Community Solution"
+#| - "Six Community Solution"
 #| layout-ncol: 2
 #| echo: false
 
 V(g)$color <- clus[[4]]
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[5]] 
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 ```
 
 As we can see, the normalized ratio cut approach performs almost as well as the ratio cut approach in terms of the maximum modularity it finds ($Q = 0.35$), but suggests a finer grained partition, with the maximum at either five or six communities. 
 
-The resulting node clusters are shown in @fig-friends2-1 and @fig-friends2-2. 
+The resulting node clusters are shown in 2-1 and 2-2. 
 
 ## Spectral Clustering Using the Eigenvectors of the *Degree-Normalized* Laplacian
 
@@ -286,24 +286,24 @@ Which is just the original Laplacian as defined earlier with each entry divided 
 A function that extracts the relevant eigenvectors of this version of the normalized Laplacian goes as follows:
 
 ```{r}
-   d.norm.ratio.cut <- function(x, k = 6) {
-         A <- as.matrix(as_adjacency_matrix(x))
-         n <- vcount(x)
-         I <- diag(1, n, n)
-         D <- diag(degree(x))
-         L <- solve(D) %*% (D - A)
-         eig.L <- eigen(L)
-         b <- n - k
-         e <- n - 1
-         U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
-         if (k > 1) {
-            U <- U[, k:1] #re-ordering columns from smallest to biggest
-            }         
-         for (i in 1:nrow(U)) {
-            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
-            }
-      return(U)
-   }
+ d.norm.ratio.cut <- function(x, k = 6) {
+ A <- as.matrix(as_adjacency_matrix(x))
+ n <- vcount(x)
+ I <- diag(1, n, n)
+ D <- diag(degree(x))
+ L <- solve(D) %*% (D - A)
+ eig.L <- eigen(L)
+ b <- n - k
+ e <- n - 1
+ U <- matrix(eig.L$vectors[, b:e], nrow = n, ncol = k)
+ if (k > 1) {
+ U <- U[, k:1] #re-ordering columns from smallest to biggest
+ } 
+ for (i in 1:nrow(U)) {
+ U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+ }
+ return(U)
+ }
 ```
 
 Where, once again, we only need to modify a couple of lines (5 and 6) from before to compute the new version of $\mathbf{L}$. 
@@ -311,36 +311,36 @@ Where, once again, we only need to modify a couple of lines (5 and 6) from befor
 To see the quality of the partitions obtained via this method, we just type:
 
 ```{r}
-   clus <- k.cuts(d.norm.ratio.cut(g))
-   mod.res <- mod.check(g, clus)
-   round(mod.res, 3)
+ clus <- k.cuts(d.norm.ratio.cut(g))
+ mod.res <- mod.check(g, clus)
+ round(mod.res, 3)
 ```
 
 The degree-normalized Laplacian once again prefers the three-community partition, but also shows that the *six* community partition produces a high-quality clustering. Here's how those look like:
 
-```{r}  
+```{r} 
 #| label: fig-friends3
 #| fig-height: 12
 #| fig-width: 12
 #| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Degree-Normalized Ratio Cut"
 #| fig-subcap:
-#|   - "Three Community Solution"
-#|   - "Six Community Solution"
+#| - "Three Community Solution"
+#| - "Six Community Solution"
 #| layout-ncol: 2
 #| echo: false
 
 V(g)$color <- clus[[2]]
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[5]] 
 set.seed(456)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 ```
 
 ## Clustering Using the Eigenvectors of the Modularity Matrix
@@ -352,18 +352,18 @@ The main difference is that rather than using the eigenvectors corresponding to 
 This approach, once again, only requires small modifications to the one we used for the Laplacian:
 
 ```{r}
-   mod.mat.cut <- function(x, k = 2) {
-         A <- as.matrix(as_adjacency_matrix(x))
-         n <- vcount(x)
-         d <- as.matrix(degree(x))
-         B <- A - (d %*% t(d))/sum(A)
-         eig.B <- eigen(B)
-         U <- eig.B$vectors[, 1:k]
-         for (i in 1:nrow(U)) {
-            U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
-            }
-      return(U)
-   }
+ mod.mat.cut <- function(x, k = 2) {
+ A <- as.matrix(as_adjacency_matrix(x))
+ n <- vcount(x)
+ d <- as.matrix(degree(x))
+ B <- A - (d %*% t(d))/sum(A)
+ eig.B <- eigen(B)
+ U <- eig.B$vectors[, 1:k]
+ for (i in 1:nrow(U)) {
+ U[i, ] <- U[i, ]/norm(as.matrix(U[i, ]), type = "E")
+ }
+ return(U)
+ }
 ```
 
 The key difference here is that we compute the modularity matrix $\mathbf{B}$ rather than $\mathbf{L}$ from the adjacency matrix $\mathbf{A}$ in line 5; we then plug $\mathbf{B}$ into the `eigen` function and proceed with normalizing in the same way as before. 
@@ -373,39 +373,38 @@ Another difference is that rather than using a large number of eigenvalues (e.g.
 Let's see how this works:
 
 ```{r}
-   U <- mod.mat.cut(g)
-   clus <- k.cuts(U)
-   mod.res <- mod.check(g, clus)
-   round(mod.res, 3)
+ U <- mod.mat.cut(g)
+ clus <- k.cuts(U)
+ mod.res <- mod.check(g, clus)
+ round(mod.res, 3)
 ```
 
-We can see that the three-cluster solution does really well modularity-wise ($Q = 0.37$), however, the four cluster solution also seems promising. The resulting communities are shown in @fig-friends3-1 and @fig-friends3-2. 
+We can see that the three-cluster solution does really well modularity-wise ($Q = 0.37$), however, the four cluster solution also seems promising. The resulting communities are shown in 3-1 and 3-2. 
 
 
-```{r}  
+```{r} 
 #| label: fig-friends4
 #| fig-height: 12
 #| fig-width: 12
 #| fig-cap: "Clustering of Nodes in the Law Firm Friendship Network Using the Spectral Decomposition of the Modularity Matrix."
 #| fig-subcap:
-#|   - "Three Community Solution"
-#|   - "Four Community Solution"
+#| - "Three Community Solution"
+#| - "Four Community Solution"
 #| layout-ncol: 2
 #| echo: false
 
 V(g)$color <- clus[[2]]
 set.seed(123)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 V(g)$color <- clus[[3]] 
 set.seed(123)
 plot(g, 
-     vertex.size=6, vertex.frame.color="lightgray", 
-     vertex.label = NA, edge.arrow.size = 0.25,
-     vertex.label.dist=1, edge.curved=0.2)
+ vertex.size=6, vertex.frame.color="lightgray", 
+ vertex.label = NA, edge.arrow.size = 0.25,
+ vertex.label.dist=1, edge.curved=0.2)
 ```
-
 
 

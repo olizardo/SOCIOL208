@@ -1,14 +1,14 @@
 ---
 title: "Hubs and Authorities"
 execute: 
-  eval: true
-  echo: true
-  output: true
-  warning: false
-  message: false
+ eval: true
+ echo: true
+ output: true
+ warning: false
+ message: false
 format: 
-   html:
-      code-line-numbers: true
+ html:
+ code-line-numbers: true
 ---
 
 Recall from [previous discussions](basic.qmd) that everything doubles (sometimes quadruples like degree correlations) in directed graphs. The same goes for status as reflected in a distributive model through the network. 
@@ -19,12 +19,12 @@ These two forms of status are mutually defining [@bonacich_lloyd01]. The top aut
 
 So this leads to a doubling of the Bonacich prestige status accounting equation:
 
-$$  
-   x^h_i = \sum_j a_{ij} x^a_j
+$$ 
+ x^h_i = \sum_j a_{ij} x^a_j
 $$
 
 $$
-   x^a_i = \sum_i a_{ij} x^h_i
+ x^a_i = \sum_i a_{ij} x^h_i
 $$
 
 Which says that the hub score $x^h$ of a node is the sum of the authority scores $x^a$ of the nodes they point to (sum over $j$; the outdegree), and the authority score of a node is the sum of the hub scores of the nodes that point to it (sum over $i$; the indegree). 
@@ -32,33 +32,33 @@ Which says that the hub score $x^h$ of a node is the sum of the authority scores
 So we need to make our [status game](prest-eigen.qmd) a bit more complicated (but not too much) to account for this duality:
 
 ```{r}
-   status2 <- function(w) {
-     a <- rep(1/nrow(w), nrow(w))  #initializing authority scores
-     d <- 1 #initializing delta
-     k <- 0 #initializing counter
-     while (d >= 1e-10) {
-         o.a <- a #old authority scores
-         h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
-         h <- h/norm(h, type = "E")
-         a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
-         a <- a/norm(a, type = "E")
-         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
-         k <- k + 1
-         }
-   return(list(h = as.vector(h), a = as.vector(a), k = k))
-   }
+ status2 <- function(w) {
+ a <- rep(1/nrow(w), nrow(w)) #initializing authority scores
+ d <- 1 #initializing delta
+ k <- 0 #initializing counter
+ while (d >= 1e-10) {
+ o.a <- a #old authority scores
+ h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
+ h <- h/norm(h, type = "E")
+ a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
+ a <- a/norm(a, type = "E")
+ d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+ k <- k + 1
+ }
+ return(list(h = as.vector(h), a = as.vector(a), k = k))
+ }
 ```
 
 Everything is like [our previous](prest-eigen.qmd) `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes or the number of rows in the adjacency matrix) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then updates the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7 normalize them in line 8 and update the new authority scores to be the sum (across each in-neighbor) of these new hub scores, which are then themselves normalized in line 10. 
 
 So at each step $t$, the authority and hub scores are calculated like this:
 
-$$  
-   x^h_i(t) = \sum_j a_{ij} x^a_j(t-1)
+$$ 
+ x^h_i(t) = \sum_j a_{ij} x^a_j(t-1)
 $$
 
 $$
-   x^a_i(t) = \sum_j a^T_{ij} x^h_j(t)
+ x^a_i(t) = \sum_j a^T_{ij} x^h_j(t)
 $$
 
 Where $a^T_{ij}$ is the corresponding entry in the *transpose* of the adjacency matrix (`t(w)` in line 9 of the above function).
@@ -68,21 +68,21 @@ As you may have guessed this is just an implementation of the "HITS" algorithm d
 The results for the Krackhardt advice network are:
 
 ```{r}
-   library(networkdata)
-   library(igraph)
-   g <- ht_advice
-   A <- as.matrix(as_adjacency_matrix(g))
-   hits.res1 <- status2(A)
-   round(hits.res1$a/max(hits.res1$a), 3)
-   round(hits.res1$h/max(hits.res1$h), 3)
+ library(networkdata)
+ library(igraph)
+ g <- ht_advice
+ A <- as.matrix(as_adjacency_matrix(g))
+ hits.res1 <- status2(A)
+ round(hits.res1$a/max(hits.res1$a), 3)
+ round(hits.res1$h/max(hits.res1$h), 3)
 ```
 
 Which are equivalent to using the `igraph` function `hits_scores`:
 
 ```{r}
-   ha <- hits_scores(g, scale = TRUE)
-   round(ha$authority, 3)
-   round(ha$hub, 3)
+ ha <- hits_scores(g, scale = TRUE)
+ round(ha$authority, 3)
+ round(ha$hub, 3)
 ```
 
 Note that the just like the `status2` function, the `igraph` function `hits_scores` returns the two sets of scores as elements of a `list`, so we need to access them using the `$` operator on the object that we store the results in (in this case `ha`). We also set the `scale` argument to `TRUE` so that the scores are normalized by the maximum. 
@@ -106,22 +106,22 @@ $$
 Let's see what they look like in the Krackhardt manager's network:
 
 ```{r}
-   M.h = A %*% t(A)
-   M.a = t(A) %*% A
-   M.h[1:10, 1:10]
-   M.a[1:10, 1:10]
+ M.h = A %*% t(A)
+ M.a = t(A) %*% A
+ M.h[1:10, 1:10]
+ M.a[1:10, 1:10]
 ```
 
 What's in these matrices? Well let's look at $\mathbf{M}^h$. The diagonals will look familiar because they happen to be the **outdegree** of each node:
 
 ```{r}
-   degree(g, mode = "out")[1:10]
+ degree(g, mode = "out")[1:10]
 ```
 
 You may have guessed that the diagonals of matrix $\mathbf{M}^a$ contain the **indegrees**:
 
 ```{r}
-   degree(g, mode = "in")[1:10]
+ degree(g, mode = "in")[1:10]
 ```
 
 Which means that the *off-diagonals* cells of each matrix $m^h_{ij}$ and $m^a_{ij}$ when $i \neq j$, contain the **common out-neighbors** and **common in-neighbors** shared by nodes $i$ and $j$ in the graph, respectively.
@@ -133,23 +133,23 @@ Which means that the *off-diagonals* cells of each matrix $m^h_{ij}$ and $m^a_{i
 #| fig-cap: "Subgraph from Krackhardt's Managers Network."
 #| fig-height: 6
 #| fig-width: 6
-   nodes <- unique(c(2, 11, neighbors(g, 2), neighbors(g, 11)))
-   g.sub <- subgraph(g, nodes)
-   V(g.sub)$name <- nodes
-   set.seed(456)
-   library(ggraph)
-   p <- ggraph(g.sub, layout = 'auto')
-   p <- p + geom_edge_parallel(color = "steelblue", edge_width = 1,
-                             arrow = arrow(length = unit(4, 'mm')),
-                             end_cap = circle(6, 'mm'), 
-                             sep = unit(5, 'mm'))
-   p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
-   p <- p + geom_node_text(aes(label = name), size = 5.5, color = "white")
-   p <- p + theme_graph() 
-   p
+ nodes <- unique(c(2, 11, neighbors(g, 2), neighbors(g, 11)))
+ g.sub <- subgraph(g, nodes)
+ V(g.sub)$name <- nodes
+ set.seed(456)
+ library(ggraph)
+ p <- ggraph(g.sub, layout = 'auto')
+ p <- p + geom_edge_parallel(color = "steelblue", edge_width = 1,
+ arrow = arrow(length = unit(4, 'mm')),
+ end_cap = circle(6, 'mm'), 
+ sep = unit(5, 'mm'))
+ p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
+ p <- p + geom_node_text(aes(label = name), size = 5.5, color = "white")
+ p <- p + theme_graph() 
+ p
 ```
 
-In information science, $\mathbf{M}^h$ and $\mathbf{M}^a$ matrices have special interpretations. Consider the subgraph shown in @fig-sub, which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
+In information science, $\mathbf{M}^h$ and $\mathbf{M}^a$ matrices have special interpretations. Consider the subgraph shown in , which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
 
 If these nodes where papers, then we would say that both 2 and 11 point to a common third node 1. In an information network, the papers that other papers point to are their common references. Therefore the number of *common out-neighbors* of two nodes is is called the **bibliographic coupling** score between the two papers. In the same way, we can see that 2 and 11 are pointed to by a common third neighbor 21. The number of *common in-neighbors* between two-papers is called their **co-citation** score.
 
@@ -158,35 +158,35 @@ Both the bibliographic coupling and the co-citation scores get at two ways that 
 The $\mathbf{M}^h$ and $\mathbf{M}^a$ matrices, therefore are two (unweighted) similarity matrices between the nodes in a directed graph. As you may also be suspecting, the hub and authorities scores are the leading eigenvectors of the $\mathbf{M}^h$ and $\mathbf{M}^a$ matrices [@kleinberg99]:
 
 ```{r}
-   a <- eigen(M.a)$vector[,1] * -1
-   h <- eigen(M.h)$vector[,1] * -1
-   round(a/max(a), 3)
-   round(h/max(h), 3)
+ a <- eigen(M.a)$vector[,1] * -1
+ h <- eigen(M.h)$vector[,1] * -1
+ round(a/max(a), 3)
+ round(h/max(h), 3)
 ```
 
-Given the connection to the HITS dual status ranking, sometimes the $\mathbf{M}^h$ is called the **hub matrix** and the $\mathbf{M}^a$ is called the **authority matrix** [@ding_etal02].  
+Given the connection to the HITS dual status ranking, sometimes the $\mathbf{M}^h$ is called the **hub matrix** and the $\mathbf{M}^a$ is called the **authority matrix** [@ding_etal02]. 
 
 Note that this also means we could have obtained the hub and authority scores using our old `status1` function, but we would have had to play the game twice, once for the matrix $\mathbf{M}^a$ and the other one for the matrix $\mathbf{M}^h$:
 
 ```{r}
-   status1 <- function(w) {
-      x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
-      d <- 1 #initial delta
-      k <- 0 #initializing counter
-      while (d > 1e-10) {
-          o.x <- x #old status scores
-          x <- w %*% o.x #new scores a function of old scores and adjacency matrix
-          x <- x/norm(x, type = "E") #normalizing new status scores
-          d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
-          k <- k + 1 #incrementing while counter
-      }
-   return(as.vector(x))
-   }
+ status1 <- function(w) {
+ x <- rep(1, nrow(w)) #initial status vector set to all ones of length equal to the number of nodes
+ d <- 1 #initial delta
+ k <- 0 #initializing counter
+ while (d > 1e-10) {
+ o.x <- x #old status scores
+ x <- w %*% o.x #new scores a function of old scores and adjacency matrix
+ x <- x/norm(x, type = "E") #normalizing new status scores
+ d <- abs(sum(abs(x) - abs(o.x))) #delta between new and old scores
+ k <- k + 1 #incrementing while counter
+ }
+ return(as.vector(x))
+ }
 
-   a <- status1(M.a)
-   round(a/max(a), 3)
-   h <- status1(M.h)
-   round(h/max(h), 3)
+ a <- status1(M.a)
+ round(a/max(a), 3)
+ h <- status1(M.h)
+ round(h/max(h), 3)
 ```
 
 This link once again demonstrates the equivalence between the eigenvectors of the hub and authority matrices, as similarity matrices between nodes in the network, and our prismatic status distribution game!
@@ -206,14 +206,14 @@ $$
 In `R` we compute it like this:
 
 ```{r}
-   D.o <- diag(1/rowSums(A))
-   P.a <- D.o %*% A
+ D.o <- diag(1/rowSums(A))
+ P.a <- D.o %*% A
 ```
 
 This matrix is row-stochastic, because each row is divided by the row total (the outdegrees of each node), meaning its rows sum to one, like we saw before:
 
 ```{r}
-   rowSums(P.a)
+ rowSums(P.a)
 ```
 
 It is also possible to compute the **indegree normalized** version of the $\mathbf{P}$ matrix, defined like this:
@@ -227,15 +227,15 @@ Where $\mathbf{D}_{in}^{-1}$ is a matrix containing the inverse of the indegrees
 In `R` we compute it like this:
 
 ```{r}
-   D.i <- diag(1/colSums(A))
-   P.h <- D.i %*% t(A)
+ D.i <- diag(1/colSums(A))
+ P.h <- D.i %*% t(A)
 ```
 
 
 Like the $\mathbf{P}_{a}$ matrix, the $\mathbf{P}_{a}$ matrix is row-stochastic, meaning its rows sum to 1.0:
 
 ```{r}
-   rowSums(P.h)
+ rowSums(P.h)
 ```
 
 To get the SALSA version of the hub and authority scores, we can just play our status game over newly defined versions of the hub and authority matrices [@langville_meyer05, p. 156]. 
@@ -255,15 +255,15 @@ $$
 Which in `R` looks like:
 
 ```{r}
-   Q.h <- P.a %*% P.h
-   Q.a <- P.h %*% P.a
+ Q.h <- P.a %*% P.h
+ Q.a <- P.h %*% P.a
 ```
 
 Each of these matrices are row stochastic:
 
 ```{r}
-   rowSums(Q.h)
-   rowSums(Q.a)
+ rowSums(Q.h)
+ rowSums(Q.a)
 ```
 
 Which means that inequalities will be defined according to differences in the in-degrees of each node just like PageRank.
@@ -271,10 +271,10 @@ Which means that inequalities will be defined according to differences in the in
 And now to obtain our SALSA hub and authority scores, we simply play our `status1` game on (the transpose of) these matrices, just like we did for PageRank:
 
 ```{r}
-   salsa.h <- status1(t(Q.h)) 
-   round(salsa.h/sum(salsa.h), 2)
-   salsa.a <- status1(t(Q.a)) 
-   round(salsa.a/sum(salsa.a), 2)
+ salsa.h <- status1(t(Q.h)) 
+ round(salsa.h/sum(salsa.h), 2)
+ salsa.a <- status1(t(Q.a)) 
+ round(salsa.a/sum(salsa.a), 2)
 ```
 
 What are these numbers? Well, it turns out that they are equivalent to the out and indegrees of each node, divided by the total number of edges in the network [@fouss_etal04, p. 451].
@@ -282,8 +282,8 @@ What are these numbers? Well, it turns out that they are equivalent to the out a
 So the SALSA hub and authority scores can also be obtained like this, without having to play our status game over any matrix:
 
 ```{r}
-   round(rowSums(A)/sum(A), 2)
-   round(colSums(A)/sum(A), 2)
+ round(rowSums(A)/sum(A), 2)
+ round(colSums(A)/sum(A), 2)
 ```
 
 Note that for the SALSA scores we use a different normalization compared to before. Instead of dividing by the maximum, we divide by the sum, so that the vector of SALSA hub and authority scores sum to 1.0. 
@@ -301,7 +301,7 @@ Let's see how this works. First, let's create a *centered* version of the networ
 To do our centering, we can use the native `R` function `apply` with the second argument set to `2` which means "apply this function to the columns of the matrix" (setting the argument to `1` would apply it to the rows):
 
 ```{r}
-   A.c <- apply(A, 2, function(x) {x - mean(x)})
+ A.c <- apply(A, 2, function(x) {x - mean(x)})
 ```
 
 As you can see, the function we `apply` to each column of the adjacency matrix `A` just takes each column vector and subtracts the mean from each of the entries of the same vector (`x - mean(x)`).
@@ -309,28 +309,28 @@ As you can see, the function we `apply` to each column of the adjacency matrix `
 We can use the `colMeans` function to check that the column means of the centered adjacency matrix are indeed zero:
 
 ```{r}
-   round(colMeans(A.c))
+ round(colMeans(A.c))
 ```
 
 Now that we have our column-centered the adjacency matrix, all we need to do is play our HITS status game on it:
 
 ```{r}
-   hits.res <- status2(A.c)
-   h2 <- hits.res$h
-   a2 <- hits.res$a
-   names(h2) <- 1:21
-   names(a2) <- 1:21
+ hits.res <- status2(A.c)
+ h2 <- hits.res$h
+ a2 <- hits.res$a
+ names(h2) <- 1:21
+ names(a2) <- 1:21
 ```
 
 We then use the function below to normalize each status score to be within the minus one to plus one interval and have mean zero:
 
 ```{r}
-   norm.v <- function(x) {
-      x <- x - min(x)
-      x <- x/max(x)
-      x <- x - mean(x)
-      return(x)
-   }
+ norm.v <- function(x) {
+ x <- x - min(x)
+ x <- x/max(x)
+ x <- x - mean(x)
+ return(x)
+ }
 ```
 
 The first thing the function does (line 2) is subtract the minimum value from the vector (which becomes zero), in line 3 we divided by the maximum (which becomes one), and in line 4 we subtract the mean from each value.
@@ -338,8 +338,8 @@ The first thing the function does (line 2) is subtract the minimum value from th
 And the resulting normalized hub and authority scores for each node in the Krackhardt managers advice network are:
 
 ```{r}
-   round(norm.v(h2), 3)
-   round(norm.v(a2), 3)
+ round(norm.v(h2), 3)
+ round(norm.v(a2), 3)
 ```
 
 @saerens_fouss05 show that these are the same scores we would obtain from a simple PCA of the regular old adjacency matrix. To see this, we can do a simple PCA of the adjacency matrix, recalling that in the standard multivariate analysis context, PCA is the [eigenvector decomposition](eigen.qmd) of the **covariance matrix** between variables in the usual rectangular cases by variables dataset. 
@@ -347,8 +347,8 @@ And the resulting normalized hub and authority scores for each node in the Krack
 In the case of the adjacency matrix, we proceed in the same way. First, we need to compute the covariance matrix of the columns of the adjacency matrix (e.g., the covariance between the indegrees of each pair of nodes). We can use the native `R` function `cov` for this purpose:
 
 ```{r}
-   C <- cov(A)
-   round(C[1:10, 1:10], 3)
+ C <- cov(A)
+ round(C[1:10, 1:10], 3)
 ```
 
 Recall that the covariance between two vectors $x$ and $y$ is just the sum of the values in the vector composed by multiplying the first vector (minus its mean) from the second vector (minus its mean) divided by the length of the vector minus one. 
@@ -366,10 +366,10 @@ Where $\mathbf{\bar{a}_i}$ indicates the mean of the entries in vector $\mathbf{
 In `R`, the entry for the covariance between persons 1 and 2 in the Krackchardt manager's network can be obtained like this:
 
 ```{r}
-   i <- A[, 1] #vector for person 1
-   j <- A[, 2] #vector for person 2
-   cov.ij <- sum((i - mean(i)) * (j - mean(j)) * (1/(length(i) - 1)))
-   round(cov.ij, 3)
+ i <- A[, 1] #vector for person 1
+ j <- A[, 2] #vector for person 2
+ cov.ij <- sum((i - mean(i)) * (j - mean(j)) * (1/(length(i) - 1)))
+ round(cov.ij, 3)
 ```
 
 Which is the same number we see in cells $c_{1,2}$ and $c_{2, 1}$ of the covariance matrix above.
@@ -377,22 +377,22 @@ Which is the same number we see in cells $c_{1,2}$ and $c_{2, 1}$ of the covaria
 Now that we have the covariance matrix `C`, all we need to do is extract the leading eigenvector of this matrix. We can do that by playing our usual status game on it!
 
 ```{r}
-   cov.a <- status1(C)
+ cov.a <- status1(C)
 ```
 
 These scores should be equivalent to the normalized authority scores we computed earlier (becuse they are based on the indegree). Now to compute the hub scores from the PCA analysis, all we need to do is add up the authority score of each node that a given node points to. We can do this by post-multyplying the adjacency matrix times the PCA score vector:
 
 ```{r}
-   cov.h <- as.vector(A %*% cov.a)
+ cov.h <- as.vector(A %*% cov.a)
 ```
 
 And now, for the big reveal:
 
 ```{r}
-   names(cov.h) <- 1:21
-   names(cov.a) <- 1:21
-   round(norm.v(cov.h), 3)
-   round(norm.v(cov.a), 3)
+ names(cov.h) <- 1:21
+ names(cov.a) <- 1:21
+ round(norm.v(cov.h), 3)
+ round(norm.v(cov.a), 3)
 ```
 
 Which are indeed the same scores we obtained earlier when we played the HITS status game on the centered adjacency matrix!
@@ -402,20 +402,20 @@ Of course, we could have also obtained the same scores by using one of the stand
 The difference is that rather than a cases by variables matrix, we just feed it the usual adjacency matrix:
 
 ```{r}
-   library(FactoMineR)
-   pca.res <- PCA(A, graph = FALSE, scale.unit = FALSE)
-   pca.h <- pca.res$ind$coord[, 1]
-   pca.a <- pca.res$var$coord[, 1]
-   names(pca.a) <- 1:21
+ library(FactoMineR)
+ pca.res <- PCA(A, graph = FALSE, scale.unit = FALSE)
+ pca.h <- pca.res$ind$coord[, 1]
+ pca.a <- pca.res$var$coord[, 1]
+ names(pca.a) <- 1:21
 ```
 
-The `PCA` function returns results in a `list` object that we called `pca.res`. One matrix in that list contains the hub (row) scores ("individual coordinates" in `FactoMineR` lingo) stored in the  `pca.res$ind$coord` object and the other contains the authority (column) scores for the same nodes ("variable coordinates" in `FactoMineR` lingo) stored in the `pca.res$var$coord` object. We set the argument `scale.unit` to `FALSE` so that the columns of the matrix are *not* transformed to have unit variance (the usual transformation for standard variables).
+The `PCA` function returns results in a `list` object that we called `pca.res`. One matrix in that list contains the hub (row) scores ("individual coordinates" in `FactoMineR` lingo) stored in the `pca.res$ind$coord` object and the other contains the authority (column) scores for the same nodes ("variable coordinates" in `FactoMineR` lingo) stored in the `pca.res$var$coord` object. We set the argument `scale.unit` to `FALSE` so that the columns of the matrix are *not* transformed to have unit variance (the usual transformation for standard variables).
 
 We can see that these scores are the same we estimated earlier:
 
 ```{r}
-   round(norm.v(pca.h), 3)
-   round(norm.v(pca.a), 3)
+ round(norm.v(pca.h), 3)
+ round(norm.v(pca.a), 3)
 ```
 
 We will see one way to interpret these PCA scores below.
@@ -429,8 +429,8 @@ They first ask: What if we play our status distribution game not on the *transpo
 Here's what happens:
 
 ```{r}
-   round(status1(Q.h), 3)
-   round(status1(Q.a), 3)
+ round(status1(Q.h), 3)
+ round(status1(Q.a), 3)
 ```
 
 OK, so that's weird. All that we get is a vector with the same number repeated twenty one times (in this case, the number of nodes in the graph). What's going on?
@@ -446,20 +446,20 @@ How do we get that vector? Well, as always, there is a mathematical workaround. 
 To do that, let's create a matrix that is equal to the original useless eigenvector times its own transpose. In `R` this goes like this:
 
 ```{r}
-   v1 <- status1(Q.h)
-   D <- v1 %*% t(v1)
+ v1 <- status1(Q.h)
+ D <- v1 %*% t(v1)
 ```
 
 What's in this matrix? Let's see the first ten rows and columns:
 
 ```{r}
-   round(D[1:10, 1:10], 3)
+ round(D[1:10, 1:10], 3)
 ```
 
 So it's just a matrix of the same dimension as the SALSA hub matrix with the same number over and over. In fact that number is equal to:
 
 ```{r}
-   round(0.2182179^2, 3)
+ round(0.2182179^2, 3)
 ```
 
 Which is just the useless constant status score multiplied by itself (squared). 
@@ -467,24 +467,24 @@ Which is just the useless constant status score multiplied by itself (squared).
 Now, we create new SALSA hub and authority matrices, which are equal to the original minus the constant `D` matrix above:
 
 ```{r}
-   Q.h2 <- Q.h - D
-   Q.a2 <- Q.a - D
+ Q.h2 <- Q.h - D
+ Q.a2 <- Q.a - D
 ```
 
 And now we play our status game on these matrices:
 
 ```{r}
-   h3 <- status1(Q.h2)
-   a3 <- status1(Q.a2)
-   names(h3) <- 1:21
-   names(a3) <- 1:21
+ h3 <- status1(Q.h2)
+ a3 <- status1(Q.a2)
+ names(h3) <- 1:21
+ names(a3) <- 1:21
 ```
 
 And the resulting scores are:
 
 ```{r}
-   round(norm.v(h3), 3)
-   round(norm.v(a3), 3)
+ round(norm.v(h3), 3)
+ round(norm.v(a3), 3)
 ```
 
 Now, these scores don't seem useless. They are different across each node; and like the PCA scores we obtained earlier, some are positive and some are negative. 
@@ -494,11 +494,11 @@ Now, these scores don't seem useless. They are different across each node; and l
 Let’s see if that is true in our case. We can use the `CA` function in the package `FactoMineR`^[https://cran.r-project.org/web/packages/FactoMineR/] to compute the Correspondence Analysis scores for any matrix in `R`, including a network adjacency matrix:
 
 ```{r}
-   library(FactoMineR)
-   ca.res <- CA(A, graph = FALSE)
-   ca.h <- ca.res$row$coord[, 1]
-   ca.a <- ca.res$col$coord[, 1]
-   names(ca.a) <- 1:21
+ library(FactoMineR)
+ ca.res <- CA(A, graph = FALSE)
+ ca.h <- ca.res$row$coord[, 1]
+ ca.a <- ca.res$col$coord[, 1]
+ names(ca.a) <- 1:21
 ```
 
 In line 2 we store the CA results in the object`ca.res`. We then grab the CA scores associated with the rows of the adjacency matrix and put them in the object `ca.h` in line 3 and the scores associated with the columns of the adjacency matrix and put them in the object `ca.a` inline 4.
@@ -506,8 +506,8 @@ In line 2 we store the CA results in the object`ca.res`. We then grab the CA sco
 Now for the big reveal:
 
 ```{r}
-   round(norm.v(ca.h), 3)
-   round(norm.v(ca.a), 3)
+ round(norm.v(ca.h), 3)
+ round(norm.v(ca.a), 3)
 ```
 
 Which shows that indeed the CA scores are the same ones as we obtain from playing our status game on the corrected versions of the un-transposed SALSA hub and authorities matrices!
@@ -518,17 +518,17 @@ But what are the CA (and PCA) scores supposed to capture? Let's look at them sid
 #| echo: false
 #| label: tbl-ha
 #| tbl-cap: "Hubs and Authorties Scores for Krackhardt's managers advice network"
-   ha.tab <- data.frame(salsa.h, salsa.a, pca.hub = h2, pca.auth = a2, ca.hub = h3, ca.auth = a3)
-   ha.tab <- round(ha.tab, 3)
-   ha.tab <- ha.tab[order(ha.tab$salsa.h, decreasing = TRUE), ]
-   library(kableExtra)
-   kbl(ha.tab, 
-      format = "html", align = "c") %>% 
-      kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
+ ha.tab <- data.frame(salsa.h, salsa.a, pca.hub = h2, pca.auth = a2, ca.hub = h3, ca.auth = a3)
+ ha.tab <- round(ha.tab, 3)
+ ha.tab <- ha.tab[order(ha.tab$salsa.h, decreasing = TRUE), ]
+ library(kableExtra)
+ kbl(ha.tab, 
+ format = "html", align = "c") %>% 
+ kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+ column_spec(1, bold = TRUE)
 ```
 
-Using information in @tbl-ha, @fig-ca-1 shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
+Using information in @tbl-ha, shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
 
 ```{r}
 #| label: fig-ca
@@ -536,56 +536,56 @@ Using information in @tbl-ha, @fig-ca-1 shows a point and line network plot but 
 #| fig-width: 8
 #| fig-height: 8
 #| fig-subcap: 
-#|   - "CA Coordinates"
-#|   - "PCA Coordinates"
+#| - "CA Coordinates"
+#| - "PCA Coordinates"
 #| layout-ncol: 2
 #| echo: false
-   #install.packages("ggraph")
-   library(ggraph)
-    l <- ggraph(g, layout = 'kk')
-    l <- as.matrix(data.frame(h3, a3*-1))  
-    c <- salsa.a - salsa.h
-    p <- ggraph(g, layout = l)
-    p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
-    p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
-    p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
-                                arrow = arrow(length = unit(2, 'mm')),
-                                end_cap = circle(4, 'mm'), 
-                                sep = unit(3, 'mm'))
-    p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
-    p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
-                                    low = "blue", 
-                                    high =  "red", 
-                                    mid = "gray", 
-                                    midpoint = mean(c))
-    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
-    p <- p + theme_minimal() 
-    p <- p + theme(legend.position = "none", 
-                   axis.text = element_text(size = 12),
-                   axis.title = element_text(size = 16))
-    p <- p + labs(x = "PCA Hub Score", y = "PCA Authority Score")
-    p
-    l <- as.matrix(data.frame(h2, a2))  
-    p <- ggraph(g, layout = l)
-    p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
-    p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
-    p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
-                                arrow = arrow(length = unit(2, 'mm')),
-                                end_cap = circle(4, 'mm'), 
-                                sep = unit(3, 'mm'))
-    p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
-    p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
-                                    low = "blue", 
-                                    high =  "red", 
-                                    mid = "gray", 
-                                    midpoint = mean(c))
-    p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
-    p <- p + theme_minimal() 
-    p <- p + theme(legend.position = "none", 
-                   axis.text = element_text(size = 12),
-                   axis.title = element_text(size = 16))
-    p <- p + labs(x = "CA Hub Score", y = "CA Authority Score")
-    p
+ #install.packages("ggraph")
+ library(ggraph)
+ l <- ggraph(g, layout = 'kk')
+ l <- as.matrix(data.frame(h3, a3*-1)) 
+ c <- salsa.a - salsa.h
+ p <- ggraph(g, layout = l)
+ p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
+ p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
+ p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
+ arrow = arrow(length = unit(2, 'mm')),
+ end_cap = circle(4, 'mm'), 
+ sep = unit(3, 'mm'))
+ p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
+ p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
+ low = "blue", 
+ high = "red", 
+ mid = "gray", 
+ midpoint = mean(c))
+ p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+ p <- p + theme_minimal() 
+ p <- p + theme(legend.position = "none", 
+ axis.text = element_text(size = 12),
+ axis.title = element_text(size = 16))
+ p <- p + labs(x = "PCA Hub Score", y = "PCA Authority Score")
+ p
+ l <- as.matrix(data.frame(h2, a2)) 
+ p <- ggraph(g, layout = l)
+ p <- p + geom_vline(aes(xintercept = 0), color = gray(.6))
+ p <- p + geom_hline(aes(yintercept = 0), color = gray(.6))
+ p <- p + geom_edge_parallel(color = gray(.75), edge_width = 0.25,
+ arrow = arrow(length = unit(2, 'mm')),
+ end_cap = circle(4, 'mm'), 
+ sep = unit(3, 'mm'))
+ p <- p + geom_node_point(aes(x = x, y = y, color = c), size = 8) 
+ p <- p + scale_color_gradient2(limit = c(min(c), max(c)), 
+ low = "blue", 
+ high = "red", 
+ mid = "gray", 
+ midpoint = mean(c))
+ p <- p + geom_node_text(aes(label = 1:vcount(g)), size = 4, color = "white")
+ p <- p + theme_minimal() 
+ p <- p + theme(legend.position = "none", 
+ axis.text = element_text(size = 12),
+ axis.title = element_text(size = 16))
+ p <- p + labs(x = "CA Hub Score", y = "CA Authority Score")
+ p
 ```
 
 We can see that the CA hub score places the "hubbiest" of hubs (blue nodes) in the lower-right quadrant of the diagram, with positive CA hub scores and negative CA authority scores (this last multiplied by minus one from the ones shown above). Note from @tbl-ha, that the nodes in this region (e.g. {15, 5, 3, 19, 9, 13}) all have large SALSA hub scores and very low SALSA authority scores. 
@@ -596,7 +596,7 @@ Finally, note that nodes in the upper-right quadrant of the diagram (e.g. {21, 7
 
 Thus what the CA scores seem to be doing is separating out the purest examples of hubs and authorities in the network from those who play both roles. 
 
-Note that as shown in @fig-ca-2, we get an even stronger separation between hubs and authorities when using the PCA scores to place nodes in a common space, with all the authorities (except nodes 7 and 21) to the upper left, and the hubs on the right-hand side of the plot. So  the PCA scores reflect the same distinction between hub and authority status as the CA scores. 
+Note that as shown in , we get an even stronger separation between hubs and authorities when using the PCA scores to place nodes in a common space, with all the authorities (except nodes 7 and 21) to the upper left, and the hubs on the right-hand side of the plot. So the PCA scores reflect the same distinction between hub and authority status as the CA scores. 
 
 ## A Hybrid PageRank/HITS Approach
 @borodin_etal05 argue that perhaps a better approach to combining PageRank and HITS is to normalize only *one* of the scores by degree while leaving the other score alone. 
@@ -610,22 +610,22 @@ We can do this by changing the way we compute the hub score of each node. Instea
 This entails slightly modifying the HITS status game as follows:
 
 ```{r}
-   status3 <- function(w) {
-     a <- rep(1, nrow(w))  #initializing authority scores
-     d.o <- rowSums(w) #outdegree of each node
-     d <- 1 #initializing delta
-     k <- 0 #initializing counter
-     while (d >= 1e-10) {
-         o.a <- a #old authority scores
-         h <- (w %*% o.a) * 1/d.o #new hub scores a function of previous authority scores of their out-neighbors
-         h <- h/norm(h, type = "E")
-         a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
-         a <- a/norm(a, type = "E")
-         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
-         k <- k + 1
-         }
-   return(list(h = as.vector(h), a = as.vector(a), k = k))
-   }
+ status3 <- function(w) {
+ a <- rep(1, nrow(w)) #initializing authority scores
+ d.o <- rowSums(w) #outdegree of each node
+ d <- 1 #initializing delta
+ k <- 0 #initializing counter
+ while (d >= 1e-10) {
+ o.a <- a #old authority scores
+ h <- (w %*% o.a) * 1/d.o #new hub scores a function of previous authority scores of their out-neighbors
+ h <- h/norm(h, type = "E")
+ a <- t(w) %*% h #new authority scores a function of current hub scores of their in-neighbors
+ a <- a/norm(a, type = "E")
+ d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+ k <- k + 1
+ }
+ return(list(h = as.vector(h), a = as.vector(a), k = k))
+ }
 ```
 
 Note that the only modification is the addition of the multiplication by the inverse of the outdegrees in line 8, which divides the standard HITS hub score by the outdegree of each hub. 
@@ -633,9 +633,9 @@ Note that the only modification is the addition of the multiplication by the inv
 The resulting hubs and authorities scores are:
 
 ```{r}
-   hits.res2 <- status3(A)
-   round(hits.res2$a/max(hits.res2$a), 3)
-   round(hits.res2$h/max(hits.res2$h), 3)
+ hits.res2 <- status3(A)
+ round(hits.res2$a/max(hits.res2$a), 3)
+ round(hits.res2$h/max(hits.res2$h), 3)
 ```
 
 This is an implementation of the "HubAvg" algorithm described by @borodin_etal05 [p. 238-239].
@@ -648,30 +648,30 @@ We can implement this approach---let's call it the "AuthAvg" algorithm---with a 
 
 
 ```{r}
-   status4 <- function(w) {
-     a <- rep(1, nrow(w))  #initializing authority scores
-     d.i <- colSums(w) #indegree of each node
-     d <- 1 #initializing delta
-     k <- 0 #initializing counter
-     while (d >= 1e-10) {
-         o.a <- a #old authority scores
-         h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
-         h <- h/norm(h, type = "E")
-         a <- (t(w) %*% h) * 1/d.i #new authority scores a function of current hub scores of their in-neighbors
-         a <- a/norm(a, type = "E")
-         d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
-         k <- k + 1
-         }
-   return(list(h = as.vector(h), a = as.vector(a), k = k))
-   }
+ status4 <- function(w) {
+ a <- rep(1, nrow(w)) #initializing authority scores
+ d.i <- colSums(w) #indegree of each node
+ d <- 1 #initializing delta
+ k <- 0 #initializing counter
+ while (d >= 1e-10) {
+ o.a <- a #old authority scores
+ h <- w %*% o.a #new hub scores a function of previous authority scores of their out-neighbors
+ h <- h/norm(h, type = "E")
+ a <- (t(w) %*% h) * 1/d.i #new authority scores a function of current hub scores of their in-neighbors
+ a <- a/norm(a, type = "E")
+ d <- abs(sum(abs(o.a) - abs(a))) #delta between old and new authority scores
+ k <- k + 1
+ }
+ return(list(h = as.vector(h), a = as.vector(a), k = k))
+ }
 ```
 
 And the resulting hubs and authorities scores are:
 
 ```{r}
-   hits.res3 <- status4(A)
-   round(hits.res3$a/max(hits.res3$a), 3)
-   round(hits.res3$h/max(hits.res3$h), 3)
+ hits.res3 <- status4(A)
+ round(hits.res3$a/max(hits.res3$a), 3)
+ round(hits.res3$h/max(hits.res3$h), 3)
 ```
 
 
@@ -682,31 +682,30 @@ Like before, we can treat the the Regular Hub, and Authority Scores, their SALSA
 
 ```{r}
 #| echo: false
-   nodes <- 1:vcount(g)
-   cent.dat <- data.frame( 
-                           Hub = hits.res1$h,
-                           Aut = hits.res1$a,
-                           Hub.Salsa = h,
-                           Aut.Salsa= a,
-                           Hub.Avg1 = hits.res2$h, 
-                           Aut.Avg1 = hits.res2$a,  
-                           Hub.Avg2 = hits.res3$h, 
-                           Aut.Avg2 = hits.res3$a)
-   cent.dat <- apply(cent.dat, 2, function(x) {round(x/max(x), 3)})
-   cent.dat1 <- data.frame(Node.ID = nodes, cent.dat, Indegree = degree(g, mode = "in"))
-   cent.dat2 <- data.frame(Node.ID = nodes, cent.dat, Outdegree = degree(g, mode = "out"))
-   cent.dat1 <- cent.dat1[order(cent.dat1$Indegree, decreasing = TRUE), ]
-   kbl(cent.dat1, 
-       format = "html", align = "c", row.names = FALSE,
-       caption = "Top Prestige Scores Ordered by Indegree.") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
-   cent.dat2 <- cent.dat2[order(cent.dat2$Outdegree, decreasing = TRUE), ]
-   kbl(cent.dat2, 
-       format = "html", align = "c", row.names = FALSE,
-       caption = "Top Prestige Scores Ordered by Outdegree") %>%    kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
-      column_spec(1, bold = TRUE)
+ nodes <- 1:vcount(g)
+ cent.dat <- data.frame( 
+ Hub = hits.res1$h,
+ Aut = hits.res1$a,
+ Hub.Salsa = h,
+ Aut.Salsa= a,
+ Hub.Avg1 = hits.res2$h, 
+ Aut.Avg1 = hits.res2$a, 
+ Hub.Avg2 = hits.res3$h, 
+ Aut.Avg2 = hits.res3$a)
+ cent.dat <- apply(cent.dat, 2, function(x) {round(x/max(x), 3)})
+ cent.dat1 <- data.frame(Node.ID = nodes, cent.dat, Indegree = degree(g, mode = "in"))
+ cent.dat2 <- data.frame(Node.ID = nodes, cent.dat, Outdegree = degree(g, mode = "out"))
+ cent.dat1 <- cent.dat1[order(cent.dat1$Indegree, decreasing = TRUE), ]
+ kbl(cent.dat1, 
+ format = "html", align = "c", row.names = FALSE,
+ caption = "Top Prestige Scores Ordered by Indegree.") %>% kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+ column_spec(1, bold = TRUE)
+ cent.dat2 <- cent.dat2[order(cent.dat2$Outdegree, decreasing = TRUE), ]
+ kbl(cent.dat2, 
+ format = "html", align = "c", row.names = FALSE,
+ caption = "Top Prestige Scores Ordered by Outdegree") %>% kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>% 
+ column_spec(1, bold = TRUE)
 ```
 -->
-
 
 
