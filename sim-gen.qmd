@@ -32,48 +32,48 @@ This measure nicely captures the idea that nodes are similar to the extent that 
 A function that implements this idea looks like:
 
 ```{r}
- SimRank <- function(w, alpha = 0.8, beta = 1) {
- do <- rowSums(w) #outdegree vector
- di <- colSums(w) #indegree vector
- n <- nrow(w) #number of nodes in the graph
- z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
- if(is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
- if(is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
- rownames(z) <- rownames(w) #naming similarity matrix rows
- colnames(z) <- colnames(w) #naming similarity matrix columns
- onei <- apply(w, 1, function(x){which(x == 1)}, simplify = FALSE) #out-neighbors list
- inei <- apply(w, 2, function(x){which(x == 1)}, simplify = FALSE) #in-neighbors list
- delta <- 1
- while(delta > 1e-10) { #run while delta is bigger than a tiny number
- z.o <- z #old similarity matrix at t-1
- for(i in 1:n) {
- for(j in 1:n) {
- if (i == j) {next} #skip when i and j are the same
- min.di <- min(di[i], di[j])
- min.do <- min(do[i], do[j])
- if (min.di != 0 & min.do != 0) { #both nodes have in and out neighbors
- a <- alpha/(di[i] * di[j]) #indegree weight
- b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
- c <- alpha/(do[i] * do[j]) #outdegree weight
- d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
- z[i,j] <- beta*a*b + (1-beta)*c*d #updating current similarity matrix at t
- }
- if (min.di != 0 & min.do == 0) { #one node has no out-neighbors
- a <- alpha/(di[i] * di[j]) #indegree weight
- b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
- z[i,j] <- beta*a*b #updating current similarity matrix at t
- }
- if (min.di == 0 & min.do != 0) { #one node has no in-neighbors
- c <- alpha/(do[i] * do[j]) #outdegree weight
- d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
- z[i,j] <- (1-beta)*c*d #updating current similarity matrix at t
- }
- } #end j for loop
- } #end i for loop
- delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
- } #end while loop
- return(z) #return similarity matrix after convergence
- } #end function
+  SimRank <- function(w, alpha = 0.8, beta = 1) {
+    do <- rowSums(w) #outdegree vector
+    di <- colSums(w) #indegree vector
+    n <- nrow(w) #number of nodes in the graph
+    z <- diag(1, n, n) #diagonal matrix (nodes are maximally similar to themselves)
+    if (is.null(rownames(w)) == TRUE) {rownames(w) <- 1:nrow(w)} #checking if matrix has row names
+    if (is.null(colnames(w)) == TRUE) {colnames(w) <- 1:nrow(w)} #checking if matrix has column names
+    rownames(z) <- rownames(w) #naming similarity matrix rows
+    colnames(z) <- colnames(w) #naming similarity matrix columns
+    onei <- apply(w, 1, function(x){which(x == 1)}, simplify = FALSE) #out-neighbors list
+    inei <- apply(w, 2, function(x){which(x == 1)}, simplify = FALSE) #in-neighbors list
+    delta <- 1
+    while (delta > 1e-10) { #run while delta is bigger than a tiny number
+      z.o <- z #old similarity matrix at t-1
+      for (i in 1:n) {
+        for (j in 1:n) {
+          if (i == j) {next} #skip when i and j are the same
+          min.di <- min(di[i], di[j])
+          min.do <- min(do[i], do[j])
+          if (min.di != 0 & min.do != 0) { #both nodes have in and out neighbors
+            a <- alpha/(di[i] * di[j]) #indegree weight
+            b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
+            c <- alpha/(do[i] * do[j]) #outdegree weight
+            d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
+            z[i,j] <- beta*a*b + (1-beta)*c*d #updating current similarity matrix at t
+          }
+          if (min.di != 0 & min.do == 0) { #one node has no out-neighbors
+            a <- alpha/(di[i] * di[j]) #indegree weight
+            b <- sum(as.matrix(z.o[inei[[i]], inei[[j]]])) #sum of similarity scores of in-neighbors in previous iteration
+            z[i,j] <- beta*a*b #updating current similarity matrix at t
+          }
+          if (min.di == 0 & min.do != 0) { #one node has no in-neighbors
+            c <- alpha/(do[i] * do[j]) #outdegree weight
+            d <- sum(as.matrix(z.o[onei[[i]], onei[[j]]])) #sum of similarity scores of out-neighbors in previous iteration
+            z[i,j] <- (1-beta)*c*d #updating current similarity matrix at t
+          }
+        } #end j for loop
+      } #end i for loop
+      delta <- abs(sum(abs(z)) - sum(abs(z.o))) #difference between similarity matrices at t and t-1
+    } #end while loop
+    return(z) #return similarity matrix after convergence
+  } #end function
 ```
 
 This function takes an adjacency matrix (`w`) as input and returns a generalized similarity matrix (`z`) as output. Note that at the initial time step $t = 0$, the similarity matrix `z` is initialized to the identity matrix $\mathbf{I}_{n \times n}$ of the same dimensions as the adjacency matrix, saying that initially all nodes are maximally similar to themselves (which makes sense).
@@ -316,9 +316,9 @@ A *maximal matching* selects the *maximum numbers* across the smallest dimension
 
 We can see that the maximum in row one, corresponding to node B, is 0.88 (the similarity between B and J), the maximum in row two, corresponding to node C, is 0.96 (the similarity between C and J), and the maximum in row three, corresponding to node D, is 0.55 (the similarity between D and K). 
 
-This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent of the numerator in the fraction of . 
+This means that the maximum matching for the neighbors of nodes A and H in this hypothetical example is $0.88 + 0.96 + 0.55 = 2.39$, which would be the equivalent of the numerator in the fraction of @eq-rolesim. 
 
-Because in a directed graph we have to worry about similarities between in and out neighbors, we modify like this:
+Because in a directed graph we have to worry about similarities between in and out neighbors, we modify @eq-rolesim like this:
 
 $$
  s_{ij}(t) = \beta \frac{\sum_{(k,l) \in M^{out}_{i,j}} s_{kl}(t-1) + \sum_{(k,l) \in M^{in}_{i,j}} s_{kl}(t-1)}{max(d^{out}_i, d^{out}_j) + max(d^{in}_i, d^{in}_j)} + \left(1 - \beta\right)
@@ -404,7 +404,7 @@ Here is the five cluster partition of the dendrogram in 2:
 
 ### Undirected Case
 
-[Hanneman & Riddle](https://faculty.ucr.edu/~hanneman/nettext/C14_Automorphic_Equivalence.html) use the undirected graph in as another example where automorphic equivalence is relevant (the graph is taken from @wasserman_faust94). Using a (costly) algorithm that identifies the "orbits" of a graph (sets of automorphically equivalent nodes) they note that there are five such positions in : Actors $\{A\}$ (the "top" node), $\{C\}$, and $\{G\}$ occupying unique (singleton) positions, with $\{B, D\}$ and $\{E, F, H, I\}$ being sets of automorphically equivalent (exchangeable) nodes. 
+[Hanneman & Riddle](https://faculty.ucr.edu/~hanneman/nettext/C14_Automorphic_Equivalence.html) use the undirected graph in @fig-wf as another example where automorphic equivalence is relevant (the graph is taken from @wasserman_faust94). Using a (costly) algorithm that identifies the "orbits" of a graph (sets of automorphically equivalent nodes) they note that there are five such positions in @fig-wf: Actors $\{A\}$ (the "top" node), $\{C\}$, and $\{G\}$ occupying unique (singleton) positions, with $\{B, D\}$ and $\{E, F, H, I\}$ being sets of automorphically equivalent (exchangeable) nodes. 
 
 ```{r}
 #| label: fig-wf
