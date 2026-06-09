@@ -7,9 +7,9 @@ title: "The Centrality Cube"
 Let us illustrate using a simple example. We begin by creating an Erdos-Renyi graph with eight nodes and connection probability $p = 0.5$:
 
 ```{r}
- library(igraph)
- set.seed(345)
- g <- sample_gnp(8, 0.5)
+library(igraph)
+set.seed(345)
+g <- sample_gnp(8, 0.5)
 ```
 
 The resulting graph looks like:
@@ -27,49 +27,61 @@ Let's see how that works.
 
 ## Building the Cube 
 
-We begin by recycling our simple user-defined function to count the total number of shortest paths between each pair of nodes:
+We begin by writing a simple user-defined function to compute the number of shortest paths between every pair of nodes in the graph. We need to do this because the cube is built on the ratio of the number of paths that go through a broker node $b$ to the total number of paths between $s$ and $r$:
 
 ```{r}
     nsp <- function(w) {
     n <- vcount(w)
     S <- matrix(1, n, n)
     for (i in 1:n) {
-    for (j in i:n) { #looping through upper triangle
-    if (j %in% neighbors(w, i) == FALSE) {S[i, j] <- length(all_shortest_paths(w, i, j)$vpaths)}
-    }
-    }
-    S[lower.tri(S)] <- t(S)[lower.tri(S)] #copying upper triangle into lower triangle
+        j <- setdiff(i:n, c(i, as.numeric(neighbors(w, i)))) # non-neighbors in upper triangle
+        if (length(j) > 0) {
+            S[i, j] <- 0 # Set sij to 0 for disconnected nodes
+            vpaths <- all_shortest_paths(w, from = i, to = j)$vpaths
+            if (length(vpaths) > 0) {
+                dests <- unlist(lapply(vpaths, function(x) as.numeric(x[length(x)])))
+                counts <- table(dests)
+                S[i, as.numeric(names(counts))] <- as.numeric(counts)
+                }
+            }
+        }
+    S[lower.tri(S)] <- t(S)[lower.tri(S)] # copying upper triangle into lower triangle
     return(S)
     }
 ```
 
-The function is called `nsp` and takes a graph as input and returns and matrix called $\mathbf{S}$ with entries $s_{ij}$ equal to the total number of shortest paths between $i$ and $j$. This is done by computing the `length` of the list returned by the `all_shortest_paths` function in `igraph` for each pair of non-adjacent nodes. This is done in two steps. 
+The function is called `nsp` and takes a graph `w` as input and returns and matrix called $\mathbf{S}$ with entries $s_{ij}$ equal to the total number of shortest paths between $i$ and $j$. This is done in three steps:
 
-- First, we check whether $j$ is a neighbor of $i$ using the `neighbors` function in `igraph`. The `neighbors` function takes a graph and a node id as input and returns a vector of that node's neighbors in the graph. We want the function to update the $S$ matrix only when $i$ and $j$ are *not* adjacent (indirectly connected).
+- First, we initialize an $n \times n$ matrix of ones called $S$ in line 3 to the all ones matrix. We will update the entries of this matrix with the actual number of shortest paths between each pair of nodes in the graph.
 
-- Second, we use the `all_shortest_paths` function to actually compute the number of shortest paths between $i$ and $j$. This function takes three inputs: (1) A graph object `x`, (2) a sender node id `i`, and (3) a receiver node id `j`, and returns a `list` of the paths between the sender and receiver nodes in the form of vectors of node ids defining each path as elements of a list called "vpaths."
+- Next, we loop through each node $i$ in the graph in line 4. For each node $i$, we identify the set of target nodes that are not neighbors of $i$ and are in the upper triangle of the matrix using the `neighbors` function in `igraph` and the `setdiff` function in base `R` in line 5. We then check if there are any target nodes to process. If there are, we set the default value of the number of paths to zero for those target nodes in line 6.
+
+- Next, we compute the shortest paths from node $i$ to the target nodes using the `all_shortest_paths` function in `igraph` in line 7. This function returns a list of paths, where each path is represented as a vector of node ids. We check if there are any paths to process in line 7. If there are, we extract the destination nodes from the paths using `lapply` and `unlist` in line 8, and then count the number of paths to each destination node using the `table` function in line 9. Finally, we update the corresponding entries in the $S$ matrix with the counts of paths in line 10. After processing all nodes, we copy the upper triangle of the $S$ matrix to the lower triangle to ensure symmetry in line 12, and return the $S$ matrix.
 
 Now we are ready to write a user defined function to build the cube. Here's a not-so-efficient (programming wise) but working example:
 
 ```{r}
  cube <- function(w) {
- n <- vcount(w)
- c <- array(rep(n^3, 0), c(n, n, n))
- S <- nsp(w)
- for (b in 1:n) {
- for (s in 1:n) {
- for (r in 1:n) {
- if (s != r & r %in% neighbors(w, s) == FALSE) {
- p.sr <- all_shortest_paths(w, s, r)$vpaths
- b.sr <- lapply(p.sr, function(x) {x[-c(1, length(x))]}) 
- c[s, r, b] <- sum(as.numeric(sapply(b.sr, function(x) {b %in% x})))
- c[s, r, b] <- c[s, r, b]/S[s, r]
- }
- }
- }
- }
- c[is.na(c)] <- 0
- return(c)
+   n <- vcount(w)
+   c <- array(0, dim = c(n, n, n))
+   S <- nsp(w)
+   for (s in 1:n) {
+     neigh_s <- neighbors(w, s) # pre-fetch neighbors
+     for (r in 1:n) {
+       if (s != r && !(r %in% neigh_s)) {
+         p.sr <- all_shortest_paths(w, s, r)$vpaths
+         brokers <- unlist(lapply(p.sr, function(x) as.numeric(x[-c(1, length(x))])))
+         
+         if (length(brokers) > 0) {
+           b_counts <- table(brokers)
+           b_idx <- as.numeric(names(b_counts))
+           c[s, r, b_idx] <- as.numeric(b_counts) / S[s, r]
+         }
+       }
+     }
+   }
+   c[is.na(c)] <- 0
+   return(c)
  }
 ```
 
@@ -239,6 +251,3 @@ Which is the same as:
 ```{r}
  round(closeness(g), 3)
 ```
-
-
-
