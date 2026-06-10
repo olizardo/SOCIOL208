@@ -30,66 +30,70 @@ Let us illustrate these concepts. Consider the following toy graph:
 #| label: fig-se
 #| fig-cap: "A toy graph demonstrating structural equivalence."
 #| echo: false
- library(igraph)
- library(ggraph)
- h <- make_empty_graph(9, directed = FALSE) %>% 
- set_vertex_attr("name", value = LETTERS[1:9]) %>% 
- add_edges(c("A","B", "A","C", "B","D", "B","E", "B","F",
- "B","G", "C","D", "C","E", "C","F", "C","G", 
- "H","D", "H","E", "H","F", "I","D", 
- "I","E", "I","F", "A","G", "I","H")) 
- 
- p <- ggraph(h, layout = 'kk')
- p <- p + geom_edge_fan(color = "steelblue", edge_width = 0.75)
- p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2") 
- p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
- p <- p + theme_graph() 
- p
+library(igraph)
+library(ggraph)
+h <- make_empty_graph(9, directed = FALSE) %>%
+  set_vertex_attr("name", value = LETTERS[1:9]) %>%
+  add_edges(c(
+    "A", "B", "A", "C", "B", "D", "B", "E", "B", "F",
+    "B", "G", "C", "D", "C", "E", "C", "F", "C", "G",
+    "H", "D", "H", "E", "H", "F", "I", "D",
+    "I", "E", "I", "F", "A", "G", "I", "H"
+  ))
+
+p <- ggraph(h, layout = "kk")
+p <- p + geom_edge_fan(color = "steelblue", edge_width = 0.75)
+p <- p + geom_node_point(aes(x = x, y = y), size = 12, color = "tan2")
+p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
+p <- p + theme_graph()
+p
 ```
 
 With associated adjacency matrix:
 
 ```{r}
 #| echo: false
- A <- as.matrix(as_adjacency_matrix(h))
- library(kableExtra)
- kbl(A, align = "c", format = "html") %>%
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive")) %>% 
- column_spec(1, bold = TRUE) %>% 
- column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>% 
- row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
- column_spec(1, extra_css = "border-left: 0.75px solid;") %>% 
- row_spec(1, extra_css = "border-top: 0.75px solid;")
+A <- as.matrix(as_adjacency_matrix(h))
+library(kableExtra)
+kbl(A, align = "c", format = "html") %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  ) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>%
+  row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
+  column_spec(1, extra_css = "border-left: 0.75px solid;") %>%
+  row_spec(1, extra_css = "border-top: 0.75px solid;")
 ```
 
 A simple function to check for structural equivalence in the graph, relying on the native `R` function `setequal` would be:
 
 ```{r}
- check.equiv <- function(x) {
- n <- vcount(x)
- v <- V(x)$name
- E <- matrix(0, n, n)
- for (i in v) {
- for (j in v) {
- if (i != j & E[which(v == j), which(v == i)] != 1) {
- N.i <- neighbors(x, i)
- N.j <- neighbors(x, j)
- if (are_adjacent(x, i, j) == TRUE) {
- N.i <- c(names(N.i), i)
- N.j <- c(names(N.j), j)
- } #end sub-if
- if (setequal(N.i, N.j) == TRUE) {
- E[which(v == i), which(v == j)] <- 1
- E[which(v == j), which(v == i)] <- 1
- } #end sub-if
- } #end main if
- } #end j loop
- } #end i loop
- rownames(E) <- v
- colnames(E) <- v
- return(E)
- }
+check.equiv <- function(x) {
+  n <- vcount(x)
+  v <- V(x)$name
+  E <- matrix(0, n, n)
+  for (i in v) {
+    for (j in v) {
+      if (i != j & E[which(v == j), which(v == i)] != 1) {
+        N.i <- neighbors(x, i)
+        N.j <- neighbors(x, j)
+        if (are_adjacent(x, i, j) == TRUE) {
+          N.i <- c(names(N.i), i)
+          N.j <- c(names(N.j), j)
+        } # end sub-if
+        if (setequal(N.i, N.j) == TRUE) {
+          E[which(v == i), which(v == j)] <- 1
+          E[which(v == j), which(v == i)] <- 1
+        } # end sub-if
+      } # end main if
+    } # end j loop
+  } # end i loop
+  rownames(E) <- v
+  colnames(E) <- v
+  return(E)
+}
 ```
 
 This function creates an empty "equivalence" matrix $\mathbf{E}$ in line 4, loops through each pair of nodes in the graph in lines 5-20. The main condition restricts the checking to nodes that are not the same or have not yet to be found to be equivalent (line 7). Lines 8-9 extract the node neighborhoods using the `igraph` function `neighbors`. 
@@ -101,21 +105,23 @@ The equivalence check is done in line 14 using the native `R` function `setequal
 After writing our function, we can then type:
 
 ```{r}
- Equiv <- check.equiv(h)
+Equiv <- check.equiv(h)
 ```
 
 And the resulting equivalence matrix $\mathbf{E}$ corresponding to the graph in is:
 
 ```{r}
 #| echo: false
- kbl(Equiv, align = "c", format = "html") %>%
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive")) %>% 
- column_spec(1, bold = TRUE,) %>% 
- column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>% 
- row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
- column_spec(1, extra_css = "border-left: 0.75px solid;") %>% 
- row_spec(1, extra_css = "border-top: 0.75px solid;")
+kbl(Equiv, align = "c", format = "html") %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  ) %>%
+  column_spec(1, bold = TRUE, ) %>%
+  column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>%
+  row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
+  column_spec(1, extra_css = "border-left: 0.75px solid;") %>%
+  row_spec(1, extra_css = "border-top: 0.75px solid;")
 ```
 
 In this matrix, there is a 1 in the corresponding cell if the row node is structurally equivalent to the column node. This matrix is symmetric since the equivalence relation is also symmetric. 
@@ -125,10 +131,10 @@ One thing we can do with this matrix is *re-order* the rows and columns, so that
 To do that we can use the `corrMatOrder` function from the `corrplot` package, designed to work with correlation matrices, but works with any matrix of values:
 
 ```{r}
- #install.packages("corrplot")
- library(corrplot)
- SE.ord <- corrMatOrder(Equiv, order = "hclust", hclust.method = "ward.D2")
- SE.ord
+# install.packages("corrplot")
+library(corrplot)
+SE.ord <- corrMatOrder(Equiv, order = "hclust", hclust.method = "ward.D2")
+SE.ord
 ```
 
 The `corrplot` function `corrMatorder` takes a matrix as input and returns a vector of reordered values of the rows(columns) as output. We use a hierarchical clustering algorithm using Ward's method to do the job. 
@@ -138,22 +144,25 @@ We can see that the new re-ordered vector has the previous row(column) 6 in fist
 We can then re-order rows and columns of the old equivalence matrix using this new ordering by typing:
 
 ```{r}
- Equiv <- Equiv[SE.ord, SE.ord]
+Equiv <- Equiv[SE.ord, SE.ord]
 ```
 
 The resulting re-ordered matrix looks like:
 
 ```{r}
 #| echo: false
- kbl(Equiv, align = "c", format = "html") %>%
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive")) %>% 
- column_spec(1, bold = TRUE) %>% 
- column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>% 
- row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
- column_spec(1, extra_css = "border-left: 0.75px solid;") %>% 
- row_spec(1, extra_css = "border-top: 0.75px solid;") %>% 
- row_spec(c(3, 5, 7), extra_css = "border-bottom: 3px solid;") %>% column_spec(c(4, 6, 8), extra_css = "border-right: 3px solid;") 
+kbl(Equiv, align = "c", format = "html") %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  ) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(1:10, extra_css = "border-right: 0.75px solid;") %>%
+  row_spec(1:9, extra_css = "border-bottom: 0.75px solid;") %>%
+  column_spec(1, extra_css = "border-left: 0.75px solid;") %>%
+  row_spec(1, extra_css = "border-top: 0.75px solid;") %>%
+  row_spec(c(3, 5, 7), extra_css = "border-bottom: 3px solid;") %>%
+  column_spec(c(4, 6, 8), extra_css = "border-right: 3px solid;")
 ```
 
 Once the equivalence matrix is re-ordered we can see that sets of structurally equivalent nodes in , appear clustered along the diagonals. This type of re-arranged matrix is said to be in **block-diagonal** form (e.g., non-zero entries clustered along the diagonals).
@@ -161,13 +170,15 @@ Once the equivalence matrix is re-ordered we can see that sets of structurally e
 Even more interestingly, we can do the same re-arranging on the original adjacency matrix, to reveal:
 
 ```{r}
- kbl(A[SE.ord, SE.ord], align = "c", format = "html") %>%
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive")) %>% 
- column_spec(1, bold = TRUE) %>% 
- column_spec(1, extra_css = "border-right: 0.75px solid;") %>% 
-
- row_spec(c(3, 5, 7), extra_css = "border-bottom: 3px solid;") %>% column_spec(c(4, 6, 8), extra_css = "border-right: 3px solid;") 
+kbl(A[SE.ord, SE.ord], align = "c", format = "html") %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  ) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(1, extra_css = "border-right: 0.75px solid;") %>%
+  row_spec(c(3, 5, 7), extra_css = "border-bottom: 3px solid;") %>%
+  column_spec(c(4, 6, 8), extra_css = "border-right: 3px solid;")
 ```
 
 This is called a **blocked adjacency matrix**. As you can see, once the structural equivalence relations in the network are revealed by permuting the rows and columns, the adjacency matrix shows an orderly pattern. 
@@ -209,20 +220,22 @@ Then we can see that:
 These intra and inter-block relations can then be represented in the reduced **image matrix**:
 
 ```{r}
- IM <- matrix(0, 4, 4)
- IM[1, ] <- c(0, 1, 0, 1)
- IM[2, ] <- c(1, 1, 0, 0)
- IM[3, ] <- c(0, 0, 1, 1)
- IM[4, ] <- c(1, 0, 1, 0)
- rownames(IM) <- c("C_1", "C_2", "C_3", "C_4")
- colnames(IM) <- c("C_1", "C_2", "C_3", "C_4")
- kbl(IM, align = "c", format = "html") %>%
- column_spec(1, bold = TRUE) %>% 
- row_spec(2, extra_css = "border-top: 0.75px solid;") %>%
- row_spec(4, extra_css = "border-bottom: 0.75px solid;") %>%
- column_spec(1:5, extra_css = "border-right: 0.75px solid;") %>%
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive"))
+IM <- matrix(0, 4, 4)
+IM[1, ] <- c(0, 1, 0, 1)
+IM[2, ] <- c(1, 1, 0, 0)
+IM[3, ] <- c(0, 0, 1, 1)
+IM[4, ] <- c(1, 0, 1, 0)
+rownames(IM) <- c("C_1", "C_2", "C_3", "C_4")
+colnames(IM) <- c("C_1", "C_2", "C_3", "C_4")
+kbl(IM, align = "c", format = "html") %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(2, extra_css = "border-top: 0.75px solid;") %>%
+  row_spec(4, extra_css = "border-bottom: 0.75px solid;") %>%
+  column_spec(1:5, extra_css = "border-right: 0.75px solid;") %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  )
 ```
 
 Which reveals a more economical representation of the system based on structural equivalence. 
@@ -256,42 +269,42 @@ Where $a_{ik}$ and $a_{jk}$ are the corresponding entries in the graph's adjacen
 A function that does this for any graph is:
 
 ```{r}
- d.euclid <- function(x) {
- A <- as.matrix(as_adjacency_matrix(x))
- n <- nrow(A)
- E <- matrix(0, n, n)
- for (i in 1:n) {
- for (j in 1:n) {
- if (i < j & i != j) {
- d.ij <- 0
- for (k in 1:n) {
- if (k != i & k != j) {
- d.ij <- d.ij + (A[i,k] - A[j,k])^2
- }
- }
- E[i,j] <- sqrt(d.ij)
- E[j,i] <- sqrt(d.ij)
- }
- }
- }
- rownames(E) <- rownames(A)
- colnames(E) <- colnames(A)
- return(E)
- }
+d.euclid <- function(x) {
+  A <- as.matrix(as_adjacency_matrix(x))
+  n <- nrow(A)
+  E <- matrix(0, n, n)
+  for (i in 1:n) {
+    for (j in 1:n) {
+      if (i < j & i != j) {
+        d.ij <- 0
+        for (k in 1:n) {
+          if (k != i & k != j) {
+            d.ij <- d.ij + (A[i, k] - A[j, k])^2
+          }
+        }
+        E[i, j] <- sqrt(d.ij)
+        E[j, i] <- sqrt(d.ij)
+      }
+    }
+  }
+  rownames(E) <- rownames(A)
+  colnames(E) <- colnames(A)
+  return(E)
+}
 ```
 
 And we can try it out with our toy graph:
 
 ```{r}
- E <- d.euclid(h)
- round(E, 1)
+E <- d.euclid(h)
+round(E, 1)
 ```
 
 And it looks like indeed it detected the structurally equivalent nodes in the graph. We can see it clearly by re-ordering the rows and columns according to our known ordering:
 
 ```{r}
- E <- E[SE.ord, SE.ord]
- round(E, 1)
+E <- E[SE.ord, SE.ord]
+round(E, 1)
 ```
 
 Here the block-diagonals of the matrix contain zeroes because the $d$ is a distance function with a minimum of zero. If we wanted it to contain ones instead we would normalize:
@@ -303,16 +316,16 @@ $$
 Which would give us:
 
 ```{r}
- E.norm <- 1 - E/max(E)
- round(E.norm, 1)
+E.norm <- 1 - E / max(E)
+round(E.norm, 1)
 ```
 
 As noted, a distance function defines a *clustering* on the nodes, and the results of the clustering generate our blocks. In `R` we can use the functions `dist` and `hclust` to do the job:
 
 ```{r}
- E <- as.dist(E) #transforming E to a dist object
- h.res <- hclust(E, method = "ward.D2")
- plot(h.res)
+E <- as.dist(E) # transforming E to a dist object
+h.res <- hclust(E, method = "ward.D2")
+plot(h.res)
 ```
 
 Which are our original clusters of structurally equivalent nodes!
@@ -322,15 +335,15 @@ Let's see how this would work in real data. Let's take the *Flintstones* (film) 
 ```{r}
 #| fig-width: 8
 #| fig-height: 8
- library(networkdata)
- library(stringr) #using stringr to change names from all caps to title case
- g <- movie_267
- V(g)$name <- str_to_title(V(g)$name)
- g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
- E <- d.euclid(g) #Euclidean distance matrix
- E <- as.dist(E) #transforming E to a dist object
- h.res <- hclust(E, method = "ward.D2") #hierarchical clustering
- plot(h.res) #plot dendrogram 
+library(networkdata)
+library(stringr) # using stringr to change names from all caps to title case
+g <- movie_267
+V(g)$name <- str_to_title(V(g)$name)
+g <- delete_vertices(g, degree(g) <= 3) # deleting low degree vertices
+E <- d.euclid(g) # Euclidean distance matrix
+E <- as.dist(E) # transforming E to a dist object
+h.res <- hclust(E, method = "ward.D2") # hierarchical clustering
+plot(h.res) # plot dendrogram
 ```
 
 The *Flintstones* is a film based on a family, and families are the prototypes of *social roles* in networks, so if structural equivalence gets at roles, then it should recover known kin roles here, and indeed it does to some extent. One cluster is the focal parents separated into "moms" and "dads" roles, and another has the kids.
@@ -340,8 +353,8 @@ After we have our clustering, we may wish to extract the structurally equivalent
 Choosing the number of clusters after a hierarchical clustering is not a well-defined problem, so you have to use a combination of pragmatic and domain-specific knowledge criteria to decide. Here, it looks like four blocks provides enough resolution and substantive interpretability so let's do that. To do the job we use a function from the `dendextend` package we used above to draw our pretty colored dendrogram data viz, called `cutree` which as its name implies cuts the dendrogram at a height that produces the required number of classes:
 
 ```{r}
- blocks <- cutree(h.res, k = 4)
- blocks
+blocks <- cutree(h.res, k = 4)
+blocks
 ```
 
 Note that the result is a **named vector** with the node labels as the names and a value of $k$ for each node, where $k$ indicates the class of that node. For instance, $\{$ Barney, Betty, Fred, Lava, Slate, Wilma $\}$ all belong to $k = 2$. Remember this is a purely **nominal** classification so the order of the numbers doesn't matter. 
@@ -376,9 +389,9 @@ So the correlation distance is the ratio of the covariance of the column vectors
 The correlation distance between nodes in our toy network is given by simply typing:
 
 ```{r}
- m <- as.matrix(as_adjacency_matrix(h))
- C <- cor(m)
- round(C, 2)
+m <- as.matrix(as_adjacency_matrix(h))
+C <- cor(m)
+round(C, 2)
 ```
 
 Which gives the Pearson product moment correlation of each pair of columns in the adjacency matrix. 
@@ -386,10 +399,10 @@ Which gives the Pearson product moment correlation of each pair of columns in th
 The key thing that was noticed by @breiger_etal75 is that we can *iterate* this process, and compute *correlation distances of correlation distances* between nodes in the graph. If we do this for our toy network a few (e.g., three) times we get:
 
 ```{r}
- C1 <- cor(C)
- C2 <- cor(C1)
- C3 <- cor(C2)
- round(C3, 2)
+C1 <- cor(C)
+C2 <- cor(C1)
+C3 <- cor(C2)
+round(C3, 2)
 ```
 
 Interestingly the positive correlations converge to 1.0 and the negative correlations converge to -1.0!
@@ -397,9 +410,9 @@ Interestingly the positive correlations converge to 1.0 and the negative correla
 If we sort the rows and columns of the new matrix according to these values, we get:
 
 ```{r}
- C.ord <- corrMatOrder(C3, order = "hclust", hclust.method = "ward.D2")
- C3 <- C3[C.ord, C.ord]
- round(C3, 2)
+C.ord <- corrMatOrder(C3, order = "hclust", hclust.method = "ward.D2")
+C3 <- C3[C.ord, C.ord]
+round(C3, 2)
 ```
 
 Aha! The iterated correlations seems to have split the matrix into two **blocks** $C_1 = \{G, F, D, A, G\}$ and $C_2 = \{I, H, B, C\}$. Each of the blocks is composed of two sub-blocks that we know are structurally equivalent from our previous analysis. 
@@ -407,16 +420,18 @@ Aha! The iterated correlations seems to have split the matrix into two **blocks*
 A function implementing this method of iterated correlation distances until convergence looks like:
 
 ```{r}
- con.cor <- function(x) {
- c <- x
- n <- nrow(c) #number of nodes
- while (1 - mean(abs(c)) > 1e-10) {c <- cor(c)}
- names1 <- c[, 1] > 9.9e-10 #nodes with 1.0 in the first column of converged correlation matrix
- names2 <- c[, 1] < -9.9e-10 #nodes with -1.0 in the first column of converged correlation matrix
- a1 <- x[, names1, drop = FALSE] #subsetting original adjacency matrix by column (first block)
- a2 <- x[, names2, drop = FALSE] #subsetting original adjacency matrix by column (second block)
- return(list(A1 = a1, A2 = a2))
- }
+con.cor <- function(x) {
+  c <- x
+  n <- nrow(c) # number of nodes
+  while (1 - mean(abs(c)) > 1e-10) {
+    c <- cor(c)
+  }
+  names1 <- c[, 1] > 9.9e-10 # nodes with 1.0 in the first column of converged correlation matrix
+  names2 <- c[, 1] < -9.9e-10 # nodes with -1.0 in the first column of converged correlation matrix
+  a1 <- x[, names1, drop = FALSE] # subsetting original adjacency matrix by column (first block)
+  a2 <- x[, names2, drop = FALSE] # subsetting original adjacency matrix by column (second block)
+  return(list(A1 = a1, A2 = a2))
+}
 ```
 
 This function takes a graph's adjacency matrix as input (`x`), creates a copy of the adjacency matrix (`c`) in line 2, to be put through the iterated correlations meat grinder (we will need the original adjacency matrix later). The `while` loop in line 4 goes through the iterated correlations (stopping when the matrix is full of ones). Then the resulting two blocks are returned as the columns of two partial versions of the original adjacency matrix (`a1` and `a2`) stored in a list.
@@ -424,7 +439,7 @@ This function takes a graph's adjacency matrix as input (`x`), creates a copy of
 For instance, to use our example above:
 
 ```{r}
- con.cor(m)
+con.cor(m)
 ```
 
 As we can see, the nodes in the columns of these slices of the adjacency matrix are the two blocks we found before. 
@@ -434,12 +449,16 @@ Of course, to implement this method as a **divisive clustering** algorithm, what
 The following function--simplified and adapted from [Adam Slez's work](https://rdrr.io/github/aslez/concoR/src/R/concoR.R)---which includes the `con.cor` function shown earlier inside of it, will do it:
 
 ```{r}
- blocks <- function(w, s = 2) {
- if (is.null(colnames(w)) == TRUE) {colnames(w) <- paste("v", 1:ncol(w), sep = "_")} #naming columns if they have no name
- z <- list(cor(w))
- for(i in 1:s) {z <- unlist(lapply(z, con.cor), recursive = FALSE)}
- return(lapply(z, colnames))
- }
+blocks <- function(w, s = 2) {
+  if (is.null(colnames(w)) == TRUE) {
+    colnames(w) <- paste("v", 1:ncol(w), sep = "_")
+  } # naming columns if they have no name
+  z <- list(cor(w))
+  for (i in 1:s) {
+    z <- unlist(lapply(z, con.cor), recursive = FALSE)
+  }
+  return(lapply(z, colnames))
+}
 ```
 
 This function takes the graph's adjacency matrix (`w`) as input and checks to see if it has any column names in line 2. After turning the adjacency matrix into a `list` object `z` in line 3, the `for` loop in line 4 goes for `s` iterations and populates the list object `z` with repeated applications of the `con.cor` function to itself (which are the previous `con.cor` partitions). Note that the `blocks` function returns a `list` object containing the *column names* of each of the `con.cor` indicator matrices of structurally equivalent nodes as output rather than the full matrices themselves (like the internal `con.cor` function does). It does this by applying the `colnames` function to each of the matrix elements of the resulting `z` list.
@@ -447,7 +466,7 @@ This function takes the graph's adjacency matrix (`w`) as input and checks to se
 Here's the `blocks` function in action for our toy network:
 
 ```{r}
- blocks(m)
+blocks(m)
 ```
 
 Which are the original four structurally equivalent classes. The argument `s` in the `blocks` function controls the number of splits. When it is equal to one, the function produces two blocks, and when it is equal to two it produces four blocks, when it is equal to three, six blocks, and so on. 
@@ -459,8 +478,8 @@ In a nutshell, this is the algorithm called CONCOR [@breiger_etal75], short for 
 For instance, if we wanted to split the *Flintstones* network into four blocks we would just type:
 
 ```{r}
- A <- as.matrix(as_adjacency_matrix(g))
- blocks(A)
+A <- as.matrix(as_adjacency_matrix(g))
+blocks(A)
 ```
 
 Which is similar to the results we got from the Euclidean distance method, except that now the children are put in the same blocks as the moms. 
@@ -468,14 +487,15 @@ Which is similar to the results we got from the Euclidean distance method, excep
 To visualize the results, we first need to convert a re-ordered version of the adjacency matrix into a "long" `data.frame` object in `R`, containing the adjacency relations between each pair of nodes in the graph. We can do that by recycling the approach we used to compute the degree correlation [here](basic.qmd):
 
 ```{r}
- ord <- unlist(blocks(A)) #node names in the order they appear in each block
- dat <- data.frame(rn = rep(rownames(A), ncol(A)), #row names
- cn = rep(colnames(A), each = nrow(A)), #column names
- e = as.vector(A) #vectorized version of adjacency matrix
- ) 
- dat$rn <- factor(dat$rn, levels = ord) #reordering row name factor
- dat$cn <- factor(dat$cn, levels = ord) #reordering column name factor
- head(dat)
+ord <- unlist(blocks(A)) # node names in the order they appear in each block
+dat <- data.frame(
+  rn = rep(rownames(A), ncol(A)), # row names
+  cn = rep(colnames(A), each = nrow(A)), # column names
+  e = as.vector(A) # vectorized version of adjacency matrix
+)
+dat$rn <- factor(dat$rn, levels = ord) # reordering row name factor
+dat$cn <- factor(dat$cn, levels = ord) # reordering column name factor
+head(dat)
 ```
 
 Now that we have the adjacency matrix converted into a `data.frame` we can use the `geom_tile` plotting function in `ggplot`:
@@ -483,21 +503,22 @@ Now that we have the adjacency matrix converted into a `data.frame` we can use t
 ```{r}
 #| fig-width: 8
 #| fig-height: 8
- p <- ggplot(dat, aes(x = rn, y = cn, fill = e))
- p <- p + geom_tile(color = "darkgray") 
- p <- p + scale_fill_gradient2(low = "white", mid = "white", high = "red")
- p <- p + scale_x_discrete(position = "top", limits = rev)
- p <- p + theme(legend.position = "none", 
- axis.text.x = element_text(hjust = 0.1, angle = 90),
- axis.text = element_text(size = 11, face = "bold")
- )
- p <- p + geom_hline(yintercept = 15.5, linewidth = 2, color = "blue")
- p <- p + geom_vline(xintercept = 3.5, linewidth = 2, color = "blue")
- p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
- p <- p + geom_vline(xintercept = 7.5, linewidth = 2, color = "blue")
- p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
- p <- p + geom_vline(xintercept = 13.5, linewidth = 2, color = "blue")
- p + ylab("") + xlab("")
+p <- ggplot(dat, aes(x = rn, y = cn, fill = e))
+p <- p + geom_tile(color = "darkgray")
+p <- p + scale_fill_gradient2(low = "white", mid = "white", high = "red")
+p <- p + scale_x_discrete(position = "top", limits = rev)
+p <- p + theme(
+  legend.position = "none",
+  axis.text.x = element_text(hjust = 0.1, angle = 90),
+  axis.text = element_text(size = 11, face = "bold")
+)
+p <- p + geom_hline(yintercept = 15.5, linewidth = 2, color = "blue")
+p <- p + geom_vline(xintercept = 3.5, linewidth = 2, color = "blue")
+p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+p <- p + geom_vline(xintercept = 7.5, linewidth = 2, color = "blue")
+p <- p + geom_hline(yintercept = 5.5, linewidth = 2, color = "blue")
+p <- p + geom_vline(xintercept = 13.5, linewidth = 2, color = "blue")
+p + ylab("") + xlab("")
 ```
 
 Which as its name suggests, produces a tile plot of the original adjacency matrix (adjacent cells in red) with rows and columns re-ordered according to the four-block solution and custom vertical and horizontal lines highlighting the boundaries of the blocked matrix using `geom_hline` (horizontal) and `geom_vline` (vertical). 
@@ -511,36 +532,38 @@ Note that if we wanted to create an **image matrix** from this blocking just lik
 Here's a function that does that:
 
 ```{r}
- image.matrix <- function(x, cut) {
- b <- blocks(x)
- n <- length(b)
- l <- names(b)
- im <- matrix(0, n, n)
- rownames(im) <- l
- colnames(im) <- l
- for (i in 1:n) {
- for (j in 1:n) {
- sb <- x[b[[i]], b[[j]]]
- e <- sum(sb)
- r <- nrow(sb)
- c <- ncol(sb)
- if (i == j) { #diagonal blocks
- d <- e/(r * (c-1))
- }
- if (i != j) { #off-diagonal blocks
- d <- e/(r * c)
- }
- if (d > cut) {im[i, j] <- 1}
- }
- }
- return(im[rev(l), rev(l)])
- }
+image.matrix <- function(x, cut) {
+  b <- blocks(x)
+  n <- length(b)
+  l <- names(b)
+  im <- matrix(0, n, n)
+  rownames(im) <- l
+  colnames(im) <- l
+  for (i in 1:n) {
+    for (j in 1:n) {
+      sb <- x[b[[i]], b[[j]]]
+      e <- sum(sb)
+      r <- nrow(sb)
+      c <- ncol(sb)
+      if (i == j) { # diagonal blocks
+        d <- e / (r * (c - 1))
+      }
+      if (i != j) { # off-diagonal blocks
+        d <- e / (r * c)
+      }
+      if (d > cut) {
+        im[i, j] <- 1
+      }
+    }
+  }
+  return(im[rev(l), rev(l)])
+}
 ```
 
 And we can then apply to the *Flinstones* network, using a cutoff of $c = 0.4$:
 
 ```{r}
- image.matrix(A, cut = 0.4)
+image.matrix(A, cut = 0.4)
 ```
 
 Which shows that the main "domestic" block of Wilma, Betty, Pebbles and Bam Bam (`A1.A1`) is connected to all the blocks except the block composed of mostly workplace characters (`A1.A2`), suggesting a strong division between work and home. 
@@ -564,7 +587,7 @@ Which just computes the Euclidean distances between nodes using both in and out 
 
 ```{r}
 #| eval: false
- d.ij <- d.ij + ((A[i,k] - A[j,k])^2 + (A[k,i] - A[k,j])^2)
+d.ij <- d.ij + ((A[i, k] - A[j, k])^2 + (A[k, i] - A[k, j])^2)
 ```
 
 This way, distances are computed on both the row and columns of the directed graph's adjacency matrix.
@@ -574,9 +597,9 @@ If we are using the correlation distance approach in a directed graph, then the 
 Let's see a brief example. Let's load up the Krackhardt's high-tech managers data on advice relations and look at the adjacency matrix:
 
 ```{r}
- g <- ht_advice
- A <- as.matrix(as_adjacency_matrix(g))
- A
+g <- ht_advice
+A <- as.matrix(as_adjacency_matrix(g))
+A
 ```
 
 Recall that [in these data](https://rdrr.io/github/schochastics/networkdata/man/ht_advice.html) a tie goes *from* an advice seeker *to* an advisor. So the standard correlation distance on the columns computes the in-correlation, or structural equivalence based on incoming ties (two managers are equivalent if they are nominated as advisors by the same others).
@@ -584,8 +607,8 @@ Recall that [in these data](https://rdrr.io/github/schochastics/networkdata/man/
 We may also be interested in the out-correlation, that is structural equivalence based on out-going ties. Here two managers are structurally equivalent is they seek advice from the same others. This information is contained in the transpose of the original adjacency matrix:
 
 ```{r}
- A.t <- t(A)
- A.t
+A.t <- t(A)
+A.t
 ```
 
 Correlating the columns of this matrix would thus give us the out-correlation distance based on advice seeking relations. 
@@ -593,20 +616,20 @@ Correlating the columns of this matrix would thus give us the out-correlation di
 "Stacking" is a way to combine both in and out-going ties and compute a single distance based on both. It just means that we literally bind the rows of the firs matrix and its transpose:
 
 ```{r}
- A.stack <- rbind(A, A.t)
- A.stack
+A.stack <- rbind(A, A.t)
+A.stack
 ```
 
 Note that this matrix has the same number of columns as the original adjacency matrix and double the number of rows. This doesn't matter since the correlation distance works on the columns, meaning that it will return a matrix of the same dimensions as the original:
 
 ```{r}
- round(cor(A.stack), 2)
+round(cor(A.stack), 2)
 ```
 
 And we would then do a blockmodel based on these distances:
 
 ```{r}
- blocks(A.stack)
+blocks(A.stack)
 ```
 
 ## Structural Equivalence in Multigraphs
@@ -614,16 +637,16 @@ And we would then do a blockmodel based on these distances:
 Note that we would apply the same trick if we wanted to do a blockmodel based on multiple relations like friendship *and* advice. Here's a blockmodel based on the stacked matrices of incoming ties of both types:
 
 ```{r}
- A.f <- as.matrix(as_adjacency_matrix(ht_friends))
- A.stack <- rbind(A, A.f)
- blocks(A.stack)
+A.f <- as.matrix(as_adjacency_matrix(ht_friends))
+A.stack <- rbind(A, A.f)
+blocks(A.stack)
 ```
 
 And one combining incoming and outgoing friendship and advice ties:
 
 ```{r}
- A.stack <- rbind(A, A.t, A.f, t(A.f))
- blocks(A.stack)
+A.stack <- rbind(A, A.t, A.f, t(A.f))
+blocks(A.stack)
 ```
 
 Note that here the stacked matrix has four sub-matrices: (1) Incoming advice, (2) outgoing advice, (3) incoming friendship, and (4) Outgoing friendship.

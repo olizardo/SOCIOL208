@@ -9,19 +9,21 @@ Imagine something is diffusing through a network starting with some seed node $i
 Here's a function called `first.pass1` that records the minimum number of steps that it takes for something to get to each node in a graph starting from a given seed node:
 
 ```{r}
- first.pass1 <- function(w, seed = 1) {
- fp <- rep(0, ncol(w))
- k <- 1
- i <- seed
- while(sum(fp[-seed] == 0) != 0) {
- j <- sample(c(1:ncol(w)), 1, prob = w[i, ]) 
- if (fp[j] == 0 & j != seed) {fp[j] <- k}
- i <- j
- k <- k + 1
- }
- names(fp) <- 1:ncol(w)
- return(fp)
- }
+first.pass1 <- function(w, seed = 1) {
+  fp <- rep(0, ncol(w))
+  k <- 1
+  i <- seed
+  while (sum(fp[-seed] == 0) != 0) {
+    j <- sample(c(1:ncol(w)), 1, prob = w[i, ])
+    if (fp[j] == 0 & j != seed) {
+      fp[j] <- k
+    }
+    i <- j
+    k <- k + 1
+  }
+  names(fp) <- 1:ncol(w)
+  return(fp)
+}
 ```
 
 The function takes a transition matrix $\mathbf{P} = \mathbf{D}^{-1}\mathbf{A}$---where $\mathbf{D}^{-1}$ is a matrix containing the inverse of the degrees of each node along the diagonals and zeros everywhere else---as the primary input (of the sort we discussed when talking about [status and prestige](prest-eigen.qmd)) and returns a vector containing the time step at which the thing that diffused through the network got to the $j^{th}$ node. It works like this:
@@ -35,14 +37,14 @@ The function takes a transition matrix $\mathbf{P} = \mathbf{D}^{-1}\mathbf{A}$-
 Let's test the `first.pass1` function out using the **undirected** version of the friendship network from the Krackhardt high-tech managers data:
 
 ```{r}
- library(networkdata)
- library(igraph)
- g <- as_undirected(ht_friends, mode = "collapse") #undirected graph
- A <- as.matrix(as_adjacency_matrix(g)) #adjacency matrix
- D <- diag(rowSums(A)^-1) #inverse of degree matrix
- P <- D %*% A #transition matrix
- set.seed(456) 
- first.pass1(P)
+library(networkdata)
+library(igraph)
+g <- as_undirected(ht_friends, mode = "collapse") # undirected graph
+A <- as.matrix(as_adjacency_matrix(g)) # adjacency matrix
+D <- diag(rowSums(A)^-1) # inverse of degree matrix
+P <- D %*% A # transition matrix
+set.seed(456)
+first.pass1(P)
 ```
 
 We can see for instance that the rumor got to node 16 in just one time step, but that it took 26 time steps to get to node 14 and 137 (!) to get to node 3.
@@ -54,9 +56,9 @@ However, we wouldn't want to use just one run of the diffusion process to calcul
 To do that, we can just `replicate` the `first.pass1` function some number of times (e.g., $n = 100$) and take an average:
 
 ```{r}
- set.seed(456)
- first.res <- replicate(100, first.pass1(P))
- round(rowMeans(first.res), 2)
+set.seed(456)
+first.res <- replicate(100, first.pass1(P))
+round(rowMeans(first.res), 2)
 ```
 
 We can see that according to this measure, called **the average first passage time** [@fouss_etal16, p. 36], when we start with node 1, things get relatively quickly to node 17 ($\hat{t} = 8.7$) but they take forever to get to node 13 ($\hat{t} = 86.8$).
@@ -64,21 +66,21 @@ We can see that according to this measure, called **the average first passage ti
 We can of course, write a wrapper around the `first.pass1` function to compute the average first passage time from one node to another using every node in the graph as the initial seed, and put all of the results in a matrix $\mathbf{M}$ where each entry $m_{ij}$ is the average first passage time between nodes $i$ and $j$:
 
 ```{r}
- first.pass2 <- function(w, n) {
- m <- rowMeans(replicate(n, first.pass1(w)))
- for (i in 2:nrow(w)) {
- m <- rbind(m, rowMeans(replicate(n, first.pass1(w, seed = i))))
- }
- rownames(m) <- 1:nrow(w)
- return(m)
- }
+first.pass2 <- function(w, n) {
+  m <- rowMeans(replicate(n, first.pass1(w)))
+  for (i in 2:nrow(w)) {
+    m <- rbind(m, rowMeans(replicate(n, first.pass1(w, seed = i))))
+  }
+  rownames(m) <- 1:nrow(w)
+  return(m)
+}
 ```
 
 And the result (showing the first ten rows and columns of $\mathbf{M}$) is:
 
 ```{r}
- set.seed(456)
- round(first.pass2(P, 100), 1)[1:10, 1:10]
+set.seed(456)
+round(first.pass2(P, 100), 1)[1:10, 1:10]
 ```
 
 Note that the $\mathbf{M}$ matrix is asymmetric. That is, the average number of steps that it takes for something to get from me to you ($m_{ij}$), is not necessarily the same as the average number of steps that it takes for something to get from you to me ($m_{ji}$). 
@@ -102,25 +104,25 @@ Here's how to proceed. We first start with a null value for all the entries of t
 A function that implement this idea goes like this:
 
 ```{r}
- first.pass3 <- function(w) {
- n <- nrow(w)
- nodes <- 1:n
- m <- matrix(0, n, n) #initializing M matrix values
- d <- 1 #initialize delta
- while(d > 1e-06) { #do while delta is bigger than a tiny number
- old.m <- m
- for (i in nodes) { #loop through every node
- for (j in nodes[-i]) { #loop through every node except i
- m[i,j] <- 1
- for (k in nodes[-c(i,j)]) { #loop through every node except i and j
- m[i,j] <- m[i,j] + (w[i,k]*old.m[k,j]) #update M matrix values
- }
- }
- }
- d <- abs(sum(abs(m) - abs(old.m))) #delta equals difference between current and previous M matrix
- } #end while loop
- return(m)
- }
+first.pass3 <- function(w) {
+  n <- nrow(w)
+  nodes <- 1:n
+  m <- matrix(0, n, n) # initializing M matrix values
+  d <- 1 # initialize delta
+  while (d > 1e-06) { # do while delta is bigger than a tiny number
+    old.m <- m
+    for (i in nodes) { # loop through every node
+      for (j in nodes[-i]) { # loop through every node except i
+        m[i, j] <- 1
+        for (k in nodes[-c(i, j)]) { # loop through every node except i and j
+          m[i, j] <- m[i, j] + (w[i, k] * old.m[k, j]) # update M matrix values
+        }
+      }
+    }
+    d <- abs(sum(abs(m) - abs(old.m))) # delta equals difference between current and previous M matrix
+  } # end while loop
+  return(m)
+}
 ```
 
 This function takes the probability transition matrix $\mathbf{P}$ as input and returns the $\mathbf{M}$ matrix of average first passage times between every pair of nodes in the network. 
@@ -128,7 +130,7 @@ This function takes the probability transition matrix $\mathbf{P}$ as input and 
 And the result is:
 
 ```{r}
- round(first.pass3(P), 1)[1:10, 1:10]
+round(first.pass3(P), 1)[1:10, 1:10]
 ```
 
 Which are the exact (up to rounding error) average first passage times between each pair of nodes in the network.
@@ -148,8 +150,8 @@ Where $\mathbf{D}$ is a diagonal matrix containing the degrees of each node in t
 In `R` we can compute $\mathbf{L}$ like this:
 
 ```{r}
- D <- diag(rowSums(A))
- L <- D - A
+D <- diag(rowSums(A))
+L <- D - A
 ```
 
 Once we have $\mathbf{L}$, we need to compute a variation known by the less than memorable name of the **Moore-Penrose Pseudo-Inverse of the Laplacian**, written as $\mathbf{L}^+$, which is given by:
@@ -163,8 +165,8 @@ Where $\mathbf{E}$ is the all ones matrix of the same dimensions as $\mathbf{L}$
 So despite the terrible name, $\mathbf{L}^+$ is easy to compute in `R`:
 
 ```{r}
- E <- matrix(1, nrow(A), nrow(A))/nrow(A)
- L.p <- solve(L + E) - E
+E <- matrix(1, nrow(A), nrow(A)) / nrow(A)
+L.p <- solve(L + E) - E
 ```
 
 As we can see, `E` is just a matrix containing the inverse of the number of nodes in the network in every cell ($\frac{1}{N}$). We use the function `solve` to obtain the **matrix inverse** of the expression in parentheses in .
@@ -172,7 +174,7 @@ As we can see, `E` is just a matrix containing the inverse of the number of node
 What's in the $\mathbf{L}^+$ matrix? Let's see the first ten rows and columns:
 
 ```{r}
- round(L.p[1:10, 1:10], 3)
+round(L.p[1:10, 1:10], 3)
 ```
 
 As we can see, some of the entries of $\mathbf{L}^+$ are positive and others are negative. More interestingly, we can see that $\mathbf{L}^+$ is a **symmetric** matrix: $l^+_{ij} = l^+_{ij}$. 
@@ -180,8 +182,8 @@ As we can see, some of the entries of $\mathbf{L}^+$ are positive and others are
 Even more interestingly, $\mathbf{L}^+$ is **doubly centered**---similar to the **modularity matrix** [considered here](comm-mod.qmd). That means *both* the rows and column sums of the matrix are equal to the all zeros vector:
 
 ```{r}
- round(rowSums(L.p), 2)
- round(colSums(L.p), 2)
+round(rowSums(L.p), 2)
+round(colSums(L.p), 2)
 ```
 
 The average first passage time between every pair of nodes in the network $m_{ij}$ expressed in terms of the entries of $\mathbf{L}^+$ and the degree vector $\mathbf{d}$, is then given by [@fouss_etal16, p. 158]:
@@ -195,17 +197,17 @@ Where $d_k$ is the degree of node $k$.
 So let's try it out:
 
 ```{r}
- nodes <- 1:nrow(A) #node id vector
- d <- rowSums(A) #degree vector
- m <- matrix(0, nrow(A), nrow(A)) #initializing M to all zeros
- for (i in nodes) { 
- for (j in nodes) { 
- for (k in nodes) { 
- m[i,j] <- m[i,j] + ((L.p[j,j] - L.p[i,j] + L.p[i,k] - L.p[k,j])*d[k])
- }
- }
- }
- round(m[1:10, 1:10], 1)
+nodes <- 1:nrow(A) # node id vector
+d <- rowSums(A) # degree vector
+m <- matrix(0, nrow(A), nrow(A)) # initializing M to all zeros
+for (i in nodes) {
+  for (j in nodes) {
+    for (k in nodes) {
+      m[i, j] <- m[i, j] + ((L.p[j, j] - L.p[i, j] + L.p[i, k] - L.p[k, j]) * d[k])
+    }
+  }
+}
+round(m[1:10, 1:10], 1)
 ```
 
 Which produces exactly the same results we obtained earlier via iteration. 
@@ -223,20 +225,20 @@ Now, this formula looks long and monstrous but it is composed of simple quantiti
 The following `R` code constructs $\mathbf{M}$ step by step:
 
 ```{r}
- e <- matrix(1, nrow(A), 1) #column vector of all ones
- d <- rowSums(A) #degree vector 
- l <- diag(L.p) #diagonal vector of Laplacian inverse
- vol.A <- sum(d) #graph volume 
- M <- vol.A * (e %*% t(l))
- M <- M - (vol.A * L.p)
- M <- M + (L.p %*% d) %*% t(e)
- M <- M - (e %*% (t(d) %*% L.p))
+e <- matrix(1, nrow(A), 1) # column vector of all ones
+d <- rowSums(A) # degree vector
+l <- diag(L.p) # diagonal vector of Laplacian inverse
+vol.A <- sum(d) # graph volume
+M <- vol.A * (e %*% t(l))
+M <- M - (vol.A * L.p)
+M <- M + (L.p %*% d) %*% t(e)
+M <- M - (e %*% (t(d) %*% L.p))
 ```
 
 And now for the big reveal:
 
 ```{r}
- round(M, 1)[1:10, 1:10]
+round(M, 1)[1:10, 1:10]
 ```
 
 Which once again, gives us the results we seek.
@@ -256,8 +258,8 @@ $$
 So the entries of the Average Commute Distance matrix $\mathbf{N}$ are just the entries of $\mathbf{M}$ on the upper triangle added to the corresponding entries in the lower triangle. In `R` we can obtain that by just adding $\mathbf{M}$ to its transpose $\mathbf{M}^T$:
 
 ```{r}
- N <- M + t(M)
- round(N[1:10, 1:10], 1)
+N <- M + t(M)
+round(N[1:10, 1:10], 1)
 ```
 
 Note that the average commute distance matrix entries are symmetric, which makes sense, for it takes as long for something to go from to you to me and back to you as from me to you and back to me. The average commute distance between pairs of nodes thus functions as a **similarity metric**; the lower the average commute distance, the closer or more similar two nodes are in the network. 
@@ -279,11 +281,11 @@ But which is actually a much less monstrous and simpler expression than before.
 The following `R` code constructs the $\mathbf{N}$ matrix of average commute distances between each pair of nodes in the network step by step:
 
 ```{r}
- N <- l %*% t(e)
- N <- N + (e %*% l)
- N <- N - (2 * L.p)
- N <- vol.A * N
- round(N, 1)[1:10, 1:10]
+N <- l %*% t(e)
+N <- N + (e %*% l)
+N <- N - (2 * L.p)
+N <- vol.A * N
+round(N, 1)[1:10, 1:10]
 ```
 
 Which as you can see, gives us the results we seek. 
@@ -295,17 +297,17 @@ Interestingly, we can obtain the average commute time distance between any pair 
 Let's construct two vectors full of zeros of the same length as the number of nodes in the graph, except they have a one in the third and eighth spot respectively:
 
 ```{r}
- n <- ncol(A)
- i <- rep(0, n)
- j <- rep(0, n)
- i[3] <- 1
- j[8] <- 1
+n <- ncol(A)
+i <- rep(0, n)
+j <- rep(0, n)
+i[3] <- 1
+j[8] <- 1
 ```
 
 @fouss_etal04b show that the average commute time distance between nodes 3 and 8 is also given by:
 
 ```{r}
- round(sum(A) * (t((i - j)) %*% L.p %*% (i - j)), 2)
+round(sum(A) * (t((i - j)) %*% L.p %*% (i - j)), 2)
 ```
 
 Neat!

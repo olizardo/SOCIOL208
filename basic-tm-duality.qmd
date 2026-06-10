@@ -27,21 +27,21 @@ $$ {#eq-g}
 Let's see how this works out with real data by loading our usual friend, the *Southern Women* data:
 
 ```{r}
- library(igraph)
- library(networkdata)
- g <- southern_women
- library(stringr) #using stringr to change names from all caps to title case
- V(g)$name <- str_to_title(V(g)$name)
+library(igraph)
+library(networkdata)
+g <- southern_women
+library(stringr) # using stringr to change names from all caps to title case
+V(g)$name <- str_to_title(V(g)$name)
 ```
 
 In this case, equations and yield:
 
 ```{r}
- A <- as_biadjacency_matrix(g)
- P <- A %*% t(A)
- P
- G <- t(A) %*% A
- G
+A <- as_biadjacency_matrix(g)
+P <- A %*% t(A)
+P
+G <- t(A) %*% A
+G
 ```
 
 The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) shared by each person (group), and the diagonals are the number of memberships of each person (the size of each group/event).
@@ -49,26 +49,26 @@ The off-diagonal entries of these square person-by-person (group-by-group) matri
 In `igraph,` the relevant function is called `bipartite_projection`. It takes a bipartite graph as an input and returns a list containing `igraph` graph objects of both projections by default:
 
 ```{r}
- Proj <- bipartite_projection(g)
- G.p <- Proj[[1]]
- G.g <- Proj[[2]]
+Proj <- bipartite_projection(g)
+G.p <- Proj[[1]]
+G.g <- Proj[[2]]
 ```
 
 In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code for to set the `edge.width`:
 
 ```{r}
- edge_attr(G.p)
- edge_attr(G.g)
+edge_attr(G.p)
+edge_attr(G.g)
 ```
 
 So to get the weighted projection matrix, we need to type:
 
 ```{r}
- as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
+as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
 ```
 
 ```{r}
- as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
+as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
 ```
 We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.with` argument to the value of the edge weight attribute in the corresponding graph:
 
@@ -77,24 +77,26 @@ We can also use the weights to draw a weighted graph network plot of people and 
 #| fig-width: 12
 #| fig-cap: "One mode projections."
 #| label: fig-projection
-#| fig-subcap: 
+#| fig-subcap:
 #| - "Persons."
 #| - "Groups."
 #| layout-ncol: 1
 
- set.seed(123)
- plot(G.p, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, edge.curved=0.2, 
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = E(G.p)$weight)
+set.seed(123)
+plot(G.p,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = E(G.p)$weight
+)
 
- set.seed(123)
- plot(G.g, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, edge.curved=0.2, 
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = E(G.g)$weight)
+set.seed(123)
+plot(G.g,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = E(G.g)$weight
+)
 ```
 
 Note that because both `G.p` and `G.g` are **weighted graphs**, we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).
@@ -102,8 +104,8 @@ Note that because both `G.p` and `G.g` are **weighted graphs**, we can calculate
 In `igraph,` we can do this using the `strength` function, which takes a weighted graph object as input:
 
 ```{r}
- strength(G.p)
- strength(G.g)
+strength(G.p)
+strength(G.g)
 ```
 
 Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:
@@ -115,8 +117,8 @@ Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical co
 We can verify this relationship for Evelyn:
 
 ```{r}
- sum.size.evelyn <- sum(A["Evelyn", ] * degree(g)[which(V(g)$type == TRUE)]) #sum of the sizes of the groups Evelyn belongs to
- sum.size.evelyn - degree(g)[which(V(g)$name == "Evelyn")]
+sum.size.evelyn <- sum(A["Evelyn", ] * degree(g)[which(V(g)$type == TRUE)]) # sum of the sizes of the groups Evelyn belongs to
+sum.size.evelyn - degree(g)[which(V(g)$name == "Evelyn")]
 ```
 
 Which is indeed Evelyn's vertex strength. 
@@ -124,8 +126,8 @@ Which is indeed Evelyn's vertex strength.
 Dually, the same relation applies to groups:
 
 ```{r}
- sum.mem.6.27 <- sum(A[, "6/27"] * degree(g)[which(V(g)$type == FALSE)]) #sum of the memberships of people in the first group
- sum.mem.6.27 - degree(g)[which(V(g)$name == "6/27")]
+sum.mem.6.27 <- sum(A[, "6/27"] * degree(g)[which(V(g)$type == FALSE)]) # sum of the memberships of people in the first group
+sum.mem.6.27 - degree(g)[which(V(g)$name == "6/27")]
 ```
 
 Which is indeed the vertex strength of the event held on 6/27.
@@ -150,36 +152,36 @@ We stop when we have the desired number of edges ($N-1$), meaning all nodes are 
 Here's a function that does all of this, taking the weighted projection `igraph` object as input and returning the minimum spanning tree:
 
 ```{r}
- make.mst <- function(x) {
- E <- data.frame(as_edgelist(x), w = E(x)$weight) #creating weighted edge list
- E <- E[order(E$w), ] #ordering by edge weight
- Tr <- make_empty_graph(n = vcount(x), directed = FALSE) #creating empty graph
- V(Tr)$name <- V(x)$name
- k <- 1
- n.e <- ecount(Tr)
- n.v <- vcount(Tr) - 1
- while(n.e < n.v) {
- i <- which(V(x)$name == E[k,1])
- j <- which(V(x)$name == E[k,2])
- if (are_adjacent(Tr, i, j) == 0) { #checking nodes are not adjacent
- Tr <- add_edges(Tr, c(i,j)) #add edge
- n.e <- ecount(Tr) #new edge id
- if (is_acyclic(Tr) == 0) { #checking new edge does not add a cycle
- Tr <- delete_edges(Tr, n.e) # delete edge if it adds a cycle
- }
- }
- n.e <- ecount(Tr)
- k <- k + 1
- }
- return(Tr)
- }
+make.mst <- function(x) {
+  E <- data.frame(as_edgelist(x), w = E(x)$weight) # creating weighted edge list
+  E <- E[order(E$w), ] # ordering by edge weight
+  Tr <- make_empty_graph(n = vcount(x), directed = FALSE) # creating empty graph
+  V(Tr)$name <- V(x)$name
+  k <- 1
+  n.e <- ecount(Tr)
+  n.v <- vcount(Tr) - 1
+  while (n.e < n.v) {
+    i <- which(V(x)$name == E[k, 1])
+    j <- which(V(x)$name == E[k, 2])
+    if (are_adjacent(Tr, i, j) == 0) { # checking nodes are not adjacent
+      Tr <- add_edges(Tr, c(i, j)) # add edge
+      n.e <- ecount(Tr) # new edge id
+      if (is_acyclic(Tr) == 0) { # checking new edge does not add a cycle
+        Tr <- delete_edges(Tr, n.e) # delete edge if it adds a cycle
+      }
+    }
+    n.e <- ecount(Tr)
+    k <- k + 1
+  }
+  return(Tr)
+}
 ```
 
 We can now build the minimum spanning tree graph for each weighted projection:
 
 ```{r}
- Tr.p <- make.mst(G.p)
- Tr.g <- make.mst(G.g)
+Tr.p <- make.mst(G.p)
+Tr.g <- make.mst(G.g)
 ```
 
 And here's a point and line plot of the minimum spanning tree for persons and groups in the *Southern Women* data (we use the `layout_as_tree` option in `igraph`):
@@ -189,23 +191,25 @@ And here's a point and line plot of the minimum spanning tree for persons and gr
 #| fig-width: 12
 #| fig-cap: "One mode projection MST."
 #| label: fig-mst
-#| fig-subcap: 
+#| fig-subcap:
 #| - "Persons."
 #| - "Groups."
 #| layout-ncol: 1
 
 set.seed(123)
- plot(Tr.p, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, layout=layout_as_tree,
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = 3, vertex.color = cluster_edge_betweenness(Tr.p)$membership)
+plot(Tr.p,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, layout = layout_as_tree,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = 3, vertex.color = cluster_edge_betweenness(Tr.p)$membership
+)
 set.seed(123)
- plot(Tr.g, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, layout=layout_as_tree,
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = 3, vertex.color = cluster_edge_betweenness(Tr.g)$membership)
+plot(Tr.g,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, layout = layout_as_tree,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = 3, vertex.color = cluster_edge_betweenness(Tr.g)$membership
+)
 ```
 
 ## An Asymmetric Approach to Dual Projection
@@ -217,20 +221,20 @@ To deal with this issue, @zhou_etal07 propose to weigh the one-mode projections 
 Recall from that [lecture](tm-ca.qmd) that the degree-normalized projections for persons and groups are obtained as follows:
 
 ```{r}
- D.p <- diag(1/rowSums(A)) #inverse of degree matrix of persons
- P.pg <- D.p %*% A
- rownames(P.pg) <- rownames(A) 
- D.g <- diag(1/colSums(A)) #inverse of degree matrix of groups
- P.gp <- D.g %*% t(A) #person-degree normalized biadjacency matrix
- rownames(P.gp) <- colnames(A) #group-degree normalized biadjacency matrix
- P.pp <- P.pg %*% P.gp #degree-normalized projection for people
- P.gg <- P.gp %*% P.pg #degree-normalized projection for groups
+D.p <- diag(1 / rowSums(A)) # inverse of degree matrix of persons
+P.pg <- D.p %*% A
+rownames(P.pg) <- rownames(A)
+D.g <- diag(1 / colSums(A)) # inverse of degree matrix of groups
+P.gp <- D.g %*% t(A) # person-degree normalized biadjacency matrix
+rownames(P.gp) <- colnames(A) # group-degree normalized biadjacency matrix
+P.pp <- P.pg %*% P.gp # degree-normalized projection for people
+P.gg <- P.gp %*% P.pg # degree-normalized projection for groups
 ```
 
 Checking the first rows and columns of the degree-weighted person projection reveals:
 
 ```{r}
- round(P.pp[1:5, 1:5], 3)
+round(P.pp[1:5, 1:5], 3)
 ```
 
 Note that the entries of this matrix are *not* symmetric, like in the standard Breiger projection. For instance, the weight of the link going from Evelyn to Laura is `r round(P.pp[1, 2], 3)`, but the weight of the link going from Laura to Evelyn is `r round(P.pp[2, 1], 3)`.
@@ -238,8 +242,8 @@ Note that the entries of this matrix are *not* symmetric, like in the standard B
 We can check this formally using the base `R` function `isSymmetric`:
 
 ```{r}
- isSymmetric(P)
- isSymmetric(P.pp)
+isSymmetric(P)
+isSymmetric(P.pp)
 ```
 
 Which returns `TRUE` for the usual Breiger projection but `FALSE` for the degree-weighted projection.
@@ -247,8 +251,8 @@ Which returns `TRUE` for the usual Breiger projection but `FALSE` for the degree
 We can create weighted directed `igraph` objects from the degree-weighted projections using the function `graph_from_adjacency_matrix` as follows:
 
 ```{r}
- G.dp <- graph_from_adjacency_matrix(P.pp, mode = "directed", weighted = TRUE, diag = FALSE)
- G.dg <- graph_from_adjacency_matrix(P.gg, mode = "directed", weighted = TRUE, diag = FALSE)
+G.dp <- graph_from_adjacency_matrix(P.pp, mode = "directed", weighted = TRUE, diag = FALSE)
+G.dg <- graph_from_adjacency_matrix(P.gg, mode = "directed", weighted = TRUE, diag = FALSE)
 ```
 
 Note that we set the `mode` argument to `directed`, the `weighted` argument to `TRUE`, and the `diag` argument to `FALSE` (to ignore the diagonal entries).
@@ -260,22 +264,24 @@ We can, of course, plot the directed weighted graphs on each mode as usual:
 #| fig-width: 12
 #| fig-cap: "Degree-weighted one mode projections."
 #| label: fig-dgproj
-#| fig-subcap: 
+#| fig-subcap:
 #| - "Persons."
 #| - "Groups."
 #| layout-ncol: 1
 
- set.seed(123)
- plot(G.dp, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, edge.curved=0.2, 
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = E(G.p)$weight*0.5)
+set.seed(123)
+plot(G.dp,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = E(G.p)$weight * 0.5
+)
 
- set.seed(123)
- plot(G.dg, 
- vertex.size=8, vertex.frame.color="lightgray", 
- vertex.label.dist=2, edge.curved=0.2, 
- vertex.label.cex = 1.5, edge.color = "lightgray",
- edge.width = E(G.g)$weight*0.5)
+set.seed(123)
+plot(G.dg,
+  vertex.size = 8, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "lightgray",
+  edge.width = E(G.g)$weight * 0.5
+)
 ```

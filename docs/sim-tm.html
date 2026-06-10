@@ -628,6 +628,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./comm-ca.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community Detection in Two-Mode Networks Using CA</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./comm-overlap-clique.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Using Cliques to Assign Nodes to Overlapping Communities</span></a>
   </div>
@@ -824,73 +830,75 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a> <span class="fu">library</span>(igraph)</span>
-<span id="cb1-2"><a href="#cb1-2"></a> <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-3"><a href="#cb1-3"></a> g <span class="ot">&lt;-</span> southern_women</span>
-<span id="cb1-4"><a href="#cb1-4"></a> A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>g <span class="ot">&lt;-</span> southern_women</span>
+<span id="cb1-4"><a href="#cb1-4"></a>A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Repackaging our vertex similarity function for the two-mode case, we have:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a> vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a> A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(x))</span>
-<span id="cb2-3"><a href="#cb2-3"></a> M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co">#number of persons</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a> N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A) <span class="co">#number of groups</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a> p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#person degrees</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a> g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co">#group degrees</span></span>
-<span id="cb2-7"><a href="#cb2-7"></a> P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co">#person projection</span></span>
-<span id="cb2-8"><a href="#cb2-8"></a> G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co">#group projection</span></span>
-<span id="cb2-9"><a href="#cb2-9"></a> J.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb2-10"><a href="#cb2-10"></a> J.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb2-11"><a href="#cb2-11"></a> C.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb2-12"><a href="#cb2-12"></a> C.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb2-13"><a href="#cb2-13"></a> D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb2-14"><a href="#cb2-14"></a> D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb2-15"><a href="#cb2-15"></a> L.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb2-16"><a href="#cb2-16"></a> L.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb2-17"><a href="#cb2-17"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb2-18"><a href="#cb2-18"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb2-19"><a href="#cb2-19"></a> <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
-<span id="cb2-20"><a href="#cb2-20"></a> J.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb2-21"><a href="#cb2-21"></a> J.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb2-22"><a href="#cb2-22"></a> C.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
-<span id="cb2-23"><a href="#cb2-23"></a> C.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
-<span id="cb2-24"><a href="#cb2-24"></a> D.p[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb2-25"><a href="#cb2-25"></a> D.p[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb2-26"><a href="#cb2-26"></a> L.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
-<span id="cb2-27"><a href="#cb2-27"></a> L.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
-<span id="cb2-28"><a href="#cb2-28"></a> }</span>
-<span id="cb2-29"><a href="#cb2-29"></a> }</span>
-<span id="cb2-30"><a href="#cb2-30"></a> }</span>
-<span id="cb2-31"><a href="#cb2-31"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb2-32"><a href="#cb2-32"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb2-33"><a href="#cb2-33"></a> <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
-<span id="cb2-34"><a href="#cb2-34"></a> J.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb2-35"><a href="#cb2-35"></a> J.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb2-36"><a href="#cb2-36"></a> C.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
-<span id="cb2-37"><a href="#cb2-37"></a> C.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
-<span id="cb2-38"><a href="#cb2-38"></a> D.g[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb2-39"><a href="#cb2-39"></a> D.g[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb2-40"><a href="#cb2-40"></a> L.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
-<span id="cb2-41"><a href="#cb2-41"></a> L.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
-<span id="cb2-42"><a href="#cb2-42"></a> }</span>
-<span id="cb2-43"><a href="#cb2-43"></a> }</span>
-<span id="cb2-44"><a href="#cb2-44"></a> }</span>
-<span id="cb2-45"><a href="#cb2-45"></a> <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
-<span id="cb2-46"><a href="#cb2-46"></a> <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g))</span>
-<span id="cb2-47"><a href="#cb2-47"></a> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>  A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(x))</span>
+<span id="cb2-3"><a href="#cb2-3"></a>  M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co"># number of persons</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>  N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A) <span class="co"># number of groups</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a>  p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co"># person degrees</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a>  g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co"># group degrees</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a>  P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co"># person projection</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>  G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co"># group projection</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a>  J.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb2-10"><a href="#cb2-10"></a>  J.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb2-11"><a href="#cb2-11"></a>  C.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb2-12"><a href="#cb2-12"></a>  C.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb2-13"><a href="#cb2-13"></a>  D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb2-14"><a href="#cb2-14"></a>  D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb2-15"><a href="#cb2-15"></a>  L.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb2-16"><a href="#cb2-16"></a>  L.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb2-17"><a href="#cb2-17"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb2-18"><a href="#cb2-18"></a>    <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb2-19"><a href="#cb2-19"></a>      <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb2-20"><a href="#cb2-20"></a>        J.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb2-21"><a href="#cb2-21"></a>        J.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb2-22"><a href="#cb2-22"></a>        C.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb2-23"><a href="#cb2-23"></a>        C.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb2-24"><a href="#cb2-24"></a>        D.p[i, j] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb2-25"><a href="#cb2-25"></a>        D.p[j, i] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb2-26"><a href="#cb2-26"></a>        L.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb2-27"><a href="#cb2-27"></a>        L.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb2-28"><a href="#cb2-28"></a>      }</span>
+<span id="cb2-29"><a href="#cb2-29"></a>    }</span>
+<span id="cb2-30"><a href="#cb2-30"></a>  }</span>
+<span id="cb2-31"><a href="#cb2-31"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb2-32"><a href="#cb2-32"></a>    <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb2-33"><a href="#cb2-33"></a>      <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb2-34"><a href="#cb2-34"></a>        J.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb2-35"><a href="#cb2-35"></a>        J.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb2-36"><a href="#cb2-36"></a>        C.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb2-37"><a href="#cb2-37"></a>        C.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb2-38"><a href="#cb2-38"></a>        D.g[i, j] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb2-39"><a href="#cb2-39"></a>        D.g[j, i] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb2-40"><a href="#cb2-40"></a>        L.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb2-41"><a href="#cb2-41"></a>        L.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb2-42"><a href="#cb2-42"></a>      }</span>
+<span id="cb2-43"><a href="#cb2-43"></a>    }</span>
+<span id="cb2-44"><a href="#cb2-44"></a>  }</span>
+<span id="cb2-45"><a href="#cb2-45"></a>  <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb2-46"><a href="#cb2-46"></a>    <span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
+<span id="cb2-47"><a href="#cb2-47"></a>    <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g</span>
+<span id="cb2-48"><a href="#cb2-48"></a>  ))</span>
+<span id="cb2-49"><a href="#cb2-49"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Using this function to compute the Jaccard similarity between people yields:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a> J.p <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.p</span>
-<span id="cb3-2"><a href="#cb3-2"></a> <span class="fu">rownames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb3-3"><a href="#cb3-3"></a> <span class="fu">colnames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb3-4"><a href="#cb3-4"></a> <span class="fu">round</span>(J.p, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>J.p <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.p</span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="fu">rownames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="fu">colnames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="fu">round</span>(J.p, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>          EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL RUTH
@@ -940,9 +948,9 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span> J.p)</span>
-<span id="cb5-2"><a href="#cb5-2"></a> hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb5-3"><a href="#cb5-3"></a> <span class="fu">plot</span>(hc.p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> J.p)</span>
+<span id="cb5-2"><a href="#cb5-2"></a>hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3"></a><span class="fu">plot</span>(hc.p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -956,12 +964,12 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a> J.g <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.g</span>
-<span id="cb6-2"><a href="#cb6-2"></a> <span class="fu">rownames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb6-3"><a href="#cb6-3"></a> <span class="fu">colnames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb6-4"><a href="#cb6-4"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span> J.g)</span>
-<span id="cb6-5"><a href="#cb6-5"></a> hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb6-6"><a href="#cb6-6"></a> <span class="fu">plot</span>(hc.g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a>J.g <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.g</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="fu">rownames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="fu">colnames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb6-4"><a href="#cb6-4"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> J.g)</span>
+<span id="cb6-5"><a href="#cb6-5"></a>hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="fu">plot</span>(hc.g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -975,9 +983,9 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a> <span class="fu">library</span>(dendextend)</span>
-<span id="cb7-2"><a href="#cb7-2"></a> clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co">#selecting four clusters for people</span></span>
-<span id="cb7-3"><a href="#cb7-3"></a> clus.p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="fu">library</span>(dendextend)</span>
+<span id="cb7-2"><a href="#cb7-2"></a>clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co"># selecting four clusters for people</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a>clus.p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
@@ -989,8 +997,8 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 </div>
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a> clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co">#selecting three clusters for groups</span></span>
-<span id="cb9-2"><a href="#cb9-2"></a> clus.g</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co"># selecting three clusters for groups</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a>clus.g</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
@@ -1003,20 +1011,22 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a> <span class="fu">library</span>(ggcorrplot)</span>
-<span id="cb11-2"><a href="#cb11-2"></a> p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]), </span>
-<span id="cb11-3"><a href="#cb11-3"></a> <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
-<span id="cb11-4"><a href="#cb11-4"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
-<span id="cb11-5"><a href="#cb11-5"></a> <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
-<span id="cb11-6"><a href="#cb11-6"></a> <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
-<span id="cb11-7"><a href="#cb11-7"></a> )</span>
-<span id="cb11-8"><a href="#cb11-8"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
-<span id="cb11-9"><a href="#cb11-9"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb11-10"><a href="#cb11-10"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb11-11"><a href="#cb11-11"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb11-12"><a href="#cb11-12"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb11-13"><a href="#cb11-13"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb11-14"><a href="#cb11-14"></a> p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a><span class="fu">library</span>(ggcorrplot)</span>
+<span id="cb11-2"><a href="#cb11-2"></a>p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]),</span>
+<span id="cb11-3"><a href="#cb11-3"></a>  <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)</span>
+<span id="cb11-4"><a href="#cb11-4"></a>)</span>
+<span id="cb11-5"><a href="#cb11-5"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(</span>
+<span id="cb11-6"><a href="#cb11-6"></a>  <span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb11-7"><a href="#cb11-7"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb11-8"><a href="#cb11-8"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb11-9"><a href="#cb11-9"></a>)</span>
+<span id="cb11-10"><a href="#cb11-10"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>)</span>
+<span id="cb11-11"><a href="#cb11-11"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb11-12"><a href="#cb11-12"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb11-13"><a href="#cb11-13"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb11-14"><a href="#cb11-14"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb11-15"><a href="#cb11-15"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb11-16"><a href="#cb11-16"></a>p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -1030,18 +1040,20 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a> <span class="fu">library</span>(kableExtra)</span>
-<span id="cb12-2"><a href="#cb12-2"></a> IM <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">3</span>)</span>
-<span id="cb12-3"><a href="#cb12-3"></a> IM[<span class="dv">1</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb12-4"><a href="#cb12-4"></a> IM[<span class="dv">2</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb12-5"><a href="#cb12-5"></a> IM[<span class="dv">3</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb12-6"><a href="#cb12-6"></a> IM[<span class="dv">4</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb12-7"><a href="#cb12-7"></a> <span class="fu">rownames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"P.Block1"</span>, <span class="st">"P.Block2"</span>, <span class="st">"P.Block3"</span>, <span class="st">"P.Block4"</span>)</span>
-<span id="cb12-8"><a href="#cb12-8"></a> <span class="fu">colnames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"E.Block1"</span>, <span class="st">"E.Block2"</span>, <span class="st">"E.Block3"</span>)</span>
-<span id="cb12-9"><a href="#cb12-9"></a> <span class="fu">kbl</span>(IM, <span class="at">format =</span> <span class="st">"html"</span>, , <span class="at">align =</span> <span class="st">"c"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb12-10"><a href="#cb12-10"></a> <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb12-11"><a href="#cb12-11"></a> <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb12-12"><a href="#cb12-12"></a> <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a><span class="fu">library</span>(kableExtra)</span>
+<span id="cb12-2"><a href="#cb12-2"></a>IM <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">3</span>)</span>
+<span id="cb12-3"><a href="#cb12-3"></a>IM[<span class="dv">1</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb12-4"><a href="#cb12-4"></a>IM[<span class="dv">2</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb12-5"><a href="#cb12-5"></a>IM[<span class="dv">3</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb12-6"><a href="#cb12-6"></a>IM[<span class="dv">4</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb12-7"><a href="#cb12-7"></a><span class="fu">rownames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"P.Block1"</span>, <span class="st">"P.Block2"</span>, <span class="st">"P.Block3"</span>, <span class="st">"P.Block4"</span>)</span>
+<span id="cb12-8"><a href="#cb12-8"></a><span class="fu">colnames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"E.Block1"</span>, <span class="st">"E.Block2"</span>, <span class="st">"E.Block3"</span>)</span>
+<span id="cb12-9"><a href="#cb12-9"></a><span class="fu">kbl</span>(IM, <span class="at">format =</span> <span class="st">"html"</span>, , <span class="at">align =</span> <span class="st">"c"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-10"><a href="#cb12-10"></a>  <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-11"><a href="#cb12-11"></a>  <span class="fu">kable_styling</span>(</span>
+<span id="cb12-12"><a href="#cb12-12"></a>    <span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb12-13"><a href="#cb12-13"></a>    <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>)</span>
+<span id="cb12-14"><a href="#cb12-14"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div class="table-responsive">
@@ -1094,57 +1106,57 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a> TM.SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
-<span id="cb13-2"><a href="#cb13-2"></a> nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
-<span id="cb13-3"><a href="#cb13-3"></a> nc <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
-<span id="cb13-4"><a href="#cb13-4"></a> dr <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
-<span id="cb13-5"><a href="#cb13-5"></a> dc <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
-<span id="cb13-6"><a href="#cb13-6"></a> Sr <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nr, nr) <span class="co">#baseline similarity: every node maximally similar to themselves</span></span>
-<span id="cb13-7"><a href="#cb13-7"></a> Sc <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nc, nc) <span class="co">#baseline similarity: every node maximally similar to themselves</span></span>
-<span id="cb13-8"><a href="#cb13-8"></a> rn <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb13-9"><a href="#cb13-9"></a> cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb13-10"><a href="#cb13-10"></a> <span class="fu">rownames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
-<span id="cb13-11"><a href="#cb13-11"></a> <span class="fu">colnames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
-<span id="cb13-12"><a href="#cb13-12"></a> <span class="fu">rownames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
-<span id="cb13-13"><a href="#cb13-13"></a> <span class="fu">colnames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
-<span id="cb13-14"><a href="#cb13-14"></a> m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb13-15"><a href="#cb13-15"></a> <span class="cf">while</span>(m <span class="sc">&lt;</span> iter) {</span>
-<span id="cb13-16"><a href="#cb13-16"></a> Sr.pre <span class="ot">&lt;-</span> Sr</span>
-<span id="cb13-17"><a href="#cb13-17"></a> Sc.pre <span class="ot">&lt;-</span> Sc</span>
-<span id="cb13-18"><a href="#cb13-18"></a> <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
-<span id="cb13-19"><a href="#cb13-19"></a> <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
-<span id="cb13-20"><a href="#cb13-20"></a> <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
-<span id="cb13-21"><a href="#cb13-21"></a> a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[i, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#objects chosen by i</span></span>
-<span id="cb13-22"><a href="#cb13-22"></a> b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[j, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#objects chosen by j</span></span>
-<span id="cb13-23"><a href="#cb13-23"></a> Scij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb13-24"><a href="#cb13-24"></a> <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
-<span id="cb13-25"><a href="#cb13-25"></a> <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
-<span id="cb13-26"><a href="#cb13-26"></a> Scij <span class="ot">&lt;-</span> Scij <span class="sc">+</span> Sc[k, l] <span class="co">#i's similarity to j</span></span>
-<span id="cb13-27"><a href="#cb13-27"></a> }</span>
-<span id="cb13-28"><a href="#cb13-28"></a> }</span>
-<span id="cb13-29"><a href="#cb13-29"></a> Sr[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(dr[i] <span class="sc">*</span> dr[j]) <span class="sc">*</span> Scij</span>
-<span id="cb13-30"><a href="#cb13-30"></a> }</span>
-<span id="cb13-31"><a href="#cb13-31"></a> }</span>
-<span id="cb13-32"><a href="#cb13-32"></a> }</span>
-<span id="cb13-33"><a href="#cb13-33"></a> <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
-<span id="cb13-34"><a href="#cb13-34"></a> <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
-<span id="cb13-35"><a href="#cb13-35"></a> <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
-<span id="cb13-36"><a href="#cb13-36"></a> a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#people who chose object i</span></span>
-<span id="cb13-37"><a href="#cb13-37"></a> b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#people who chose object j</span></span>
-<span id="cb13-38"><a href="#cb13-38"></a> Srij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb13-39"><a href="#cb13-39"></a> <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
-<span id="cb13-40"><a href="#cb13-40"></a> <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
-<span id="cb13-41"><a href="#cb13-41"></a> Srij <span class="ot">&lt;-</span> Srij <span class="sc">+</span> Sr[k, l] <span class="co">#i's similarity to j</span></span>
-<span id="cb13-42"><a href="#cb13-42"></a> }</span>
-<span id="cb13-43"><a href="#cb13-43"></a> }</span>
-<span id="cb13-44"><a href="#cb13-44"></a> Sc[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(dc[i] <span class="sc">*</span> dc[j]) <span class="sc">*</span> Srij</span>
-<span id="cb13-45"><a href="#cb13-45"></a> }</span>
-<span id="cb13-46"><a href="#cb13-46"></a> }</span>
-<span id="cb13-47"><a href="#cb13-47"></a> }</span>
-<span id="cb13-48"><a href="#cb13-48"></a> m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb13-49"><a href="#cb13-49"></a> }</span>
-<span id="cb13-50"><a href="#cb13-50"></a> <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Sr =</span> Sr, <span class="at">Sc =</span> Sc))</span>
-<span id="cb13-51"><a href="#cb13-51"></a> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a>TM.SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
+<span id="cb13-2"><a href="#cb13-2"></a>  nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb13-3"><a href="#cb13-3"></a>  nc <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
+<span id="cb13-4"><a href="#cb13-4"></a>  dr <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb13-5"><a href="#cb13-5"></a>  dc <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
+<span id="cb13-6"><a href="#cb13-6"></a>  Sr <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nr, nr) <span class="co"># baseline similarity: every node maximally similar to themselves</span></span>
+<span id="cb13-7"><a href="#cb13-7"></a>  Sc <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nc, nc) <span class="co"># baseline similarity: every node maximally similar to themselves</span></span>
+<span id="cb13-8"><a href="#cb13-8"></a>  rn <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb13-9"><a href="#cb13-9"></a>  cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb13-10"><a href="#cb13-10"></a>  <span class="fu">rownames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
+<span id="cb13-11"><a href="#cb13-11"></a>  <span class="fu">colnames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
+<span id="cb13-12"><a href="#cb13-12"></a>  <span class="fu">rownames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
+<span id="cb13-13"><a href="#cb13-13"></a>  <span class="fu">colnames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
+<span id="cb13-14"><a href="#cb13-14"></a>  m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb13-15"><a href="#cb13-15"></a>  <span class="cf">while</span> (m <span class="sc">&lt;</span> iter) {</span>
+<span id="cb13-16"><a href="#cb13-16"></a>    Sr.pre <span class="ot">&lt;-</span> Sr</span>
+<span id="cb13-17"><a href="#cb13-17"></a>    Sc.pre <span class="ot">&lt;-</span> Sc</span>
+<span id="cb13-18"><a href="#cb13-18"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
+<span id="cb13-19"><a href="#cb13-19"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
+<span id="cb13-20"><a href="#cb13-20"></a>        <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
+<span id="cb13-21"><a href="#cb13-21"></a>          a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[i, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># objects chosen by i</span></span>
+<span id="cb13-22"><a href="#cb13-22"></a>          b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[j, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># objects chosen by j</span></span>
+<span id="cb13-23"><a href="#cb13-23"></a>          Scij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb13-24"><a href="#cb13-24"></a>          <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb13-25"><a href="#cb13-25"></a>            <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb13-26"><a href="#cb13-26"></a>              Scij <span class="ot">&lt;-</span> Scij <span class="sc">+</span> Sc[k, l] <span class="co"># i's similarity to j</span></span>
+<span id="cb13-27"><a href="#cb13-27"></a>            }</span>
+<span id="cb13-28"><a href="#cb13-28"></a>          }</span>
+<span id="cb13-29"><a href="#cb13-29"></a>          Sr[i, j] <span class="ot">&lt;-</span> C <span class="sc">/</span> (dr[i] <span class="sc">*</span> dr[j]) <span class="sc">*</span> Scij</span>
+<span id="cb13-30"><a href="#cb13-30"></a>        }</span>
+<span id="cb13-31"><a href="#cb13-31"></a>      }</span>
+<span id="cb13-32"><a href="#cb13-32"></a>    }</span>
+<span id="cb13-33"><a href="#cb13-33"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
+<span id="cb13-34"><a href="#cb13-34"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
+<span id="cb13-35"><a href="#cb13-35"></a>        <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
+<span id="cb13-36"><a href="#cb13-36"></a>          a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># people who chose object i</span></span>
+<span id="cb13-37"><a href="#cb13-37"></a>          b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># people who chose object j</span></span>
+<span id="cb13-38"><a href="#cb13-38"></a>          Srij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb13-39"><a href="#cb13-39"></a>          <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb13-40"><a href="#cb13-40"></a>            <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb13-41"><a href="#cb13-41"></a>              Srij <span class="ot">&lt;-</span> Srij <span class="sc">+</span> Sr[k, l] <span class="co"># i's similarity to j</span></span>
+<span id="cb13-42"><a href="#cb13-42"></a>            }</span>
+<span id="cb13-43"><a href="#cb13-43"></a>          }</span>
+<span id="cb13-44"><a href="#cb13-44"></a>          Sc[i, j] <span class="ot">&lt;-</span> C <span class="sc">/</span> (dc[i] <span class="sc">*</span> dc[j]) <span class="sc">*</span> Srij</span>
+<span id="cb13-45"><a href="#cb13-45"></a>        }</span>
+<span id="cb13-46"><a href="#cb13-46"></a>      }</span>
+<span id="cb13-47"><a href="#cb13-47"></a>    }</span>
+<span id="cb13-48"><a href="#cb13-48"></a>    m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb13-49"><a href="#cb13-49"></a>  }</span>
+<span id="cb13-50"><a href="#cb13-50"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Sr =</span> Sr, <span class="at">Sc =</span> Sc))</span>
+<span id="cb13-51"><a href="#cb13-51"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>This function takes the biadjacency matrix <span class="math inline">\(\mathbf{A}\)</span> as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).</p>
@@ -1152,14 +1164,14 @@ FLORA      0.14  0.14      0.11   0.10 0.17  0.12    0.20   0.33  1.00</code></p
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a> sim.res <span class="ot">&lt;-</span> <span class="fu">TM.SimRank</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>sim.res <span class="ot">&lt;-</span> <span class="fu">TM.SimRank</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Then we peek inside the people similarity matrix:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a> <span class="fu">round</span>(sim.res<span class="sc">$</span>Sr[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a><span class="fu">round</span>(sim.res<span class="sc">$</span>Sr[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>          EVELYN LAURA THERESA BRENDA CHARLOTTE FRANCES ELEANOR PEARL  RUTH
@@ -1190,7 +1202,7 @@ VERNE     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a> <span class="fu">round</span>(sim.res<span class="sc">$</span>Sc[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1"></a><span class="fu">round</span>(sim.res<span class="sc">$</span>Sc[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>      6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10
@@ -1210,23 +1222,23 @@ VERNE     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a> D.p <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sr)</span>
-<span id="cb19-2"><a href="#cb19-2"></a> D.g <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1"></a>D.p <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sr)</span>
+<span id="cb19-2"><a href="#cb19-2"></a>D.g <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Subject to hierarchical clustering:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a> hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.p, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb20-2"><a href="#cb20-2"></a> hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.g, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1"></a>hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.p, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb20-2"><a href="#cb20-2"></a>hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.g, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>And plot:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a> <span class="fu">plot</span>(hc.p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1"></a><span class="fu">plot</span>(hc.p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -1237,7 +1249,7 @@ VERNE     1.000</code></pre>
 </div>
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a> <span class="fu">plot</span>(hc.g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1"></a><span class="fu">plot</span>(hc.g)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -1251,8 +1263,8 @@ VERNE     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a> clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co">#selecting four clusters for people</span></span>
-<span id="cb23-2"><a href="#cb23-2"></a> clus.p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a>clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co"># selecting four clusters for people</span></span>
+<span id="cb23-2"><a href="#cb23-2"></a>clus.p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
@@ -1264,8 +1276,8 @@ VERNE     1.000</code></pre>
 </div>
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a> clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co">#selecting three clusters for groups</span></span>
-<span id="cb25-2"><a href="#cb25-2"></a> clus.g</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a>clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co"># selecting three clusters for groups</span></span>
+<span id="cb25-2"><a href="#cb25-2"></a>clus.g</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  2/23  6/10   4/7 11/21 
@@ -1278,19 +1290,21 @@ VERNE     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a> p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]), </span>
-<span id="cb27-2"><a href="#cb27-2"></a> <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
-<span id="cb27-3"><a href="#cb27-3"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
-<span id="cb27-4"><a href="#cb27-4"></a> <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
-<span id="cb27-5"><a href="#cb27-5"></a> <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
-<span id="cb27-6"><a href="#cb27-6"></a> )</span>
-<span id="cb27-7"><a href="#cb27-7"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
-<span id="cb27-8"><a href="#cb27-8"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb27-9"><a href="#cb27-9"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb27-10"><a href="#cb27-10"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb27-11"><a href="#cb27-11"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb27-12"><a href="#cb27-12"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">10.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb27-13"><a href="#cb27-13"></a> p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1"></a>p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]),</span>
+<span id="cb27-2"><a href="#cb27-2"></a>  <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)</span>
+<span id="cb27-3"><a href="#cb27-3"></a>)</span>
+<span id="cb27-4"><a href="#cb27-4"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(</span>
+<span id="cb27-5"><a href="#cb27-5"></a>  <span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb27-6"><a href="#cb27-6"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb27-7"><a href="#cb27-7"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb27-8"><a href="#cb27-8"></a>)</span>
+<span id="cb27-9"><a href="#cb27-9"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>)</span>
+<span id="cb27-10"><a href="#cb27-10"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb27-11"><a href="#cb27-11"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb27-12"><a href="#cb27-12"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb27-13"><a href="#cb27-13"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb27-14"><a href="#cb27-14"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">10.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb27-15"><a href="#cb27-15"></a>p</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -1791,274 +1805,281 @@ Jeh, Glen, and Jennifer Widom. 2002. <span>“Simrank: A Measure of Structural-C
 <span id="cb28-9"><a href="#cb28-9"></a>Let's see how this would work in our trusty *Southern Women* dataset:</span>
 <span id="cb28-10"><a href="#cb28-10"></a></span>
 <span id="cb28-13"><a href="#cb28-13"></a><span class="in">```{r}</span></span>
-<span id="cb28-14"><a href="#cb28-14"></a> <span class="fu">library</span>(igraph)</span>
-<span id="cb28-15"><a href="#cb28-15"></a> <span class="fu">library</span>(networkdata)</span>
-<span id="cb28-16"><a href="#cb28-16"></a> g <span class="ot">&lt;-</span> southern_women</span>
-<span id="cb28-17"><a href="#cb28-17"></a> A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span>
+<span id="cb28-14"><a href="#cb28-14"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb28-15"><a href="#cb28-15"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb28-16"><a href="#cb28-16"></a>g <span class="ot">&lt;-</span> southern_women</span>
+<span id="cb28-17"><a href="#cb28-17"></a>A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span>
 <span id="cb28-18"><a href="#cb28-18"></a><span class="in">```</span></span>
 <span id="cb28-19"><a href="#cb28-19"></a></span>
 <span id="cb28-20"><a href="#cb28-20"></a>Repackaging our vertex similarity function for the two-mode case, we have:</span>
 <span id="cb28-21"><a href="#cb28-21"></a></span>
 <span id="cb28-24"><a href="#cb28-24"></a><span class="in">```{r}</span></span>
-<span id="cb28-25"><a href="#cb28-25"></a> vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb28-26"><a href="#cb28-26"></a> A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(x))</span>
-<span id="cb28-27"><a href="#cb28-27"></a> M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co">#number of persons</span></span>
-<span id="cb28-28"><a href="#cb28-28"></a> N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A) <span class="co">#number of groups</span></span>
-<span id="cb28-29"><a href="#cb28-29"></a> p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co">#person degrees</span></span>
-<span id="cb28-30"><a href="#cb28-30"></a> g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co">#group degrees</span></span>
-<span id="cb28-31"><a href="#cb28-31"></a> P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co">#person projection</span></span>
-<span id="cb28-32"><a href="#cb28-32"></a> G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co">#group projection</span></span>
-<span id="cb28-33"><a href="#cb28-33"></a> J.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb28-34"><a href="#cb28-34"></a> J.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb28-35"><a href="#cb28-35"></a> C.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb28-36"><a href="#cb28-36"></a> C.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb28-37"><a href="#cb28-37"></a> D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb28-38"><a href="#cb28-38"></a> D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb28-39"><a href="#cb28-39"></a> L.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
-<span id="cb28-40"><a href="#cb28-40"></a> L.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
-<span id="cb28-41"><a href="#cb28-41"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb28-42"><a href="#cb28-42"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
-<span id="cb28-43"><a href="#cb28-43"></a> <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
-<span id="cb28-44"><a href="#cb28-44"></a> J.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb28-45"><a href="#cb28-45"></a> J.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb28-46"><a href="#cb28-46"></a> C.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
-<span id="cb28-47"><a href="#cb28-47"></a> C.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
-<span id="cb28-48"><a href="#cb28-48"></a> D.p[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb28-49"><a href="#cb28-49"></a> D.p[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>P[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>P[i,j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
-<span id="cb28-50"><a href="#cb28-50"></a> L.p[i,j] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
-<span id="cb28-51"><a href="#cb28-51"></a> L.p[j,i] <span class="ot">&lt;-</span> P[i,j]<span class="sc">/</span>(p.d[i] <span class="sc">*</span> p.d[j])</span>
-<span id="cb28-52"><a href="#cb28-52"></a> }</span>
-<span id="cb28-53"><a href="#cb28-53"></a> }</span>
-<span id="cb28-54"><a href="#cb28-54"></a> }</span>
-<span id="cb28-55"><a href="#cb28-55"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb28-56"><a href="#cb28-56"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
-<span id="cb28-57"><a href="#cb28-57"></a> <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
-<span id="cb28-58"><a href="#cb28-58"></a> J.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb28-59"><a href="#cb28-59"></a> J.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb28-60"><a href="#cb28-60"></a> C.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
-<span id="cb28-61"><a href="#cb28-61"></a> C.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
-<span id="cb28-62"><a href="#cb28-62"></a> D.g[i,j] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb28-63"><a href="#cb28-63"></a> D.g[j,i] <span class="ot">&lt;-</span> (<span class="dv">2</span><span class="sc">*</span>G[i,j])<span class="sc">/</span>(<span class="dv">2</span><span class="sc">*</span>G[i,j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
-<span id="cb28-64"><a href="#cb28-64"></a> L.g[i,j] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
-<span id="cb28-65"><a href="#cb28-65"></a> L.g[j,i] <span class="ot">&lt;-</span> G[i,j]<span class="sc">/</span>(g.d[i] <span class="sc">*</span> g.d[j])</span>
-<span id="cb28-66"><a href="#cb28-66"></a> }</span>
-<span id="cb28-67"><a href="#cb28-67"></a> }</span>
-<span id="cb28-68"><a href="#cb28-68"></a> }</span>
-<span id="cb28-69"><a href="#cb28-69"></a> <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
-<span id="cb28-70"><a href="#cb28-70"></a> <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g))</span>
-<span id="cb28-71"><a href="#cb28-71"></a> }</span>
-<span id="cb28-72"><a href="#cb28-72"></a><span class="in">```</span></span>
-<span id="cb28-73"><a href="#cb28-73"></a></span>
-<span id="cb28-74"><a href="#cb28-74"></a>Using this function to compute the Jaccard similarity between people yields:</span>
+<span id="cb28-25"><a href="#cb28-25"></a>vertex.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb28-26"><a href="#cb28-26"></a>  A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_biadjacency_matrix</span>(x))</span>
+<span id="cb28-27"><a href="#cb28-27"></a>  M <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A) <span class="co"># number of persons</span></span>
+<span id="cb28-28"><a href="#cb28-28"></a>  N <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A) <span class="co"># number of groups</span></span>
+<span id="cb28-29"><a href="#cb28-29"></a>  p.d <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A) <span class="co"># person degrees</span></span>
+<span id="cb28-30"><a href="#cb28-30"></a>  g.d <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A) <span class="co"># group degrees</span></span>
+<span id="cb28-31"><a href="#cb28-31"></a>  P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="co"># person projection</span></span>
+<span id="cb28-32"><a href="#cb28-32"></a>  G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A <span class="co"># group projection</span></span>
+<span id="cb28-33"><a href="#cb28-33"></a>  J.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb28-34"><a href="#cb28-34"></a>  J.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb28-35"><a href="#cb28-35"></a>  C.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb28-36"><a href="#cb28-36"></a>  C.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb28-37"><a href="#cb28-37"></a>  D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb28-38"><a href="#cb28-38"></a>  D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb28-39"><a href="#cb28-39"></a>  L.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, M, M)</span>
+<span id="cb28-40"><a href="#cb28-40"></a>  L.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, N, N)</span>
+<span id="cb28-41"><a href="#cb28-41"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb28-42"><a href="#cb28-42"></a>    <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>M) {</span>
+<span id="cb28-43"><a href="#cb28-43"></a>      <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb28-44"><a href="#cb28-44"></a>        J.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb28-45"><a href="#cb28-45"></a>        J.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb28-46"><a href="#cb28-46"></a>        C.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb28-47"><a href="#cb28-47"></a>        C.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(p.d[i] <span class="sc">*</span> p.d[j]))</span>
+<span id="cb28-48"><a href="#cb28-48"></a>        D.p[i, j] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb28-49"><a href="#cb28-49"></a>        D.p[j, i] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> P[i, j] <span class="sc">+</span> p.d[i] <span class="sc">+</span> p.d[j])</span>
+<span id="cb28-50"><a href="#cb28-50"></a>        L.p[i, j] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb28-51"><a href="#cb28-51"></a>        L.p[j, i] <span class="ot">&lt;-</span> P[i, j] <span class="sc">/</span> (p.d[i] <span class="sc">*</span> p.d[j])</span>
+<span id="cb28-52"><a href="#cb28-52"></a>      }</span>
+<span id="cb28-53"><a href="#cb28-53"></a>    }</span>
+<span id="cb28-54"><a href="#cb28-54"></a>  }</span>
+<span id="cb28-55"><a href="#cb28-55"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb28-56"><a href="#cb28-56"></a>    <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>N) {</span>
+<span id="cb28-57"><a href="#cb28-57"></a>      <span class="cf">if</span> (i <span class="sc">&lt;</span> j) {</span>
+<span id="cb28-58"><a href="#cb28-58"></a>        J.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb28-59"><a href="#cb28-59"></a>        J.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb28-60"><a href="#cb28-60"></a>        C.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb28-61"><a href="#cb28-61"></a>        C.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (<span class="fu">sqrt</span>(g.d[i] <span class="sc">*</span> g.d[j]))</span>
+<span id="cb28-62"><a href="#cb28-62"></a>        D.g[i, j] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb28-63"><a href="#cb28-63"></a>        D.g[j, i] <span class="ot">&lt;-</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j]) <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> G[i, j] <span class="sc">+</span> g.d[i] <span class="sc">+</span> g.d[j])</span>
+<span id="cb28-64"><a href="#cb28-64"></a>        L.g[i, j] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb28-65"><a href="#cb28-65"></a>        L.g[j, i] <span class="ot">&lt;-</span> G[i, j] <span class="sc">/</span> (g.d[i] <span class="sc">*</span> g.d[j])</span>
+<span id="cb28-66"><a href="#cb28-66"></a>      }</span>
+<span id="cb28-67"><a href="#cb28-67"></a>    }</span>
+<span id="cb28-68"><a href="#cb28-68"></a>  }</span>
+<span id="cb28-69"><a href="#cb28-69"></a>  <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb28-70"><a href="#cb28-70"></a>    <span class="at">J.p =</span> J.p, <span class="at">C.p =</span> C.p, <span class="at">D.p =</span> D.p, <span class="at">L.p =</span> L.p,</span>
+<span id="cb28-71"><a href="#cb28-71"></a>    <span class="at">J.g =</span> J.g, <span class="at">C.g =</span> C.g, <span class="at">D.g =</span> D.g, <span class="at">L.g =</span> L.g</span>
+<span id="cb28-72"><a href="#cb28-72"></a>  ))</span>
+<span id="cb28-73"><a href="#cb28-73"></a>}</span>
+<span id="cb28-74"><a href="#cb28-74"></a><span class="in">```</span></span>
 <span id="cb28-75"><a href="#cb28-75"></a></span>
-<span id="cb28-78"><a href="#cb28-78"></a><span class="in">```{r}</span></span>
-<span id="cb28-79"><a href="#cb28-79"></a> J.p <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.p</span>
-<span id="cb28-80"><a href="#cb28-80"></a> <span class="fu">rownames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb28-81"><a href="#cb28-81"></a> <span class="fu">colnames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb28-82"><a href="#cb28-82"></a> <span class="fu">round</span>(J.p, <span class="dv">2</span>)</span>
-<span id="cb28-83"><a href="#cb28-83"></a><span class="in">```</span></span>
-<span id="cb28-84"><a href="#cb28-84"></a></span>
-<span id="cb28-85"><a href="#cb28-85"></a><span class="fu">## Structural Equivalence</span></span>
+<span id="cb28-76"><a href="#cb28-76"></a>Using this function to compute the Jaccard similarity between people yields:</span>
+<span id="cb28-77"><a href="#cb28-77"></a></span>
+<span id="cb28-80"><a href="#cb28-80"></a><span class="in">```{r}</span></span>
+<span id="cb28-81"><a href="#cb28-81"></a>J.p <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.p</span>
+<span id="cb28-82"><a href="#cb28-82"></a><span class="fu">rownames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb28-83"><a href="#cb28-83"></a><span class="fu">colnames</span>(J.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb28-84"><a href="#cb28-84"></a><span class="fu">round</span>(J.p, <span class="dv">2</span>)</span>
+<span id="cb28-85"><a href="#cb28-85"></a><span class="in">```</span></span>
 <span id="cb28-86"><a href="#cb28-86"></a></span>
-<span id="cb28-87"><a href="#cb28-87"></a>And, of course, once we have a similarity we can cluster nodes based on approximate structural equivalence by transforming proximities to distances:</span>
+<span id="cb28-87"><a href="#cb28-87"></a><span class="fu">## Structural Equivalence</span></span>
 <span id="cb28-88"><a href="#cb28-88"></a></span>
-<span id="cb28-91"><a href="#cb28-91"></a><span class="in">```{r}</span></span>
-<span id="cb28-92"><a href="#cb28-92"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span> J.p)</span>
-<span id="cb28-93"><a href="#cb28-93"></a> hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb28-94"><a href="#cb28-94"></a> <span class="fu">plot</span>(hc.p)</span>
-<span id="cb28-95"><a href="#cb28-95"></a><span class="in">```</span></span>
-<span id="cb28-96"><a href="#cb28-96"></a></span>
-<span id="cb28-97"><a href="#cb28-97"></a>And for events:</span>
+<span id="cb28-89"><a href="#cb28-89"></a>And, of course, once we have a similarity we can cluster nodes based on approximate structural equivalence by transforming proximities to distances:</span>
+<span id="cb28-90"><a href="#cb28-90"></a></span>
+<span id="cb28-93"><a href="#cb28-93"></a><span class="in">```{r}</span></span>
+<span id="cb28-94"><a href="#cb28-94"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> J.p)</span>
+<span id="cb28-95"><a href="#cb28-95"></a>hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb28-96"><a href="#cb28-96"></a><span class="fu">plot</span>(hc.p)</span>
+<span id="cb28-97"><a href="#cb28-97"></a><span class="in">```</span></span>
 <span id="cb28-98"><a href="#cb28-98"></a></span>
-<span id="cb28-101"><a href="#cb28-101"></a><span class="in">```{r}</span></span>
-<span id="cb28-102"><a href="#cb28-102"></a> J.g <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.g</span>
-<span id="cb28-103"><a href="#cb28-103"></a> <span class="fu">rownames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb28-104"><a href="#cb28-104"></a> <span class="fu">colnames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb28-105"><a href="#cb28-105"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span><span class="sc">-</span> J.g)</span>
-<span id="cb28-106"><a href="#cb28-106"></a> hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb28-107"><a href="#cb28-107"></a> <span class="fu">plot</span>(hc.g)</span>
-<span id="cb28-108"><a href="#cb28-108"></a><span class="in">```</span></span>
-<span id="cb28-109"><a href="#cb28-109"></a></span>
-<span id="cb28-110"><a href="#cb28-110"></a>We can then derive cluster memberships for people and groups from the <span class="in">`hclust`</span> object:</span>
+<span id="cb28-99"><a href="#cb28-99"></a>And for events:</span>
+<span id="cb28-100"><a href="#cb28-100"></a></span>
+<span id="cb28-103"><a href="#cb28-103"></a><span class="in">```{r}</span></span>
+<span id="cb28-104"><a href="#cb28-104"></a>J.g <span class="ot">&lt;-</span> <span class="fu">vertex.sim</span>(g)<span class="sc">$</span>J.g</span>
+<span id="cb28-105"><a href="#cb28-105"></a><span class="fu">rownames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb28-106"><a href="#cb28-106"></a><span class="fu">colnames</span>(J.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb28-107"><a href="#cb28-107"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> J.g)</span>
+<span id="cb28-108"><a href="#cb28-108"></a>hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb28-109"><a href="#cb28-109"></a><span class="fu">plot</span>(hc.g)</span>
+<span id="cb28-110"><a href="#cb28-110"></a><span class="in">```</span></span>
 <span id="cb28-111"><a href="#cb28-111"></a></span>
-<span id="cb28-114"><a href="#cb28-114"></a><span class="in">```{r}</span></span>
-<span id="cb28-115"><a href="#cb28-115"></a> <span class="fu">library</span>(dendextend)</span>
-<span id="cb28-116"><a href="#cb28-116"></a> clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co">#selecting four clusters for people</span></span>
-<span id="cb28-117"><a href="#cb28-117"></a> clus.p</span>
-<span id="cb28-118"><a href="#cb28-118"></a> clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co">#selecting three clusters for groups</span></span>
-<span id="cb28-119"><a href="#cb28-119"></a> clus.g</span>
-<span id="cb28-120"><a href="#cb28-120"></a><span class="in">```</span></span>
-<span id="cb28-121"><a href="#cb28-121"></a></span>
-<span id="cb28-122"><a href="#cb28-122"></a>And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 <span class="co">[</span><span class="ot">p. 210, table 5</span><span class="co">]</span>:</span>
+<span id="cb28-112"><a href="#cb28-112"></a>We can then derive cluster memberships for people and groups from the <span class="in">`hclust`</span> object:</span>
+<span id="cb28-113"><a href="#cb28-113"></a></span>
+<span id="cb28-116"><a href="#cb28-116"></a><span class="in">```{r}</span></span>
+<span id="cb28-117"><a href="#cb28-117"></a><span class="fu">library</span>(dendextend)</span>
+<span id="cb28-118"><a href="#cb28-118"></a>clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co"># selecting four clusters for people</span></span>
+<span id="cb28-119"><a href="#cb28-119"></a>clus.p</span>
+<span id="cb28-120"><a href="#cb28-120"></a>clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co"># selecting three clusters for groups</span></span>
+<span id="cb28-121"><a href="#cb28-121"></a>clus.g</span>
+<span id="cb28-122"><a href="#cb28-122"></a><span class="in">```</span></span>
 <span id="cb28-123"><a href="#cb28-123"></a></span>
-<span id="cb28-126"><a href="#cb28-126"></a><span class="in">```{r}</span></span>
-<span id="cb28-127"><a href="#cb28-127"></a> <span class="fu">library</span>(ggcorrplot)</span>
-<span id="cb28-128"><a href="#cb28-128"></a> p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]), </span>
-<span id="cb28-129"><a href="#cb28-129"></a> <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
-<span id="cb28-130"><a href="#cb28-130"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
-<span id="cb28-131"><a href="#cb28-131"></a> <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
-<span id="cb28-132"><a href="#cb28-132"></a> <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
-<span id="cb28-133"><a href="#cb28-133"></a> )</span>
-<span id="cb28-134"><a href="#cb28-134"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
-<span id="cb28-135"><a href="#cb28-135"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-136"><a href="#cb28-136"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-137"><a href="#cb28-137"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-138"><a href="#cb28-138"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-139"><a href="#cb28-139"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-140"><a href="#cb28-140"></a> p</span>
-<span id="cb28-141"><a href="#cb28-141"></a><span class="in">```</span></span>
-<span id="cb28-142"><a href="#cb28-142"></a></span>
-<span id="cb28-143"><a href="#cb28-143"></a>Which reveals a number of almost complete (one-blocks) and almost null (zero-blocks) in the social structure, with a reduced image matrix that looks like:</span>
-<span id="cb28-144"><a href="#cb28-144"></a></span>
-<span id="cb28-147"><a href="#cb28-147"></a><span class="in">```{r}</span></span>
-<span id="cb28-148"><a href="#cb28-148"></a> <span class="fu">library</span>(kableExtra)</span>
-<span id="cb28-149"><a href="#cb28-149"></a> IM <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">3</span>)</span>
-<span id="cb28-150"><a href="#cb28-150"></a> IM[<span class="dv">1</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb28-151"><a href="#cb28-151"></a> IM[<span class="dv">2</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb28-152"><a href="#cb28-152"></a> IM[<span class="dv">3</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb28-153"><a href="#cb28-153"></a> IM[<span class="dv">4</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
-<span id="cb28-154"><a href="#cb28-154"></a> <span class="fu">rownames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"P.Block1"</span>, <span class="st">"P.Block2"</span>, <span class="st">"P.Block3"</span>, <span class="st">"P.Block4"</span>)</span>
-<span id="cb28-155"><a href="#cb28-155"></a> <span class="fu">colnames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"E.Block1"</span>, <span class="st">"E.Block2"</span>, <span class="st">"E.Block3"</span>)</span>
-<span id="cb28-156"><a href="#cb28-156"></a> <span class="fu">kbl</span>(IM, <span class="at">format =</span> <span class="st">"html"</span>, , <span class="at">align =</span> <span class="st">"c"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb28-157"><a href="#cb28-157"></a> <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb28-158"><a href="#cb28-158"></a> <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb28-159"><a href="#cb28-159"></a> <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>))</span>
-<span id="cb28-160"><a href="#cb28-160"></a></span>
-<span id="cb28-161"><a href="#cb28-161"></a><span class="in">```</span></span>
-<span id="cb28-162"><a href="#cb28-162"></a></span>
-<span id="cb28-163"><a href="#cb28-163"></a><span class="fu">## Generalized Vertex Similarity</span></span>
-<span id="cb28-164"><a href="#cb28-164"></a></span>
-<span id="cb28-165"><a href="#cb28-165"></a>Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the *same* objects (groups), and two objects (groups) are similar if they are chosen by the *same* people. </span>
-<span id="cb28-166"><a href="#cb28-166"></a></span>
-<span id="cb28-167"><a href="#cb28-167"></a>We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* (not necessarily the same) objects, and two objects are similar if they are chosen by *similar* (not necessarily the same) people.</span>
-<span id="cb28-168"><a href="#cb28-168"></a></span>
-<span id="cb28-169"><a href="#cb28-169"></a>This leads to the same problem setup that inspired the **SimRank** approach <span class="co">[</span><span class="ot">@jeh_widom02</span><span class="co">]</span>. </span>
-<span id="cb28-170"><a href="#cb28-170"></a></span>
-<span id="cb28-171"><a href="#cb28-171"></a>A (longish) function to compute the SimRank similarity between nodes in a two mode network goes as follows:</span>
-<span id="cb28-172"><a href="#cb28-172"></a></span>
-<span id="cb28-175"><a href="#cb28-175"></a><span class="in">```{r}</span></span>
-<span id="cb28-176"><a href="#cb28-176"></a> TM.SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
-<span id="cb28-177"><a href="#cb28-177"></a> nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
-<span id="cb28-178"><a href="#cb28-178"></a> nc <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
-<span id="cb28-179"><a href="#cb28-179"></a> dr <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
-<span id="cb28-180"><a href="#cb28-180"></a> dc <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
-<span id="cb28-181"><a href="#cb28-181"></a> Sr <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nr, nr) <span class="co">#baseline similarity: every node maximally similar to themselves</span></span>
-<span id="cb28-182"><a href="#cb28-182"></a> Sc <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nc, nc) <span class="co">#baseline similarity: every node maximally similar to themselves</span></span>
-<span id="cb28-183"><a href="#cb28-183"></a> rn <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb28-184"><a href="#cb28-184"></a> cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
-<span id="cb28-185"><a href="#cb28-185"></a> <span class="fu">rownames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
-<span id="cb28-186"><a href="#cb28-186"></a> <span class="fu">colnames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
-<span id="cb28-187"><a href="#cb28-187"></a> <span class="fu">rownames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
-<span id="cb28-188"><a href="#cb28-188"></a> <span class="fu">colnames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
-<span id="cb28-189"><a href="#cb28-189"></a> m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb28-190"><a href="#cb28-190"></a> <span class="cf">while</span>(m <span class="sc">&lt;</span> iter) {</span>
-<span id="cb28-191"><a href="#cb28-191"></a> Sr.pre <span class="ot">&lt;-</span> Sr</span>
-<span id="cb28-192"><a href="#cb28-192"></a> Sc.pre <span class="ot">&lt;-</span> Sc</span>
-<span id="cb28-193"><a href="#cb28-193"></a> <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
-<span id="cb28-194"><a href="#cb28-194"></a> <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
-<span id="cb28-195"><a href="#cb28-195"></a> <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
-<span id="cb28-196"><a href="#cb28-196"></a> a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[i, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#objects chosen by i</span></span>
-<span id="cb28-197"><a href="#cb28-197"></a> b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[j, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#objects chosen by j</span></span>
-<span id="cb28-198"><a href="#cb28-198"></a> Scij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb28-199"><a href="#cb28-199"></a> <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
-<span id="cb28-200"><a href="#cb28-200"></a> <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
-<span id="cb28-201"><a href="#cb28-201"></a> Scij <span class="ot">&lt;-</span> Scij <span class="sc">+</span> Sc[k, l] <span class="co">#i's similarity to j</span></span>
-<span id="cb28-202"><a href="#cb28-202"></a> }</span>
-<span id="cb28-203"><a href="#cb28-203"></a> }</span>
-<span id="cb28-204"><a href="#cb28-204"></a> Sr[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(dr[i] <span class="sc">*</span> dr[j]) <span class="sc">*</span> Scij</span>
-<span id="cb28-205"><a href="#cb28-205"></a> }</span>
-<span id="cb28-206"><a href="#cb28-206"></a> }</span>
-<span id="cb28-207"><a href="#cb28-207"></a> }</span>
-<span id="cb28-208"><a href="#cb28-208"></a> <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
-<span id="cb28-209"><a href="#cb28-209"></a> <span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
-<span id="cb28-210"><a href="#cb28-210"></a> <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
-<span id="cb28-211"><a href="#cb28-211"></a> a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#people who chose object i</span></span>
-<span id="cb28-212"><a href="#cb28-212"></a> b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co">#people who chose object j</span></span>
-<span id="cb28-213"><a href="#cb28-213"></a> Srij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb28-214"><a href="#cb28-214"></a> <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
-<span id="cb28-215"><a href="#cb28-215"></a> <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
-<span id="cb28-216"><a href="#cb28-216"></a> Srij <span class="ot">&lt;-</span> Srij <span class="sc">+</span> Sr[k, l] <span class="co">#i's similarity to j</span></span>
-<span id="cb28-217"><a href="#cb28-217"></a> }</span>
-<span id="cb28-218"><a href="#cb28-218"></a> }</span>
-<span id="cb28-219"><a href="#cb28-219"></a> Sc[i, j] <span class="ot">&lt;-</span> C<span class="sc">/</span>(dc[i] <span class="sc">*</span> dc[j]) <span class="sc">*</span> Srij</span>
-<span id="cb28-220"><a href="#cb28-220"></a> }</span>
-<span id="cb28-221"><a href="#cb28-221"></a> }</span>
-<span id="cb28-222"><a href="#cb28-222"></a> }</span>
-<span id="cb28-223"><a href="#cb28-223"></a> m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb28-224"><a href="#cb28-224"></a> }</span>
-<span id="cb28-225"><a href="#cb28-225"></a> <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Sr =</span> Sr, <span class="at">Sc =</span> Sc))</span>
-<span id="cb28-226"><a href="#cb28-226"></a> }</span>
-<span id="cb28-227"><a href="#cb28-227"></a><span class="in">```</span></span>
-<span id="cb28-228"><a href="#cb28-228"></a></span>
-<span id="cb28-229"><a href="#cb28-229"></a>This function takes the biadjacency matrix $\mathbf{A}$ as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).</span>
-<span id="cb28-230"><a href="#cb28-230"></a></span>
-<span id="cb28-231"><a href="#cb28-231"></a>Here's how that would work in the SW data. First we compute the SimRank scores:</span>
-<span id="cb28-232"><a href="#cb28-232"></a></span>
-<span id="cb28-235"><a href="#cb28-235"></a><span class="in">```{r}</span></span>
-<span id="cb28-236"><a href="#cb28-236"></a> sim.res <span class="ot">&lt;-</span> <span class="fu">TM.SimRank</span>(A)</span>
-<span id="cb28-237"><a href="#cb28-237"></a><span class="in">```</span></span>
-<span id="cb28-238"><a href="#cb28-238"></a></span>
-<span id="cb28-239"><a href="#cb28-239"></a>Then we peek inside the people similarity matrix:</span>
-<span id="cb28-240"><a href="#cb28-240"></a></span>
-<span id="cb28-243"><a href="#cb28-243"></a><span class="in">```{r}</span></span>
-<span id="cb28-244"><a href="#cb28-244"></a> <span class="fu">round</span>(sim.res<span class="sc">$</span>Sr[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
-<span id="cb28-245"><a href="#cb28-245"></a><span class="in">```</span></span>
-<span id="cb28-246"><a href="#cb28-246"></a></span>
-<span id="cb28-247"><a href="#cb28-247"></a>And the group similarity matrix:</span>
-<span id="cb28-248"><a href="#cb28-248"></a></span>
-<span id="cb28-251"><a href="#cb28-251"></a><span class="in">```{r}</span></span>
-<span id="cb28-252"><a href="#cb28-252"></a> <span class="fu">round</span>(sim.res<span class="sc">$</span>Sc[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
-<span id="cb28-253"><a href="#cb28-253"></a><span class="in">```</span></span>
-<span id="cb28-254"><a href="#cb28-254"></a></span>
-<span id="cb28-255"><a href="#cb28-255"></a>Like before we can use these results to define two sets of distances:</span>
-<span id="cb28-256"><a href="#cb28-256"></a></span>
-<span id="cb28-259"><a href="#cb28-259"></a><span class="in">```{r}</span></span>
-<span id="cb28-260"><a href="#cb28-260"></a> D.p <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sr)</span>
-<span id="cb28-261"><a href="#cb28-261"></a> D.g <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sc)</span>
-<span id="cb28-262"><a href="#cb28-262"></a><span class="in">```</span></span>
-<span id="cb28-263"><a href="#cb28-263"></a></span>
-<span id="cb28-264"><a href="#cb28-264"></a>Subject to hierarchical clustering:</span>
-<span id="cb28-265"><a href="#cb28-265"></a></span>
-<span id="cb28-268"><a href="#cb28-268"></a><span class="in">```{r}</span></span>
-<span id="cb28-269"><a href="#cb28-269"></a> hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.p, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb28-270"><a href="#cb28-270"></a> hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.g, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
-<span id="cb28-271"><a href="#cb28-271"></a><span class="in">```</span></span>
-<span id="cb28-272"><a href="#cb28-272"></a></span>
-<span id="cb28-273"><a href="#cb28-273"></a>And plot:</span>
-<span id="cb28-274"><a href="#cb28-274"></a></span>
-<span id="cb28-277"><a href="#cb28-277"></a><span class="in">```{r}</span></span>
-<span id="cb28-278"><a href="#cb28-278"></a> <span class="fu">plot</span>(hc.p)</span>
-<span id="cb28-279"><a href="#cb28-279"></a> <span class="fu">plot</span>(hc.g)</span>
-<span id="cb28-280"><a href="#cb28-280"></a><span class="in">```</span></span>
-<span id="cb28-281"><a href="#cb28-281"></a></span>
-<span id="cb28-282"><a href="#cb28-282"></a>Get cluster memberships for people and groups from the <span class="in">`hclust`</span> object:</span>
-<span id="cb28-283"><a href="#cb28-283"></a></span>
-<span id="cb28-286"><a href="#cb28-286"></a><span class="in">```{r}</span></span>
-<span id="cb28-287"><a href="#cb28-287"></a> clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co">#selecting four clusters for people</span></span>
-<span id="cb28-288"><a href="#cb28-288"></a> clus.p</span>
-<span id="cb28-289"><a href="#cb28-289"></a> clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co">#selecting three clusters for groups</span></span>
-<span id="cb28-290"><a href="#cb28-290"></a> clus.g</span>
-<span id="cb28-291"><a href="#cb28-291"></a><span class="in">```</span></span>
-<span id="cb28-292"><a href="#cb28-292"></a></span>
-<span id="cb28-293"><a href="#cb28-293"></a>And block the biadjacency matrix:</span>
-<span id="cb28-294"><a href="#cb28-294"></a></span>
-<span id="cb28-297"><a href="#cb28-297"></a><span class="in">```{r}</span></span>
-<span id="cb28-298"><a href="#cb28-298"></a> p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]), </span>
-<span id="cb28-299"><a href="#cb28-299"></a> <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)) </span>
-<span id="cb28-300"><a href="#cb28-300"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>, </span>
-<span id="cb28-301"><a href="#cb28-301"></a> <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
-<span id="cb28-302"><a href="#cb28-302"></a> <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
-<span id="cb28-303"><a href="#cb28-303"></a> )</span>
-<span id="cb28-304"><a href="#cb28-304"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>) </span>
-<span id="cb28-305"><a href="#cb28-305"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-306"><a href="#cb28-306"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-307"><a href="#cb28-307"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-308"><a href="#cb28-308"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-309"><a href="#cb28-309"></a> p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">10.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
-<span id="cb28-310"><a href="#cb28-310"></a> p</span>
-<span id="cb28-311"><a href="#cb28-311"></a><span class="in">```</span></span>
-<span id="cb28-312"><a href="#cb28-312"></a></span>
-<span id="cb28-313"><a href="#cb28-313"></a>Note that this block solution is similar (pun intended) but not *exactly* the same as the one based on structural equivalence we obtained earlier, although it would lead to the same reduced image matrix for the blocks.</span>
+<span id="cb28-124"><a href="#cb28-124"></a>And finally we can block the original affiliation matrix, as recommended by @everett_borgatti13 <span class="co">[</span><span class="ot">p. 210, table 5</span><span class="co">]</span>:</span>
+<span id="cb28-125"><a href="#cb28-125"></a></span>
+<span id="cb28-128"><a href="#cb28-128"></a><span class="in">```{r}</span></span>
+<span id="cb28-129"><a href="#cb28-129"></a><span class="fu">library</span>(ggcorrplot)</span>
+<span id="cb28-130"><a href="#cb28-130"></a>p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]),</span>
+<span id="cb28-131"><a href="#cb28-131"></a>  <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)</span>
+<span id="cb28-132"><a href="#cb28-132"></a>)</span>
+<span id="cb28-133"><a href="#cb28-133"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(</span>
+<span id="cb28-134"><a href="#cb28-134"></a>  <span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb28-135"><a href="#cb28-135"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb28-136"><a href="#cb28-136"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb28-137"><a href="#cb28-137"></a>)</span>
+<span id="cb28-138"><a href="#cb28-138"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>)</span>
+<span id="cb28-139"><a href="#cb28-139"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-140"><a href="#cb28-140"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-141"><a href="#cb28-141"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-142"><a href="#cb28-142"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-143"><a href="#cb28-143"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">9.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-144"><a href="#cb28-144"></a>p</span>
+<span id="cb28-145"><a href="#cb28-145"></a><span class="in">```</span></span>
+<span id="cb28-146"><a href="#cb28-146"></a></span>
+<span id="cb28-147"><a href="#cb28-147"></a>Which reveals a number of almost complete (one-blocks) and almost null (zero-blocks) in the social structure, with a reduced image matrix that looks like:</span>
+<span id="cb28-148"><a href="#cb28-148"></a></span>
+<span id="cb28-151"><a href="#cb28-151"></a><span class="in">```{r}</span></span>
+<span id="cb28-152"><a href="#cb28-152"></a><span class="fu">library</span>(kableExtra)</span>
+<span id="cb28-153"><a href="#cb28-153"></a>IM <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">3</span>)</span>
+<span id="cb28-154"><a href="#cb28-154"></a>IM[<span class="dv">1</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb28-155"><a href="#cb28-155"></a>IM[<span class="dv">2</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb28-156"><a href="#cb28-156"></a>IM[<span class="dv">3</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb28-157"><a href="#cb28-157"></a>IM[<span class="dv">4</span>, ] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb28-158"><a href="#cb28-158"></a><span class="fu">rownames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"P.Block1"</span>, <span class="st">"P.Block2"</span>, <span class="st">"P.Block3"</span>, <span class="st">"P.Block4"</span>)</span>
+<span id="cb28-159"><a href="#cb28-159"></a><span class="fu">colnames</span>(IM) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"E.Block1"</span>, <span class="st">"E.Block2"</span>, <span class="st">"E.Block3"</span>)</span>
+<span id="cb28-160"><a href="#cb28-160"></a><span class="fu">kbl</span>(IM, <span class="at">format =</span> <span class="st">"html"</span>, , <span class="at">align =</span> <span class="st">"c"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb28-161"><a href="#cb28-161"></a>  <span class="fu">column_spec</span>(<span class="dv">1</span>, <span class="at">bold =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb28-162"><a href="#cb28-162"></a>  <span class="fu">kable_styling</span>(</span>
+<span id="cb28-163"><a href="#cb28-163"></a>    <span class="at">full_width =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb28-164"><a href="#cb28-164"></a>    <span class="at">bootstrap_options =</span> <span class="fu">c</span>(<span class="st">"hover"</span>, <span class="st">"condensed"</span>, <span class="st">"responsive"</span>)</span>
+<span id="cb28-165"><a href="#cb28-165"></a>  )</span>
+<span id="cb28-166"><a href="#cb28-166"></a><span class="in">```</span></span>
+<span id="cb28-167"><a href="#cb28-167"></a></span>
+<span id="cb28-168"><a href="#cb28-168"></a><span class="fu">## Generalized Vertex Similarity</span></span>
+<span id="cb28-169"><a href="#cb28-169"></a></span>
+<span id="cb28-170"><a href="#cb28-170"></a>Recall that vertex similarity works using the principle of *structural equivalence*: Two people are similar if the choose the *same* objects (groups), and two objects (groups) are similar if they are chosen by the *same* people. </span>
+<span id="cb28-171"><a href="#cb28-171"></a></span>
+<span id="cb28-172"><a href="#cb28-172"></a>We can, like we did in the one mode case, be after a more general version of similarity, which says that: Two people are similar if they choose *similar* (not necessarily the same) objects, and two objects are similar if they are chosen by *similar* (not necessarily the same) people.</span>
+<span id="cb28-173"><a href="#cb28-173"></a></span>
+<span id="cb28-174"><a href="#cb28-174"></a>This leads to the same problem setup that inspired the **SimRank** approach <span class="co">[</span><span class="ot">@jeh_widom02</span><span class="co">]</span>. </span>
+<span id="cb28-175"><a href="#cb28-175"></a></span>
+<span id="cb28-176"><a href="#cb28-176"></a>A (longish) function to compute the SimRank similarity between nodes in a two mode network goes as follows:</span>
+<span id="cb28-177"><a href="#cb28-177"></a></span>
+<span id="cb28-180"><a href="#cb28-180"></a><span class="in">```{r}</span></span>
+<span id="cb28-181"><a href="#cb28-181"></a>TM.SimRank <span class="ot">&lt;-</span> <span class="cf">function</span>(A, <span class="at">C =</span> <span class="fl">0.8</span>, <span class="at">iter =</span> <span class="dv">10</span>) {</span>
+<span id="cb28-182"><a href="#cb28-182"></a>  nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(A)</span>
+<span id="cb28-183"><a href="#cb28-183"></a>  nc <span class="ot">&lt;-</span> <span class="fu">ncol</span>(A)</span>
+<span id="cb28-184"><a href="#cb28-184"></a>  dr <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb28-185"><a href="#cb28-185"></a>  dc <span class="ot">&lt;-</span> <span class="fu">colSums</span>(A)</span>
+<span id="cb28-186"><a href="#cb28-186"></a>  Sr <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nr, nr) <span class="co"># baseline similarity: every node maximally similar to themselves</span></span>
+<span id="cb28-187"><a href="#cb28-187"></a>  Sc <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, nc, nc) <span class="co"># baseline similarity: every node maximally similar to themselves</span></span>
+<span id="cb28-188"><a href="#cb28-188"></a>  rn <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb28-189"><a href="#cb28-189"></a>  cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
+<span id="cb28-190"><a href="#cb28-190"></a>  <span class="fu">rownames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
+<span id="cb28-191"><a href="#cb28-191"></a>  <span class="fu">colnames</span>(Sr) <span class="ot">&lt;-</span> rn</span>
+<span id="cb28-192"><a href="#cb28-192"></a>  <span class="fu">rownames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
+<span id="cb28-193"><a href="#cb28-193"></a>  <span class="fu">colnames</span>(Sc) <span class="ot">&lt;-</span> cn</span>
+<span id="cb28-194"><a href="#cb28-194"></a>  m <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb28-195"><a href="#cb28-195"></a>  <span class="cf">while</span> (m <span class="sc">&lt;</span> iter) {</span>
+<span id="cb28-196"><a href="#cb28-196"></a>    Sr.pre <span class="ot">&lt;-</span> Sr</span>
+<span id="cb28-197"><a href="#cb28-197"></a>    Sc.pre <span class="ot">&lt;-</span> Sc</span>
+<span id="cb28-198"><a href="#cb28-198"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
+<span id="cb28-199"><a href="#cb28-199"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nr) {</span>
+<span id="cb28-200"><a href="#cb28-200"></a>        <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
+<span id="cb28-201"><a href="#cb28-201"></a>          a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[i, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># objects chosen by i</span></span>
+<span id="cb28-202"><a href="#cb28-202"></a>          b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[j, ] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># objects chosen by j</span></span>
+<span id="cb28-203"><a href="#cb28-203"></a>          Scij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb28-204"><a href="#cb28-204"></a>          <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb28-205"><a href="#cb28-205"></a>            <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb28-206"><a href="#cb28-206"></a>              Scij <span class="ot">&lt;-</span> Scij <span class="sc">+</span> Sc[k, l] <span class="co"># i's similarity to j</span></span>
+<span id="cb28-207"><a href="#cb28-207"></a>            }</span>
+<span id="cb28-208"><a href="#cb28-208"></a>          }</span>
+<span id="cb28-209"><a href="#cb28-209"></a>          Sr[i, j] <span class="ot">&lt;-</span> C <span class="sc">/</span> (dr[i] <span class="sc">*</span> dr[j]) <span class="sc">*</span> Scij</span>
+<span id="cb28-210"><a href="#cb28-210"></a>        }</span>
+<span id="cb28-211"><a href="#cb28-211"></a>      }</span>
+<span id="cb28-212"><a href="#cb28-212"></a>    }</span>
+<span id="cb28-213"><a href="#cb28-213"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
+<span id="cb28-214"><a href="#cb28-214"></a>      <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nc) {</span>
+<span id="cb28-215"><a href="#cb28-215"></a>        <span class="cf">if</span> (i <span class="sc">!=</span> j) {</span>
+<span id="cb28-216"><a href="#cb28-216"></a>          a <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, i] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># people who chose object i</span></span>
+<span id="cb28-217"><a href="#cb28-217"></a>          b <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">which</span>(A[, j] <span class="sc">==</span> <span class="dv">1</span>)) <span class="co"># people who chose object j</span></span>
+<span id="cb28-218"><a href="#cb28-218"></a>          Srij <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb28-219"><a href="#cb28-219"></a>          <span class="cf">for</span> (k <span class="cf">in</span> a) {</span>
+<span id="cb28-220"><a href="#cb28-220"></a>            <span class="cf">for</span> (l <span class="cf">in</span> b) {</span>
+<span id="cb28-221"><a href="#cb28-221"></a>              Srij <span class="ot">&lt;-</span> Srij <span class="sc">+</span> Sr[k, l] <span class="co"># i's similarity to j</span></span>
+<span id="cb28-222"><a href="#cb28-222"></a>            }</span>
+<span id="cb28-223"><a href="#cb28-223"></a>          }</span>
+<span id="cb28-224"><a href="#cb28-224"></a>          Sc[i, j] <span class="ot">&lt;-</span> C <span class="sc">/</span> (dc[i] <span class="sc">*</span> dc[j]) <span class="sc">*</span> Srij</span>
+<span id="cb28-225"><a href="#cb28-225"></a>        }</span>
+<span id="cb28-226"><a href="#cb28-226"></a>      }</span>
+<span id="cb28-227"><a href="#cb28-227"></a>    }</span>
+<span id="cb28-228"><a href="#cb28-228"></a>    m <span class="ot">&lt;-</span> m <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb28-229"><a href="#cb28-229"></a>  }</span>
+<span id="cb28-230"><a href="#cb28-230"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">Sr =</span> Sr, <span class="at">Sc =</span> Sc))</span>
+<span id="cb28-231"><a href="#cb28-231"></a>}</span>
+<span id="cb28-232"><a href="#cb28-232"></a><span class="in">```</span></span>
+<span id="cb28-233"><a href="#cb28-233"></a></span>
+<span id="cb28-234"><a href="#cb28-234"></a>This function takes the biadjacency matrix $\mathbf{A}$ as input and returns two generalized relational similarity matrices: One for the people (row objects) and the other one for the groups (column objects).</span>
+<span id="cb28-235"><a href="#cb28-235"></a></span>
+<span id="cb28-236"><a href="#cb28-236"></a>Here's how that would work in the SW data. First we compute the SimRank scores:</span>
+<span id="cb28-237"><a href="#cb28-237"></a></span>
+<span id="cb28-240"><a href="#cb28-240"></a><span class="in">```{r}</span></span>
+<span id="cb28-241"><a href="#cb28-241"></a>sim.res <span class="ot">&lt;-</span> <span class="fu">TM.SimRank</span>(A)</span>
+<span id="cb28-242"><a href="#cb28-242"></a><span class="in">```</span></span>
+<span id="cb28-243"><a href="#cb28-243"></a></span>
+<span id="cb28-244"><a href="#cb28-244"></a>Then we peek inside the people similarity matrix:</span>
+<span id="cb28-245"><a href="#cb28-245"></a></span>
+<span id="cb28-248"><a href="#cb28-248"></a><span class="in">```{r}</span></span>
+<span id="cb28-249"><a href="#cb28-249"></a><span class="fu">round</span>(sim.res<span class="sc">$</span>Sr[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
+<span id="cb28-250"><a href="#cb28-250"></a><span class="in">```</span></span>
+<span id="cb28-251"><a href="#cb28-251"></a></span>
+<span id="cb28-252"><a href="#cb28-252"></a>And the group similarity matrix:</span>
+<span id="cb28-253"><a href="#cb28-253"></a></span>
+<span id="cb28-256"><a href="#cb28-256"></a><span class="in">```{r}</span></span>
+<span id="cb28-257"><a href="#cb28-257"></a><span class="fu">round</span>(sim.res<span class="sc">$</span>Sc[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
+<span id="cb28-258"><a href="#cb28-258"></a><span class="in">```</span></span>
+<span id="cb28-259"><a href="#cb28-259"></a></span>
+<span id="cb28-260"><a href="#cb28-260"></a>Like before we can use these results to define two sets of distances:</span>
+<span id="cb28-261"><a href="#cb28-261"></a></span>
+<span id="cb28-264"><a href="#cb28-264"></a><span class="in">```{r}</span></span>
+<span id="cb28-265"><a href="#cb28-265"></a>D.p <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sr)</span>
+<span id="cb28-266"><a href="#cb28-266"></a>D.g <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(<span class="dv">1</span> <span class="sc">-</span> sim.res<span class="sc">$</span>Sc)</span>
+<span id="cb28-267"><a href="#cb28-267"></a><span class="in">```</span></span>
+<span id="cb28-268"><a href="#cb28-268"></a></span>
+<span id="cb28-269"><a href="#cb28-269"></a>Subject to hierarchical clustering:</span>
+<span id="cb28-270"><a href="#cb28-270"></a></span>
+<span id="cb28-273"><a href="#cb28-273"></a><span class="in">```{r}</span></span>
+<span id="cb28-274"><a href="#cb28-274"></a>hc.p <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.p, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb28-275"><a href="#cb28-275"></a>hc.g <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D.g, <span class="at">method =</span> <span class="st">"ward.D2"</span>)</span>
+<span id="cb28-276"><a href="#cb28-276"></a><span class="in">```</span></span>
+<span id="cb28-277"><a href="#cb28-277"></a></span>
+<span id="cb28-278"><a href="#cb28-278"></a>And plot:</span>
+<span id="cb28-279"><a href="#cb28-279"></a></span>
+<span id="cb28-282"><a href="#cb28-282"></a><span class="in">```{r}</span></span>
+<span id="cb28-283"><a href="#cb28-283"></a><span class="fu">plot</span>(hc.p)</span>
+<span id="cb28-284"><a href="#cb28-284"></a><span class="fu">plot</span>(hc.g)</span>
+<span id="cb28-285"><a href="#cb28-285"></a><span class="in">```</span></span>
+<span id="cb28-286"><a href="#cb28-286"></a></span>
+<span id="cb28-287"><a href="#cb28-287"></a>Get cluster memberships for people and groups from the <span class="in">`hclust`</span> object:</span>
+<span id="cb28-288"><a href="#cb28-288"></a></span>
+<span id="cb28-291"><a href="#cb28-291"></a><span class="in">```{r}</span></span>
+<span id="cb28-292"><a href="#cb28-292"></a>clus.p <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.p, <span class="dv">4</span>)) <span class="co"># selecting four clusters for people</span></span>
+<span id="cb28-293"><a href="#cb28-293"></a>clus.p</span>
+<span id="cb28-294"><a href="#cb28-294"></a>clus.g <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">cutree</span>(hc.g, <span class="dv">3</span>)) <span class="co"># selecting three clusters for groups</span></span>
+<span id="cb28-295"><a href="#cb28-295"></a>clus.g</span>
+<span id="cb28-296"><a href="#cb28-296"></a><span class="in">```</span></span>
+<span id="cb28-297"><a href="#cb28-297"></a></span>
+<span id="cb28-298"><a href="#cb28-298"></a>And block the biadjacency matrix:</span>
+<span id="cb28-299"><a href="#cb28-299"></a></span>
+<span id="cb28-302"><a href="#cb28-302"></a><span class="in">```{r}</span></span>
+<span id="cb28-303"><a href="#cb28-303"></a>p <span class="ot">&lt;-</span> <span class="fu">ggcorrplot</span>(<span class="fu">t</span>(A[<span class="fu">names</span>(clus.p), <span class="fu">names</span>(clus.g)]),</span>
+<span id="cb28-304"><a href="#cb28-304"></a>  <span class="at">colors =</span> <span class="fu">c</span>(<span class="st">"white"</span>, <span class="st">"white"</span>, <span class="st">"red"</span>)</span>
+<span id="cb28-305"><a href="#cb28-305"></a>)</span>
+<span id="cb28-306"><a href="#cb28-306"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">theme</span>(</span>
+<span id="cb28-307"><a href="#cb28-307"></a>  <span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb28-308"><a href="#cb28-308"></a>  <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>),</span>
+<span id="cb28-309"><a href="#cb28-309"></a>  <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb28-310"><a href="#cb28-310"></a>)</span>
+<span id="cb28-311"><a href="#cb28-311"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">scale_x_discrete</span>(<span class="at">position =</span> <span class="st">"top"</span>)</span>
+<span id="cb28-312"><a href="#cb28-312"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">7.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-313"><a href="#cb28-313"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">11.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-314"><a href="#cb28-314"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">16.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-315"><a href="#cb28-315"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">6.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-316"><a href="#cb28-316"></a>p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">10.5</span>, <span class="at">linewidth =</span> <span class="dv">2</span>, <span class="at">color =</span> <span class="st">"blue"</span>)</span>
+<span id="cb28-317"><a href="#cb28-317"></a>p</span>
+<span id="cb28-318"><a href="#cb28-318"></a><span class="in">```</span></span>
+<span id="cb28-319"><a href="#cb28-319"></a></span>
+<span id="cb28-320"><a href="#cb28-320"></a>Note that this block solution is similar (pun intended) but not *exactly* the same as the one based on structural equivalence we obtained earlier, although it would lead to the same reduced image matrix for the blocks.</span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

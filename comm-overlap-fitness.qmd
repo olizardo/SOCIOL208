@@ -5,12 +5,12 @@ title: "Finding Overlapping Communities by Optimizing Local Fitness Functions"
 @lancichinetti_etal09 describe a method for detecting overlapping communities in networks by maximizing a local quantity at the level of subgraphs of the larger graph. Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:
 
 ```{r}
- library(networkdata)
- library(igraph)
- g <- law_friends
- g <- subgraph(g, degree(g) >= 2)
- ug <- as_undirected(g, mode = "collapse")
- V(ug)$name <- as.character(1:vcount(ug))
+library(networkdata)
+library(igraph)
+g <- law_friends
+g <- subgraph(g, degree(g) >= 2)
+ug <- as_undirected(g, mode = "collapse")
+V(ug)$name <- as.character(1:vcount(ug))
 ```
 
 ## The Local Fitness Function
@@ -26,22 +26,22 @@ Where $k^{in}$ is the internal degree of nodes in the subgraph (the sum of the d
 Here's an `R` function that computes for any subgraph:
 
 ```{r}
- sg.fitness <- function(graph, sub.nodes) {
- degrees.fg <- degree(graph)
- subgraph <- subgraph(graph, sub.nodes)
- degrees.sg <- degree(subgraph)
- k.i <- sum(degrees.sg)
- k.o <- sum(degrees.fg[sub.nodes] - degrees.sg[sub.nodes])
- fsg <- k.i / (k.i + k.o)
- return(fsg)
- }
+sg.fitness <- function(graph, sub.nodes) {
+  degrees.fg <- degree(graph)
+  subgraph <- subgraph(graph, sub.nodes)
+  degrees.sg <- degree(subgraph)
+  k.i <- sum(degrees.sg)
+  k.o <- sum(degrees.fg[sub.nodes] - degrees.sg[sub.nodes])
+  fsg <- k.i / (k.i + k.o)
+  return(fsg)
+}
 ```
 
 And here is the `sg.fitness` function in action:
 
 ```{r}
- fg <- sg.fitness(ug, c("61", "62", "65", "67"))
- fg
+fg <- sg.fitness(ug, c("61", "62", "65", "67"))
+fg
 ```
 
 Which says that the fitness of the subgraph formed by nodes 61, 62, 65, and 67 is `r round(fg, 2)`.
@@ -57,19 +57,19 @@ $$ {#eq-nodefit}
 We can write a function to determine the fitness of a node relative to a subgraph according to using our previous `sg.fitness` function like this:
 
 ```{r}
- node.fit <- function(graph, subgraph, node) {
- plus <- unique(c(subgraph, node))
- minus <- subgraph[!subgraph %in% node]
- fit.i <- sg.fitness(graph, plus)
- fit.o <- sg.fitness(graph, minus)
- return(fit.i - fit.o)
- }
+node.fit <- function(graph, subgraph, node) {
+  plus <- unique(c(subgraph, node))
+  minus <- subgraph[!subgraph %in% node]
+  fit.i <- sg.fitness(graph, plus)
+  fit.o <- sg.fitness(graph, minus)
+  return(fit.i - fit.o)
+}
 ```
 
 So if we wanted to figure out the fitness of node 58 relative to the subgraph formed by nodes 61, 62, 65, and 67 we can just type:
 
 ```{r}
- node.fit(ug, c("65", "67", "61", "62"), "58")
+node.fit(ug, c("65", "67", "61", "62"), "58")
 ```
 
 We can see that node 58's fitness relative to this subgraph is positive, indicating that including it increases the subgraph's fitness.
@@ -81,18 +81,20 @@ We can see that node 58's fitness relative to this subgraph is positive, indicat
 How do we do that? First, let's write a function that takes a list of nodes specifying a subgraph of a larger graph as input and returns all unique neighbors of those nodes as output.
 
 ```{r}
- sub.nei <- function(graph, subgraph) {
- nei.list <- lapply(subgraph, function(x) {neighbors(graph, x)})
- nei.list <- unique(unlist(nei.list))
- nei.list <- nei.list[!nei.list %in% subgraph]
- return(nei.list)
- }
+sub.nei <- function(graph, subgraph) {
+  nei.list <- lapply(subgraph, function(x) {
+    neighbors(graph, x)
+  })
+  nei.list <- unique(unlist(nei.list))
+  nei.list <- nei.list[!nei.list %in% subgraph]
+  return(nei.list)
+}
 ```
 
 So, for instance, if we wanted to see all the neighbors of the earlier subgraph, we would type:
 
 ```{r}
- sub.nei(ug, c("65", "67", "61", "62"))
+sub.nei(ug, c("65", "67", "61", "62"))
 ```
 
 Great. Now that we have this, all we need to do is loop through each of the focal node's neighbors, figure out which one increases the fitness of the subgraph composed of the union of the original node and that neighbor the most, and keep adding neighbors (and neighbors of neighbors), until the remaining nodes don't add much to the fitness.
@@ -100,31 +102,39 @@ Great. Now that we have this, all we need to do is loop through each of the foca
 Here's a function that does that:
 
 ```{r}
- node.comm <- function(graph, node, s = 123456, e = 0.01) {
- fit.vec <- 1 #initializing node fitness vector
- sub <- node #initializing subgraph
- set.seed(s) #setting seed
- while (sum(fit.vec <= e) != length(fit.vec)) {
- nei <- sub.nei(graph, sub)
- fit.vec <- sapply(nei, function(x) {node.fit(graph, sub, x)})
- names(fit.vec) <- nei
- max.fit <- names(which(fit.vec == max(fit.vec)))
- if(length(max.fit) > 1) {max.fit <- sample(max.fit, 1)}
- sub <- unique(c(sub, max.fit))
- sub.fit.vec <- sapply(sub, function(x) {node.fit(graph, sub, x)})
- low.fit <- names(which(sub.fit.vec < 0))
- if (length(low.fit) != 0) {sub <- sub[!sub %in% low.fit]}
- }
- sub <- sub[!sub %in% node]
- return(sub)
- }
+node.comm <- function(graph, node, s = 123456, e = 0.01) {
+  fit.vec <- 1 # initializing node fitness vector
+  sub <- node # initializing subgraph
+  set.seed(s) # setting seed
+  while (sum(fit.vec <= e) != length(fit.vec)) {
+    nei <- sub.nei(graph, sub)
+    fit.vec <- sapply(nei, function(x) {
+      node.fit(graph, sub, x)
+    })
+    names(fit.vec) <- nei
+    max.fit <- names(which(fit.vec == max(fit.vec)))
+    if (length(max.fit) > 1) {
+      max.fit <- sample(max.fit, 1)
+    }
+    sub <- unique(c(sub, max.fit))
+    sub.fit.vec <- sapply(sub, function(x) {
+      node.fit(graph, sub, x)
+    })
+    low.fit <- names(which(sub.fit.vec < 0))
+    if (length(low.fit) != 0) {
+      sub <- sub[!sub %in% low.fit]
+    }
+  }
+  sub <- sub[!sub %in% node]
+  return(sub)
+}
 ```
 
 And here are the nodes that belong to node 31's natural community:
 
 ```{r}
- nc31 <- node.comm(ug, "31")
- nc31
+nc31 <- node.comm(ug, "31")
+nc31
 ```
 
 We can see from that indeed this set of nodes (pictured in blue) belongs to a cohesive subgroup proximate to node 31 (pictured in red). 
@@ -134,27 +144,27 @@ We can see from that indeed this set of nodes (pictured in blue) belongs to a co
 To build overlapping communities, @lancichinetti_etal09 recommend that we pick a node at random, compute its natural community, then pick another node at random that is not yet assigned to a community, and repeat until each node has been assigned to at least one community. In `R`, we can do that by gradually building a `list` object that contains the nodes assigned to a randomly chosen node's "natural community" as determined by the `node.comm` function above across the various iterations. Here's a function that does that: 
 
 ```{r}
- fit.comm <- function(graph, s = 123) {
- node.list <- V(graph)$name #initial node list
- comm.list <- list() #initializing the overlapping communities list
- set.seed(s) #setting the seed
- k <- 1
- while(length(node.list) != 0) {
- v <- sample(node.list, 1) #randomly selecting a node from the list
- nc <- node.comm(graph, v) #determining the natural community of the node
- comm.list[[k]] <- c(nc, v) #adding nodes to the list
- node.list <- node.list[!node.list %in% unique(c(unlist(comm.list)))] #deleting the nodes already assigned to a community from the list
- k <- k + 1
- }
- return(comm.list) 
- }
+fit.comm <- function(graph, s = 123) {
+  node.list <- V(graph)$name # initial node list
+  comm.list <- list() # initializing the overlapping communities list
+  set.seed(s) # setting the seed
+  k <- 1
+  while (length(node.list) != 0) {
+    v <- sample(node.list, 1) # randomly selecting a node from the list
+    nc <- node.comm(graph, v) # determining the natural community of the node
+    comm.list[[k]] <- c(nc, v) # adding nodes to the list
+    node.list <- node.list[!node.list %in% unique(c(unlist(comm.list)))] # deleting the nodes already assigned to a community from the list
+    k <- k + 1
+  }
+  return(comm.list)
+}
 ```
 
 And here's the function in action:
 
 ```{r}
- fc <- fit.comm(ug)
- fc
+fc <- fit.comm(ug)
+fc
 ```
 
 We can see that the algorithm returns a `list` object containing `r length(fc)` communities. 
@@ -162,10 +172,10 @@ We can see that the algorithm returns a `list` object containing `r length(fc)` 
 We can now create the bi-adjacency matrix corresponding to the two-mode person by community network, as we did in the case of the [clique percolation method](comm-overlap-clique.qmd) for overlapping community detection:
 
 ```{r}
- Z <- matrix(0, vcount(ug), length(fc))
- for (i in seq_len(length(fc))) {
- Z[as.numeric(fc[[i]]), i] <- 1
- }
+Z <- matrix(0, vcount(ug), length(fc))
+for (i in seq_len(length(fc))) {
+  Z[as.numeric(fc[[i]]), i] <- 1
+}
 ```
 
 ```{r}
@@ -179,65 +189,71 @@ We can now create the bi-adjacency matrix corresponding to the two-mode person b
 #| fig-width: 12
 #| echo: false
 
- c <- rep("tan", vcount(ug))
- c[as.numeric(nc31)] <- "blue"
- c[31] <- "red"
- V(ug)$color <- c
- set.seed(123)
- ul <- layout_with_kk(ug)
- plot(ug, 
- layout = ul, 
- vertex.size=6, 
- vertex.frame.color="lightgray", 
- vertex.label = V(ug)$name, 
- edge.arrow.size = 0.25,
- vertex.label.dist = 1.2,
- vertex.label.degree = 180, 
- edge.curved=0.2,
- vertex.label.cex = 1.5
- )
+c <- rep("tan", vcount(ug))
+c[as.numeric(nc31)] <- "blue"
+c[31] <- "red"
+V(ug)$color <- c
+set.seed(123)
+ul <- layout_with_kk(ug)
+plot(ug,
+  layout = ul,
+  vertex.size = 6,
+  vertex.frame.color = "lightgray",
+  vertex.label = V(ug)$name,
+  edge.arrow.size = 0.25,
+  vertex.label.dist = 1.2,
+  vertex.label.degree = 180,
+  edge.curved = 0.2,
+  vertex.label.cex = 1.5
+)
 
- W_raw <- split(Z/rowSums(Z), seq(nrow(Z)))
- W <- lapply(W_raw, function(x) {x[which(x != 0)]})
- ccol <- lapply(W_raw, function(x) {which(x != 0)})
- library(RColorBrewer) 
- getPalette = colorRampPalette(categorical_pal(8))
- pal = getPalette(ncol(Z))
- V(ug)$shape <- "pie"
- V(ug)$pie <- W
- c.list <- lapply(ccol, function(x) {pal[x]})
- names(c.list) <- V(ug)$name
- V(ug)$pie.color <- c.list
- plot(ug, 
- layout = ul, 
- vertex.size = 8, 
- vertex.label.color = "black", 
- vertex.label.font = 2, 
- vertex.label.cex = 1.5, 
- edge.width = 2, 
- edge.color = "lightblue",
- vertex.label.dist = 1.2,
- vertex.label.degree = 180,
- edge.curved=0.2
- )
- legend("bottomleft", 
- legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")), 
- fill = pal, 
- bty = "n", # No box around legend
- cex = 1.5
- ) # Text size
+W_raw <- split(Z / rowSums(Z), seq(nrow(Z)))
+W <- lapply(W_raw, function(x) {
+  x[which(x != 0)]
+})
+ccol <- lapply(W_raw, function(x) {
+  which(x != 0)
+})
+library(RColorBrewer)
+getPalette <- colorRampPalette(categorical_pal(8))
+pal <- getPalette(ncol(Z))
+V(ug)$shape <- "pie"
+V(ug)$pie <- W
+c.list <- lapply(ccol, function(x) {
+  pal[x]
+})
+names(c.list) <- V(ug)$name
+V(ug)$pie.color <- c.list
+plot(ug,
+  layout = ul,
+  vertex.size = 8,
+  vertex.label.color = "black",
+  vertex.label.font = 2,
+  vertex.label.cex = 1.5,
+  edge.width = 2,
+  edge.color = "lightblue",
+  vertex.label.dist = 1.2,
+  vertex.label.degree = 180,
+  edge.curved = 0.2
+)
+legend("bottomleft",
+  legend = c(paste("Commnunity", 1:ncol(Z), sep = "_")),
+  fill = pal,
+  bty = "n", # No box around legend
+  cex = 1.5
+) # Text size
 ```
 
 Here are the entries for the first 10 people:
 
 ```{r}
- Z[1:10, ]
+Z[1:10, ]
 ```
 
 And here's the community overlap matrix:
 
 ```{r}
- t(Z) %*% Z
+t(Z) %*% Z
 ```
 
 And now we can use fancy `igraph` pie-chart plotting to visualize the overlapping communities. This is shown in 

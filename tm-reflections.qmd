@@ -92,33 +92,33 @@ Let's see how this would work in a real two-mode network. To do that, we load up
 
 
 ```{r}
- library(networkdata)
- library(igraph)
- g <- southern_women
- A <- as.matrix(as_biadjacency_matrix(g))
+library(networkdata)
+library(igraph)
+g <- southern_women
+A <- as.matrix(as_biadjacency_matrix(g))
 ```
 
 Now, we need a function that does all of the reflections that we just spoke about. Here's one that accomplishes that, which is slight modification of the `tm.status` function from the [two-mode prestige lecture notes](prest-tm-gen.qmd), to store the values of the prestige score of each node at each iteration in a matrix:
 
 ```{r}
- reflections <- function(x, iter = 20) { #x is a matrix with people as rows and groups as columns iters is number of reflections
- z <- t(x)
- p.c <- matrix(0, nrow(x), iter) #initialize person centralities
- g.c <- matrix(0, ncol(x), iter) #initialize group centralities trajectory matrix
- rownames(p.c) <- rownames(x)
- rownames(g.c) <- colnames(x)
- colnames(p.c) <- paste("Ref_", c(1:iter), sep = "")
- colnames(g.c) <- paste("Ref_", c(1:iter), sep = "")
- p.c[, 1] <- rowSums(x) #person degree centrality 
- g.c[, 1] <- colSums(x) #group degree centrality 
- k <- 1 #initializing counter
- while (k < iter) {
- p.c[, k + 1] <- (x %*% g.c[, k]) * p.c[, 1]^-1 #assign person average centrality of groups they belong to
- g.c[, k + 1] <- (z %*% p.c[, k]) * g.c[, 1]^-1 #assign group average centrality of people in the group
- k <- k + 1 #increase counter
- } #end while loop
- return(list(p.c = p.c, g.c = g.c))
- } #end function
+reflections <- function(x, iter = 20) { # x is a matrix with people as rows and groups as columns iters is number of reflections
+  z <- t(x)
+  p.c <- matrix(0, nrow(x), iter) # initialize person centralities
+  g.c <- matrix(0, ncol(x), iter) # initialize group centralities trajectory matrix
+  rownames(p.c) <- rownames(x)
+  rownames(g.c) <- colnames(x)
+  colnames(p.c) <- paste("Ref_", c(1:iter), sep = "")
+  colnames(g.c) <- paste("Ref_", c(1:iter), sep = "")
+  p.c[, 1] <- rowSums(x) # person degree centrality
+  g.c[, 1] <- colSums(x) # group degree centrality
+  k <- 1 # initializing counter
+  while (k < iter) {
+    p.c[, k + 1] <- (x %*% g.c[, k]) * p.c[, 1]^-1 # assign person average centrality of groups they belong to
+    g.c[, k + 1] <- (z %*% p.c[, k]) * g.c[, 1]^-1 # assign group average centrality of people in the group
+    k <- k + 1 # increase counter
+  } # end while loop
+  return(list(p.c = p.c, g.c = g.c))
+} # end function
 ```
 
 The function above takes the biadjacency matrix $\mathbf{A}$ as input and returns two objects: 
@@ -129,13 +129,13 @@ The function above takes the biadjacency matrix $\mathbf{A}$ as input and return
 And let's try it out:
 
 ```{r}
- ref.res <- reflections(A)
+ref.res <- reflections(A)
 ```
 
 Let's check out the person scores at the 18th reflection:
 
 ```{r}
- ref.res$p.c[, 18]
+ref.res$p.c[, 18]
 ```
 
 This all look like slightly different versions of the same number! The reason for this is as @hidalgo_hausmann09 note, is that the scores begin to *converge* as the number of reflections increase. To get noticeable differences, we need to *scale* the higher reflection scores using the standard normalization:
@@ -149,7 +149,7 @@ Where $\bar{C}^R$ is the mean reflective score and $\sigma_{C^R}$ is the standar
 In `R` we can do this using the native `scale` function:
 
 ```{r}
- scale(ref.res$p.c[, 18])
+scale(ref.res$p.c[, 18])
 ```
 
 Better!
@@ -157,8 +157,8 @@ Better!
 Recall also that the @hidalgo_hausmann09 reflections iterate between odd and even scores. We want only one of those. So let's choose the even columns for persons and groups:
 
 ```{r}
- HH.p <- scale(ref.res$p.c[, seq(2, 20, by = 2)])
- HH.g <- scale(ref.res$g.c[, seq(2, 20, by = 2)])
+HH.p <- scale(ref.res$p.c[, seq(2, 20, by = 2)])
+HH.g <- scale(ref.res$g.c[, seq(2, 20, by = 2)])
 ```
 
 And now we can put them in fancy tables, as in @tbl-ref:
@@ -168,20 +168,19 @@ And now we can put them in fancy tables, as in @tbl-ref:
 #| tbl-cap: "Reflective Scores"
 #| tbl-subcap:
 #| - "Persons."
-#| - "Groups." 
+#| - "Groups."
 #| layout-nrow: 2
 
 library(kableExtra)
-kbl(HH.p[order(HH.p[,10], decreasing = TRUE), ], digits = 2) |> 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized to unit variance.")) 
+kbl(HH.p[order(HH.p[, 10], decreasing = TRUE), ], digits = 2) |>
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |>
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized to unit variance."))
 
-kbl(HH.g[order(HH.g[,10], decreasing = TRUE), ], digits = 2) |> 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |> 
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized to unit variance.")) 
-
+kbl(HH.g[order(HH.g[, 10], decreasing = TRUE), ], digits = 2) |>
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) |>
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized to unit variance."))
 ```
 
 We can see in @tbl-ref that in higher order reflections, the scores have converged to a steady value. Some of persons/groups receive big positive scores, while others receive negative scores, suggestive of strong differentiation in HH reflective scores for the *SW* data. 
@@ -189,27 +188,27 @@ We can see in @tbl-ref that in higher order reflections, the scores have converg
 A neat way to visualize data like that in @tbl-ref is using a **bump chart**. We can do this in `R` using the program [ggbump](https://r-graph-gallery.com/package/ggbump.html). First, we need to transform the data in @tbl-ref to "long" format. We use `dplyr` and `tidyr` to do that:
 
 ```{r}
- library(dplyr)
- library(tidyr)
- HH.p.long <- data.frame(HH.p) %>% 
- mutate(person = rownames(HH.p)) %>% 
- pivot_longer(
- cols = 1:10,
- names_to = "Ref",
- values_to = "k"
- ) %>%
- mutate(Ref = factor(Ref, ordered = TRUE, levels = colnames(HH.p))) 
- head(HH.p.long)
+library(dplyr)
+library(tidyr)
+HH.p.long <- data.frame(HH.p) %>%
+  mutate(person = rownames(HH.p)) %>%
+  pivot_longer(
+    cols = 1:10,
+    names_to = "Ref",
+    values_to = "k"
+  ) %>%
+  mutate(Ref = factor(Ref, ordered = TRUE, levels = colnames(HH.p)))
+head(HH.p.long)
 
- HH.g.long <- data.frame(HH.g) %>% 
- mutate(group = rownames(HH.g)) %>% 
- pivot_longer(
- cols = 1:10,
- names_to = "Ref",
- values_to = "k"
- ) %>%
- mutate(Ref = factor(Ref, ordered = TRUE, levels = colnames(HH.g))) 
- head(HH.g.long)
+HH.g.long <- data.frame(HH.g) %>%
+  mutate(group = rownames(HH.g)) %>%
+  pivot_longer(
+    cols = 1:10,
+    names_to = "Ref",
+    values_to = "k"
+  ) %>%
+  mutate(Ref = factor(Ref, ordered = TRUE, levels = colnames(HH.g)))
+head(HH.g.long)
 ```
 
 Now we can plot the persons and groups in their reflective score trajectory across the even reflections. The result looks like .
@@ -218,54 +217,68 @@ Now we can plot the persons and groups in their reflective score trajectory acro
 #| echo: false
 #| label: fig-refs
 #| fig-cap: "Reflections"
-#| fig-subcap: 
+#| fig-subcap:
 #| - "Persons"
 #| - "Groups"
 #| layout-ncol: 1
 #| fig-width: 12
 #| fig-height: 10
 
- library(ggplot2)
- library(ggbump)
- library(ggrepel)
- library(cowplot)
- p <- ggplot(data = HH.p.long, mapping = aes(x = Ref, y = k, 
- color = person, group = person))
- p <- p + geom_bump(linewidth = 1, smooth = 8)
- p <- p + geom_point(size = 3.5)
- p <- p + geom_text_repel(data = filter(HH.p.long, Ref == "Ref_2"), 
- aes(x = Ref, label = person), 
- size = 4, nudge_x = -2)
- p <- p <- p + geom_text_repel(data = filter(HH.p.long, Ref == "Ref_20"), 
- aes(x = Ref, label = person), 
- size = 4, nudge_x = 2)
- p <- p + theme_minimal_grid(font_size = 14, line_size = 0)
- p <- p + labs(x = "")
- p <- p + theme(legend.position = "none",
- panel.grid.major = element_blank(),
- axis.text.y = element_blank(),
- axis.title.y = element_blank(),
- )
- p
+library(ggplot2)
+library(ggbump)
+library(ggrepel)
+library(cowplot)
+p <- ggplot(data = HH.p.long, mapping = aes(
+  x = Ref, y = k,
+  color = person, group = person
+))
+p <- p + geom_bump(linewidth = 1, smooth = 8)
+p <- p + geom_point(size = 3.5)
+p <- p + geom_text_repel(
+  data = filter(HH.p.long, Ref == "Ref_2"),
+  aes(x = Ref, label = person),
+  size = 4, nudge_x = -2
+)
+p <- p <- p + geom_text_repel(
+  data = filter(HH.p.long, Ref == "Ref_20"),
+  aes(x = Ref, label = person),
+  size = 4, nudge_x = 2
+)
+p <- p + theme_minimal_grid(font_size = 14, line_size = 0)
+p <- p + labs(x = "")
+p <- p + theme(
+  legend.position = "none",
+  panel.grid.major = element_blank(),
+  axis.text.y = element_blank(),
+  axis.title.y = element_blank(),
+)
+p
 
- p <- ggplot(data = HH.g.long, mapping = aes(x = Ref, y = k, 
- color = group, group = group))
- p <- p + geom_bump(linewidth = 1, smooth = 8)
- p <- p + geom_point(size = 3.5)
- p <- p + geom_text_repel(data = filter(HH.g.long, Ref == "Ref_2"), 
- aes(x = Ref, label = group), 
- size = 4, nudge_x = -1)
- p <- p <- p + geom_text_repel(data = filter(HH.g.long, Ref == "Ref_20"), 
- aes(x = Ref, label = group), 
- size = 4, nudge_x = 1)
- p <- p + theme_minimal_grid(font_size = 14, line_size = 0)
- p <- p + labs(x = "")
- p <- p + theme(legend.position = "none",
- panel.grid.major = element_blank(),
- axis.text.y = element_blank(),
- axis.title.y = element_blank()
- )
- p
+p <- ggplot(data = HH.g.long, mapping = aes(
+  x = Ref, y = k,
+  color = group, group = group
+))
+p <- p + geom_bump(linewidth = 1, smooth = 8)
+p <- p + geom_point(size = 3.5)
+p <- p + geom_text_repel(
+  data = filter(HH.g.long, Ref == "Ref_2"),
+  aes(x = Ref, label = group),
+  size = 4, nudge_x = -1
+)
+p <- p <- p + geom_text_repel(
+  data = filter(HH.g.long, Ref == "Ref_20"),
+  aes(x = Ref, label = group),
+  size = 4, nudge_x = 1
+)
+p <- p + theme_minimal_grid(font_size = 14, line_size = 0)
+p <- p + labs(x = "")
+p <- p + theme(
+  legend.position = "none",
+  panel.grid.major = element_blank(),
+  axis.text.y = element_blank(),
+  axis.title.y = element_blank()
+)
+p
 ```
 
 As -1 shows, *\{Dorothy\}* begins pretty high on the list according to the second reflection (the average size of the groups she belongs to is big) but loses that advantage as we move to further reflections, ending up closer to the bottom of the middle. Meanwhile, *\{Charlotte, Brenda\}* begin with pretty low scores on the second reflection, but end up at the top by the 20th. 
@@ -280,34 +293,34 @@ If you recall [from the CA for two-mode networks lecture notes](tm-ca.qmd), in a
 
 
 ```{r}
- W.p <- diag(1/rowSums(A)) %*% A %*% diag(1/colSums(A)) %*% t(A)
+W.p <- diag(1 / rowSums(A)) %*% A %*% diag(1 / colSums(A)) %*% t(A)
 ```
 
 And we get the (real part of the) second eigenvector for the matrix like this:
 
 ```{r}
- ca.p <- Re(eigen(W.p)$vectors[, 2])
- ca.p
+ca.p <- Re(eigen(W.p)$vectors[, 2])
+ca.p
 ```
 
 For groups, the relevant CA matrix `W.g` is:
 
 ```{r}
- W.g <- diag(1/colSums(A)) %*% t(A) %*% diag(1/rowSums(A)) %*% A
+W.g <- diag(1 / colSums(A)) %*% t(A) %*% diag(1 / rowSums(A)) %*% A
 ```
 
 And we get the second eigenvector of *that* matrix:
 
 
 ```{r}
- ca.g <- Re(eigen(W.p)$vectors[, 2])
- ca.g
+ca.g <- Re(eigen(W.p)$vectors[, 2])
+ca.g
 ```
 
 And we can see that these scores are perfectly correlated with the equilibrium reflection scores:
 
 ```{r}
- abs(round(cor(ca.p, HH.p[, 10]), 2))
+abs(round(cor(ca.p, HH.p[, 10]), 2))
 
- abs(round(cor(ca.g, HH.p[, 10]), 2))
+abs(round(cor(ca.g, HH.p[, 10]), 2))
 ```

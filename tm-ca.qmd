@@ -27,30 +27,30 @@ $$
 In `R` can compute $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$, using the classic Southern Women two-mode data, as follows:
 
 ```{r}
- library(igraph)
- library(networkdata)
- g <- southern_women #southern women data
- A <- as.matrix(as_biadjacency_matrix(g)) #bi-adjacency matrix
- D.p <- diag(1/rowSums(A)) #inverse of degree matrix of persons
- P.pg <- D.p %*% A
- rownames(P.pg) <- rownames(A) 
- D.g <- diag(1/colSums(A)) #inverse of degree matrix of groups
- P.gp <- D.g %*% t(A)
- rownames(P.gp) <- colnames(A)
+library(igraph)
+library(networkdata)
+g <- southern_women # southern women data
+A <- as.matrix(as_biadjacency_matrix(g)) # bi-adjacency matrix
+D.p <- diag(1 / rowSums(A)) # inverse of degree matrix of persons
+P.pg <- D.p %*% A
+rownames(P.pg) <- rownames(A)
+D.g <- diag(1 / colSums(A)) # inverse of degree matrix of groups
+P.gp <- D.g %*% t(A)
+rownames(P.gp) <- colnames(A)
 ```
 
 And we can check that both $\mathbf{P}_{PG}$ and $\mathbf{P}_{GP}$ are indeed row stochastic:
 
 ```{r}
- rowSums(P.pg)
- rowSums(P.gp)
+rowSums(P.pg)
+rowSums(P.gp)
 ```
 
 And that they are of the predicted dimensions:
 
 ```{r}
- dim(P.pg)
- dim(P.gp)
+dim(P.pg)
+dim(P.gp)
 ```
 
 Great! Now, we can obtain the *degree-normalized projections* for people by multiplying $\mathbf{P}_{PG}$ times $\mathbf{P}_{GP}$:
@@ -72,23 +72,23 @@ Which produces the matrix $\mathbf{P}_{GG}$ a square $N \times N$ matrix contain
 In `R` we obtain these matrices as follows:
 
 ```{r}
- P.pp <- P.pg %*% P.gp
- P.gg <- P.gp %*% P.pg
+P.pp <- P.pg %*% P.gp
+P.gg <- P.gp %*% P.pg
 ```
 
 Which are still row stochastic--but now square--matrices:
 
 ```{r}
- rowSums(P.pp)
- rowSums(P.gg)
- dim(P.pp)
- dim(P.gg)
+rowSums(P.pp)
+rowSums(P.gg)
+dim(P.pp)
+dim(P.gg)
 ```
 
 Let's peek inside one of these matrices:
 
 ```{r}
- round(head(P.pp), 3)
+round(head(P.pp), 3)
 ```
 
 What are these numbers? Well, they can be interpreted as *probabilities* that a random walker starting at the row node and, following any sequence of $person-group-person'-group'$ hops, will reach the column person. Thus, higher values indicate an *affinity* or *proximity* between the people (and the groups in the corresponding matrix).
@@ -98,15 +98,15 @@ What are these numbers? Well, they can be interpreted as *probabilities* that a 
 We went through all these steps because CA is equivalent to the eigendecomposition of the last two square matrices we obtained, namely, $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$:
 
 ```{r}
- CA.p <- lapply(eigen(P.pp), Re)
- CA.g <- lapply(eigen(P.gg), Re)
+CA.p <- lapply(eigen(P.pp), Re)
+CA.g <- lapply(eigen(P.gg), Re)
 ```
 
 Let's see what we have here:
 
 ```{r}
- round(CA.p$values, 2)
- round(CA.g$values, 2)
+round(CA.p$values, 2)
+round(CA.g$values, 2)
 ```
 
 So the two matrices have identical eigenvalues, and the first one is 1.0. 
@@ -114,10 +114,10 @@ So the two matrices have identical eigenvalues, and the first one is 1.0.
 Let's check out the first three eigenvectors:
 
 ```{r}
- rownames(CA.p$vectors) <- rownames(A)
- rownames(CA.g$vectors) <- colnames(A)
- round(CA.p$vectors[, 1:3], 2)
- round(CA.g$vectors[, 1:3], 2)
+rownames(CA.p$vectors) <- rownames(A)
+rownames(CA.g$vectors) <- colnames(A)
+round(CA.p$vectors[, 1:3], 2)
+round(CA.g$vectors[, 1:3], 2)
 ```
 
 So this is interesting. The first eigenvector of the decomposition of both $\mathbf{P_{PP}}$ and $\mathbf{P_{GG}}$ is just the same number for each person and group. Note that this is the eigenvector that is associated with the first eigenvalue which happens to be $\lambda_1 = 1.0$.
@@ -125,15 +125,15 @@ So this is interesting. The first eigenvector of the decomposition of both $\mat
 So it looks like the first eigenvector is a pretty useless quantity (a constant) so we can discard it, keeping all the other ones. Now the old second eigenvector is the first, the old third is the second, and so on:
 
 ```{r}
- eig.vec.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
- eig.vec.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
+eig.vec.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
+eig.vec.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
 ```
 
 Note that the rest of the eigenvalues (discarding the 1.0 one) are arranged in descending order:
 
 ```{r}
- eig.vals <- CA.p$values[2:length(CA.p$values)]
- round(eig.vals, 3)
+eig.vals <- CA.p$values[2:length(CA.p$values)]
+round(eig.vals, 3)
 ```
 
 The magnitude of the eigenvalue tells us how important is the related eigenvector in containing information about the original matrix. It looks like here, the first two eigenvectors contain a good chunk of the info. 
@@ -141,7 +141,7 @@ The magnitude of the eigenvalue tells us how important is the related eigenvecto
 We can check how much exactly by computing the ratio between the sum of the first two eigenvalues over the sum of all the eigenvalues:
 
 ```{r}
- round(sum(eig.vals[1:2])/sum(eig.vals), 2)
+round(sum(eig.vals[1:2]) / sum(eig.vals), 2)
 ```
 
 Which tells us that the first two eigenvectors account for about 57% of the action (or more precisely we could reconstruct the original matrix with 57% accuracy using just these two eigenvectors and associated eigenvalues). 
@@ -151,40 +151,42 @@ Because the magnitude of the CA eigenvectors don't have a natural scale, it is c
 We can perform the normalization of the raw CA scores using the following function, which performs CA on the affiliation matrix:
 
 ```{r}
- norm.CA.vec <- function(x) {
- D.p <- diag(rowSums(x)) #degree matrix for persons
- D.g <- diag(colSums(x)) #degree matrix for groups
- i.Dp <- solve(D.p) #inverse of degree matrix for persons
- i.Dg <- solve(D.g) #inverse of degree matrix for groups
- CA.p <- lapply(eigen(i.Dp %*% x %*% i.Dg %*% t(x)), Re) #person CA
- CA.g <- lapply(eigen(i.Dg %*% t(x) %*% i.Dp %*% x), Re) #group CA
- ev <- CA.p$values[2:length(CA.g$values)]
- m <- length(ev)
- CA.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
- CA.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
- rownames(CA.p) <- rownames(A)
- rownames(CA.g) <- colnames(A)
- Z.u.p <- matrix(0, nrow(x), m)
- Z.u.g <- matrix(0, ncol(x), m)
- Z.v.p <- matrix(0, nrow(x), m)
- Z.v.g <- matrix(0, ncol(x), m)
- rownames(Z.u.p) <- rownames(x)
- rownames(Z.u.g) <- colnames(x)
- rownames(Z.v.p) <- rownames(x)
- rownames(Z.v.g) <- colnames(x)
- for (i in 1:m) {
- ev.p <- as.matrix(CA.p[, i])
- ev.g <- as.matrix(CA.g[, i])
- norm.p <- as.numeric(t(ev.p) %*% D.p %*% ev.p) #person norm
- Z.u.p[, i] <- ev.p * sqrt(sum(A)/norm.p) #normalizing to unit variance
- Z.v.p[, i] <- Z.u.p[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
- norm.g <- as.numeric(t(ev.g) %*% D.g %*% ev.g) #group norm
- Z.u.g[, i] <- ev.g * sqrt(sum(A)/norm.g) #normalizing to unit variance
- Z.v.g[, i] <- Z.u.g[, i] * sqrt(ev[i]) #normalizing to square root of eigenvalue
- }
- return(list(Z.u.p = Z.u.p, Z.u.g = Z.u.g,
- Z.v.p = Z.v.p, Z.v.g = Z.v.g))
- }
+norm.CA.vec <- function(x) {
+  D.p <- diag(rowSums(x)) # degree matrix for persons
+  D.g <- diag(colSums(x)) # degree matrix for groups
+  i.Dp <- solve(D.p) # inverse of degree matrix for persons
+  i.Dg <- solve(D.g) # inverse of degree matrix for groups
+  CA.p <- lapply(eigen(i.Dp %*% x %*% i.Dg %*% t(x)), Re) # person CA
+  CA.g <- lapply(eigen(i.Dg %*% t(x) %*% i.Dp %*% x), Re) # group CA
+  ev <- CA.p$values[2:length(CA.g$values)]
+  m <- length(ev)
+  CA.p <- CA.p$vectors[, 2:ncol(CA.p$vectors)]
+  CA.g <- CA.g$vectors[, 2:ncol(CA.g$vectors)]
+  rownames(CA.p) <- rownames(A)
+  rownames(CA.g) <- colnames(A)
+  Z.u.p <- matrix(0, nrow(x), m)
+  Z.u.g <- matrix(0, ncol(x), m)
+  Z.v.p <- matrix(0, nrow(x), m)
+  Z.v.g <- matrix(0, ncol(x), m)
+  rownames(Z.u.p) <- rownames(x)
+  rownames(Z.u.g) <- colnames(x)
+  rownames(Z.v.p) <- rownames(x)
+  rownames(Z.v.g) <- colnames(x)
+  for (i in 1:m) {
+    ev.p <- as.matrix(CA.p[, i])
+    ev.g <- as.matrix(CA.g[, i])
+    norm.p <- as.numeric(t(ev.p) %*% D.p %*% ev.p) # person norm
+    Z.u.p[, i] <- ev.p * sqrt(sum(A) / norm.p) # normalizing to unit variance
+    Z.v.p[, i] <- Z.u.p[, i] * sqrt(ev[i]) # normalizing to square root of eigenvalue
+    norm.g <- as.numeric(t(ev.g) %*% D.g %*% ev.g) # group norm
+    Z.u.g[, i] <- ev.g * sqrt(sum(A) / norm.g) # normalizing to unit variance
+    Z.v.g[, i] <- Z.u.g[, i] * sqrt(ev[i]) # normalizing to square root of eigenvalue
+  }
+  return(list(
+    Z.u.p = Z.u.p, Z.u.g = Z.u.g,
+    Z.v.p = Z.v.p, Z.v.g = Z.v.g
+  ))
+}
 ```
 
 This function takes the bi-adjacency matrix as input and returns two new set of normalized CA scores for both persons and groups as output. The normalized CA scores are stored in four separate matrices: $\mathbf{Z_P^U}, \mathbf{Z_G^U}, \mathbf{Z_P^V}, \mathbf{Z_G^V}$. 
@@ -194,15 +196,15 @@ One person-group set of scores is normalized to unit variance (`Z.u.p` and `Z.u.
 Let's see the normalization function at work, extracting the first two dimensions for persons and groups (the first two columns of each $\mathbf{Z}$ matrix):
 
 ```{r}
- CA.res <- norm.CA.vec(A)
- uni.p <- CA.res$Z.u.p[, 1:2]
- uni.g <- CA.res$Z.u.g[, 1:2]
- val.p <- CA.res$Z.v.p[, 1:2]
- val.g <- CA.res$Z.v.g[, 1:2]
- round(uni.p, 2)
- round(uni.g, 2)
- round(val.p, 2)
- round(val.g, 2)
+CA.res <- norm.CA.vec(A)
+uni.p <- CA.res$Z.u.p[, 1:2]
+uni.g <- CA.res$Z.u.g[, 1:2]
+val.p <- CA.res$Z.v.p[, 1:2]
+val.g <- CA.res$Z.v.g[, 1:2]
+round(uni.p, 2)
+round(uni.g, 2)
+round(val.p, 2)
+round(val.g, 2)
 ```
 
 Great! Now we have two sets (unit variance versus eigenvalue variance) of normalized CA scores for persons and groups on the first two dimensions. 
@@ -216,25 +218,25 @@ The main difference is that this time we sum scores across the $\mathbf{P_P}$ an
 So for any given person, on any given dimension, let's say $EVELYN$, her CA score is given by the sum of the (unit variance normalized) CA scores of the groups she belongs to weighted by her degree (done by multiplying each CA score by the relevant cell in Evelyn's row of the $\mathbf{P}_{PG}$ matrix):
 
 ```{r}
- sum(P.pg["EVELYN", ] * uni.g[, 1]) 
+sum(P.pg["EVELYN", ] * uni.g[, 1])
 ```
 
 Which is the same as the (eigenvalue variance) normalized score we obtained via CA for $EVELYN$:
 
 ```{r}
- val.p["EVELYN", 1]
+val.p["EVELYN", 1]
 ```
 
 A similar story applies to groups. Each group score is the group-size-weighted sum of the (unit variance normalized) CA scores of the people who join it:
 
 ```{r}
- sum(P.gp["6/27", ] * uni.p[, 1])
+sum(P.gp["6/27", ] * uni.p[, 1])
 ```
 
 Which is the same as the (eigenvalue variance normalized) score we obtained via CA:
 
 ```{r}
- val.g["6/27", 1] 
+val.g["6/27", 1]
 ```
 
 Neat! Duality at work.
@@ -244,25 +246,28 @@ Neat! Duality at work.
 And, finally, we can use the first two (eigenvalue variance) normalized CA scores to plot the persons and groups in a common two-dimensional space:
 
 ```{r}
- val.g[, 2] <- val.g[, 2]*-1 #flippling sign of group scores on second dimension for plotting purposes
- plot.dat <- data.frame(rbind(uni.p, val.g)) %>% 
- cbind(type = as.factor(c(rep(1, 18), rep(2, 14))))
- library(ggplot2)
- # install.packages("ggrepel")
- library(ggrepel)
- p <- ggplot(data = plot.dat, aes(x = X1, y = X2, color = type))
- p <- p + geom_hline(aes(yintercept = 0), color = "gray")
- p <- p + geom_vline(aes(xintercept = 0), color = "gray")
- p <- p + geom_text_repel(aes(label = rownames(plot.dat)), 
- max.overlaps = 20, size = 2.75)
- p <- p + theme_minimal()
- p <- p + theme(legend.position = "none",
- axis.title = element_text(size = 14),
- axis.text = element_text(size = 12))
- p <- p + scale_color_manual(values = c("red", "blue"))
- p <- p + labs(x = "First Dimension", y = "Second Dimension") 
- p <- p + xlim(-2, 2) + ylim(-2, 4)
- p
+val.g[, 2] <- val.g[, 2] * -1 # flippling sign of group scores on second dimension for plotting purposes
+plot.dat <- data.frame(rbind(uni.p, val.g)) %>%
+  cbind(type = as.factor(c(rep(1, 18), rep(2, 14))))
+library(ggplot2)
+# install.packages("ggrepel")
+library(ggrepel)
+p <- ggplot(data = plot.dat, aes(x = X1, y = X2, color = type))
+p <- p + geom_hline(aes(yintercept = 0), color = "gray")
+p <- p + geom_vline(aes(xintercept = 0), color = "gray")
+p <- p + geom_text_repel(aes(label = rownames(plot.dat)),
+  max.overlaps = 20, size = 2.75
+)
+p <- p + theme_minimal()
+p <- p + theme(
+  legend.position = "none",
+  axis.title = element_text(size = 14),
+  axis.text = element_text(size = 12)
+)
+p <- p + scale_color_manual(values = c("red", "blue"))
+p <- p + labs(x = "First Dimension", y = "Second Dimension")
+p <- p + xlim(-2, 2) + ylim(-2, 4)
+p
 ```
 
 In this space, people with the most similar patterns of memberships to the most similar groups are placed close to one another. In the same way, groups with the most similar members are placed closed to one another. 
@@ -270,20 +275,22 @@ In this space, people with the most similar patterns of memberships to the most 
 Also like before, we can use the scores obtained from the CA analysis to re-arrange the rows and columns of the original matrix to reveal blocks of maximally similar persons and events:
 
 ```{r}
- library(ggcorrplot)
- p <- ggcorrplot(t(A[order(val.p[,1]), order(val.g[,1])]), 
- colors = c("white", "white", "red")) 
- p <- p + theme(legend.position = "none", 
- axis.text.y = element_text(size = 8),
- axis.text.x = element_text(size = 8, angle = 0),
- )
- p <- p + scale_x_discrete(position = "top") 
- p <- p + geom_hline(yintercept = 6.5, linewidth = 2, color = "blue")
- p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
- p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
- p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
- p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
- p
+library(ggcorrplot)
+p <- ggcorrplot(t(A[order(val.p[, 1]), order(val.g[, 1])]),
+  colors = c("white", "white", "red")
+)
+p <- p + theme(
+  legend.position = "none",
+  axis.text.y = element_text(size = 8),
+  axis.text.x = element_text(size = 8, angle = 0),
+)
+p <- p + scale_x_discrete(position = "top")
+p <- p + geom_hline(yintercept = 6.5, linewidth = 2, color = "blue")
+p <- p + geom_hline(yintercept = 11.5, linewidth = 2, color = "blue")
+p <- p + geom_hline(yintercept = 16.5, linewidth = 2, color = "blue")
+p <- p + geom_vline(xintercept = 9.5, linewidth = 2, color = "blue")
+p <- p + geom_vline(xintercept = 6.5, linewidth = 2, color = "blue")
+p
 ```
 
 Here CA seems to have detected two separate clusters of actors who preferentially attend two distinct clusters of events! 
@@ -321,32 +328,32 @@ The matrices $\mathbf{P}$ and $\mathbf{G}$ no longer have the nice interpretatio
 Let's see how this would work:
 
 ```{r}
- D2.p <- diag(1/sqrt(rowSums(A)))
- D2.g <- diag(1/sqrt(colSums(A)))
- A2 <- D2.p %*% A %*% D2.g
- P <- A2 %*% t(A2)
- G <- t(A2) %*% A2
+D2.p <- diag(1 / sqrt(rowSums(A)))
+D2.g <- diag(1 / sqrt(colSums(A)))
+A2 <- D2.p %*% A %*% D2.g
+P <- A2 %*% t(A2)
+G <- t(A2) %*% A2
 ```
 
 We can check that indeed $\mathbf{P}$ and $\mathbf{G}$ are symmetric:
 
 ```{r}
- isSymmetric(P)
- isSymmetric(G)
+isSymmetric(P)
+isSymmetric(G)
 ```
 
 And now we can obtain the row and column CA scores via eigendecomposition of these matrices:
 
 ```{r}
- eig.vec.p2 <- eigen(P)$vectors
- eig.vec.g2 <- eigen(G)$vectors
+eig.vec.p2 <- eigen(P)$vectors
+eig.vec.g2 <- eigen(G)$vectors
 ```
 
 As @sciarra_etal20 [p. 3] also note, to have the eigenvectors obtained via this procedure match the CA scores, we need to rescale the standard CA scores by multiplying them by the square root of the degrees of the row and column nodes:
 
 ```{r}
- cor(CA.res$Z.u.p[, 1] * sqrt(rowSums(A)), eig.vec.p2[, 2])
- cor(CA.res$Z.u.g[, 1] * sqrt(colSums(A)), eig.vec.g2[, 2])
+cor(CA.res$Z.u.p[, 1] * sqrt(rowSums(A)), eig.vec.p2[, 2])
+cor(CA.res$Z.u.g[, 1] * sqrt(colSums(A)), eig.vec.g2[, 2])
 ```
 
 Which as we can see, results in perfectly correlated scores across the two methods. 

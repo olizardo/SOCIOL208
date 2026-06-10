@@ -49,19 +49,19 @@ $$
 Let's look at an example:
 
 ```{r}
- library(networkdata)
- library(igraph)
- library(stringr) #using stringr to change names from all caps to title case
- g <- movie_267
- V(g)$name <- str_to_title(V(g)$name)
- g <- delete_vertices(g, degree(g) <= 3) #deleting low degree vertices
- A <- as.matrix(as_adjacency_matrix(g))
- A.p <- A %*% A #common neighbors matrix
- A.q <- A %*% (1 - A) #neighbors of i not connected to j
- A.r <- (1 - A) %*% A #neighbors of j not connected to i
- A.p[1:10, 1:10]
- A.q[1:10, 1:10]
- A.r[1:10, 1:10]
+library(networkdata)
+library(igraph)
+library(stringr) # using stringr to change names from all caps to title case
+g <- movie_267
+V(g)$name <- str_to_title(V(g)$name)
+g <- delete_vertices(g, degree(g) <= 3) # deleting low degree vertices
+A <- as.matrix(as_adjacency_matrix(g))
+A.p <- A %*% A # common neighbors matrix
+A.q <- A %*% (1 - A) # neighbors of i not connected to j
+A.r <- (1 - A) %*% A # neighbors of j not connected to i
+A.p[1:10, 1:10]
+A.q[1:10, 1:10]
+A.r[1:10, 1:10]
 ```
 
 Note that while $\mathbf{A}(p)$ is necessarily symmetric, neither $q$ nor $r$ have to be. Barney has many more neighbors that Bam-Bam is not connected to than vice versa. Also note that the $\mathbf{A}(r)$ matrix is just the transpose of the $\mathbf{A}(q)$ matrix $\left[\mathbf{A}(q)\right]^T$ in the undirected case. 
@@ -111,9 +111,9 @@ $$ {#eq-ba}
 Which is the just the products of the degrees of each of the nodes. In terms of the matrices defined earlier, the preferential attachment index can be calculated as follows:
 
 ```{r}
- P.a <- (A.p + A.q) * (A.p + A.r)
- P.a <- P.a / max(P.a)
- round(P.a[1:10, 1:10], 2)
+P.a <- (A.p + A.q) * (A.p + A.r)
+P.a <- P.a / max(P.a)
+round(P.a[1:10, 1:10], 2)
 ```
 
 Which shows Barney to be very similar to Betty and Fred as we would expect.
@@ -161,8 +161,8 @@ Which is the ratio of the size of the *intersection* of the neighborhoods of the
 In our example, we can compute the Jaccard similarity as follows:
 
 ```{r}
- J <- A.p / (A.p + A.q + A.r)
- round(J[1:10, 1:10], 2)
+J <- A.p / (A.p + A.q + A.r)
+round(J[1:10, 1:10], 2)
 ```
 
 Here showing that Barney is more similar to Fred and Betty than he is to Bam-Bam.
@@ -182,8 +182,8 @@ When the neighborhoods of the two nodes coincide (e.g., $q = 0$ and $r = 0$) the
 In our example, we can compute the Cosine similarity as follows:
 
 ```{r}
- C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
- round(C[1:10, 1:10], 2)
+C <- A.p / (sqrt(A.p + A.q) * sqrt(A.p + A.r))
+round(C[1:10, 1:10], 2)
 ```
 
 Showing results similar (pun intended) to those obtained using the Jaccard index. 
@@ -201,8 +201,8 @@ Which is given by the ratio of *twice* the number of common neighbors divided by
 In our example, we can compute the Dice similarity as follows:
 
 ```{r}
- D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
- round(D[1:10, 1:10], 2)
+D <- (2 * A.p) / ((2 * A.p) + A.q + A.r)
+round(D[1:10, 1:10], 2)
 ```
 
 Once again, showing results comparable to the previous. 
@@ -226,8 +226,8 @@ For nodes with identical neighborhoods, the maximum LHN score will always be $\f
 In our example, we can compute the LHN similarity as follows:
 
 ```{r}
- L <- A.p / ((A.p + A.q) * (A.p + A.r))
- round(L[1:10, 1:10], 2)
+L <- A.p / ((A.p + A.q) * (A.p + A.r))
+round(L[1:10, 1:10], 2)
 ```
 
 Which, once again, produces similar results to what we found before. Note, however, that the LHN is not naturally maximal for self-similar nodes. 
@@ -235,17 +235,17 @@ Which, once again, produces similar results to what we found before. Note, howev
 We can package all that we said before into a handy function that takes a graph as input and returns all four fully normalized similarity metrics as output:
 
 ```{r}
- vertex.sim <- function(w) {
- x <- as.matrix(as_adjacency_matrix(w))
- p <- x %*% x 
- q <- x %*% (1 - x) 
- r <- (1 - x) %*% x
- j <- p / (p + q + r)
- c <- p / (sqrt(p + q) * sqrt(p + r))
- d <- (2 * p) / ((2 * p) + q + r)
- l <- p / ((p + q) * (p + r))
- return(list(J = j, C = c, D = d, L = l))
- }
+vertex.sim <- function(w) {
+  x <- as.matrix(as_adjacency_matrix(w))
+  p <- x %*% x
+  q <- x %*% (1 - x)
+  r <- (1 - x) %*% x
+  j <- p / (p + q + r)
+  c <- p / (sqrt(p + q) * sqrt(p + r))
+  d <- (2 * p) / ((2 * p) + q + r)
+  l <- p / ((p + q) * (p + r))
+  return(list(J = j, C = c, D = d, L = l))
+}
 ```
 
 ## Partially Normalized Similarity Metrics 
@@ -284,40 +284,44 @@ For instance, consider our toy graph from our [previous discussion](sim-structeq
 ```{r}
 #| fig-cap: "A toy graph demonstrating structural equivalence."
 #| echo: false
- library(igraph)
- library(ggraph)
- h <- make_empty_graph(9, directed = FALSE) %>% 
- set_vertex_attr("name", value = LETTERS[1:9]) %>% 
- add_edges(c("A","B", "A","C", "B","D", "B","E", "B","F",
- "B","G", "C","D", "C","E", "C","F", "C","G", 
- "H","D", "H","E", "H","F", "I","D", 
- "I","E", "I","F", "A","G", "I","H")) 
- cols <- c(2, 1, 1, 3, 3, 3, 2, 4, 4)
- p <- ggraph(h, layout = 'kk')
- p <- p + geom_edge_fan(color = "gray", edge_width = 0.75)
- p <- p + geom_node_point(aes(x = x, y = y, 
- color = as.factor(cols)), size = 12) 
- p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
- p <- p + theme_graph() + theme(legend.position = "none")
- p
+library(igraph)
+library(ggraph)
+h <- make_empty_graph(9, directed = FALSE) %>%
+  set_vertex_attr("name", value = LETTERS[1:9]) %>%
+  add_edges(c(
+    "A", "B", "A", "C", "B", "D", "B", "E", "B", "F",
+    "B", "G", "C", "D", "C", "E", "C", "F", "C", "G",
+    "H", "D", "H", "E", "H", "F", "I", "D",
+    "I", "E", "I", "F", "A", "G", "I", "H"
+  ))
+cols <- c(2, 1, 1, 3, 3, 3, 2, 4, 4)
+p <- ggraph(h, layout = "kk")
+p <- p + geom_edge_fan(color = "gray", edge_width = 0.75)
+p <- p + geom_node_point(aes(
+  x = x, y = y,
+  color = as.factor(cols)
+), size = 12)
+p <- p + geom_node_text(aes(label = name), size = 6, color = "white")
+p <- p + theme_graph() + theme(legend.position = "none")
+p
 ```
 
 The cosine similarity matrix for this graph is:
 
 ```{r}
- W <- as.matrix(as_adjacency_matrix(h))
- W.p <- W %*% W
- W.q <- W %*% (1 - W) 
- W.r <- (1 - W) %*% W
- C <- W.p / (sqrt(W.p + W.q) * sqrt(W.p + W.r))
- round(C, 2)
+W <- as.matrix(as_adjacency_matrix(h))
+W.p <- W %*% W
+W.q <- W %*% (1 - W)
+W.r <- (1 - W) %*% W
+C <- W.p / (sqrt(W.p + W.q) * sqrt(W.p + W.r))
+round(C, 2)
 ```
 
 Note that structurally equivalent nodes have similarity scores equal to 1.0. In this case, the distance matrix is given by:
 
 ```{r}
- D <- 1 - C
- round(D, 2)
+D <- 1 - C
+round(D, 2)
 ```
 
 And a hierarchical clustering on this matrix reveals the structurally equivalent classes:
@@ -325,16 +329,16 @@ And a hierarchical clustering on this matrix reveals the structurally equivalent
 ```{r}
 #| fig-height: 6
 #| fig-width: 6
- D <- as.dist(D) 
- h.res <- hclust(D, method = "ward.D2")
- plot(h.res)
+D <- as.dist(D)
+h.res <- hclust(D, method = "ward.D2")
+plot(h.res)
 ```
 
 In the *Flintstones* network, we could then find structurally equivalent blocks from the similarity analysis as follows (using Cosine):
 
 ```{r}
- D <- as.dist(1- vertex.sim(g)$C)
- h.res <- hclust(D, method = "ward.D2") #hierarchical clustering
+D <- as.dist(1 - vertex.sim(g)$C)
+h.res <- hclust(D, method = "ward.D2") # hierarchical clustering
 ```
 
 We can then plot the resulting clusters into a dendrogram:
@@ -342,7 +346,7 @@ We can then plot the resulting clusters into a dendrogram:
 ```{r}
 #| fig-height: 8
 #| fig-width: 8
- plot(h.res)
+plot(h.res)
 ```
 
 Which reveals four major blocks of structurally similar actors.
@@ -350,8 +354,8 @@ Which reveals four major blocks of structurally similar actors.
 We can then extract our blocks just like we did with the Euclidean distance hierarchical clustering results in our discussion of [structural equivalence](sim-structequiv.qmd):
 
 ```{r}
- blocks <- cutree(h.res, k = 4) #requesting four blocks
- blocks
+blocks <- cutree(h.res, k = 4) # requesting four blocks
+blocks
 ```
 
 This analysis puts $\{$ Barney, Betty, Fred, Lava, Mrs. Slate, Slate, Wilma $\}$ in the second block of equivalent actors (shown as the right-most cluster in the dendrogram). Which seems about right!

@@ -34,14 +34,14 @@ $$ {#eq-bet1}
 Let's see an example of how to calculate betweenness centrality using real data. We first load our trusty *Pulp Fiction* data set from the `networkdata` package, which is an **undirected** graph of character scene co-appearances in the film:
 
 ```{r}
- library(networkdata)
- library(igraph)
- library(stringr) #using stringr to change names from all caps to title case
- g <- movie_559
- V(g)$name <- str_to_title(V(g)$name)
- V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" #fixing misspelled name
- E(g)$weight <- 1 #setting edge weights to 1.0 (relevant for betweenness calculation)
- V(g)$name
+library(networkdata)
+library(igraph)
+library(stringr) # using stringr to change names from all caps to title case
+g <- movie_559
+V(g)$name <- str_to_title(V(g)$name)
+V(g)$name[which(V(g)$name == "Esmarelda")] <- "Esmeralda" # fixing misspelled name
+E(g)$weight <- 1 # setting edge weights to 1.0 (relevant for betweenness calculation)
+V(g)$name
 ```
 
 To compute the components of the betweenness centrality defined earlier, we need two pieces of information. 
@@ -49,8 +49,8 @@ To compute the components of the betweenness centrality defined earlier, we need
 First we need to know the *length* of the shortest path between every pair of nodes, so that we can separate the shortest paths from the other longer paths. As we saw in our discussion of [closeness](cent-clos.qmd), this is stored in the **geodesic distance matrix** ($\mathbf{G}$) of dimensions $N \times N$, because the length of the shortest path between a pair of nodes is also the **geodesic distance** between them. In `igraph` we can calculate the entries for $\mathbf{G}$ using the `distances` function:
 
 ```{r}
- G <- distances(g)
- G[1:10, 1:10]
+G <- distances(g)
+G[1:10, 1:10]
 ```
 
 Second, we need to know the *number* of shortest paths linking every pair of nodes (as nodes can be linked by multiple distinct shortest paths). In `igraph` we can use the `all_shortest_paths` function to figure out this information. 
@@ -58,8 +58,8 @@ Second, we need to know the *number* of shortest paths linking every pair of nod
 For instance, let's say we wanted to find the number of shortest paths between the pair of nodes "Young Man" (at the diner) and "The Pedestrian" (who appears when Butch encounters Marsellus on the street). To do that we can just type:
 
 ```{r}
- ap <- all_shortest_paths(g, from = "Pedestrian", to = "Young Man")
- ap$vpaths
+ap <- all_shortest_paths(g, from = "Pedestrian", to = "Young Man")
+ap$vpaths
 ```
 
 The `all_shortest_paths` function has three arguments: The graph `g`, the `from` node (the **starting node** in the path count) and the `to` node (the **end node** in the path count).^[In an undirected graph you get the same result for a pair of nodes regardless of which one you put on the `from` or `to` slots.] 
@@ -67,7 +67,7 @@ The `all_shortest_paths` function has three arguments: The graph `g`, the `from`
 The function stores the results in a list object containing various sub-objects. The actual paths (containing the node ids) are in a list sub-object called `vpaths`, which is itself a list (with named vectors containing the indices of the nodes of each path as elements). The `length` of this list is the number of shortest paths between the young man at the diner and the pedestrian:
 
 ```{r}
- length(ap$vpaths)
+length(ap$vpaths)
 ```
 
 We can see that the list is of length eight, indicating that there are eight distinct shortest paths between the pedestrian and the young man.
@@ -75,7 +75,7 @@ We can see that the list is of length eight, indicating that there are eight dis
 If we wanted to verify the *length of the shortest path* between these two nodes, we could just type:
 
 ```{r}
- G["Young Man", "Pedestrian"]
+G["Young Man", "Pedestrian"]
 ```
 
 Which provides us with the relevant entry in the geodesic distance matrix, telling us that the young man is four steps away from the pedestrian in the network. This also means that each path will involve five nodes (counting the young man and the pedestrian, with three intermediary nodes), because the length of the path is the number of edges in it, and the length of a path is always $n-1$ where $n$ is the number of nodes in the path.
@@ -83,27 +83,27 @@ Which provides us with the relevant entry in the geodesic distance matrix, telli
 Note that we could have gotten the same information using the `distances` function in `igraph` specifying the `v` and `to` nodes:
 
 ```{r}
- distances(g, v = "Young Man", to = "Pedestrian")
+distances(g, v = "Young Man", to = "Pedestrian")
 ```
 
 Now, to populate the entries of the **shortest paths matrix** ($\mathbf{S}$), we can just loop through each pair of (non-adjacent) nodes in the graph and record the length of the `vpaths` object obtained when we run the `all_shortest_paths` function on that pair of nodes:
 
 ```{r}
- n <- vcount(g)
- A <- as.matrix(as_adjacency_matrix(g))
- S <- matrix(1, n, n) #intializing shortest paths matrix
- diag(S) <- 0 #setting diagonals to zero (Brandes, 2008, p. 137)
- rownames(S) <- V(g)$name
- colnames(S) <- V(g)$name
- for (i in 1:n) {
- for (j in i:n) { #looping through upper triangle
- if (A[i,j] == 0) { #restrict to non-adjancent nodes 
- S[i,j] <- length(all_shortest_paths(g, from = i, to = j)$vpaths)
- }
- }
- }
- S[lower.tri(S)] <- t(S)[lower.tri(S)] #copying upper triangle into lower triangle
- S[1:10, 1:10]
+n <- vcount(g)
+A <- as.matrix(as_adjacency_matrix(g))
+S <- matrix(1, n, n) # intializing shortest paths matrix
+diag(S) <- 0 # setting diagonals to zero (Brandes, 2008, p. 137)
+rownames(S) <- V(g)$name
+colnames(S) <- V(g)$name
+for (i in 1:n) {
+  for (j in i:n) { # looping through upper triangle
+    if (A[i, j] == 0) { # restrict to non-adjancent nodes
+      S[i, j] <- length(all_shortest_paths(g, from = i, to = j)$vpaths)
+    }
+  }
+}
+S[lower.tri(S)] <- t(S)[lower.tri(S)] # copying upper triangle into lower triangle
+S[1:10, 1:10]
 ```
 
 Once we have the information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices, we have all we need to compute the various quantities defined earlier. 
@@ -128,10 +128,13 @@ This also means that if the above equality does *not* obtain and $g_{ij} < g_{ik
 Using this approach, we can write a simple function to compute the pair dependency of any two nodes on a third node, using information stored in the $\mathbf{G}$ and $\mathbf{S}$ matrices:
 
 ```{r}
- pair.dep <- function(a, b, c) {
- if (G[a, b] == G[a, c] + G[c, b]) {return((S[a, c]*S[c, b])/S[a, b])}
- else {return(0)}
- }
+pair.dep <- function(a, b, c) {
+  if (G[a, b] == G[a, c] + G[c, b]) {
+    return((S[a, c] * S[c, b]) / S[a, b])
+  } else {
+    return(0)
+  }
+}
 ```
 
 This function computes the pair dependency of the nodes entered as values of the `a` and `b` arguments on the node entered as the value of the `c` argument using the entries stored on the `S` matrix according to equation . 
@@ -139,7 +142,7 @@ This function computes the pair dependency of the nodes entered as values of the
 We can test it out to compute the pair dependency of the young man and the pedestrian on Vincent:
 
 ```{r}
- pair.dep("Pedestrian", "Young Man", "Vincent")
+pair.dep("Pedestrian", "Young Man", "Vincent")
 ```
 
 Which says that Vincent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vincent"), 2) * 100`% of the paths between the The Young Man and The Pedestrian (four out of eight).
@@ -149,19 +152,21 @@ Which says that Vincent lies on `r round(pair.dep("Pedestrian", "Young Man", "Vi
 As noted in , the *one-sided dependency* of a node $i$ on another node $k$ is just the sum of the pairwise dependencies involving $i$ as a source and $k$ as an intermediary across every destination node $j$. We can get these using a simple wrapper function over the `pair.dep` function:
 
 ```{r}
- one.sided <- function(a, c) {
- od <- 0
- i <- which(V(g)$name == a)
- k <- which(V(g)$name == c)
- for (j in c(1:vcount(g))[-c(i, k)]) {od <- od + pair.dep(i, j, k)}
- return(od)
- }
+one.sided <- function(a, c) {
+  od <- 0
+  i <- which(V(g)$name == a)
+  k <- which(V(g)$name == c)
+  for (j in c(1:vcount(g))[-c(i, k)]) {
+    od <- od + pair.dep(i, j, k)
+  }
+  return(od)
+}
 ```
 
 So the one-sided dependence of the young man on Vincent is:
 
 ```{r}
- one.sided("Young Man", "Vincent")
+one.sided("Young Man", "Vincent")
 ```
 
 Which is the sum of the pair dependencies that involve the young man as a starting node and Vincent as an inner node.
@@ -169,7 +174,7 @@ Which is the sum of the pair dependencies that involve the young man as a starti
 Note that while the young man is highly dependent on Vincent to reach others, the reverse is not the case:
 
 ```{r}
- one.sided("Vincent", "Young Man")
+one.sided("Vincent", "Young Man")
 ```
 
 As the young man stands on none of the paths that link Vincent to other nodes in the graph. 
@@ -179,37 +184,39 @@ As the young man stands on none of the paths that link Vincent to other nodes in
 As noted in , Vincent's *betweenness* is just the sum of the pair dependencies of each pair of nodes in the graph on him. We could compute that quantity (not very efficiently) for any node in the graph using the following wrapper over the `pair.dep` function:
 
 ```{r}
- bet.cent <- function(c) {
- n <- vcount(g)
- bc <- 0
- k <- which(V(g)$name == c)
- for (i in 1:n) {
- for (j in i:n) {
- if (i != k & j != k & A[i, j] == 0) {bc <- bc + pair.dep(i, j, k)}
- }
- }
- return(bc)
- }
+bet.cent <- function(c) {
+  n <- vcount(g)
+  bc <- 0
+  k <- which(V(g)$name == c)
+  for (i in 1:n) {
+    for (j in i:n) {
+      if (i != k & j != k & A[i, j] == 0) {
+        bc <- bc + pair.dep(i, j, k)
+      }
+    }
+  }
+  return(bc)
+}
 ```
 
 And now to find Vincent's betweenness:
 
 ```{r}
- bet.cent("Vincent")
+bet.cent("Vincent")
 ```
 
 Which is the same result we would have gotten had we used the `betweenness` function in `igraph` specifying that we want the answer just for the Vincent node:
 
 
 ```{r}
- betweenness(g, v = "Vincent")
+betweenness(g, v = "Vincent")
 ```
 
 We can of course use the same `igraph` function to---efficiently, using Brandes's [-@brandes01] algorithm---compute the betweenness centrality of each node in the graph stored in a vector of length $N$:
 
 
 ```{r}
- pulp.bet <- betweenness(g)
+pulp.bet <- betweenness(g)
 ```
 
 We should expect a character to have high betweenness in this network to the extent that they appear in scenes with characters who themselves don't appear in any scenes together, thus inter-mediating between different parts of the story. Characters who only appear in one scene with some others (like The Wolf or The Gimp) are likely to be low in betweenness.
@@ -217,12 +224,14 @@ We should expect a character to have high betweenness in this network to the ext
 Using the information stored in the `pulp.bet` vector of betweenness centralities for each node, we can create a top ten table of betweenness for the *Pulp Fiction* network.
 
 ```{r}
- library(kableExtra)
- top.10.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
- kbl(round(top.10.bet, 2), format = "pipe", align = c("l", "c"),
- col.names = c("Character", "Betweenness"),
- caption = "Top Ten Betweenness Characters in Pulp Fiction Network.") |> 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+library(kableExtra)
+top.10.bet <- sort(pulp.bet, decreasing = TRUE)[1:10]
+kbl(round(top.10.bet, 2),
+  format = "pipe", align = c("l", "c"),
+  col.names = c("Character", "Betweenness"),
+  caption = "Top Ten Betweenness Characters in Pulp Fiction Network."
+) |>
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
 Unsurprisingly, the three main characters in the story are also the highest in betweenness, with the already considered Vincent at the top of the list (that makes sense since Vincent intermediates between Butch and the rest of the story as he sadly found out in the [toilet](https://www.youtube.com/watch?v=fm9VPN1r4Hk)). Somewhat surprisingly, the main antagonist of the story (the pawn shop owner) is also up there. After that we see a big drop in the bottom five of the top ten. 
@@ -242,18 +251,18 @@ So for the *Pulp Fiction* network the normalized betweenness is equal to:
 
 
 ```{r}
- n <- vcount(g)
- pulp.nbet <- (2*pulp.bet)/((n-1)*(n-2))
- top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
- round(top.10.nbet, 4)
+n <- vcount(g)
+pulp.nbet <- (2 * pulp.bet) / ((n - 1) * (n - 2))
+top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
+round(top.10.nbet, 4)
 ```
 
 Which are the same scores we would obtain using the `igraph` function with the argument `normalized` set to `TRUE`:
 
 ```{r}
- pulp.nbet <- betweenness(g, normalized = TRUE)
- top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
- round(top.10.nbet, 4)
+pulp.nbet <- betweenness(g, normalized = TRUE)
+top.10.nbet <- sort(pulp.nbet, decreasing = TRUE)[1:10]
+round(top.10.nbet, 4)
 ```
 
 ## Betwenness in Directed Graphs
@@ -263,14 +272,14 @@ In contrast to closeness, there is no problem computing betweenness in the direc
 Let us examine betweenness centrality in the directed young women lawyers advice network:
 
 ```{r}
- g <- law_advice
- women <- which(V(g)$gender == 2) #selecting women
- wg <- subgraph(g, women)
- young <- which(V(wg)$age < 40) #selecting women under forty
- wg <- subgraph(wg, young)
- V(wg)$name <- 1:vcount(wg) #naming nodes
- w.bet <- betweenness(wg)
- round(w.bet, 3)
+g <- law_advice
+women <- which(V(g)$gender == 2) # selecting women
+wg <- subgraph(g, women)
+young <- which(V(wg)$age < 40) # selecting women under forty
+wg <- subgraph(wg, young)
+V(wg)$name <- 1:vcount(wg) # naming nodes
+w.bet <- betweenness(wg)
+round(w.bet, 3)
 ```
 
 Here we see that node 3 is the highest in betweenness, pictured in red in . For comparison, the node with the highest *closeness* centrality is pictured in blue in the same figure.
@@ -279,20 +288,22 @@ Here we see that node 3 is the highest in betweenness, pictured in red in . For 
 #| label: fig-yw
 #| echo: false
 #| fig-cap: "Women lawyers advice network with highest closeness centrality node in blue and highest betweenness centrality node in red"
- library(ggraph)
- d.harm = harmonic_centrality(wg)
- col <- rep("tan2", vcount(wg)) #creating node color vector
- col[which(w.bet == max(w.bet))] <- "red" #changing color of max bet. centrality node to red
- col[which(d.harm == max(d.harm))] <- "blue" #changing color of max clos. centrality node to blue
- p <- ggraph(wg, layout = 'auto')
- p <- p + geom_edge_parallel(color = "steelblue", edge_width = 0.5,
- arrow = arrow(length = unit(2.5, 'mm')),
- end_cap = circle(4, 'mm'), 
- sep = unit(3, 'mm'))
- p <- p + geom_node_point(aes(x = x, y = y), size = 10, color = col) 
- p <- p + geom_node_text(aes(label = V(wg)$name), size = 5, color = "white")
- p <- p + theme_graph() 
- p
+library(ggraph)
+d.harm <- harmonic_centrality(wg)
+col <- rep("tan2", vcount(wg)) # creating node color vector
+col[which(w.bet == max(w.bet))] <- "red" # changing color of max bet. centrality node to red
+col[which(d.harm == max(d.harm))] <- "blue" # changing color of max clos. centrality node to blue
+p <- ggraph(wg, layout = "auto")
+p <- p + geom_edge_parallel(
+  color = "steelblue", edge_width = 0.5,
+  arrow = arrow(length = unit(2.5, "mm")),
+  end_cap = circle(4, "mm"),
+  sep = unit(3, "mm")
+)
+p <- p + geom_node_point(aes(x = x, y = y), size = 10, color = col)
+p <- p + geom_node_text(aes(label = V(wg)$name), size = 5, color = "white")
+p <- p + theme_graph()
+p
 ```
 
 This result makes sense. Node 3 intermediates all the connections linking the tightly knit group of nodes on the left side (6, 10, 11, 12) with the rest of the network. Also if nodes 5 and 7 need to pass something along to the rest, they have to use 3 at least half time. Node 4 also needs 3 to reach 6. 
@@ -306,14 +317,14 @@ This result nicely illustrates the difference between closeness and betweenness.
 We will use the undirected version of the women lawyers advice network for this example. Let's say we are interested in the difference that node 10 makes for the betweenness centralities of everyone else. In that case we would proceed as follows:
 
 ```{r}
- bet <- betweenness(wg) #original centrality scores
- Sbet <- sum(bet) #sum of original centrality scores
- wg.d <- wg - vertex("10") #removing vertex 10 from the graph
- bet.d <- betweenness(wg.d) #centrality scores of node deleted subgraph
- Sbet.d <- sum(bet.d) #sum of centrality scores of node deleted subgraph
- total.c <- Sbet - Sbet.d #total centrality
- indirect.c <- total.c - bet[10] #indirect centrality
- indirect.c
+bet <- betweenness(wg) # original centrality scores
+Sbet <- sum(bet) # sum of original centrality scores
+wg.d <- wg - vertex("10") # removing vertex 10 from the graph
+bet.d <- betweenness(wg.d) # centrality scores of node deleted subgraph
+Sbet.d <- sum(bet.d) # sum of centrality scores of node deleted subgraph
+total.c <- Sbet - Sbet.d # total centrality
+indirect.c <- total.c - bet[10] # indirect centrality
+indirect.c
 ```
 
 Line 1 just calculates the regular betweenness centrality vector for the graph. Line 2 sums up all of the entries of this vector. Line 3 creates a node deleted subgraph by removing node 10. This is done using the "minus" operator and the `igraph` function `vertex`, which takes a node id or name as input. Lines 4-5 just recalculate the sum of betweenness centralities in the subgraph that excludes node 10. Then in line 6 we subtract the sum of centralities of the node deleted subgraph from the sum of centralities of the original graph. If this number, which Borgatti and Everett call the "total" centrality, is large and positive then that means that node 10 makes a difference for the centrality of others. 
@@ -323,25 +334,27 @@ However, part of that difference is node 10's own "direct" centrality, so to get
 Now all we need to do is do the same for each node to create a vector of indirect betweenness centralities. So we incorporate the code above into a short loop through all vertices:
 
 ```{r}
- total.c <- 0 #empty vector
- indirect.c <- 0 #empty vector
- for (i in 1:vcount(wg)) {
- wg.d <- wg - vertex(i)
- bet.d <- betweenness(wg.d) #centrality scores of node deleted subgraph
- Sbet.d <- sum(bet.d) #sum of centrality scores of node deleted subgraph
- total.c[i] <- Sbet - Sbet.d #total centrality
- indirect.c[i] <- total.c[i] - bet[i] #total minus direct
- }
+total.c <- 0 # empty vector
+indirect.c <- 0 # empty vector
+for (i in 1:vcount(wg)) {
+  wg.d <- wg - vertex(i)
+  bet.d <- betweenness(wg.d) # centrality scores of node deleted subgraph
+  Sbet.d <- sum(bet.d) # sum of centrality scores of node deleted subgraph
+  total.c[i] <- Sbet - Sbet.d # total centrality
+  indirect.c[i] <- total.c[i] - bet[i] # total minus direct
+}
 ```
 
 We can now list the total, direct, and indirect betweenness centralities for the women lawyers graph using a nice table:
 
 ```{r}
- i.bet <- data.frame(n = 1:vcount(wg), total.c, round(betweenness(wg), 1), round(indirect.c, 1))
- kbl(i.bet, format = "pipe", align = c("l", "c", "c", "c"),
- col.names = c("Node", "Total", "Direct", "Indirect"), row.names = FALSE,
- caption = "Induced Betweenness Scores in the Women Lawyers Advice Network") %>% 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
+i.bet <- data.frame(n = 1:vcount(wg), total.c, round(betweenness(wg), 1), round(indirect.c, 1))
+kbl(i.bet,
+  format = "pipe", align = c("l", "c", "c", "c"),
+  col.names = c("Node", "Total", "Direct", "Indirect"), row.names = FALSE,
+  caption = "Induced Betweenness Scores in the Women Lawyers Advice Network"
+) %>%
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive"))
 ```
 
 This approach to decomposing betweenness centrality provides a new way to categorize actors in a network: 

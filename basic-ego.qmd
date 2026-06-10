@@ -23,11 +23,11 @@ Perhaps the most basic structural characteristic of an ego network is the densit
 Let's see how it works. First we load up the *New Hope* Star Wars social network included in the `networkdata` package [@gabasova16]:
 
 ```{r}
- library(networkdata)
- library(igraph)
- library(stringr) #using stringr to change names from all caps to title case
- g <- starwars[[4]]
- V(g)$name <- str_to_title(V(g)$name)
+library(networkdata)
+library(igraph)
+library(stringr) # using stringr to change names from all caps to title case
+g <- starwars[[4]]
+V(g)$name <- str_to_title(V(g)$name)
 ```
 
 The `starwars` object contain a `list` of igraph network data sets corresponding to seven of the Star Wars films (the three originals, three prequels, and *The Force Awakens*). They are ordered in terms of the film chronology, so Episode IV, *A New Hope* is the fourth element in the list. 
@@ -35,7 +35,7 @@ The `starwars` object contain a `list` of igraph network data sets corresponding
 As we said an ego graph is just a subgraph centered on a particular actor. So R2-D2's ego graph is just:
 
 ```{r}
- r2 <- subgraph(g, c("R2-D2", names(neighbors(g, "R2-D2")))) #R2-D2's ego graph
+r2 <- subgraph(g, c("R2-D2", names(neighbors(g, "R2-D2")))) # R2-D2's ego graph
 ```
 
 And we can just plot it like we would any `igraph` object:
@@ -44,13 +44,14 @@ And we can just plot it like we would any `igraph` object:
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "R2-D2's Ego Network."
- V(r2)$color <- rep(2, vcount(r2)) #alters appear in blue
- V(r2)$color[which(V(r2)$name == "R2-D2")] <- 1 #ego appears in tan 
- plot(r2, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(r2, center = "R2-D2"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+V(r2)$color <- rep(2, vcount(r2)) # alters appear in blue
+V(r2)$color[which(V(r2)$name == "R2-D2")] <- 1 # ego appears in tan
+plot(r2,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(r2, center = "R2-D2"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 Note that we use the `layout_as_star()` for the layout, so that the ego is put in the center of the star graph surrounded by their alters, we can specify who the star node is using the option `center`.
@@ -58,9 +59,9 @@ Note that we use the `layout_as_star()` for the layout, so that the ego is put i
 R2-D2's clustering coefficient is just the density of the graph that includes only the alters:
 
 ```{r}
- alters <- r2 - vertex("R2-D2")
- C <- round(edge_density(alters), 2)
- C
+alters <- r2 - vertex("R2-D2")
+C <- round(edge_density(alters), 2)
+C
 ```
 
 The clustering coefficient $C_i$ for an ego $i$ ranges from zero to one. $C = 0$ means that *none* of ego's alters are connected to one another and $C = 1$ means that *all* of ego's alters are connected to one another. In this case, $C = `r C`$ means that `r C*100`% of R2-D2's alters are connected (e.g., co-appear in scenes) to one another. 
@@ -70,15 +71,17 @@ Typically we would want to compute the clustering coefficient of every node in a
 First, we create a little function that creates the ego subgraph for node `v`:
 
 ```{r}
- get.ego <- function(v, graph){subgraph(graph, c(v, names(neighbors(graph, v))))}
+get.ego <- function(v, graph) {
+  subgraph(graph, c(v, names(neighbors(graph, v))))
+}
 ```
 
 Second, we use `lapply` to extract the ego subgraph for each node in the network:
 
 ```{r}
- ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
- names(ego.graphs) <- V(g)$name #naming list
- head(ego.graphs)
+ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
+names(ego.graphs) <- V(g)$name # naming list
+head(ego.graphs)
 ```
 
 The result is a `list` object with $|V| = `r length(ego.graphs)`$ ego subgraphs composed of each node's alters and their connections. 
@@ -86,9 +89,9 @@ The result is a `list` object with $|V| = `r length(ego.graphs)`$ ego subgraphs 
 Second, to find out the clustering coefficient of each node, we just `sapply` the `igraph` function `edge_density` to each member of the `ego.graphs` list:
 
 ```{r}
- C <- sapply(ego.graphs, edge_density)
- names(C) <- V(g)$name
- round(C, 2)
+C <- sapply(ego.graphs, edge_density)
+names(C) <- V(g)$name
+round(C, 2)
 ```
 
 Note we have a couple of `NaN` values in the slots corresponding to Greedo and Jabba in the clustering coefficient vector. 
@@ -96,7 +99,7 @@ Note we have a couple of `NaN` values in the slots corresponding to Greedo and J
 Let's check out why:
 
 ```{r}
- degree(g)
+degree(g)
 ```
 
 Here we see the problem is that both Greedo and Jabba are pendant nodes (with degree equal to one), so it doesn't make sense to analyze their clustering coefficients because their ego graph is just an isolated node!
@@ -104,11 +107,11 @@ Here we see the problem is that both Greedo and Jabba are pendant nodes (with de
 We can just drop them and re-analyze:
 
 ```{r}
- g <- subgraph(g, degree(g)> 1)
- ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
- C <- sapply(ego.graphs, edge_density)
- names(C) <- V(g)$name
- round(C, 2)
+g <- subgraph(g, degree(g) > 1)
+ego.graphs <- lapply(V(g)$name, get.ego, graph = g)
+C <- sapply(ego.graphs, edge_density)
+names(C) <- V(g)$name
+round(C, 2)
 ```
 
 Much better!
@@ -121,17 +124,18 @@ Let's see what that looks like:
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "Luke's ego network with alter nodes colored by community assingment via Newman's leading eigenvector method."
- set.seed(456)
- N <- neighbors(g, "Luke")
- luke.alters <- subgraph(g, N) 
- V(luke.alters)$color <- cluster_leading_eigen(luke.alters)$membership
- luke <- subgraph(g, c("Luke", names(N)))
- luke <- simplify(union(luke, luke.alters))
- V(luke)$color[which(is.na(V(luke)$color))] <- "red"
- plot(luke, 
- vertex.size=6, vertex.frame.color="lightgray", 
- vertex.label.dist=1.25, 
- vertex.label.cex = 0.75, edge.color = "lightgray")
+set.seed(456)
+N <- neighbors(g, "Luke")
+luke.alters <- subgraph(g, N)
+V(luke.alters)$color <- cluster_leading_eigen(luke.alters)$membership
+luke <- subgraph(g, c("Luke", names(N)))
+luke <- simplify(union(luke, luke.alters))
+V(luke)$color[which(is.na(V(luke)$color))] <- "red"
+plot(luke,
+  vertex.size = 6, vertex.frame.color = "lightgray",
+  vertex.label.dist = 1.25,
+  vertex.label.cex = 0.75, edge.color = "lightgray"
+)
 ```
 
 Here we can see that Luke mediates between three densely connected clusters: The Rebel Pilot community on the left and the Obi-Wan, Leia, Chewbacca, Han Solo and Droid communities on the right. Note that we didn't have to use that `layout_as_star` option because when ego's network has community structure, the traditional spring embedding layout will put ego at the center.
@@ -141,17 +145,17 @@ Note that in the ego graph that includes ego, each connected alter is a **triang
 So that means that the diagonals of the cube of the adjacency matrix also contain the information needed to compute the clustering coefficient:
 
 ```{r}
- A <- as.matrix(as_adjacency_matrix(g))
- A3 <- A %*% A %*% A
- diag(A3)
+A <- as.matrix(as_adjacency_matrix(g))
+A3 <- A %*% A %*% A
+diag(A3)
 ```
 
 So all we need to do is divide these numbers by the maximum possible number of undirected triangles that could be centered on a node, which is $k_i(k_i - 1)$ where $k_i$ is ego's degree:
 
 ```{r}
- k <- degree(g)
- C <- diag(A3)/(k*(k - 1))
- round(C, 2)
+k <- degree(g)
+C <- diag(A3) / (k * (k - 1))
+round(C, 2)
 ```
 
 Which gives us the answer as before!
@@ -165,8 +169,8 @@ $$
 In `R`:
 
 ```{r}
- C.glob <- mean(C)
- round(C.glob, 2)
+C.glob <- mean(C)
+round(C.glob, 2)
 ```
 
 Which indicates a fairly clustered graph. 
@@ -174,13 +178,13 @@ Which indicates a fairly clustered graph.
 In `igraph` we can use the function `transitivity` to compute the local and global clustering coefficients, which can be specified using the argument `type`. For the local version, the function also expects a list of vertices:
 
 ```{r}
- round(transitivity(g, V(g)$name, type = "local"), 2)
+round(transitivity(g, V(g)$name, type = "local"), 2)
 ```
 
 And the graph's global clustering coefficient is:
 
 ```{r}
- round(transitivity(g, type = "average"), 2)
+round(transitivity(g, type = "average"), 2)
 ```
 
 ## Effective Size
@@ -201,17 +205,17 @@ Where $k_i$ is the ego network size (ego's degree) and $\bar{k}_{j \in N(i)}$ is
 So to calculate $ES$ in our network all we have to do is calculate the average degree of each ego graph and the subtract that from ego's degree. We can obtain the average degree of each ego using the first two `lapply` and `sapply` lines in the following:
 
 ```{r}
- mk <- lapply(ego.graphs, degree) #degree sequence of each ego
- mk <- sapply(mk, mean) 
- names(mk) <- V(g)$name
- round(mk, 2)
+mk <- lapply(ego.graphs, degree) # degree sequence of each ego
+mk <- sapply(mk, mean)
+names(mk) <- V(g)$name
+round(mk, 2)
 ```
 
 We can then compute ES as follows:
 
 ```{r}
- ES <- degree(g) - mk
- round(ES, 1)
+ES <- degree(g) - mk
+round(ES, 1)
 ```
 
 Note that for nodes with the maximum clustering coefficient ($C_i = 1$) (like Han) the $ES$ measure reaches its minimum value of 1.0. The reason for this is that if the alter-to-alter network for an ego is a **complete graph**, then the average degree of that graph will necessarily be equal to the number of nodes in the alter-to-alter graph (ego's degree) minus one. 
@@ -229,26 +233,28 @@ Here's an example from *A New Hope*:
 #| fig-subcap:
 #| - "k = 7, C = 0.76, ES = 2.4"
 #| - "k = 7, C = 0.57, ES = 3.6"
-#| layout-ncol: 2 
+#| layout-ncol: 2
 #| echo: false
- N <- neighbors(g, "Obi-Wan")
- a <- subgraph(g, c("Obi-Wan", names(N)))
- V(a)$color <- rep(2, vcount(a))
- V(a)$color[which(V(a)$name == "Obi-Wan")] <- 1
- plot(a,
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(a, center = "Obi-Wan"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- N <- neighbors(g, "Red Leader")
- b <- subgraph(g, c("Red Leader", names(N)))
- V(b)$color <- rep(2, vcount(a))
- V(b)$color[which(V(b)$name == "Red Leader")] <- 1 
- plot(b, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(b, center = "Red Leader"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Obi-Wan")
+a <- subgraph(g, c("Obi-Wan", names(N)))
+V(a)$color <- rep(2, vcount(a))
+V(a)$color[which(V(a)$name == "Obi-Wan")] <- 1
+plot(a,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(a, center = "Obi-Wan"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+N <- neighbors(g, "Red Leader")
+b <- subgraph(g, c("Red Leader", names(N)))
+V(b)$color <- rep(2, vcount(a))
+V(b)$color[which(V(b)$name == "Red Leader")] <- 1
+plot(b,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(b, center = "Red Leader"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 Here we can see that even though both Obi-Wan and Red Leader have an ego network of the same size ($k = 7$), a larger proportion of Obi-Wan's contacts ($C = 0.76$) are connected to one another than Red Leader's ($C = 0.57$), which means that Obi-Wan's effective size ($ES = 2.4$) ends up being smaller than Red Leader's ($ES = 3.6$). 
@@ -271,24 +277,24 @@ Where $\mathbf{J}$ is a matrix full of ones of the same dimensions as $\mathbf{A
 A simple function that does this looks like:
 
 ```{r}
- ego.bet <- function(v, graph) {
- n <- neighbors(graph, v)
- alters <- subgraph(graph, c(v, names(n)))
- w <- as.matrix(as_adjacency_matrix(alters))
- w2 <- w %*% w
- j <- matrix(1, nrow(w), ncol(w))
- cb <- w2 * (j - w)
- cb <- 1/cb
- cb[is.infinite(cb)] <- 0
- cb <- sum(cb[upper.tri(cb)])
- return(cb)
- }
+ego.bet <- function(v, graph) {
+  n <- neighbors(graph, v)
+  alters <- subgraph(graph, c(v, names(n)))
+  w <- as.matrix(as_adjacency_matrix(alters))
+  w2 <- w %*% w
+  j <- matrix(1, nrow(w), ncol(w))
+  cb <- w2 * (j - w)
+  cb <- 1 / cb
+  cb[is.infinite(cb)] <- 0
+  cb <- sum(cb[upper.tri(cb)])
+  return(cb)
+}
 ```
 
 Let's see how it works for Luke:
 
 ```{r}
- round(ego.bet("Luke", g), 2)
+round(ego.bet("Luke", g), 2)
 ```
 
 Which says that Luke has pretty high ego-network betweenness.
@@ -296,7 +302,7 @@ Which says that Luke has pretty high ego-network betweenness.
 We can, of course, compute it for everyone in the network like before:
 
 ```{r}
- round(sapply(V(g)$name, ego.bet, graph = g), 2)
+round(sapply(V(g)$name, ego.bet, graph = g), 2)
 ```
 
 Which confirms our original impression of Luke as the highest ego-network betweenness character with Leia in second place.
@@ -307,14 +313,15 @@ What does it mean to have an ego-network betweenness of zero? Well, this is only
 #| fig-height: 8
 #| fig-width: 8
 #| fig-cap: "Chewbacca's Ego Network."
- chew <- subgraph(g, c("Chewbacca", names(neighbors(g, "Chewbacca")))) #Chewbacca's ego graph
- V(chew)$color <- rep(2, vcount(chew))
- V(chew)$color[which(V(chew)$name == "Chewbacca")] <- 1 
- plot(chew, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(chew, center = "Chewbacca"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+chew <- subgraph(g, c("Chewbacca", names(neighbors(g, "Chewbacca")))) # Chewbacca's ego graph
+V(chew)$color <- rep(2, vcount(chew))
+V(chew)$color[which(V(chew)$name == "Chewbacca")] <- 1
+plot(chew,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(chew, center = "Chewbacca"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 Which is a complete clique of size seven.
@@ -347,9 +354,9 @@ Let's see how this would work.
 First, let's switch to the *Attack of the Clones* Star Wars graph:
 
 ```{r}
- g <- starwars[[2]]
- V(g)$name <- str_to_title(V(g)$name)
- g <- subgraph(g, degree(g)> 1) #removing singletons
+g <- starwars[[2]]
+V(g)$name <- str_to_title(V(g)$name)
+g <- subgraph(g, degree(g) > 1) # removing singletons
 ```
 
 Now, we will pick the vertex attribute `homeworld` and try to measure how diverse is each character's ego network on this score. 
@@ -359,14 +366,14 @@ To do that, we need to get the proportion of characters from each homeworld in t
 Let's check out this vertex attribute:
 
 ```{r}
- V(g)$homeworld
+V(g)$homeworld
 ```
 
 There are some `NA` values here, so let's create a residual category called "other":
 
 ```{r}
- V(g)$homeworld[is.na(V(g)$homeworld)] <- "Other"
- V(g)$homeworld
+V(g)$homeworld[is.na(V(g)$homeworld)] <- "Other"
+V(g)$homeworld
 ```
 
 Great! Now we can use the native `R` function `table` to get the relevant proportions.
@@ -374,21 +381,23 @@ Great! Now we can use the native `R` function `table` to get the relevant propor
 The function `table` gives us the count of characters in each category, and then we divide by the total number of actors in the network, given by `vcount`:
 
 ```{r}
- p.hw <- round(table(V(g)$homeworld)/vcount(g), 3)
- p.hw
+p.hw <- round(table(V(g)$homeworld) / vcount(g), 3)
+p.hw
 ```
 
 Now that we know how to get the proportions we need, we can write a custom function that will compute $H$ (or its normalized counterpart the $IQV$) for a given ego network for any given attribute:
 
 ```{r}
- blau <- function(n, w, a, norm = FALSE) {
- x <- subgraph(w, neighbors(w, n)) #ego subgraph
- p <- table(vertex_attr(x, a))/vcount(x) #proportion of alters in each category of the attribute a
- m <- length(p)
- res <- 1 - sum(p^2) #blau diversity
- if (norm == TRUE) {res <- res /(1 - 1/m)} #IQV
- return(res)
- }
+blau <- function(n, w, a, norm = FALSE) {
+  x <- subgraph(w, neighbors(w, n)) # ego subgraph
+  p <- table(vertex_attr(x, a)) / vcount(x) # proportion of alters in each category of the attribute a
+  m <- length(p)
+  res <- 1 - sum(p^2) # blau diversity
+  if (norm == TRUE) {
+    res <- res / (1 - 1 / m)
+  } # IQV
+  return(res)
+}
 ```
 
 This function takes three inputs: The name of the ego `n`, the graph object `w`, and the name of the attribute `a`. It returns the Blau diversity index score for that ego on that attribute by default; when `norm` is set to `TRUE` it returns the normalized Blau score (a.k.a. the $IQV$). 
@@ -396,7 +405,7 @@ This function takes three inputs: The name of the ego `n`, the graph object `w`,
 Let's see Padme's Home World ego network diversity score:
 
 ```{r}
- round(blau("Padme", g, "homeworld"), 3)
+round(blau("Padme", g, "homeworld"), 3)
 ```
 
 Which says that Padme has a fairly diverse ego network when it comes to Home World. 
@@ -404,7 +413,7 @@ Which says that Padme has a fairly diverse ego network when it comes to Home Wor
 We can, of course, just use `sapply` to compute everyone's Home World ego network diversity score:
 
 ```{r}
- round(sapply(V(g)$name, blau, w = g, a = "homeworld"), 3)
+round(sapply(V(g)$name, blau, w = g, a = "homeworld"), 3)
 ```
 
 In this network Count Dooku stands out as having a very diverse ego network by Home World, while Owen sports a very homogeneous ego network on the same attribute. 
@@ -418,30 +427,32 @@ Let's see a side-by-side comparison:
 #| fig-subcap:
 #| - ""
 #| - ""
-#| layout-ncol: 2 
+#| layout-ncol: 2
 #| echo: false
- N <- neighbors(g, "Count Dooku")
- a <- subgraph(g, c("Count Dooku", names(N)))
- V(a)$color <- as.numeric(as.factor(V(a)$homeworld))
- plot(a, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(a, center = "Count Dooku"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- N <- neighbors(g, "Owen")
- b <- subgraph(g, c("Owen", names(N)))
- V(b)$color <- as.numeric(as.factor(V(b)$homeworld))
- plot(b, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(b, center = "Owen"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Count Dooku")
+a <- subgraph(g, c("Count Dooku", names(N)))
+V(a)$color <- as.numeric(as.factor(V(a)$homeworld))
+plot(a,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(a, center = "Count Dooku"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+N <- neighbors(g, "Owen")
+b <- subgraph(g, c("Owen", names(N)))
+V(b)$color <- as.numeric(as.factor(V(b)$homeworld))
+plot(b,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(b, center = "Owen"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 And here are the corresponding $IQV$ scores for everyone in the network:
 
 ```{r}
- round(sapply(V(g)$name, blau, w = g, a = "homeworld", norm = TRUE), 3)
+round(sapply(V(g)$name, blau, w = g, a = "homeworld", norm = TRUE), 3)
 ```
 
 As we noted an ego network with maximum diversity $IQV = 1.0$ is one where every alter is in a different category. Here are two examples:
@@ -453,24 +464,26 @@ As we noted an ego network with maximum diversity $IQV = 1.0$ is one where every
 #| fig-subcap:
 #| - ""
 #| - ""
-#| layout-ncol: 2 
+#| layout-ncol: 2
 #| echo: false
- N <- neighbors(g, "Boba Fett")
- a <- subgraph(g, c("Boba Fett", names(N)))
- V(a)$color <- as.numeric(as.factor(V(a)$homeworld))
- plot(a, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(a, center = "Boba Fett"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- N <- neighbors(g, "Poggle")
- b <- subgraph(g, c("Poggle", names(N)))
- V(b)$color <- as.numeric(as.factor(V(b)$homeworld))
- plot(b, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(b, center = "Poggle"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Boba Fett")
+a <- subgraph(g, c("Boba Fett", names(N)))
+V(a)$color <- as.numeric(as.factor(V(a)$homeworld))
+plot(a,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(a, center = "Boba Fett"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+N <- neighbors(g, "Poggle")
+b <- subgraph(g, c("Poggle", names(N)))
+V(b)$color <- as.numeric(as.factor(V(b)$homeworld))
+plot(b,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(b, center = "Poggle"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 #### Ego Network Homophily
@@ -492,33 +505,33 @@ The $EI$ index ranges from a minimum of $EI = -1$, indicating maximum homophily,
 So let's write a function that does what we want to calculate EI:
 
 ```{r}
- EI <- function(n, w, a) {
- x <- subgraph(w, neighbors(w, n))
- E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a)) #n. external ties
- I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a)) #n. internal ties
- res = (E - I)/(E + I) #EI Index
- return(res)
- }
+EI <- function(n, w, a) {
+  x <- subgraph(w, neighbors(w, n))
+  E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a)) # n. external ties
+  I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a)) # n. internal ties
+  res <- (E - I) / (E + I) # EI Index
+  return(res)
+}
 ```
 
 Let's look at the attribute `sex`:
 
 ```{r}
- V(g)$sex
+V(g)$sex
 ```
 
 Getting rid of the `NA` values:
 
 ```{r}
- V(g)$sex[is.na(V(g)$sex)] <- "Other"
- V(g)$sex
+V(g)$sex[is.na(V(g)$sex)] <- "Other"
+V(g)$sex
 ```
 
 And calculating the homophily index on gender for everyone:
 
 ```{r}
- EI <- sapply(V(g)$name, EI, w = g, a = "sex")
- round(EI, 2)
+EI <- sapply(V(g)$name, EI, w = g, a = "sex")
+round(EI, 2)
 ```
 
 As we can see, the Emperor, Mace Windu, Obi-Wan and other such characters have a homophilous "bro" network. Padme, on the other hand, has a heterophilous network with respect to gender. 
@@ -532,24 +545,26 @@ Let's see a side-by-side comparison:
 #| fig-subcap:
 #| - "H = -0.60"
 #| - "H = 0.88"
-#| layout-ncol: 2 
+#| layout-ncol: 2
 #| echo: false
- N <- neighbors(g, "Mace Windu")
- a <- subgraph(g, c("Mace Windu", names(N)))
- V(a)$color <- as.numeric(as.factor(V(a)$sex))
- plot(a, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(a, center = "Mace Windu"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- N <- neighbors(g, "Padme")
- b <- subgraph(g, c("Padme", names(N)))
- V(b)$color <- as.numeric(as.factor(V(b)$sex))
- plot(b, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(b, center = "Padme"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Mace Windu")
+a <- subgraph(g, c("Mace Windu", names(N)))
+V(a)$color <- as.numeric(as.factor(V(a)$sex))
+plot(a,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(a, center = "Mace Windu"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+N <- neighbors(g, "Padme")
+b <- subgraph(g, c("Padme", names(N)))
+V(b)$color <- as.numeric(as.factor(V(b)$sex))
+plot(b,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(b, center = "Padme"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 As we can see, Mace Windu is mostly surrounded by other men (like him) but Padme's network includes only one other woman, and the rest are composed of people with a different gender presentation than her (or have no discernible gender like the droids).
@@ -559,8 +574,8 @@ Like the clustering coefficient, we can compute a graph level index of homophily
 In the case of gender in *Attack of the Clones*:
 
 ```{r}
- EI.gender = mean(EI)
- round(EI.gender, 2)
+EI.gender <- mean(EI)
+round(EI.gender, 2)
 ```
 
 Which shows a slight preference for same-gender ties in the network. 
@@ -589,24 +604,24 @@ With $N_s$ being the number of "similar" nodes to ego in the whole graph (or ext
 Here's a function that does that:
 
 ```{r}
- NEI <- function(n, w, a) {
- N <- vcount(w) 
- Ns <- sum(vertex_attr(w, a) == vertex_attr(w, a, n))
- x <- subgraph(w, neighbors(w, n))
- E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a)) 
- I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a)) 
- E <- E/(N - Ns) #normalized E
- I <- I/Ns #normalized I
- res = (E - I)/(E + I)
- return(res)
- }
+NEI <- function(n, w, a) {
+  N <- vcount(w)
+  Ns <- sum(vertex_attr(w, a) == vertex_attr(w, a, n))
+  x <- subgraph(w, neighbors(w, n))
+  E <- sum(vertex_attr(w, a, n) != vertex_attr(x, a))
+  I <- sum(vertex_attr(w, a, n) == vertex_attr(x, a))
+  E <- E / (N - Ns) # normalized E
+  I <- I / Ns # normalized I
+  res <- (E - I) / (E + I)
+  return(res)
+}
 ```
 
 Let's re-check Mace Windu's and Padme's EI index using the normalized version:
 
 ```{r}
- round(NEI("Mace Windu", g, "sex"), 2)
- round(NEI("Padme", g, "sex"), 2)
+round(NEI("Mace Windu", g, "sex"), 2)
+round(NEI("Padme", g, "sex"), 2)
 ```
 
 As we can see the NEI scores are less extreme than the unnormalized ones, once we take into account that the majority of characters in the film are men.
@@ -614,8 +629,8 @@ As we can see the NEI scores are less extreme than the unnormalized ones, once w
 Here are the NEI scores with respect to gender for everyone:
 
 ```{r}
- NEI <- sapply(V(g)$name, NEI, w = g, a = "sex")
- round(NEI, 2)
+NEI <- sapply(V(g)$name, NEI, w = g, a = "sex")
+round(NEI, 2)
 ```
 
 Interestingly, while most people's scores are attenuated towards zero in the normalized scale, R2-D2's becomes more extreme going from weakly positive (demonstrating "gender" heterophily) to extreme negative (showing same "gender" preference). 
@@ -627,14 +642,15 @@ Let's see what's going on:
 #| fig-width: 5
 #| fig-cap: "R2-D2's Ego Network with Nodes Colored by Gender"
 #| echo: false
- N <- neighbors(g, "R2-D2")
- r2 <- subgraph(g, c("R2-D2", names(N)))
- V(r2)$color <- as.numeric(as.factor(V(r2)$sex))
- plot(r2, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(r2, center = "R2-D2"),
- vertex.label.cex = 1, edge.color = "lightgray")
+N <- neighbors(g, "R2-D2")
+r2 <- subgraph(g, c("R2-D2", names(N)))
+V(r2)$color <- as.numeric(as.factor(V(r2)$sex))
+plot(r2,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(r2, center = "R2-D2"),
+  vertex.label.cex = 1, edge.color = "lightgray"
+)
 ```
 
 Here we can see that the reason why R2-D2 ends up being high in homophily in the NEI despite containing a network with just three nodes and only a single "same-gender" (i.e., none) tie, is that he is connected to C3PO who is the only other character (a droid) whose gender is also assigned to "none."
@@ -642,8 +658,8 @@ Here we can see that the reason why R2-D2 ends up being high in homophily in the
 And here's the graph's overall NEI:
 
 ```{r}
- NEI.gender = mean(NEI)
- round(NEI.gender, 2)
+NEI.gender <- mean(NEI)
+round(NEI.gender, 2)
 ```
 
 Which shows that our previous unnormalized average under-estimated homophily in this network. Instead, there is a moderately strong tendency for characters to co-appear with others of the same gender classification once the imbalance favoring men is accounted for. 
@@ -662,21 +678,21 @@ Which yields a classic 2 by 2 table.
 Here's a function that produces such a table for each ego for a given attribute:
 
 ```{r}
- abcd <- function(n, w, a) {
- x <- subgraph(w, neighbors(w, n))
- same <- vertex_attr(w, a, n) == vertex_attr(w, a)
- same <- same[!(same %in% n)] #deleting ego node from vector
- tied <- as.vector(V(w)$name) %in% names(neighbors(w, n))
- tab <- table(tied, same)
- tab <- tab[2:1, 2:1] #reversing row and column order of table
- return(tab)
- }
+abcd <- function(n, w, a) {
+  x <- subgraph(w, neighbors(w, n))
+  same <- vertex_attr(w, a, n) == vertex_attr(w, a)
+  same <- same[!(same %in% n)] # deleting ego node from vector
+  tied <- as.vector(V(w)$name) %in% names(neighbors(w, n))
+  tab <- table(tied, same)
+  tab <- tab[2:1, 2:1] # reversing row and column order of table
+  return(tab)
+}
 ```
 
 So for Count Dooku with respect to gender, this 2 X 2 table looks like:
 
 ```{r}
- abcd("Count Dooku", g, "sex")
+abcd("Count Dooku", g, "sex")
 ```
 
 So here we can see that Dooku is linked to eight others of the same gender, but there are nine other men he's not linked to. In the same way, he has two different-gender ties, but there are nine others of a different gender he's not tied to. 
@@ -685,12 +701,12 @@ As @everett_borgatti12 note, we can label the cells of the 2 X 2 EI table with t
 
 ```{r}
 #| echo: false
- t <- abcd("Count Dooku", g, "sex")
- t[1,1] <- "a"
- t[1,2] <- "b"
- t[2,1] <- "c"
- t[2,2] <- "d"
- t
+t <- abcd("Count Dooku", g, "sex")
+t[1, 1] <- "a"
+t[1, 2] <- "b"
+t[2, 1] <- "c"
+t[2, 2] <- "d"
+t
 ```
 
 Using this nomenclature, the EI index is given by:
@@ -724,21 +740,21 @@ From the formula it is clear that $r^{pb}$ is positive whenever ego is connected
 A function that computes $r^{pb}$ from the output of `abcd` above is:
 
 ```{r}
- pb.corr <- function(x) {
- a <- x[1,1]
- b <- x[1,2]
- c <- x[2,1]
- d <- x[2,2]
- num <- (a*d - b*c)
- den <- sqrt((a+c)*(b+d)*(a+b)*(c+d))
- return(num/den)
- }
+pb.corr <- function(x) {
+  a <- x[1, 1]
+  b <- x[1, 2]
+  c <- x[2, 1]
+  d <- x[2, 2]
+  num <- (a * d - b * c)
+  den <- sqrt((a + c) * (b + d) * (a + b) * (c + d))
+  return(num / den)
+}
 ```
 
 For Dooku, $r^{pb}$ is:
 
 ```{r}
- round(pb.corr(abcd("Count Dooku", g, "sex")), 2)
+round(pb.corr(abcd("Count Dooku", g, "sex")), 2)
 ```
 
 Which shows a positive tendency for same gender ties, net of the imbalance between men and other-gendered characters in the film. 
@@ -746,16 +762,16 @@ Which shows a positive tendency for same gender ties, net of the imbalance betwe
 To calculate $r^{pb}$ for the whole network, first we need to create a list containing the corresponding 2 X 2 EI tables for each node for the gender attribute:
 
 ```{r}
- abcd.gender <- lapply(V(g)$name, abcd, w = g, a = "sex")
- names(abcd.gender) <- V(g)$name
- head(abcd.gender)
+abcd.gender <- lapply(V(g)$name, abcd, w = g, a = "sex")
+names(abcd.gender) <- V(g)$name
+head(abcd.gender)
 ```
 
 And then `sapply` the function `pb.corr` to each element of this list:
 
 ```{r}
- PBC <- sapply(abcd.gender, pb.corr)
- round(PBC, 2)
+PBC <- sapply(abcd.gender, pb.corr)
+round(PBC, 2)
 ```
 
 Which shows that, after accounting for group sizes, most characters display slight to moderate preferences for same-gender ties, with the exception of Anakin, Padme, Taun We, Owen, Clegg, and Sun Rit. 
@@ -763,7 +779,7 @@ Which shows that, after accounting for group sizes, most characters display slig
 If we wanted to see what proportion of nodes have a same-gender preference we just type:
 
 ```{r}
- round(sum(PBC > 0)/length(PBC), 2)
+round(sum(PBC > 0) / length(PBC), 2)
 ```
 
 Which suggest that about 70% of the characters display a tendency to appear with same gender others (accounting for differences in the sizes of different gender groups).
@@ -772,7 +788,7 @@ Which suggest that about 70% of the characters display a tendency to appear with
 And at the network level, the point-biserial correlation homophily measure for gender is:
 
 ```{r}
- round(mean(PBC), 4)
+round(mean(PBC), 4)
 ```
 
 Which also suggests a slight preference for same gender ties in this network.
@@ -790,22 +806,22 @@ Like $r^{pb}$, $Q$ works like a correlation coefficient. It is at is maximum val
 A function to calculate $Q$ from the `abcd` function output is as follows:
 
 ```{r}
- y.Q <- function(x) {
- a <- x[1,1]
- b <- x[1,2]
- c <- x[2,1]
- d <- x[2,2]
- num <- a*d - b*c
- den <- a*d + b*c
- return(num/den) 
- }
+y.Q <- function(x) {
+  a <- x[1, 1]
+  b <- x[1, 2]
+  c <- x[2, 1]
+  d <- x[2, 2]
+  num <- a * d - b * c
+  den <- a * d + b * c
+  return(num / den)
+}
 ```
 
 And here are the values for the *Attack of the Clones* network:
 
 ```{r}
- Q <- sapply(abcd.gender, y.Q)
- round(Q, 2)
+Q <- sapply(abcd.gender, y.Q)
+round(Q, 2)
 ```
 
 Let's compare four egos with extreme values on $Q$:
@@ -819,43 +835,47 @@ Let's compare four egos with extreme values on $Q$:
 #| - "Q = -1"
 #| - "Q = -1"
 #| - "Q = 1"
-#| layout-ncol: 2 
+#| layout-ncol: 2
 #| echo: false
- N <- neighbors(g, "Ki-Adi-Mundi")
- a <- subgraph(g, c("Ki-Adi-Mundi", names(N)))
- V(a)$color <- as.factor(vertex_attr(a, "sex"))
- plot(a, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(a, center = "Ki-Adi-Mundi"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Ki-Adi-Mundi")
+a <- subgraph(g, c("Ki-Adi-Mundi", names(N)))
+V(a)$color <- as.factor(vertex_attr(a, "sex"))
+plot(a,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(a, center = "Ki-Adi-Mundi"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 
- N <- neighbors(g, "Taun We")
- b <- subgraph(g, c("Taun We", names(N)))
- V(b)$color <- as.factor(vertex_attr(b, "sex"))
- plot(b, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(b, center = "Taun We"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- 
- N <- neighbors(g, "Sun Rit")
- c <- subgraph(g, c("Sun Rit", names(N)))
- V(c)$color <- as.factor(vertex_attr(c, "sex"))
- plot(c, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(c, center = "Sun Rit"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
- 
- N <- neighbors(g, "Captain Typho")
- d <- subgraph(g, c("Captain Typho", names(N)))
- V(d)$color <- as.factor(vertex_attr(d, "sex"))
- plot(d, 
- vertex.size=10, vertex.frame.color="lightgray", 
- vertex.label.dist=2, 
- layout = layout_as_star(d, center = "Captain Typho"),
- vertex.label.cex = 1.25, edge.color = "lightgray")
+N <- neighbors(g, "Taun We")
+b <- subgraph(g, c("Taun We", names(N)))
+V(b)$color <- as.factor(vertex_attr(b, "sex"))
+plot(b,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(b, center = "Taun We"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+
+N <- neighbors(g, "Sun Rit")
+c <- subgraph(g, c("Sun Rit", names(N)))
+V(c)$color <- as.factor(vertex_attr(c, "sex"))
+plot(c,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(c, center = "Sun Rit"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
+
+N <- neighbors(g, "Captain Typho")
+d <- subgraph(g, c("Captain Typho", names(N)))
+V(d)$color <- as.factor(vertex_attr(d, "sex"))
+plot(d,
+  vertex.size = 10, vertex.frame.color = "lightgray",
+  vertex.label.dist = 2,
+  layout = layout_as_star(d, center = "Captain Typho"),
+  vertex.label.cex = 1.25, edge.color = "lightgray"
+)
 ```
 
 As we can see, Ki-Adi-Mundi and Captain Typho have an ego network that combine maximum homophily and homogeneity with respect to gender (both ego networks are composed of all men)--and therefore both receive the minimum score of $Q=-1$.
@@ -865,7 +885,7 @@ Taun We, on the other hand, has an ego network that combines maximum heterophily
 The average value of $Q$ for the whole network is:
 
 ```{r}
- round(mean(Q), 2)
+round(mean(Q), 2)
 ```
 
 Which also suggests a slight same-gender preference in the network after accounting for unbalanced group sizes. 

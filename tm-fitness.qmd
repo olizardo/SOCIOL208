@@ -63,29 +63,29 @@ This means that when determining the prestige of the *events* it is not very inf
 Let's see how this would work in the *Southern Women* data. First, we load it up:
 
 ```{r}
- library(networkdata)
- library(igraph)
- g <- southern_women
- A <- as.matrix(as_biadjacency_matrix(g))
+library(networkdata)
+library(igraph)
+g <- southern_women
+A <- as.matrix(as_biadjacency_matrix(g))
 ```
 
 And here's a function called `tm.fitness` that modifies the old two-mode status distribution game function [we played before](prest-tm-gen.qmd)---which, as you recall, was itself based on Kleinberg's [-@kleinberg99] HITS algorithm for directed one-mode networks---to compute the fitness and complexity prestige scores for persons and groups:
 
 ```{r}
- tm.fitness <- function(w, iter = 1000) {
- y <- matrix(1, ncol(w), 1) #initial group status column vector set to a constant
- z <- t(w)
- k <- 0
- while (k < iter) {
- o.y <- y 
- x <- w %*% o.y #fitness status scores for people
- x <- x/mean(x) #normalizing new people status scores 
- y <- (z %*% x^-1)^-1 #complexity status scores for groups
- y <- y/mean(y) #normalizing new group status scores 
- k <- k + 1
- }
- return(list(p.s = x, g.s = y, k = k))
- }
+tm.fitness <- function(w, iter = 1000) {
+  y <- matrix(1, ncol(w), 1) # initial group status column vector set to a constant
+  z <- t(w)
+  k <- 0
+  while (k < iter) {
+    o.y <- y
+    x <- w %*% o.y # fitness status scores for people
+    x <- x / mean(x) # normalizing new people status scores
+    y <- (z %*% x^-1)^-1 # complexity status scores for groups
+    y <- y / mean(y) # normalizing new group status scores
+    k <- k + 1
+  }
+  return(list(p.s = x, g.s = y, k = k))
+}
 ```
 
 Note that we use a number-of-iterations approach to indicate convergence (governed by the `iter` argument) rather than a successive-differences approach, due to the non-linear nature of the algorithm's scoring. 
@@ -93,17 +93,17 @@ Note that we use a number-of-iterations approach to indicate convergence (govern
 We then apply the `tm.fitness` function to the SW data:
 
 ```{r}
- fc <- tm.fitness(A, iter = 50)
+fc <- tm.fitness(A, iter = 50)
 ```
 
 We also calculate the usual Bonacich eigenvector scores using the `svd` function for comparison purposes:
 
 ```{r}
- eig <- svd(A)
- p.s <- eig$u[, 1] * -1
- g.s <- eig$v[, 1] * -1
- names(p.s) <- rownames(A)
- names(g.s) <- colnames(A)
+eig <- svd(A)
+p.s <- eig$u[, 1] * -1
+g.s <- eig$v[, 1] * -1
+names(p.s) <- rownames(A)
+names(g.s) <- colnames(A)
 ```
 
 And we put them in a table:
@@ -114,28 +114,32 @@ And we put them in a table:
 #| tbl-cap: "Status Scores"
 #| tbl-subcap:
 #| - "Persons."
-#| - "Groups." 
+#| - "Groups."
 #| layout-nrow: 1
 
- library(kableExtra)
- library(dplyr)
- s.tab <- data.frame(b = p.s/max(p.s), fc = fc$p.s/max(fc$p.s)) |> 
- arrange(desc(fc))
- kbl(s.tab, format = "pipe", digits = 3,
- align = c("l", "c", "c"),
- col.names = c(" ", "Bonacich", "Fitness")) %>% 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+library(kableExtra)
+library(dplyr)
+s.tab <- data.frame(b = p.s / max(p.s), fc = fc$p.s / max(fc$p.s)) |>
+  arrange(desc(fc))
+kbl(s.tab,
+  format = "pipe", digits = 3,
+  align = c("l", "c", "c"),
+  col.names = c(" ", "Bonacich", "Fitness")
+) %>%
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized by dividing by the maximum."))
 
- s.tab <- data.frame(b = g.s/max(g.s), fc = fc$g.s/max(fc$g.s)) |> 
- arrange(desc(fc))
- kbl(s.tab, format = "pipe", digits = 3,
- align = c("l", "c", "c"),
- col.names = c(" ", "Bonacich", "Complexity")) %>% 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+s.tab <- data.frame(b = g.s / max(g.s), fc = fc$g.s / max(fc$g.s)) |>
+  arrange(desc(fc))
+kbl(s.tab,
+  format = "pipe", digits = 3,
+  align = c("l", "c", "c"),
+  col.names = c(" ", "Bonacich", "Complexity")
+) %>%
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized by dividing by the maximum."))
 ```
 
 Each table sorts persons and groups by fitness/complexity score. We can see that the status order changes once we introduce the fitness/complexity scoring mode. While *\{Theresa\}* is the top person according to the usual dual Bonacich prestige score, once we heavily discount the status of events that include low-status people, *\{Evelyn\}* becomes the top person, with *\{Theresa\}* dropping to the sixth spot. In the same way, while *\{Nora\}* is ranked sixth by the Bonacich prestige, her standing improves to third in the fitness scoring. Meanwhile, *\{Brenda\}* ranked third according to the Bonacich score, but her prestige drops to seventh place in the fitness/complexity scoring. 
@@ -168,10 +172,10 @@ Where $k_p = \sum_p A_{pg}$ is the degree of each person.
 In `R` we can obtain these matrices as follows:
 
 ```{r}
- D.p <- diag(1/rowSums(A))
- k.g <- colSums(A/(rowSums(A)))
- D.g <- diag(1/k.g)
- A.n <- D.p %*% A %*% D.g
+D.p <- diag(1 / rowSums(A))
+k.g <- colSums(A / (rowSums(A)))
+D.g <- diag(1 / k.g)
+A.n <- D.p %*% A %*% D.g
 ```
 
 Once we have the normalized biadjacency matrix, we compute the normalized Breiger projections:
@@ -197,12 +201,12 @@ $$
 Which in `R` we obtain as follows:
 
 ```{r}
- P.n <- A.n %*% t(A.n)
- G.n <- t(A.n) %*% A.n
- eig.p <- abs(eigen(P.n)$vectors[,1])
- eig.g <- abs(eigen(G.n)$vectors[,1])
- names(eig.p) <- rownames(A)
- names(eig.g) <- colnames(A)
+P.n <- A.n %*% t(A.n)
+G.n <- t(A.n) %*% A.n
+eig.p <- abs(eigen(P.n)$vectors[, 1])
+eig.g <- abs(eigen(G.n)$vectors[, 1])
+names(eig.p) <- rownames(A)
+names(eig.g) <- colnames(A)
 ```
 
 We can then compare the scores for both persons and groups, with the proviso that, to maximize the correlation with their linear approximations, we normalize the fitness scores for people by dividing by the person degrees $k_p$, and the complexity scores for groups by multiplying by the corresponding $d'_{gg}$ score.
@@ -210,8 +214,8 @@ We can then compare the scores for both persons and groups, with the proviso tha
 We can see that they are pretty close:
 
 ```{r}
- cor(fc$p.s/rowSums(A), eig.p)
- cor(fc$g.s*k.g, eig.g)
+cor(fc$p.s / rowSums(A), eig.p)
+cor(fc$g.s * k.g, eig.g)
 ```
 
 
@@ -222,33 +226,39 @@ We can see that they are pretty close:
 #| fig-cap-location: margin
 #| fig-subcap:
 #| - "Rows/Columns Reordered by Bonacich Prestige."
-#| - "Rows/Columns Reordered by Fitness/Complexity." 
-#| - "Rows/Columns Reordered by Linearized Fitness/Complexity." 
+#| - "Rows/Columns Reordered by Fitness/Complexity."
+#| - "Rows/Columns Reordered by Linearized Fitness/Complexity."
 #| layout-nrow: 2
 #| fig-width: 8
 #| fig-height: 8
-#| 
- library(corrplot)
- A.reord <- A[names(sort(p.s, decreasing = TRUE)), names(sort(g.s, decreasing = TRUE))]
- corrplot(A.reord, is.corr = FALSE, method = "color", 
- tl.col = "black", tl.cex = 1, tl.srt = 45,
- addCoef.col = "black", cl.pos = "n",
- number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
- col=colorRampPalette(c("white","white","red"))(200))
- a <- names(fc$p.s[order(fc$p.s[, 1]*-1), ])
- b <- names(fc$g.s[order(fc$g.s[, 1]*-1), ])
- A.reord <- A[a, b]
- corrplot(A.reord, is.corr = FALSE, method = "color", 
- tl.col = "black", tl.cex = 1, tl.srt = 45,
- addCoef.col = "black", cl.pos = "n",
- number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
- col=colorRampPalette(c("white","white","red"))(200))
- A.reord <- A[names(sort(eig.p, decreasing = TRUE)), names(sort(eig.g, decreasing = TRUE))]
- corrplot(A.reord, is.corr = FALSE, method = "color", 
- tl.col = "black", tl.cex = 1, tl.srt = 45,
- addCoef.col = "black", cl.pos = "n",
- number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
- col=colorRampPalette(c("white","white","red"))(200))
+#|
+library(corrplot)
+A.reord <- A[names(sort(p.s, decreasing = TRUE)), names(sort(g.s, decreasing = TRUE))]
+corrplot(A.reord,
+  is.corr = FALSE, method = "color",
+  tl.col = "black", tl.cex = 1, tl.srt = 45,
+  addCoef.col = "black", cl.pos = "n",
+  number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
+  col = colorRampPalette(c("white", "white", "red"))(200)
+)
+a <- names(fc$p.s[order(fc$p.s[, 1] * -1), ])
+b <- names(fc$g.s[order(fc$g.s[, 1] * -1), ])
+A.reord <- A[a, b]
+corrplot(A.reord,
+  is.corr = FALSE, method = "color",
+  tl.col = "black", tl.cex = 1, tl.srt = 45,
+  addCoef.col = "black", cl.pos = "n",
+  number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
+  col = colorRampPalette(c("white", "white", "red"))(200)
+)
+A.reord <- A[names(sort(eig.p, decreasing = TRUE)), names(sort(eig.g, decreasing = TRUE))]
+corrplot(A.reord,
+  is.corr = FALSE, method = "color",
+  tl.col = "black", tl.cex = 1, tl.srt = 45,
+  addCoef.col = "black", cl.pos = "n",
+  number.cex = 1.5, number.digits = 0, addgrid.col = "darkgray",
+  col = colorRampPalette(c("white", "white", "red"))(200)
+)
 ```
 
 ```{r}
@@ -257,28 +267,32 @@ We can see that they are pretty close:
 #| tbl-cap: "Status Scores"
 #| tbl-subcap:
 #| - "Persons."
-#| - "Groups." 
+#| - "Groups."
 #| layout-nrow: 1
 
- nfc.ps <- fc$p.s/rowSums(A)
- s.tab <- data.frame(fc = nfc.ps/max(nfc.ps), lfc = eig.p/max(eig.p)) |> 
- arrange(desc(fc))
- kbl(s.tab, format = "pipe", digits = 3,
- align = c("l", "c", "c"),
- col.names = c(" ", "Fitness", "Linear Fitness")) %>% 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+nfc.ps <- fc$p.s / rowSums(A)
+s.tab <- data.frame(fc = nfc.ps / max(nfc.ps), lfc = eig.p / max(eig.p)) |>
+  arrange(desc(fc))
+kbl(s.tab,
+  format = "pipe", digits = 3,
+  align = c("l", "c", "c"),
+  col.names = c(" ", "Fitness", "Linear Fitness")
+) %>%
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized by dividing by the maximum."))
 
- nfc.gs <- fc$g.s * k.g
- s.tab <- data.frame(fc = nfc.gs/max(nfc.gs), lfc = eig.g/max(eig.g)) |> 
- arrange(desc(fc))
- kbl(s.tab, format = "pipe", digits = 3,
- align = c("l", "c", "c"),
- col.names = c(" ", "Complexity", "Linear Complexity")) %>% 
- kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
- column_spec(1, bold = TRUE) |> 
- footnote(symbol = c("Scores normalized by dividing by the maximum.")) 
+nfc.gs <- fc$g.s * k.g
+s.tab <- data.frame(fc = nfc.gs / max(nfc.gs), lfc = eig.g / max(eig.g)) |>
+  arrange(desc(fc))
+kbl(s.tab,
+  format = "pipe", digits = 3,
+  align = c("l", "c", "c"),
+  col.names = c(" ", "Complexity", "Linear Complexity")
+) %>%
+  kable_styling(bootstrap_options = c("hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE) |>
+  footnote(symbol = c("Scores normalized by dividing by the maximum."))
 ```
 
 @tbl-fclc shows the linear fitness/complexity scores compared to the non-linear ones for persons and groups, and -3 shows the biadjacency matrix with rows and columns re-ordered according to the linearized fitness/complexity scores, which we can see is pretty close to the non-linear version in -2.

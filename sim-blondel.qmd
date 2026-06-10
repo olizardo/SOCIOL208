@@ -46,54 +46,66 @@ We create two subgraphs. One composed of older male partners (aged fifty or olde
 #| fig-subcap:
 #| - "Older Men Partners"
 #| - "Women Lawyers"
- library(networkdata)
- library(igraph)
- library(ggraph)
- set.seed(123)
- g <- subgraph(law_advice, which(V(law_advice)$status == 1))
- g1 <- subgraph(g, which(V(g)$gender == 1 & V(g)$age > 50))
- g2 <- subgraph(law_advice, which(V(law_advice)$gender == 2))
- set.seed(123)
- plot(g1, 
- edge.arrow.size=.5, 
- vertex.color="tan2", 
- vertex.size=6, vertex.frame.color="lightgray", 
- vertex.label.color="black", vertex.label.cex=1.25, 
- vertex.label.dist=1, edge.curved=0.2)
- 
- plot(g2, 
- edge.arrow.size=.5, 
- vertex.color="tan2", 
- vertex.size=6, vertex.frame.color="lightgray", 
- vertex.label.color="black", vertex.label.cex=1.25, 
- vertex.label.dist=1, edge.curved=0.2)
+library(networkdata)
+library(igraph)
+library(ggraph)
+set.seed(123)
+g <- subgraph(law_advice, which(V(law_advice)$status == 1))
+g1 <- subgraph(g, which(V(g)$gender == 1 & V(g)$age > 50))
+g2 <- subgraph(law_advice, which(V(law_advice)$gender == 2))
+set.seed(123)
+plot(g1,
+  edge.arrow.size = .5,
+  vertex.color = "tan2",
+  vertex.size = 6, vertex.frame.color = "lightgray",
+  vertex.label.color = "black", vertex.label.cex = 1.25,
+  vertex.label.dist = 1, edge.curved = 0.2
+)
+
+plot(g2,
+  edge.arrow.size = .5,
+  vertex.color = "tan2",
+  vertex.size = 6, vertex.frame.color = "lightgray",
+  vertex.label.color = "black", vertex.label.cex = 1.25,
+  vertex.label.dist = 1, edge.curved = 0.2
+)
 ```
 
 A function to compute the **Blondel similarity** as described in can be written as:
 
 ```{r}
- blondel.sim <- function(a, b) {
- if(is.null(rownames(a)) == TRUE) {rownames(a) <- 1:nrow(a)} #checking if matrix has row names
- if(is.null(colnames(a)) == TRUE) {colnames(a) <- 1:ncol(a)} #checking if matrix has column names
- if(is.null(rownames(b)) == TRUE) {rownames(b) <- 1:nrow(b)} #checking if matrix has row names
- if(is.null(colnames(b)) == TRUE) {colnames(b) <- 1:ncol(b)} #checking if matrix has column names
- z <- matrix(1, nrow(b), nrow(a)) #initializing similarity matrix to all ones matrix
- rownames(z) <- rownames(b) #naming rows of similarity matrix
- colnames(z) <- rownames(a) #naming columns of similarity matrix
- d <- 1 #initializing delta
- d.o <- 2 #initializing comparison delta
- m <- 1 #initializing iteration counter
- while (d != d.o | m %% 2 != 0) { #do while the previous delta is different from the current delta and the iteration is odd
- z.o <- z #initializing old similarity matrix
- d.o <- d #old delta equals previous delta
- z <- (b %*% z.o %*% t(a)) + (t(b) %*% z.o %*% a) #blondel et al. similarity equation
- z <- z/norm(z, type = "F") #normalizing similarity matrix
- d <- abs(sum(abs(z)) - sum(abs(z.o))) #updating delta
- m <- m + 1 #updating iteration counter
- }
- z <- apply(z, 2, function(x) {x/max(x)}) #normalizing converged matrix by column max
- return(z) #return converged similarity matrix
- }
+blondel.sim <- function(a, b) {
+  if (is.null(rownames(a)) == TRUE) {
+    rownames(a) <- 1:nrow(a)
+  } # checking if matrix has row names
+  if (is.null(colnames(a)) == TRUE) {
+    colnames(a) <- 1:ncol(a)
+  } # checking if matrix has column names
+  if (is.null(rownames(b)) == TRUE) {
+    rownames(b) <- 1:nrow(b)
+  } # checking if matrix has row names
+  if (is.null(colnames(b)) == TRUE) {
+    colnames(b) <- 1:ncol(b)
+  } # checking if matrix has column names
+  z <- matrix(1, nrow(b), nrow(a)) # initializing similarity matrix to all ones matrix
+  rownames(z) <- rownames(b) # naming rows of similarity matrix
+  colnames(z) <- rownames(a) # naming columns of similarity matrix
+  d <- 1 # initializing delta
+  d.o <- 2 # initializing comparison delta
+  m <- 1 # initializing iteration counter
+  while (d != d.o | m %% 2 != 0) { # do while the previous delta is different from the current delta and the iteration is odd
+    z.o <- z # initializing old similarity matrix
+    d.o <- d # old delta equals previous delta
+    z <- (b %*% z.o %*% t(a)) + (t(b) %*% z.o %*% a) # blondel et al. similarity equation
+    z <- z / norm(z, type = "F") # normalizing similarity matrix
+    d <- abs(sum(abs(z)) - sum(abs(z.o))) # updating delta
+    m <- m + 1 # updating iteration counter
+  }
+  z <- apply(z, 2, function(x) {
+    x / max(x)
+  }) # normalizing converged matrix by column max
+  return(z) # return converged similarity matrix
+}
 ```
 
 Which is modeled after our status game function but instead of computing a vector of scores we are populating a whole matrix!
@@ -103,14 +115,16 @@ The basic task is to figure out which nodes from the first matrix are most simil
 And here are the results presented in tabular form:
 
 ```{r}
- library(kableExtra)
- A <- as.matrix(as_adjacency_matrix(g1))
- B <- as.matrix(as_adjacency_matrix(g2))
- K <- blondel.sim(A, B) 
- kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
- column_spec(1, bold = TRUE) %>% 
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive"))
+library(kableExtra)
+A <- as.matrix(as_adjacency_matrix(g1))
+B <- as.matrix(as_adjacency_matrix(g2))
+K <- blondel.sim(A, B)
+kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>%
+  column_spec(1, bold = TRUE) %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  )
 ```
 
 We can see that node 5 in the older men partner's graph (a highly central node in terms of being an advice seeker) is most similar to node 9 in the women lawyer's graph (also a highly central node in terms of being an advice seeker). Node 11 in the older men partner's graph, on the other hand, who's mostly an advice-giver, is most similar to node 5 in the women lawyer's graph who's also the most central advicee-giver. So it looks like it works!
@@ -122,15 +136,16 @@ One neat thing that @blondel_etal04 show is that we can also take a network and 
 More specifically, they show that we can run their algorithm to compare any network to the following two-node graph:
 
 ```{r}
- g <- make_empty_graph(2)
- g <- add_edges(g, c(1,2))
- V(g)$name <- c("Hub", "Authority")
- plot(g, 
- edge.arrow.size=1, 
- vertex.color="tan2", 
- vertex.size=12, vertex.frame.color="lightgray", 
- vertex.label.color="black", vertex.label.cex=1.5, 
- vertex.label.dist=-3)
+g <- make_empty_graph(2)
+g <- add_edges(g, c(1, 2))
+V(g)$name <- c("Hub", "Authority")
+plot(g,
+  edge.arrow.size = 1,
+  vertex.color = "tan2",
+  vertex.size = 12, vertex.frame.color = "lightgray",
+  vertex.label.color = "black", vertex.label.cex = 1.5,
+  vertex.label.dist = -3
+)
 ```
 
 In which case, the resulting "similarity" scores, will be equivalent to Kleinberg's [Hub and Authority scores](prest-hits.qmd)! 
@@ -138,15 +153,19 @@ In which case, the resulting "similarity" scores, will be equivalent to Kleinber
 We can check that this is the case for the women's lawyers advice graph:
 
 ```{r}
- A <- as.matrix(as_adjacency_matrix(g))
- B <- as.matrix(as_adjacency_matrix(g2))
- K <- blondel.sim(A, B)
- tab <- cbind(K, Hub.Score = round(hits_scores(g2)$hub, 4), 
- Auth.Score = round(hits_scores(g2)$authority, 4))
- kbl(tab, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
- column_spec(1, bold = TRUE) %>% 
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive"))
+A <- as.matrix(as_adjacency_matrix(g))
+B <- as.matrix(as_adjacency_matrix(g2))
+K <- blondel.sim(A, B)
+tab <- cbind(K,
+  Hub.Score = round(hits_scores(g2)$hub, 4),
+  Auth.Score = round(hits_scores(g2)$authority, 4)
+)
+kbl(tab, align = "c", format = "html", row.names = TRUE, digits = 2) %>%
+  column_spec(1, bold = TRUE) %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  )
 ```
 
 The first two columns are the scores using the function to compute the Blondel et al. similarity to each of the two nodes in the Hub/Authority micro-graph and the third and fourth columns are the scores we get from the `igraph` function `hits scores`, which as we can see, are identical. 
@@ -156,27 +175,30 @@ The first two columns are the scores using the function to compute the Blondel e
 Of course in a directed graph, there are more than two ideal typical "roles." In addition to "sender" (Hub) or "receiver" (Authority) we may also have "intermediaries" or "pass along" nodes. We can thus get an "intermediary" score for each node by comparing any network to the following three-node graph:
 
 ```{r}
- g <- make_empty_graph(3)
- g <- add_edges(g, c(1,2, 2,3))
- V(g)$name <- c("Hub", "Broker", "Authority")
- plot(g, 
- edge.arrow.size=1, 
- vertex.color="tan2", 
- vertex.size=12, vertex.frame.color="lightgray", 
- vertex.label.color="black", vertex.label.cex=1.5, 
- vertex.label.dist=2)
+g <- make_empty_graph(3)
+g <- add_edges(g, c(1, 2, 2, 3))
+V(g)$name <- c("Hub", "Broker", "Authority")
+plot(g,
+  edge.arrow.size = 1,
+  vertex.color = "tan2",
+  vertex.size = 12, vertex.frame.color = "lightgray",
+  vertex.label.color = "black", vertex.label.cex = 1.5,
+  vertex.label.dist = 2
+)
 ```
 
 Here are the results for the women lawyers graph:
 
 ```{r}
- A <- as.matrix(as_adjacency_matrix(g))
- B <- as.matrix(as_adjacency_matrix(g2))
- K <- blondel.sim(A, B)
- kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>% 
- column_spec(1, bold = TRUE) %>% 
- kable_styling(full_width = TRUE,
- bootstrap_options = c("hover", "condensed", "responsive"))
+A <- as.matrix(as_adjacency_matrix(g))
+B <- as.matrix(as_adjacency_matrix(g2))
+K <- blondel.sim(A, B)
+kbl(K, align = "c", format = "html", row.names = TRUE, digits = 2) %>%
+  column_spec(1, bold = TRUE) %>%
+  kable_styling(
+    full_width = TRUE,
+    bootstrap_options = c("hover", "condensed", "responsive")
+  )
 ```
 
 Columns one and three gives us versions of the Hub and Authority scores (respectively), "purged" of any contribution made by the intermediary status of nodes. Column two now gives us an ordinal score for how much the row node resembles and intermediary (or broker) in the network. 

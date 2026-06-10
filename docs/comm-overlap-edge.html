@@ -624,6 +624,12 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./comm-ca.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Community Detection in Two-Mode Networks Using CA</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./comm-overlap-clique.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Using Cliques to Assign Nodes to Overlapping Communities</span></a>
   </div>
@@ -822,12 +828,12 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a> <span class="fu">library</span>(networkdata)</span>
-<span id="cb1-2"><a href="#cb1-2"></a> <span class="fu">library</span>(igraph)</span>
-<span id="cb1-3"><a href="#cb1-3"></a> g <span class="ot">&lt;-</span> law_friends</span>
-<span id="cb1-4"><a href="#cb1-4"></a> g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g) <span class="sc">&gt;=</span> <span class="dv">2</span>)</span>
-<span id="cb1-5"><a href="#cb1-5"></a> ug <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
-<span id="cb1-6"><a href="#cb1-6"></a> <span class="fu">V</span>(ug)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(ug))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb1-3"><a href="#cb1-3"></a>g <span class="ot">&lt;-</span> law_friends</span>
+<span id="cb1-4"><a href="#cb1-4"></a>g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g) <span class="sc">&gt;=</span> <span class="dv">2</span>)</span>
+<span id="cb1-5"><a href="#cb1-5"></a>ug <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="fu">V</span>(ug)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(ug))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The key idea behind link clustering is that <em>similar</em> links should be assigned to the same clusters. How do we compute the similarity between links?</p>
@@ -839,29 +845,33 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a> edge.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a> E <span class="ot">&lt;-</span> <span class="fu">ecount</span>(h) <span class="co">#number of edges</span></span>
-<span id="cb2-3"><a href="#cb2-3"></a> V <span class="ot">&lt;-</span> <span class="fu">vcount</span>(h) <span class="co">#number of nodes</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a> <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">V</span>(h)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">seq_len</span>(V))} <span class="co">#checking if graph has node names</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a> edgemat <span class="ot">&lt;-</span> <span class="fu">ends</span>(h, <span class="fu">E</span>(h)) <span class="co">#edge list</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a> E.sim <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, E, E) <span class="co">#initializing link similarity matrix to identity matrix</span></span>
-<span id="cb2-7"><a href="#cb2-7"></a> nlist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name, <span class="cf">function</span>(x) {<span class="fu">c</span>(<span class="fu">as.vector</span>(<span class="fu">names</span>(<span class="fu">neighbors</span>(h, x))), x)}) <span class="co">#neighbors list for each node</span></span>
-<span id="cb2-8"><a href="#cb2-8"></a> <span class="fu">names</span>(nlist) <span class="ot">&lt;-</span> <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="co">#naming neighbors list using graph node names</span></span>
-<span id="cb2-9"><a href="#cb2-9"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>E) {</span>
-<span id="cb2-10"><a href="#cb2-10"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(j<span class="dv">-1</span>)) { <span class="co">#looping through upper triangle only</span></span>
-<span id="cb2-11"><a href="#cb2-11"></a> ei <span class="ot">&lt;-</span> edgemat[i, ] <span class="co">#nodes incident to first edge</span></span>
-<span id="cb2-12"><a href="#cb2-12"></a> ej <span class="ot">&lt;-</span> edgemat[j, ] <span class="co">#nodes incident to second edge</span></span>
-<span id="cb2-13"><a href="#cb2-13"></a> <span class="cf">if</span> (<span class="fu">length</span>(<span class="fu">intersect</span>(ei, ej)) <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#do only if pair of edges share a node</span></span>
-<span id="cb2-14"><a href="#cb2-14"></a> v <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">union</span>(ei, ej), <span class="fu">intersect</span>(ei, ej))<span class="co">#extracting nodes attached to shared node</span></span>
-<span id="cb2-15"><a href="#cb2-15"></a> n1 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">1</span>]]] <span class="co">#neighbors of first node</span></span>
-<span id="cb2-16"><a href="#cb2-16"></a> n2 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">2</span>]]] <span class="co">#neighbors of second node</span></span>
-<span id="cb2-17"><a href="#cb2-17"></a> E.sim[j, i] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">intersect</span>(n1, n2)) <span class="sc">/</span> <span class="fu">length</span>(<span class="fu">union</span>(n1, n2)) <span class="co">#Jaccard similarity</span></span>
-<span id="cb2-18"><a href="#cb2-18"></a> E.sim[i, j] <span class="ot">&lt;-</span> E.sim[j, i] <span class="co">#symmetric score</span></span>
-<span id="cb2-19"><a href="#cb2-19"></a> }</span>
-<span id="cb2-20"><a href="#cb2-20"></a> }</span>
-<span id="cb2-21"><a href="#cb2-21"></a> }</span>
-<span id="cb2-22"><a href="#cb2-22"></a> <span class="fu">return</span>(E.sim)</span>
-<span id="cb2-23"><a href="#cb2-23"></a> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>edge.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
+<span id="cb2-2"><a href="#cb2-2"></a>  E <span class="ot">&lt;-</span> <span class="fu">ecount</span>(h) <span class="co"># number of edges</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a>  V <span class="ot">&lt;-</span> <span class="fu">vcount</span>(h) <span class="co"># number of nodes</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name) <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb2-5"><a href="#cb2-5"></a>    <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">seq_len</span>(V))</span>
+<span id="cb2-6"><a href="#cb2-6"></a>  } <span class="co"># checking if graph has node names</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a>  edgemat <span class="ot">&lt;-</span> <span class="fu">ends</span>(h, <span class="fu">E</span>(h)) <span class="co"># edge list</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a>  E.sim <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, E, E) <span class="co"># initializing link similarity matrix to identity matrix</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a>  nlist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name, <span class="cf">function</span>(x) {</span>
+<span id="cb2-10"><a href="#cb2-10"></a>    <span class="fu">c</span>(<span class="fu">as.vector</span>(<span class="fu">names</span>(<span class="fu">neighbors</span>(h, x))), x)</span>
+<span id="cb2-11"><a href="#cb2-11"></a>  }) <span class="co"># neighbors list for each node</span></span>
+<span id="cb2-12"><a href="#cb2-12"></a>  <span class="fu">names</span>(nlist) <span class="ot">&lt;-</span> <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="co"># naming neighbors list using graph node names</span></span>
+<span id="cb2-13"><a href="#cb2-13"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>E) {</span>
+<span id="cb2-14"><a href="#cb2-14"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(j <span class="sc">-</span> <span class="dv">1</span>)) { <span class="co"># looping through upper triangle only</span></span>
+<span id="cb2-15"><a href="#cb2-15"></a>      ei <span class="ot">&lt;-</span> edgemat[i, ] <span class="co"># nodes incident to first edge</span></span>
+<span id="cb2-16"><a href="#cb2-16"></a>      ej <span class="ot">&lt;-</span> edgemat[j, ] <span class="co"># nodes incident to second edge</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a>      <span class="cf">if</span> (<span class="fu">length</span>(<span class="fu">intersect</span>(ei, ej)) <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co"># do only if pair of edges share a node</span></span>
+<span id="cb2-18"><a href="#cb2-18"></a>        v <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">union</span>(ei, ej), <span class="fu">intersect</span>(ei, ej)) <span class="co"># extracting nodes attached to shared node</span></span>
+<span id="cb2-19"><a href="#cb2-19"></a>        n1 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">1</span>]]] <span class="co"># neighbors of first node</span></span>
+<span id="cb2-20"><a href="#cb2-20"></a>        n2 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">2</span>]]] <span class="co"># neighbors of second node</span></span>
+<span id="cb2-21"><a href="#cb2-21"></a>        E.sim[j, i] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">intersect</span>(n1, n2)) <span class="sc">/</span> <span class="fu">length</span>(<span class="fu">union</span>(n1, n2)) <span class="co"># Jaccard similarity</span></span>
+<span id="cb2-22"><a href="#cb2-22"></a>        E.sim[i, j] <span class="ot">&lt;-</span> E.sim[j, i] <span class="co"># symmetric score</span></span>
+<span id="cb2-23"><a href="#cb2-23"></a>      }</span>
+<span id="cb2-24"><a href="#cb2-24"></a>    }</span>
+<span id="cb2-25"><a href="#cb2-25"></a>  }</span>
+<span id="cb2-26"><a href="#cb2-26"></a>  <span class="fu">return</span>(E.sim)</span>
+<span id="cb2-27"><a href="#cb2-27"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The function takes the graph as input and returns an inter-link similarity matrix—of dimensions <span class="math inline">\(E \times E\)</span> where <span class="math inline">\(E\)</span> is the number of edges in the graph—as output.</p>
@@ -876,8 +886,8 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a> E.sim <span class="ot">&lt;-</span> <span class="fu">edge.sim</span>(ug)</span>
-<span id="cb3-2"><a href="#cb3-2"></a> <span class="fu">round</span>(E.sim[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>E.sim <span class="ot">&lt;-</span> <span class="fu">edge.sim</span>(ug)</span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="fu">round</span>(E.sim[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>       [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]  [,9] [,10]
@@ -897,18 +907,18 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a> D <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> E.sim</span>
-<span id="cb5-2"><a href="#cb5-2"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(D)</span>
-<span id="cb5-3"><a href="#cb5-3"></a> hc.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"average"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>D <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> E.sim</span>
+<span id="cb5-2"><a href="#cb5-2"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(D)</span>
+<span id="cb5-3"><a href="#cb5-3"></a>hc.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"average"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The resulting dendrogram looks like this:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a> <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.05</span>)</span>
-<span id="cb6-2"><a href="#cb6-2"></a> <span class="fu">plot</span>(hc.res)</span>
-<span id="cb6-3"><a href="#cb6-3"></a> <span class="fu">rect.hclust</span>(hc.res, <span class="at">k =</span> <span class="dv">10</span>, <span class="at">border =</span> <span class="st">"red"</span>) <span class="co"># Draws boxes around the clusters</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.05</span>)</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="fu">plot</span>(hc.res)</span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="fu">rect.hclust</span>(hc.res, <span class="at">k =</span> <span class="dv">10</span>, <span class="at">border =</span> <span class="st">"red"</span>) <span class="co"># Draws boxes around the clusters</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -927,14 +937,14 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a> lc <span class="ot">&lt;-</span> <span class="fu">cutree</span>(hc.res, <span class="dv">10</span>)</span>
-<span id="cb7-2"><a href="#cb7-2"></a> ld <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(ug), lc)</span>
-<span id="cb7-3"><a href="#cb7-3"></a> communities <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
-<span id="cb7-4"><a href="#cb7-4"></a> <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(lc)) {</span>
-<span id="cb7-5"><a href="#cb7-5"></a> sub.dat <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ld, lc <span class="sc">==</span> k)</span>
-<span id="cb7-6"><a href="#cb7-6"></a> communities[[k]] <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(sub.dat[, <span class="dv">1</span>], sub.dat[, <span class="dv">2</span>]))</span>
-<span id="cb7-7"><a href="#cb7-7"></a> }</span>
-<span id="cb7-8"><a href="#cb7-8"></a> communities</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>lc <span class="ot">&lt;-</span> <span class="fu">cutree</span>(hc.res, <span class="dv">10</span>)</span>
+<span id="cb7-2"><a href="#cb7-2"></a>ld <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(ug), lc)</span>
+<span id="cb7-3"><a href="#cb7-3"></a>communities <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(lc)) {</span>
+<span id="cb7-5"><a href="#cb7-5"></a>  sub.dat <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ld, lc <span class="sc">==</span> k)</span>
+<span id="cb7-6"><a href="#cb7-6"></a>  communities[[k]] <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(sub.dat[, <span class="dv">1</span>], sub.dat[, <span class="dv">2</span>]))</span>
+<span id="cb7-7"><a href="#cb7-7"></a>}</span>
+<span id="cb7-8"><a href="#cb7-8"></a>communities</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]
@@ -980,17 +990,17 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a> Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(ug), <span class="fu">length</span>(communities))</span>
-<span id="cb9-2"><a href="#cb9-2"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(communities))) {</span>
-<span id="cb9-3"><a href="#cb9-3"></a> Z[<span class="fu">as.numeric</span>(communities[[i]]), i] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb9-4"><a href="#cb9-4"></a> }</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(ug), <span class="fu">length</span>(communities))</span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(communities))) {</span>
+<span id="cb9-3"><a href="#cb9-3"></a>  Z[<span class="fu">as.numeric</span>(communities[[i]]), i] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb9-4"><a href="#cb9-4"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>And the matrix of inter-community ties based on shared characters can be obtained via the usual <span class="citation" data-cites="breiger74">Breiger (<a href="#ref-breiger74" role="doc-biblioref">1974</a>)</span> projection:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a> <span class="fu">t</span>(Z) <span class="sc">%*%</span> Z</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1"></a><span class="fu">t</span>(Z) <span class="sc">%*%</span> Z</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10]
@@ -1524,12 +1534,12 @@ Radicchi, Filippo, Claudio Castellano, Federico Cecconi, Vittorio Loreto, and Do
 <span id="cb12-13"><a href="#cb12-13"></a>Let's see how this works. First, let's load up the friendship nomination network from @lazega01, constrained to be undirected:</span>
 <span id="cb12-14"><a href="#cb12-14"></a></span>
 <span id="cb12-17"><a href="#cb12-17"></a><span class="in">```{r}</span></span>
-<span id="cb12-18"><a href="#cb12-18"></a> <span class="fu">library</span>(networkdata)</span>
-<span id="cb12-19"><a href="#cb12-19"></a> <span class="fu">library</span>(igraph)</span>
-<span id="cb12-20"><a href="#cb12-20"></a> g <span class="ot">&lt;-</span> law_friends</span>
-<span id="cb12-21"><a href="#cb12-21"></a> g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g) <span class="sc">&gt;=</span> <span class="dv">2</span>)</span>
-<span id="cb12-22"><a href="#cb12-22"></a> ug <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
-<span id="cb12-23"><a href="#cb12-23"></a> <span class="fu">V</span>(ug)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(ug))</span>
+<span id="cb12-18"><a href="#cb12-18"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb12-19"><a href="#cb12-19"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb12-20"><a href="#cb12-20"></a>g <span class="ot">&lt;-</span> law_friends</span>
+<span id="cb12-21"><a href="#cb12-21"></a>g <span class="ot">&lt;-</span> <span class="fu">subgraph</span>(g, <span class="fu">degree</span>(g) <span class="sc">&gt;=</span> <span class="dv">2</span>)</span>
+<span id="cb12-22"><a href="#cb12-22"></a>ug <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(g, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
+<span id="cb12-23"><a href="#cb12-23"></a><span class="fu">V</span>(ug)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">vcount</span>(ug))</span>
 <span id="cb12-24"><a href="#cb12-24"></a><span class="in">```</span></span>
 <span id="cb12-25"><a href="#cb12-25"></a></span>
 <span id="cb12-26"><a href="#cb12-26"></a>The key idea behind link clustering is that *similar* links should be assigned to the same clusters. How do we compute the similarity between links? </span>
@@ -1542,139 +1552,148 @@ Radicchi, Filippo, Claudio Castellano, Federico Cecconi, Vittorio Loreto, and Do
 <span id="cb12-33"><a href="#cb12-33"></a></span>
 <span id="cb12-34"><a href="#cb12-34"></a></span>
 <span id="cb12-37"><a href="#cb12-37"></a><span class="in">```{r}</span></span>
-<span id="cb12-38"><a href="#cb12-38"></a> edge.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
-<span id="cb12-39"><a href="#cb12-39"></a> E <span class="ot">&lt;-</span> <span class="fu">ecount</span>(h) <span class="co">#number of edges</span></span>
-<span id="cb12-40"><a href="#cb12-40"></a> V <span class="ot">&lt;-</span> <span class="fu">vcount</span>(h) <span class="co">#number of nodes</span></span>
-<span id="cb12-41"><a href="#cb12-41"></a> <span class="cf">if</span>(<span class="fu">is.null</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name) <span class="sc">==</span> <span class="cn">TRUE</span>) {<span class="fu">V</span>(h)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">seq_len</span>(V))} <span class="co">#checking if graph has node names</span></span>
-<span id="cb12-42"><a href="#cb12-42"></a> edgemat <span class="ot">&lt;-</span> <span class="fu">ends</span>(h, <span class="fu">E</span>(h)) <span class="co">#edge list</span></span>
-<span id="cb12-43"><a href="#cb12-43"></a> E.sim <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, E, E) <span class="co">#initializing link similarity matrix to identity matrix</span></span>
-<span id="cb12-44"><a href="#cb12-44"></a> nlist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name, <span class="cf">function</span>(x) {<span class="fu">c</span>(<span class="fu">as.vector</span>(<span class="fu">names</span>(<span class="fu">neighbors</span>(h, x))), x)}) <span class="co">#neighbors list for each node</span></span>
-<span id="cb12-45"><a href="#cb12-45"></a> <span class="fu">names</span>(nlist) <span class="ot">&lt;-</span> <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="co">#naming neighbors list using graph node names</span></span>
-<span id="cb12-46"><a href="#cb12-46"></a> <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>E) {</span>
-<span id="cb12-47"><a href="#cb12-47"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(j<span class="dv">-1</span>)) { <span class="co">#looping through upper triangle only</span></span>
-<span id="cb12-48"><a href="#cb12-48"></a> ei <span class="ot">&lt;-</span> edgemat[i, ] <span class="co">#nodes incident to first edge</span></span>
-<span id="cb12-49"><a href="#cb12-49"></a> ej <span class="ot">&lt;-</span> edgemat[j, ] <span class="co">#nodes incident to second edge</span></span>
-<span id="cb12-50"><a href="#cb12-50"></a> <span class="cf">if</span> (<span class="fu">length</span>(<span class="fu">intersect</span>(ei, ej)) <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co">#do only if pair of edges share a node</span></span>
-<span id="cb12-51"><a href="#cb12-51"></a> v <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">union</span>(ei, ej), <span class="fu">intersect</span>(ei, ej))<span class="co">#extracting nodes attached to shared node</span></span>
-<span id="cb12-52"><a href="#cb12-52"></a> n1 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">1</span>]]] <span class="co">#neighbors of first node</span></span>
-<span id="cb12-53"><a href="#cb12-53"></a> n2 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">2</span>]]] <span class="co">#neighbors of second node</span></span>
-<span id="cb12-54"><a href="#cb12-54"></a> E.sim[j, i] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">intersect</span>(n1, n2)) <span class="sc">/</span> <span class="fu">length</span>(<span class="fu">union</span>(n1, n2)) <span class="co">#Jaccard similarity</span></span>
-<span id="cb12-55"><a href="#cb12-55"></a> E.sim[i, j] <span class="ot">&lt;-</span> E.sim[j, i] <span class="co">#symmetric score</span></span>
-<span id="cb12-56"><a href="#cb12-56"></a> }</span>
-<span id="cb12-57"><a href="#cb12-57"></a> }</span>
-<span id="cb12-58"><a href="#cb12-58"></a> }</span>
-<span id="cb12-59"><a href="#cb12-59"></a> <span class="fu">return</span>(E.sim)</span>
-<span id="cb12-60"><a href="#cb12-60"></a> }</span>
-<span id="cb12-61"><a href="#cb12-61"></a><span class="in">```</span></span>
-<span id="cb12-62"><a href="#cb12-62"></a></span>
-<span id="cb12-63"><a href="#cb12-63"></a>The function takes the graph as input and returns an inter-link similarity matrix---of dimensions $E \times E$ where $E$ is the number of edges in the graph---as output. </span>
-<span id="cb12-64"><a href="#cb12-64"></a></span>
-<span id="cb12-65"><a href="#cb12-65"></a>It works like this:</span>
+<span id="cb12-38"><a href="#cb12-38"></a>edge.sim <span class="ot">&lt;-</span> <span class="cf">function</span>(h) {</span>
+<span id="cb12-39"><a href="#cb12-39"></a>  E <span class="ot">&lt;-</span> <span class="fu">ecount</span>(h) <span class="co"># number of edges</span></span>
+<span id="cb12-40"><a href="#cb12-40"></a>  V <span class="ot">&lt;-</span> <span class="fu">vcount</span>(h) <span class="co"># number of nodes</span></span>
+<span id="cb12-41"><a href="#cb12-41"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name) <span class="sc">==</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb12-42"><a href="#cb12-42"></a>    <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">as.character</span>(<span class="fu">seq_len</span>(V))</span>
+<span id="cb12-43"><a href="#cb12-43"></a>  } <span class="co"># checking if graph has node names</span></span>
+<span id="cb12-44"><a href="#cb12-44"></a>  edgemat <span class="ot">&lt;-</span> <span class="fu">ends</span>(h, <span class="fu">E</span>(h)) <span class="co"># edge list</span></span>
+<span id="cb12-45"><a href="#cb12-45"></a>  E.sim <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, E, E) <span class="co"># initializing link similarity matrix to identity matrix</span></span>
+<span id="cb12-46"><a href="#cb12-46"></a>  nlist <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">V</span>(h)<span class="sc">$</span>name, <span class="cf">function</span>(x) {</span>
+<span id="cb12-47"><a href="#cb12-47"></a>    <span class="fu">c</span>(<span class="fu">as.vector</span>(<span class="fu">names</span>(<span class="fu">neighbors</span>(h, x))), x)</span>
+<span id="cb12-48"><a href="#cb12-48"></a>  }) <span class="co"># neighbors list for each node</span></span>
+<span id="cb12-49"><a href="#cb12-49"></a>  <span class="fu">names</span>(nlist) <span class="ot">&lt;-</span> <span class="fu">V</span>(h)<span class="sc">$</span>name <span class="co"># naming neighbors list using graph node names</span></span>
+<span id="cb12-50"><a href="#cb12-50"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>E) {</span>
+<span id="cb12-51"><a href="#cb12-51"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(j <span class="sc">-</span> <span class="dv">1</span>)) { <span class="co"># looping through upper triangle only</span></span>
+<span id="cb12-52"><a href="#cb12-52"></a>      ei <span class="ot">&lt;-</span> edgemat[i, ] <span class="co"># nodes incident to first edge</span></span>
+<span id="cb12-53"><a href="#cb12-53"></a>      ej <span class="ot">&lt;-</span> edgemat[j, ] <span class="co"># nodes incident to second edge</span></span>
+<span id="cb12-54"><a href="#cb12-54"></a>      <span class="cf">if</span> (<span class="fu">length</span>(<span class="fu">intersect</span>(ei, ej)) <span class="sc">!=</span> <span class="dv">0</span>) { <span class="co"># do only if pair of edges share a node</span></span>
+<span id="cb12-55"><a href="#cb12-55"></a>        v <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">union</span>(ei, ej), <span class="fu">intersect</span>(ei, ej)) <span class="co"># extracting nodes attached to shared node</span></span>
+<span id="cb12-56"><a href="#cb12-56"></a>        n1 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">1</span>]]] <span class="co"># neighbors of first node</span></span>
+<span id="cb12-57"><a href="#cb12-57"></a>        n2 <span class="ot">&lt;-</span> nlist[[v[<span class="dv">2</span>]]] <span class="co"># neighbors of second node</span></span>
+<span id="cb12-58"><a href="#cb12-58"></a>        E.sim[j, i] <span class="ot">&lt;-</span> <span class="fu">length</span>(<span class="fu">intersect</span>(n1, n2)) <span class="sc">/</span> <span class="fu">length</span>(<span class="fu">union</span>(n1, n2)) <span class="co"># Jaccard similarity</span></span>
+<span id="cb12-59"><a href="#cb12-59"></a>        E.sim[i, j] <span class="ot">&lt;-</span> E.sim[j, i] <span class="co"># symmetric score</span></span>
+<span id="cb12-60"><a href="#cb12-60"></a>      }</span>
+<span id="cb12-61"><a href="#cb12-61"></a>    }</span>
+<span id="cb12-62"><a href="#cb12-62"></a>  }</span>
+<span id="cb12-63"><a href="#cb12-63"></a>  <span class="fu">return</span>(E.sim)</span>
+<span id="cb12-64"><a href="#cb12-64"></a>}</span>
+<span id="cb12-65"><a href="#cb12-65"></a><span class="in">```</span></span>
 <span id="cb12-66"><a href="#cb12-66"></a></span>
-<span id="cb12-67"><a href="#cb12-67"></a><span class="ss">- </span>In line 5, we extract the end nodes incident to each edge in the graph using the <span class="in">`igraph`</span> function <span class="in">`ends`</span> (which returns an $E \times 2$ matrix, the nodes at the end of the edges in one column and the nodes at the other end of the edges in the other column). </span>
-<span id="cb12-68"><a href="#cb12-68"></a><span class="ss">- </span>In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges are maximally similar to themselves and have an initial similarity of zero with other edges). </span>
-<span id="cb12-69"><a href="#cb12-69"></a><span class="ss">- </span>Lines 7 and 8 create a <span class="in">`list`</span> object called <span class="in">`nlist`</span> using the <span class="in">`lapply`</span> shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called **inclusive neighborhood**).</span>
-<span id="cb12-70"><a href="#cb12-70"></a><span class="ss">- </span>Then lines 9-21 enter a double <span class="in">`for`</span> loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the <span class="in">`nlist`</span> object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).</span>
-<span id="cb12-71"><a href="#cb12-71"></a></span>
-<span id="cb12-72"><a href="#cb12-72"></a>Here's the function in action in the *Pulp Fiction* network:</span>
-<span id="cb12-73"><a href="#cb12-73"></a></span>
-<span id="cb12-76"><a href="#cb12-76"></a><span class="in">```{r}</span></span>
-<span id="cb12-77"><a href="#cb12-77"></a> E.sim <span class="ot">&lt;-</span> <span class="fu">edge.sim</span>(ug)</span>
-<span id="cb12-78"><a href="#cb12-78"></a> <span class="fu">round</span>(E.sim[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
-<span id="cb12-79"><a href="#cb12-79"></a><span class="in">```</span></span>
-<span id="cb12-80"><a href="#cb12-80"></a></span>
-<span id="cb12-81"><a href="#cb12-81"></a>We can then transform the link similarities into distances, and cluster them:</span>
-<span id="cb12-82"><a href="#cb12-82"></a></span>
-<span id="cb12-85"><a href="#cb12-85"></a><span class="in">```{r}</span></span>
-<span id="cb12-86"><a href="#cb12-86"></a> D <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> E.sim</span>
-<span id="cb12-87"><a href="#cb12-87"></a> D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(D)</span>
-<span id="cb12-88"><a href="#cb12-88"></a> hc.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"average"</span>)</span>
-<span id="cb12-89"><a href="#cb12-89"></a></span>
-<span id="cb12-90"><a href="#cb12-90"></a><span class="in">```</span></span>
-<span id="cb12-91"><a href="#cb12-91"></a></span>
-<span id="cb12-92"><a href="#cb12-92"></a>The resulting dendrogram looks like this:</span>
-<span id="cb12-93"><a href="#cb12-93"></a></span>
-<span id="cb12-96"><a href="#cb12-96"></a><span class="in">```{r}</span></span>
-<span id="cb12-97"><a href="#cb12-97"></a> <span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.05</span>)</span>
-<span id="cb12-98"><a href="#cb12-98"></a> <span class="fu">plot</span>(hc.res)</span>
-<span id="cb12-99"><a href="#cb12-99"></a> <span class="fu">rect.hclust</span>(hc.res, <span class="at">k =</span> <span class="dv">10</span>, <span class="at">border =</span> <span class="st">"red"</span>) <span class="co"># Draws boxes around the clusters</span></span>
-<span id="cb12-100"><a href="#cb12-100"></a><span class="in">```</span></span>
-<span id="cb12-101"><a href="#cb12-101"></a></span>
-<span id="cb12-102"><a href="#cb12-102"></a>The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E =$ <span class="in">`r ecount(ug)`</span> in this case), and the clusters are "link communities" <span class="co">[</span><span class="ot">@ahn_etal10</span><span class="co">]</span>.</span>
-<span id="cb12-103"><a href="#cb12-103"></a></span>
-<span id="cb12-104"><a href="#cb12-104"></a><span class="fu">## Clustering Nodes</span></span>
-<span id="cb12-105"><a href="#cb12-105"></a></span>
-<span id="cb12-106"><a href="#cb12-106"></a>As we noted, because the links are the ones that get clustered, nodes incident to each link can belong to more than one cluster (since nodes with degree $k&gt;1$ are incident to multiple links). </span>
-<span id="cb12-107"><a href="#cb12-107"></a></span>
-<span id="cb12-108"><a href="#cb12-108"></a>We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with ten overlapping communities:</span>
-<span id="cb12-109"><a href="#cb12-109"></a></span>
-<span id="cb12-112"><a href="#cb12-112"></a><span class="in">```{r}</span></span>
-<span id="cb12-113"><a href="#cb12-113"></a> lc <span class="ot">&lt;-</span> <span class="fu">cutree</span>(hc.res, <span class="dv">10</span>)</span>
-<span id="cb12-114"><a href="#cb12-114"></a> ld <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(ug), lc)</span>
-<span id="cb12-115"><a href="#cb12-115"></a> communities <span class="ot">&lt;-</span> <span class="fu">list</span>() </span>
-<span id="cb12-116"><a href="#cb12-116"></a> <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(lc)) {</span>
-<span id="cb12-117"><a href="#cb12-117"></a> sub.dat <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ld, lc <span class="sc">==</span> k)</span>
-<span id="cb12-118"><a href="#cb12-118"></a> communities[[k]] <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(sub.dat[, <span class="dv">1</span>], sub.dat[, <span class="dv">2</span>]))</span>
-<span id="cb12-119"><a href="#cb12-119"></a> }</span>
-<span id="cb12-120"><a href="#cb12-120"></a> communities</span>
-<span id="cb12-121"><a href="#cb12-121"></a><span class="in">```</span></span>
-<span id="cb12-122"><a href="#cb12-122"></a></span>
-<span id="cb12-123"><a href="#cb12-123"></a>Because nodes belong to multiple communities, the resulting actor-by-community ties form a **two-mode network** (see <span class="co">[</span><span class="ot">here</span><span class="co">](basic-tm.qmd)</span>). </span>
-<span id="cb12-124"><a href="#cb12-124"></a></span>
-<span id="cb12-125"><a href="#cb12-125"></a>We can reconstruct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node, like this:</span>
-<span id="cb12-126"><a href="#cb12-126"></a></span>
-<span id="cb12-129"><a href="#cb12-129"></a><span class="in">```{r}</span></span>
-<span id="cb12-130"><a href="#cb12-130"></a> Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(ug), <span class="fu">length</span>(communities))</span>
-<span id="cb12-131"><a href="#cb12-131"></a> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(communities))) {</span>
-<span id="cb12-132"><a href="#cb12-132"></a> Z[<span class="fu">as.numeric</span>(communities[[i]]), i] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb12-133"><a href="#cb12-133"></a> }</span>
-<span id="cb12-134"><a href="#cb12-134"></a><span class="in">```</span></span>
-<span id="cb12-135"><a href="#cb12-135"></a></span>
-<span id="cb12-136"><a href="#cb12-136"></a>And the matrix of inter-community ties based on shared characters can be obtained via the usual @breiger74 projection:</span>
-<span id="cb12-137"><a href="#cb12-137"></a></span>
-<span id="cb12-140"><a href="#cb12-140"></a><span class="in">```{r}</span></span>
-<span id="cb12-141"><a href="#cb12-141"></a> <span class="fu">t</span>(Z) <span class="sc">%*%</span> Z</span>
-<span id="cb12-142"><a href="#cb12-142"></a><span class="in">```</span></span>
-<span id="cb12-143"><a href="#cb12-143"></a></span>
-<span id="cb12-144"><a href="#cb12-144"></a>And we can visualize the nodes connected to multiple communities as follows: </span>
-<span id="cb12-145"><a href="#cb12-145"></a></span>
-<span id="cb12-148"><a href="#cb12-148"></a><span class="in">```{r}</span></span>
-<span id="cb12-149"><a href="#cb12-149"></a><span class="co">#| label: fig-overlap</span></span>
-<span id="cb12-150"><a href="#cb12-150"></a><span class="co">#| fig-cap: "Undirected Law Firm Friendship Network Showing the Memberships of Each Node in Overlapping Communities."</span></span>
-<span id="cb12-151"><a href="#cb12-151"></a><span class="co">#| fig-height: 12</span></span>
-<span id="cb12-152"><a href="#cb12-152"></a><span class="co">#| fig-width: 12</span></span>
-<span id="cb12-153"><a href="#cb12-153"></a><span class="co">#| echo: false</span></span>
-<span id="cb12-154"><a href="#cb12-154"></a> W_raw <span class="ot">&lt;-</span> <span class="fu">split</span>(Z<span class="sc">/</span><span class="fu">rowSums</span>(Z), <span class="fu">seq</span>(<span class="fu">nrow</span>(Z)))</span>
-<span id="cb12-155"><a href="#cb12-155"></a> W <span class="ot">&lt;-</span> <span class="fu">lapply</span>(W_raw, <span class="cf">function</span>(x) {x[<span class="fu">which</span>(x <span class="sc">!=</span> <span class="dv">0</span>)]})</span>
-<span id="cb12-156"><a href="#cb12-156"></a> ccol <span class="ot">&lt;-</span> <span class="fu">lapply</span>(W_raw, <span class="cf">function</span>(x) {<span class="fu">which</span>(x <span class="sc">!=</span> <span class="dv">0</span>)})</span>
-<span id="cb12-157"><a href="#cb12-157"></a> <span class="fu">library</span>(RColorBrewer) </span>
-<span id="cb12-158"><a href="#cb12-158"></a> getPalette <span class="ot">=</span> <span class="fu">colorRampPalette</span>(<span class="fu">categorical_pal</span>(<span class="dv">8</span>))</span>
-<span id="cb12-159"><a href="#cb12-159"></a> pal <span class="ot">=</span> <span class="fu">getPalette</span>(<span class="fu">ncol</span>(Z))</span>
-<span id="cb12-160"><a href="#cb12-160"></a> <span class="fu">V</span>(ug)<span class="sc">$</span>shape <span class="ot">&lt;-</span> <span class="st">"pie"</span></span>
-<span id="cb12-161"><a href="#cb12-161"></a> <span class="fu">V</span>(ug)<span class="sc">$</span>pie <span class="ot">&lt;-</span> W</span>
-<span id="cb12-162"><a href="#cb12-162"></a> c.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(ccol, <span class="cf">function</span>(x) {pal[x]})</span>
-<span id="cb12-163"><a href="#cb12-163"></a> <span class="fu">names</span>(c.list) <span class="ot">&lt;-</span> <span class="fu">V</span>(ug)<span class="sc">$</span>name</span>
-<span id="cb12-164"><a href="#cb12-164"></a> <span class="fu">V</span>(ug)<span class="sc">$</span>pie.color <span class="ot">&lt;-</span> c.list</span>
-<span id="cb12-165"><a href="#cb12-165"></a> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb12-166"><a href="#cb12-166"></a> <span class="fu">plot</span>(ug, </span>
-<span id="cb12-167"><a href="#cb12-167"></a> <span class="at">layout =</span> layout_with_kk, </span>
-<span id="cb12-168"><a href="#cb12-168"></a> <span class="at">vertex.size =</span> <span class="dv">8</span>, </span>
-<span id="cb12-169"><a href="#cb12-169"></a> <span class="at">vertex.label.color =</span> <span class="st">"black"</span>, </span>
-<span id="cb12-170"><a href="#cb12-170"></a> <span class="at">vertex.label.font =</span> <span class="dv">2</span>, </span>
-<span id="cb12-171"><a href="#cb12-171"></a> <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, </span>
-<span id="cb12-172"><a href="#cb12-172"></a> <span class="at">edge.width =</span> <span class="dv">2</span>, </span>
-<span id="cb12-173"><a href="#cb12-173"></a> <span class="at">edge.color =</span> <span class="st">"lightblue"</span>,</span>
-<span id="cb12-174"><a href="#cb12-174"></a> <span class="at">vertex.label.dist =</span> <span class="fl">1.2</span>,</span>
-<span id="cb12-175"><a href="#cb12-175"></a> <span class="at">vertex.label.degree =</span> <span class="dv">180</span>,</span>
-<span id="cb12-176"><a href="#cb12-176"></a> <span class="at">edge.curved=</span><span class="fl">0.2</span></span>
-<span id="cb12-177"><a href="#cb12-177"></a> )</span>
-<span id="cb12-178"><a href="#cb12-178"></a> <span class="fu">legend</span>(<span class="st">"bottomleft"</span>, </span>
-<span id="cb12-179"><a href="#cb12-179"></a> <span class="at">legend =</span> <span class="fu">c</span>(<span class="fu">paste</span>(<span class="st">"Commnunity"</span>, <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(Z), <span class="at">sep =</span> <span class="st">"_"</span>)), </span>
-<span id="cb12-180"><a href="#cb12-180"></a> <span class="at">fill =</span> pal, </span>
-<span id="cb12-181"><a href="#cb12-181"></a> <span class="at">bty =</span> <span class="st">"n"</span>, <span class="co"># No box around legend</span></span>
-<span id="cb12-182"><a href="#cb12-182"></a> <span class="at">cex =</span> <span class="fl">1.5</span></span>
-<span id="cb12-183"><a href="#cb12-183"></a> ) <span class="co"># Text size</span></span>
-<span id="cb12-184"><a href="#cb12-184"></a><span class="in">```</span></span>
+<span id="cb12-67"><a href="#cb12-67"></a>The function takes the graph as input and returns an inter-link similarity matrix---of dimensions $E \times E$ where $E$ is the number of edges in the graph---as output. </span>
+<span id="cb12-68"><a href="#cb12-68"></a></span>
+<span id="cb12-69"><a href="#cb12-69"></a>It works like this:</span>
+<span id="cb12-70"><a href="#cb12-70"></a></span>
+<span id="cb12-71"><a href="#cb12-71"></a><span class="ss">- </span>In line 5, we extract the end nodes incident to each edge in the graph using the <span class="in">`igraph`</span> function <span class="in">`ends`</span> (which returns an $E \times 2$ matrix, the nodes at the end of the edges in one column and the nodes at the other end of the edges in the other column). </span>
+<span id="cb12-72"><a href="#cb12-72"></a><span class="ss">- </span>In line 6, we initialize the $E \times E$ matrix of edge similarities to the identity matrix (all edges are maximally similar to themselves and have an initial similarity of zero with other edges). </span>
+<span id="cb12-73"><a href="#cb12-73"></a><span class="ss">- </span>Lines 7 and 8 create a <span class="in">`list`</span> object called <span class="in">`nlist`</span> using the <span class="in">`lapply`</span> shortcut, containing the neighbors of each node in the graph as elements (including the ego node itself, the so-called **inclusive neighborhood**).</span>
+<span id="cb12-74"><a href="#cb12-74"></a><span class="ss">- </span>Then lines 9-21 enter a double <span class="in">`for`</span> loop that cycles through each pair of edges, determines whether they have a node in common (line 13) and calculates the Jaccard similarity between the neighborhoods of the other two nodes using the info stored in the <span class="in">`nlist`</span> object (lines 15-16), and fills that info into the edge similarity matrix (lines 17-18).</span>
+<span id="cb12-75"><a href="#cb12-75"></a></span>
+<span id="cb12-76"><a href="#cb12-76"></a>Here's the function in action in the *Pulp Fiction* network:</span>
+<span id="cb12-77"><a href="#cb12-77"></a></span>
+<span id="cb12-80"><a href="#cb12-80"></a><span class="in">```{r}</span></span>
+<span id="cb12-81"><a href="#cb12-81"></a>E.sim <span class="ot">&lt;-</span> <span class="fu">edge.sim</span>(ug)</span>
+<span id="cb12-82"><a href="#cb12-82"></a><span class="fu">round</span>(E.sim[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">3</span>)</span>
+<span id="cb12-83"><a href="#cb12-83"></a><span class="in">```</span></span>
+<span id="cb12-84"><a href="#cb12-84"></a></span>
+<span id="cb12-85"><a href="#cb12-85"></a>We can then transform the link similarities into distances, and cluster them:</span>
+<span id="cb12-86"><a href="#cb12-86"></a></span>
+<span id="cb12-89"><a href="#cb12-89"></a><span class="in">```{r}</span></span>
+<span id="cb12-90"><a href="#cb12-90"></a>D <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> E.sim</span>
+<span id="cb12-91"><a href="#cb12-91"></a>D <span class="ot">&lt;-</span> <span class="fu">as.dist</span>(D)</span>
+<span id="cb12-92"><a href="#cb12-92"></a>hc.res <span class="ot">&lt;-</span> <span class="fu">hclust</span>(D, <span class="at">method =</span> <span class="st">"average"</span>)</span>
+<span id="cb12-93"><a href="#cb12-93"></a><span class="in">```</span></span>
+<span id="cb12-94"><a href="#cb12-94"></a></span>
+<span id="cb12-95"><a href="#cb12-95"></a>The resulting dendrogram looks like this:</span>
+<span id="cb12-96"><a href="#cb12-96"></a></span>
+<span id="cb12-99"><a href="#cb12-99"></a><span class="in">```{r}</span></span>
+<span id="cb12-100"><a href="#cb12-100"></a><span class="fu">par</span>(<span class="at">cex =</span> <span class="fl">0.05</span>)</span>
+<span id="cb12-101"><a href="#cb12-101"></a><span class="fu">plot</span>(hc.res)</span>
+<span id="cb12-102"><a href="#cb12-102"></a><span class="fu">rect.hclust</span>(hc.res, <span class="at">k =</span> <span class="dv">10</span>, <span class="at">border =</span> <span class="st">"red"</span>) <span class="co"># Draws boxes around the clusters</span></span>
+<span id="cb12-103"><a href="#cb12-103"></a><span class="in">```</span></span>
+<span id="cb12-104"><a href="#cb12-104"></a></span>
+<span id="cb12-105"><a href="#cb12-105"></a>The leaves of the dendrogram (bottom-most objects) represent each link in the graph ($E =$ <span class="in">`r ecount(ug)`</span> in this case), and the clusters are "link communities" <span class="co">[</span><span class="ot">@ahn_etal10</span><span class="co">]</span>.</span>
+<span id="cb12-106"><a href="#cb12-106"></a></span>
+<span id="cb12-107"><a href="#cb12-107"></a><span class="fu">## Clustering Nodes</span></span>
+<span id="cb12-108"><a href="#cb12-108"></a></span>
+<span id="cb12-109"><a href="#cb12-109"></a>As we noted, because the links are the ones that get clustered, nodes incident to each link can belong to more than one cluster (since nodes with degree $k&gt;1$ are incident to multiple links). </span>
+<span id="cb12-110"><a href="#cb12-110"></a></span>
+<span id="cb12-111"><a href="#cb12-111"></a>We can then use the dendrogram information to return a list of node assignments to multiple communities. Let's see the results with ten overlapping communities:</span>
+<span id="cb12-112"><a href="#cb12-112"></a></span>
+<span id="cb12-115"><a href="#cb12-115"></a><span class="in">```{r}</span></span>
+<span id="cb12-116"><a href="#cb12-116"></a>lc <span class="ot">&lt;-</span> <span class="fu">cutree</span>(hc.res, <span class="dv">10</span>)</span>
+<span id="cb12-117"><a href="#cb12-117"></a>ld <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(ug), lc)</span>
+<span id="cb12-118"><a href="#cb12-118"></a>communities <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb12-119"><a href="#cb12-119"></a><span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">max</span>(lc)) {</span>
+<span id="cb12-120"><a href="#cb12-120"></a>  sub.dat <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(ld, lc <span class="sc">==</span> k)</span>
+<span id="cb12-121"><a href="#cb12-121"></a>  communities[[k]] <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(sub.dat[, <span class="dv">1</span>], sub.dat[, <span class="dv">2</span>]))</span>
+<span id="cb12-122"><a href="#cb12-122"></a>}</span>
+<span id="cb12-123"><a href="#cb12-123"></a>communities</span>
+<span id="cb12-124"><a href="#cb12-124"></a><span class="in">```</span></span>
+<span id="cb12-125"><a href="#cb12-125"></a></span>
+<span id="cb12-126"><a href="#cb12-126"></a>Because nodes belong to multiple communities, the resulting actor-by-community ties form a **two-mode network** (see <span class="co">[</span><span class="ot">here</span><span class="co">](basic-tm.qmd)</span>). </span>
+<span id="cb12-127"><a href="#cb12-127"></a></span>
+<span id="cb12-128"><a href="#cb12-128"></a>We can reconstruct the **bi-adjacency matrix** corresponding to this two-mode network from the list of community memberships for each node, like this:</span>
+<span id="cb12-129"><a href="#cb12-129"></a></span>
+<span id="cb12-132"><a href="#cb12-132"></a><span class="in">```{r}</span></span>
+<span id="cb12-133"><a href="#cb12-133"></a>Z <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="fu">vcount</span>(ug), <span class="fu">length</span>(communities))</span>
+<span id="cb12-134"><a href="#cb12-134"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(communities))) {</span>
+<span id="cb12-135"><a href="#cb12-135"></a>  Z[<span class="fu">as.numeric</span>(communities[[i]]), i] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb12-136"><a href="#cb12-136"></a>}</span>
+<span id="cb12-137"><a href="#cb12-137"></a><span class="in">```</span></span>
+<span id="cb12-138"><a href="#cb12-138"></a></span>
+<span id="cb12-139"><a href="#cb12-139"></a>And the matrix of inter-community ties based on shared characters can be obtained via the usual @breiger74 projection:</span>
+<span id="cb12-140"><a href="#cb12-140"></a></span>
+<span id="cb12-143"><a href="#cb12-143"></a><span class="in">```{r}</span></span>
+<span id="cb12-144"><a href="#cb12-144"></a><span class="fu">t</span>(Z) <span class="sc">%*%</span> Z</span>
+<span id="cb12-145"><a href="#cb12-145"></a><span class="in">```</span></span>
+<span id="cb12-146"><a href="#cb12-146"></a></span>
+<span id="cb12-147"><a href="#cb12-147"></a>And we can visualize the nodes connected to multiple communities as follows: </span>
+<span id="cb12-148"><a href="#cb12-148"></a></span>
+<span id="cb12-151"><a href="#cb12-151"></a><span class="in">```{r}</span></span>
+<span id="cb12-152"><a href="#cb12-152"></a><span class="co">#| label: fig-overlap</span></span>
+<span id="cb12-153"><a href="#cb12-153"></a><span class="co">#| fig-cap: "Undirected Law Firm Friendship Network Showing the Memberships of Each Node in Overlapping Communities."</span></span>
+<span id="cb12-154"><a href="#cb12-154"></a><span class="co">#| fig-height: 12</span></span>
+<span id="cb12-155"><a href="#cb12-155"></a><span class="co">#| fig-width: 12</span></span>
+<span id="cb12-156"><a href="#cb12-156"></a><span class="co">#| echo: false</span></span>
+<span id="cb12-157"><a href="#cb12-157"></a>W_raw <span class="ot">&lt;-</span> <span class="fu">split</span>(Z <span class="sc">/</span> <span class="fu">rowSums</span>(Z), <span class="fu">seq</span>(<span class="fu">nrow</span>(Z)))</span>
+<span id="cb12-158"><a href="#cb12-158"></a>W <span class="ot">&lt;-</span> <span class="fu">lapply</span>(W_raw, <span class="cf">function</span>(x) {</span>
+<span id="cb12-159"><a href="#cb12-159"></a>  x[<span class="fu">which</span>(x <span class="sc">!=</span> <span class="dv">0</span>)]</span>
+<span id="cb12-160"><a href="#cb12-160"></a>})</span>
+<span id="cb12-161"><a href="#cb12-161"></a>ccol <span class="ot">&lt;-</span> <span class="fu">lapply</span>(W_raw, <span class="cf">function</span>(x) {</span>
+<span id="cb12-162"><a href="#cb12-162"></a>  <span class="fu">which</span>(x <span class="sc">!=</span> <span class="dv">0</span>)</span>
+<span id="cb12-163"><a href="#cb12-163"></a>})</span>
+<span id="cb12-164"><a href="#cb12-164"></a><span class="fu">library</span>(RColorBrewer)</span>
+<span id="cb12-165"><a href="#cb12-165"></a>getPalette <span class="ot">&lt;-</span> <span class="fu">colorRampPalette</span>(<span class="fu">categorical_pal</span>(<span class="dv">8</span>))</span>
+<span id="cb12-166"><a href="#cb12-166"></a>pal <span class="ot">&lt;-</span> <span class="fu">getPalette</span>(<span class="fu">ncol</span>(Z))</span>
+<span id="cb12-167"><a href="#cb12-167"></a><span class="fu">V</span>(ug)<span class="sc">$</span>shape <span class="ot">&lt;-</span> <span class="st">"pie"</span></span>
+<span id="cb12-168"><a href="#cb12-168"></a><span class="fu">V</span>(ug)<span class="sc">$</span>pie <span class="ot">&lt;-</span> W</span>
+<span id="cb12-169"><a href="#cb12-169"></a>c.list <span class="ot">&lt;-</span> <span class="fu">lapply</span>(ccol, <span class="cf">function</span>(x) {</span>
+<span id="cb12-170"><a href="#cb12-170"></a>  pal[x]</span>
+<span id="cb12-171"><a href="#cb12-171"></a>})</span>
+<span id="cb12-172"><a href="#cb12-172"></a><span class="fu">names</span>(c.list) <span class="ot">&lt;-</span> <span class="fu">V</span>(ug)<span class="sc">$</span>name</span>
+<span id="cb12-173"><a href="#cb12-173"></a><span class="fu">V</span>(ug)<span class="sc">$</span>pie.color <span class="ot">&lt;-</span> c.list</span>
+<span id="cb12-174"><a href="#cb12-174"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb12-175"><a href="#cb12-175"></a><span class="fu">plot</span>(ug,</span>
+<span id="cb12-176"><a href="#cb12-176"></a>  <span class="at">layout =</span> layout_with_kk,</span>
+<span id="cb12-177"><a href="#cb12-177"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>,</span>
+<span id="cb12-178"><a href="#cb12-178"></a>  <span class="at">vertex.label.color =</span> <span class="st">"black"</span>,</span>
+<span id="cb12-179"><a href="#cb12-179"></a>  <span class="at">vertex.label.font =</span> <span class="dv">2</span>,</span>
+<span id="cb12-180"><a href="#cb12-180"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>,</span>
+<span id="cb12-181"><a href="#cb12-181"></a>  <span class="at">edge.width =</span> <span class="dv">2</span>,</span>
+<span id="cb12-182"><a href="#cb12-182"></a>  <span class="at">edge.color =</span> <span class="st">"lightblue"</span>,</span>
+<span id="cb12-183"><a href="#cb12-183"></a>  <span class="at">vertex.label.dist =</span> <span class="fl">1.2</span>,</span>
+<span id="cb12-184"><a href="#cb12-184"></a>  <span class="at">vertex.label.degree =</span> <span class="dv">180</span>,</span>
+<span id="cb12-185"><a href="#cb12-185"></a>  <span class="at">edge.curved =</span> <span class="fl">0.2</span></span>
+<span id="cb12-186"><a href="#cb12-186"></a>)</span>
+<span id="cb12-187"><a href="#cb12-187"></a><span class="fu">legend</span>(<span class="st">"bottomleft"</span>,</span>
+<span id="cb12-188"><a href="#cb12-188"></a>  <span class="at">legend =</span> <span class="fu">c</span>(<span class="fu">paste</span>(<span class="st">"Commnunity"</span>, <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(Z), <span class="at">sep =</span> <span class="st">"_"</span>)),</span>
+<span id="cb12-189"><a href="#cb12-189"></a>  <span class="at">fill =</span> pal,</span>
+<span id="cb12-190"><a href="#cb12-190"></a>  <span class="at">bty =</span> <span class="st">"n"</span>, <span class="co"># No box around legend</span></span>
+<span id="cb12-191"><a href="#cb12-191"></a>  <span class="at">cex =</span> <span class="fl">1.5</span></span>
+<span id="cb12-192"><a href="#cb12-192"></a>) <span class="co"># Text size</span></span>
+<span id="cb12-193"><a href="#cb12-193"></a><span class="in">```</span></span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
