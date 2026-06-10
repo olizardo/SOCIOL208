@@ -90,7 +90,7 @@ This function takes an adjacency matrix (`w`) as input and returns a generalized
 
 The above is an implementation of the generalized version of `SimRank` developed by @zhao_etal09, called `P-Rank`, which accounts for similarities between in- and out-neighbors (weighted by the $\beta$ parameter). Jeh and Widom's [-@jeh_widom02] original version of `SimRank` (which only takes into account in-neighbor similarities) is obtained when $\beta = 1$ (the default in the `SimRank` function above).
 
-Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in , which is intended to represent a set of web pages at a university. There is a link from the main University page to the two professors ' pages, and a link from the professors to the students' pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link to the main university page on their webpage. 
+Let us see how it works using the toy example that @jeh_widom02 [p. 540, Figure 2] used in their original paper, shown in @fig-jw, which is intended to represent a set of web pages at a university. There is a link from the main University page to the two professors ' pages, and a link from the professors to the students' pages. In addition, "Student B" has a link on their webpage to the corresponding professor, and "Student A" has a link to the main university page on their webpage. 
 
 ```{r}
 #| label: fig-jw
@@ -165,7 +165,7 @@ The plot suggests a division into five major node clusters. On the left, we have
 
 Recall that we turned to SimRank because it promised to solve Borgatti and Everett's [-@borgatti_everett92] *role problem*, or the idea that nodes can play the same role in the network even when they don't share *any* neighbors. 
 
-Now, we know from that *SimRank* uses information about the neighborhoods of the two nodes, but relaxes the local structural-similarity assumption that these neighbors need to be *shared*. 
+Now, we know from @eq-simrank that *SimRank* uses information about the neighborhoods of the two nodes, but relaxes the local structural-similarity assumption that these neighbors need to be *shared*. 
 
 However, it is clear that nodes that have *completely disjoint* neighborhoods would be considered by *SimRank* to be low similarity even though they could be playing the same *roles*.^[In fact, @kusumoto_etal14 show that the `SimRank` score of two nodes tends towards zero as their geodesic distance increases.] So maybe *SimRank* doesn't solve the doctor/patient problem after all. 
 
@@ -219,7 +219,7 @@ plot(h,
 )
 ```
 
-To build some intuition, consider the graph in , which is a directed version of a toy example from @borgatti_everett92 [p. 14, Figure 7(a)]. Going by the standard of *structural equivalence* criterion (see [here](sim-structequiv.qmd)), we would say that the sets of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, {A, C}, because each pair in brackets has *identical* in and out neighborhoods. Nodes {E} and {F} should be in their own singleton sets, as they have distinct out-neighborhoods even though they share the same in-neighborhood (each other).
+To build some intuition, consider the graph in @fig-be, which is a directed version of a toy example from @borgatti_everett92 [p. 14, Figure 7(a)]. Going by the standard of *structural equivalence* criterion (see [here](sim-structequiv.qmd)), we would say that the sets of structurally equivalent nodes are {J, H}, {G, I}, {D, B}, {A, C}, because each pair in brackets has *identical* in and out neighborhoods. Nodes {E} and {F} should be in their own singleton sets, as they have distinct out-neighborhoods even though they share the same in-neighborhood (each other).
 
 We can ascertain this by reviving our old Euclidean distance function:
 
@@ -281,17 +281,17 @@ h.res <- hclust(D, method = "ward.D2")
 plot(h.res)
 ```
 
-We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in that Zhao et al.'s [-@zhao_etal09] generalized version of `SimRank` does not identify the more general role classes in the Borgatti-Everett graph. It does correctly assigns {E}, {F} to their separate group, but it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
+We specify $\beta = 0.5$ so that `SimRank` gives equal weight to in and out-neighbors. However, we can see in @fig-sr that Zhao et al.'s [-@zhao_etal09] generalized version of `SimRank` does not identify the more general role classes in the Borgatti-Everett graph. It does correctly assigns {E}, {F} to their separate group, but it creates two larger similarity clusters containing nodes {A, B, C, D} and {G, H, I, J} which make sense from the point of view of *proximity* or *cohesion* but not from the point of view of role similarity independently of proximity [@borgatti_everett92]. 
 
 ## RoleSim
 
-We can see that the problem is that nodes like {J, H, A, C} in are not structurally equivalent (since J and H don't share any neighbors with A and C). Instead, they are **automorphically equivalent** (see @borgatti_everett92 for relevant discussion). 
+We can see that the problem is that nodes like {J, H, A, C} in @fig-be-1 are not structurally equivalent (since J and H don't share any neighbors with A and C). Instead, they are **automorphically equivalent** (see @borgatti_everett92 for relevant discussion). 
 
-While automorphic equivalence is a terrible name coming from the depths of graph theory, it has a simple explanation. Two nodes are automorphically equivalent if we could swap the labels of any pair (e.g., J for A and A for J) in the relevant set in , and *nothing* would change in the graph. That is, *every* graph theoretic quantity we could compute would remain the same (density, average shortest path length, diameter, etc.). 
+While automorphic equivalence is a terrible name coming from the depths of graph theory, it has a simple explanation. Two nodes are automorphically equivalent if we could swap the labels of any pair (e.g., J for A and A for J) in the relevant set in @fig-be-1, and *nothing* would change in the graph. That is, *every* graph theoretic quantity we could compute would remain the same (density, average shortest path length, diameter, etc.). 
 
-It is easy to see that nodes inside the set {A, C, J, H} pass this test in . For instance, the graph in has the same properties as , even though J is now a neighbor of B and D, and A is a neighbor of G and I. Such an evil twin graph is called an **automorphism** of the original graph. 
+It is easy to see that nodes inside the set {A, C, J, H} pass this test in @fig-be-1. For instance, the graph in @fig-be-2 has the same properties as @fig-be-1, even though J is now a neighbor of B and D, and A is a neighbor of G and I. Such an evil twin graph is called an **automorphism** of the original graph. 
 
-Of course, this strict graph theoretic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like , since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$), or they are not ($s_{ij} = 0$), with nothing in between. 
+Of course, this strict graph theoretic notion of automorphic equivalence is too strong for most practical applications outside of a toy graph like @fig-be, since it only returns binary outcomes: Either two nodes are in the same automorphically equivalent set ($s_{ij} = 1$), or they are not ($s_{ij} = 0$), with nothing in between. 
 
 What we need instead is a metric of **automorphic similarity** that admits to gradations so that two nodes could be *more or less* automorphically similar, with the idea being that the more automorphically similar two nodes are, the less disruption there is to the graph structure when they are exchanged, and with the Platonic ideal case being *no* disruption whatsoever for strictly automorphically equivalent nodes. 
 
@@ -560,7 +560,7 @@ h.res <- hclust(D, method = "ward.D") # hierarchical clustering
 plot(h.res)
 ```
 
-Indeed it does! As we can see in , nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
+Indeed it does! As we can see in @fig-cs, nodes {A, C, J, H} are put in the same class, as are nodes {B, D, G, I} and {E, F}.
 
 Let us compare the clustering that we obtain in the *Pulp Fiction* network from a measure that is sensitive to automorphic similarity (like `RoleSim`) to the one we obtained using `SimRank`:
 
