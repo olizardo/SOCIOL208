@@ -1778,210 +1778,211 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb27-8"><a href="#cb27-8"></a>\mathbf{M} = \mathbf{A}\mathbf{A}^T</span>
 <span id="cb27-9"><a href="#cb27-9"></a>$$</span>
 <span id="cb27-10"><a href="#cb27-10"></a></span>
-<span id="cb27-11"><a href="#cb27-11"></a>As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in another mode, this also reveals the **duality of persons and groups**: The connections between people are made up of the groups they share, and the connections between groups are revealed by the groups they share.</span>
+<span id="cb27-11"><a href="#cb27-11"></a>As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in another mode, this also reveals the **duality of persons and groups**: The connections between people are made up of the groups they share, and the connections between groups are revealed by the people they share.</span>
 <span id="cb27-12"><a href="#cb27-12"></a></span>
-<span id="cb27-13"><a href="#cb27-13"></a>Thus, computing the common neighbors matrix for both persons and groups (also called the **projection** of the two-mode network into each of its modes) yields a one-mode similarity matrix between people and groups, where similarities are defined by the number of objects in the other mode they share. </span>
-<span id="cb27-14"><a href="#cb27-14"></a></span>
-<span id="cb27-15"><a href="#cb27-15"></a>For the people, the relevant projection is:</span>
-<span id="cb27-16"><a href="#cb27-16"></a></span>
-<span id="cb27-17"><a href="#cb27-17"></a>$$</span>
-<span id="cb27-18"><a href="#cb27-18"></a>\mathbf{P} = \mathbf{A}\mathbf{A}^T</span>
-<span id="cb27-19"><a href="#cb27-19"></a>$$ {#eq-p}</span>
-<span id="cb27-20"><a href="#cb27-20"></a></span>
-<span id="cb27-21"><a href="#cb27-21"></a>And for the groups:</span>
-<span id="cb27-22"><a href="#cb27-22"></a></span>
-<span id="cb27-23"><a href="#cb27-23"></a>$$</span>
-<span id="cb27-24"><a href="#cb27-24"></a>\mathbf{G} = \mathbf{A}^T\mathbf{A}</span>
-<span id="cb27-25"><a href="#cb27-25"></a>$$ {#eq-g}</span>
-<span id="cb27-26"><a href="#cb27-26"></a></span>
-<span id="cb27-27"><a href="#cb27-27"></a>Let's see how this works out with real data by loading our usual friend, the *Southern Women* data:</span>
-<span id="cb27-28"><a href="#cb27-28"></a></span>
-<span id="cb27-31"><a href="#cb27-31"></a><span class="in">```{r}</span></span>
-<span id="cb27-32"><a href="#cb27-32"></a><span class="fu">library</span>(igraph)</span>
-<span id="cb27-33"><a href="#cb27-33"></a><span class="fu">library</span>(networkdata)</span>
-<span id="cb27-34"><a href="#cb27-34"></a>g <span class="ot">&lt;-</span> southern_women</span>
-<span id="cb27-35"><a href="#cb27-35"></a><span class="fu">library</span>(stringr) <span class="co"># using stringr to change names from all caps to title case</span></span>
-<span id="cb27-36"><a href="#cb27-36"></a><span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
-<span id="cb27-37"><a href="#cb27-37"></a><span class="in">```</span></span>
-<span id="cb27-38"><a href="#cb27-38"></a></span>
-<span id="cb27-39"><a href="#cb27-39"></a>In this case, equations and yield:</span>
-<span id="cb27-40"><a href="#cb27-40"></a></span>
-<span id="cb27-43"><a href="#cb27-43"></a><span class="in">```{r}</span></span>
-<span id="cb27-44"><a href="#cb27-44"></a>A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span>
-<span id="cb27-45"><a href="#cb27-45"></a>P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A)</span>
-<span id="cb27-46"><a href="#cb27-46"></a>P</span>
-<span id="cb27-47"><a href="#cb27-47"></a>G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A</span>
-<span id="cb27-48"><a href="#cb27-48"></a>G</span>
-<span id="cb27-49"><a href="#cb27-49"></a><span class="in">```</span></span>
-<span id="cb27-50"><a href="#cb27-50"></a></span>
-<span id="cb27-51"><a href="#cb27-51"></a>The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) shared by each person (group), and the diagonals are the number of memberships of each person (the size of each group/event).</span>
-<span id="cb27-52"><a href="#cb27-52"></a></span>
-<span id="cb27-53"><a href="#cb27-53"></a>In <span class="in">`igraph,`</span> the relevant function is called <span class="in">`bipartite_projection`</span>. It takes a bipartite graph as an input and returns a list containing <span class="in">`igraph`</span> graph objects of both projections by default:</span>
-<span id="cb27-54"><a href="#cb27-54"></a></span>
-<span id="cb27-57"><a href="#cb27-57"></a><span class="in">```{r}</span></span>
-<span id="cb27-58"><a href="#cb27-58"></a>Proj <span class="ot">&lt;-</span> <span class="fu">bipartite_projection</span>(g)</span>
-<span id="cb27-59"><a href="#cb27-59"></a>G.p <span class="ot">&lt;-</span> Proj[[<span class="dv">1</span>]]</span>
-<span id="cb27-60"><a href="#cb27-60"></a>G.g <span class="ot">&lt;-</span> Proj[[<span class="dv">2</span>]]</span>
-<span id="cb27-61"><a href="#cb27-61"></a><span class="in">```</span></span>
-<span id="cb27-62"><a href="#cb27-62"></a></span>
-<span id="cb27-63"><a href="#cb27-63"></a>In the graph objects produced by the <span class="in">`bipartite_projection`</span> function, the actual shared memberships and shared members are stored as an *attribute* of each edge called <span class="in">`weight`</span> used in the plotting code for to set the <span class="in">`edge.width`</span>:</span>
-<span id="cb27-64"><a href="#cb27-64"></a></span>
-<span id="cb27-67"><a href="#cb27-67"></a><span class="in">```{r}</span></span>
-<span id="cb27-68"><a href="#cb27-68"></a><span class="fu">edge_attr</span>(G.p)</span>
-<span id="cb27-69"><a href="#cb27-69"></a><span class="fu">edge_attr</span>(G.g)</span>
-<span id="cb27-70"><a href="#cb27-70"></a><span class="in">```</span></span>
-<span id="cb27-71"><a href="#cb27-71"></a></span>
-<span id="cb27-72"><a href="#cb27-72"></a>So to get the weighted projection matrix, we need to type:</span>
-<span id="cb27-73"><a href="#cb27-73"></a></span>
-<span id="cb27-76"><a href="#cb27-76"></a><span class="in">```{r}</span></span>
-<span id="cb27-77"><a href="#cb27-77"></a><span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(G.p, <span class="at">attr =</span> <span class="st">"weight"</span>))</span>
-<span id="cb27-78"><a href="#cb27-78"></a><span class="in">```</span></span>
-<span id="cb27-79"><a href="#cb27-79"></a></span>
-<span id="cb27-82"><a href="#cb27-82"></a><span class="in">```{r}</span></span>
-<span id="cb27-83"><a href="#cb27-83"></a><span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(G.g, <span class="at">attr =</span> <span class="st">"weight"</span>))</span>
-<span id="cb27-84"><a href="#cb27-84"></a><span class="in">```</span></span>
-<span id="cb27-85"><a href="#cb27-85"></a>We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the <span class="in">`edge.with`</span> argument to the value of the edge weight attribute in the corresponding graph:</span>
-<span id="cb27-86"><a href="#cb27-86"></a></span>
-<span id="cb27-89"><a href="#cb27-89"></a><span class="in">```{r}</span></span>
-<span id="cb27-90"><a href="#cb27-90"></a><span class="co">#| fig-height: 12</span></span>
-<span id="cb27-91"><a href="#cb27-91"></a><span class="co">#| fig-width: 12</span></span>
-<span id="cb27-92"><a href="#cb27-92"></a><span class="co">#| fig-cap: "One mode projections."</span></span>
-<span id="cb27-93"><a href="#cb27-93"></a><span class="co">#| label: fig-projection</span></span>
-<span id="cb27-94"><a href="#cb27-94"></a><span class="co">#| fig-subcap:</span></span>
-<span id="cb27-95"><a href="#cb27-95"></a><span class="co">#| - "Persons."</span></span>
-<span id="cb27-96"><a href="#cb27-96"></a><span class="co">#| - "Groups."</span></span>
-<span id="cb27-97"><a href="#cb27-97"></a><span class="co">#| layout-ncol: 1</span></span>
-<span id="cb27-98"><a href="#cb27-98"></a></span>
-<span id="cb27-99"><a href="#cb27-99"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb27-100"><a href="#cb27-100"></a><span class="fu">plot</span>(G.p,</span>
-<span id="cb27-101"><a href="#cb27-101"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-102"><a href="#cb27-102"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span>,</span>
-<span id="cb27-103"><a href="#cb27-103"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-104"><a href="#cb27-104"></a>  <span class="at">edge.width =</span> <span class="fu">E</span>(G.p)<span class="sc">$</span>weight</span>
-<span id="cb27-105"><a href="#cb27-105"></a>)</span>
-<span id="cb27-106"><a href="#cb27-106"></a></span>
-<span id="cb27-107"><a href="#cb27-107"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb27-108"><a href="#cb27-108"></a><span class="fu">plot</span>(G.g,</span>
-<span id="cb27-109"><a href="#cb27-109"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-110"><a href="#cb27-110"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span>,</span>
-<span id="cb27-111"><a href="#cb27-111"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-112"><a href="#cb27-112"></a>  <span class="at">edge.width =</span> <span class="fu">E</span>(G.g)<span class="sc">$</span>weight</span>
-<span id="cb27-113"><a href="#cb27-113"></a>)</span>
-<span id="cb27-114"><a href="#cb27-114"></a><span class="in">```</span></span>
-<span id="cb27-115"><a href="#cb27-115"></a></span>
-<span id="cb27-116"><a href="#cb27-116"></a>Note that because both <span class="in">`G.p`</span> and <span class="in">`G.g`</span> are **weighted graphs**, we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).</span>
-<span id="cb27-117"><a href="#cb27-117"></a></span>
-<span id="cb27-118"><a href="#cb27-118"></a>In <span class="in">`igraph,`</span> we can do this using the <span class="in">`strength`</span> function, which takes a weighted graph object as input:</span>
-<span id="cb27-119"><a href="#cb27-119"></a></span>
-<span id="cb27-122"><a href="#cb27-122"></a><span class="in">```{r}</span></span>
-<span id="cb27-123"><a href="#cb27-123"></a><span class="fu">strength</span>(G.p)</span>
-<span id="cb27-124"><a href="#cb27-124"></a><span class="fu">strength</span>(G.g)</span>
-<span id="cb27-125"><a href="#cb27-125"></a><span class="in">```</span></span>
-<span id="cb27-126"><a href="#cb27-126"></a></span>
-<span id="cb27-127"><a href="#cb27-127"></a>Interestingly, as noted by @faust97 <span class="co">[</span><span class="ot">p. 167</span><span class="co">]</span>, there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:</span>
-<span id="cb27-128"><a href="#cb27-128"></a></span>
-<span id="cb27-129"><a href="#cb27-129"></a><span class="ss">1. </span>For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.</span>
-<span id="cb27-130"><a href="#cb27-130"></a></span>
-<span id="cb27-131"><a href="#cb27-131"></a><span class="ss">1. </span>For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.</span>
-<span id="cb27-132"><a href="#cb27-132"></a></span>
-<span id="cb27-133"><a href="#cb27-133"></a>We can verify this relationship for Evelyn:</span>
-<span id="cb27-134"><a href="#cb27-134"></a></span>
-<span id="cb27-137"><a href="#cb27-137"></a><span class="in">```{r}</span></span>
-<span id="cb27-138"><a href="#cb27-138"></a>sum.size.evelyn <span class="ot">&lt;-</span> <span class="fu">sum</span>(A[<span class="st">"Evelyn"</span>, ] <span class="sc">*</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>type <span class="sc">==</span> <span class="cn">TRUE</span>)]) <span class="co"># sum of the sizes of the groups Evelyn belongs to</span></span>
-<span id="cb27-139"><a href="#cb27-139"></a>sum.size.evelyn <span class="sc">-</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Evelyn"</span>)]</span>
-<span id="cb27-140"><a href="#cb27-140"></a><span class="in">```</span></span>
-<span id="cb27-141"><a href="#cb27-141"></a></span>
-<span id="cb27-142"><a href="#cb27-142"></a>Which is indeed Evelyn's vertex strength. </span>
-<span id="cb27-143"><a href="#cb27-143"></a></span>
-<span id="cb27-144"><a href="#cb27-144"></a>Dually, the same relation applies to groups:</span>
-<span id="cb27-145"><a href="#cb27-145"></a></span>
-<span id="cb27-148"><a href="#cb27-148"></a><span class="in">```{r}</span></span>
-<span id="cb27-149"><a href="#cb27-149"></a>sum.mem.<span class="fl">6.27</span> <span class="ot">&lt;-</span> <span class="fu">sum</span>(A[, <span class="st">"6/27"</span>] <span class="sc">*</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>type <span class="sc">==</span> <span class="cn">FALSE</span>)]) <span class="co"># sum of the memberships of people in the first group</span></span>
-<span id="cb27-150"><a href="#cb27-150"></a>sum.mem.<span class="fl">6.27</span> <span class="sc">-</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"6/27"</span>)]</span>
-<span id="cb27-151"><a href="#cb27-151"></a><span class="in">```</span></span>
-<span id="cb27-152"><a href="#cb27-152"></a></span>
-<span id="cb27-153"><a href="#cb27-153"></a>Which is indeed the vertex strength of the event held on 6/27.</span>
-<span id="cb27-154"><a href="#cb27-154"></a></span>
-<span id="cb27-155"><a href="#cb27-155"></a><span class="fu">## Visualizing Dual Projections Using the Minimum Spanning Tree</span></span>
-<span id="cb27-156"><a href="#cb27-156"></a></span>
-<span id="cb27-157"><a href="#cb27-157"></a>As we just saw, projecting the original biadjacency matrix using Breiger's <span class="co">[</span><span class="ot">-@breiger74</span><span class="co">]</span> approach results in two weighted one-mode networks. Because there is an edge between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in . This can make it hard to discern the connectivity structure of the projected networks and detect patterns.</span>
-<span id="cb27-158"><a href="#cb27-158"></a></span>
-<span id="cb27-159"><a href="#cb27-159"></a>One approach to simplifying the visual projections of two-mode networks is to compute the **minimum spanning tree**of the resulting weighted graph. For any weighted network, the minimum spanning tree is the graph that connects all nodes using the smallest number of edges that form a tree^<span class="co">[</span><span class="ot">Recall that a tree is a connected graph without any cycles.</span><span class="co">]</span>, which happens to be $N-1$ where $N$ is the number of nodes. </span>
-<span id="cb27-160"><a href="#cb27-160"></a></span>
-<span id="cb27-161"><a href="#cb27-161"></a>To do this, we can follow **Kruskal's Algorithm**. It goes like this:</span>
-<span id="cb27-162"><a href="#cb27-162"></a></span>
-<span id="cb27-163"><a href="#cb27-163"></a><span class="ss">- </span>First, we create an edgelist containing each of the edge weights of the one-mode projection graph.</span>
-<span id="cb27-164"><a href="#cb27-164"></a><span class="ss">- </span>Then we sort the edgelist by weight in increasing order (smallest weights first).</span>
-<span id="cb27-165"><a href="#cb27-165"></a><span class="ss">- </span>Then, we create an undirected empty graph with $N$ nodes.</span>
-<span id="cb27-166"><a href="#cb27-166"></a><span class="ss">- </span>Now, we go down the edgelist, adding edges to the empty graph one at a time, at each step checking that:</span>
-<span id="cb27-167"><a href="#cb27-167"></a><span class="ss"> 1. </span>We are not connecting nodes that have already been connected (avoiding **multiedges**).</span>
-<span id="cb27-168"><a href="#cb27-168"></a><span class="ss"> 1. </span>Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). </span>
-<span id="cb27-169"><a href="#cb27-169"></a></span>
-<span id="cb27-170"><a href="#cb27-170"></a>We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.</span>
-<span id="cb27-171"><a href="#cb27-171"></a></span>
-<span id="cb27-172"><a href="#cb27-172"></a>Here's a function that does all of this, taking the weighted projection <span class="in">`igraph`</span> object as input and returning the minimum spanning tree:</span>
-<span id="cb27-173"><a href="#cb27-173"></a></span>
-<span id="cb27-176"><a href="#cb27-176"></a><span class="in">```{r}</span></span>
-<span id="cb27-177"><a href="#cb27-177"></a>make.mst <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
-<span id="cb27-178"><a href="#cb27-178"></a>  E <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(x), <span class="at">w =</span> <span class="fu">E</span>(x)<span class="sc">$</span>weight) <span class="co"># creating weighted edge list</span></span>
-<span id="cb27-179"><a href="#cb27-179"></a>  E <span class="ot">&lt;-</span> E[<span class="fu">order</span>(E<span class="sc">$</span>w), ] <span class="co"># ordering by edge weight</span></span>
-<span id="cb27-180"><a href="#cb27-180"></a>  Tr <span class="ot">&lt;-</span> <span class="fu">make_empty_graph</span>(<span class="at">n =</span> <span class="fu">vcount</span>(x), <span class="at">directed =</span> <span class="cn">FALSE</span>) <span class="co"># creating empty graph</span></span>
-<span id="cb27-181"><a href="#cb27-181"></a>  <span class="fu">V</span>(Tr)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
-<span id="cb27-182"><a href="#cb27-182"></a>  k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb27-183"><a href="#cb27-183"></a>  n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr)</span>
-<span id="cb27-184"><a href="#cb27-184"></a>  n.v <span class="ot">&lt;-</span> <span class="fu">vcount</span>(Tr) <span class="sc">-</span> <span class="dv">1</span></span>
-<span id="cb27-185"><a href="#cb27-185"></a>  <span class="cf">while</span> (n.e <span class="sc">&lt;</span> n.v) {</span>
-<span id="cb27-186"><a href="#cb27-186"></a>    i <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(x)<span class="sc">$</span>name <span class="sc">==</span> E[k, <span class="dv">1</span>])</span>
-<span id="cb27-187"><a href="#cb27-187"></a>    j <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(x)<span class="sc">$</span>name <span class="sc">==</span> E[k, <span class="dv">2</span>])</span>
-<span id="cb27-188"><a href="#cb27-188"></a>    <span class="cf">if</span> (<span class="fu">are_adjacent</span>(Tr, i, j) <span class="sc">==</span> <span class="dv">0</span>) { <span class="co"># checking nodes are not adjacent</span></span>
-<span id="cb27-189"><a href="#cb27-189"></a>      Tr <span class="ot">&lt;-</span> <span class="fu">add_edges</span>(Tr, <span class="fu">c</span>(i, j)) <span class="co"># add edge</span></span>
-<span id="cb27-190"><a href="#cb27-190"></a>      n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr) <span class="co"># new edge id</span></span>
-<span id="cb27-191"><a href="#cb27-191"></a>      <span class="cf">if</span> (<span class="fu">is_acyclic</span>(Tr) <span class="sc">==</span> <span class="dv">0</span>) { <span class="co"># checking new edge does not add a cycle</span></span>
-<span id="cb27-192"><a href="#cb27-192"></a>        Tr <span class="ot">&lt;-</span> <span class="fu">delete_edges</span>(Tr, n.e) <span class="co"># delete edge if it adds a cycle</span></span>
-<span id="cb27-193"><a href="#cb27-193"></a>      }</span>
-<span id="cb27-194"><a href="#cb27-194"></a>    }</span>
-<span id="cb27-195"><a href="#cb27-195"></a>    n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr)</span>
-<span id="cb27-196"><a href="#cb27-196"></a>    k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb27-197"><a href="#cb27-197"></a>  }</span>
-<span id="cb27-198"><a href="#cb27-198"></a>  <span class="fu">return</span>(Tr)</span>
-<span id="cb27-199"><a href="#cb27-199"></a>}</span>
-<span id="cb27-200"><a href="#cb27-200"></a><span class="in">```</span></span>
-<span id="cb27-201"><a href="#cb27-201"></a></span>
-<span id="cb27-202"><a href="#cb27-202"></a>We can now build the minimum spanning tree graph for each weighted projection:</span>
-<span id="cb27-203"><a href="#cb27-203"></a></span>
-<span id="cb27-206"><a href="#cb27-206"></a><span class="in">```{r}</span></span>
-<span id="cb27-207"><a href="#cb27-207"></a>Tr.p <span class="ot">&lt;-</span> <span class="fu">make.mst</span>(G.p)</span>
-<span id="cb27-208"><a href="#cb27-208"></a>Tr.g <span class="ot">&lt;-</span> <span class="fu">make.mst</span>(G.g)</span>
-<span id="cb27-209"><a href="#cb27-209"></a><span class="in">```</span></span>
-<span id="cb27-210"><a href="#cb27-210"></a></span>
-<span id="cb27-211"><a href="#cb27-211"></a>And here's a point and line plot of the minimum spanning tree for persons and groups in the *Southern Women* data (we use the <span class="in">`layout_as_tree`</span> option in <span class="in">`igraph`</span>):</span>
-<span id="cb27-212"><a href="#cb27-212"></a></span>
-<span id="cb27-215"><a href="#cb27-215"></a><span class="in">```{r}</span></span>
-<span id="cb27-216"><a href="#cb27-216"></a><span class="co">#| fig-height: 12</span></span>
-<span id="cb27-217"><a href="#cb27-217"></a><span class="co">#| fig-width: 12</span></span>
-<span id="cb27-218"><a href="#cb27-218"></a><span class="co">#| fig-cap: "One mode projection MST."</span></span>
-<span id="cb27-219"><a href="#cb27-219"></a><span class="co">#| label: fig-mst</span></span>
-<span id="cb27-220"><a href="#cb27-220"></a><span class="co">#| fig-subcap:</span></span>
-<span id="cb27-221"><a href="#cb27-221"></a><span class="co">#| - "Persons."</span></span>
-<span id="cb27-222"><a href="#cb27-222"></a><span class="co">#| - "Groups."</span></span>
-<span id="cb27-223"><a href="#cb27-223"></a><span class="co">#| layout-ncol: 1</span></span>
-<span id="cb27-224"><a href="#cb27-224"></a></span>
-<span id="cb27-225"><a href="#cb27-225"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb27-226"><a href="#cb27-226"></a><span class="fu">plot</span>(Tr.p,</span>
-<span id="cb27-227"><a href="#cb27-227"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-228"><a href="#cb27-228"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">layout =</span> layout_as_tree,</span>
-<span id="cb27-229"><a href="#cb27-229"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-230"><a href="#cb27-230"></a>  <span class="at">edge.width =</span> <span class="dv">3</span>, <span class="at">vertex.color =</span> <span class="fu">cluster_edge_betweenness</span>(Tr.p)<span class="sc">$</span>membership</span>
-<span id="cb27-231"><a href="#cb27-231"></a>)</span>
-<span id="cb27-232"><a href="#cb27-232"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb27-233"><a href="#cb27-233"></a><span class="fu">plot</span>(Tr.g,</span>
-<span id="cb27-234"><a href="#cb27-234"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-235"><a href="#cb27-235"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">layout =</span> layout_as_tree,</span>
-<span id="cb27-236"><a href="#cb27-236"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
-<span id="cb27-237"><a href="#cb27-237"></a>  <span class="at">edge.width =</span> <span class="dv">3</span>, <span class="at">vertex.color =</span> <span class="fu">cluster_edge_betweenness</span>(Tr.g)<span class="sc">$</span>membership</span>
-<span id="cb27-238"><a href="#cb27-238"></a>)</span>
-<span id="cb27-239"><a href="#cb27-239"></a><span class="in">```</span></span>
-<span id="cb27-240"><a href="#cb27-240"></a></span>
+<span id="cb27-13"><a href="#cb27-13"></a><span class="fu">## The Two-Mode Common Neighbors Matrices</span></span>
+<span id="cb27-14"><a href="#cb27-14"></a>Thus, computing the common neighbors matrix for both persons and groups (also called the **projection** of the two-mode network into each of its modes) yields a one-mode similarity matrix between people and groups, where similarities are defined by the number of objects in the other mode they share. </span>
+<span id="cb27-15"><a href="#cb27-15"></a></span>
+<span id="cb27-16"><a href="#cb27-16"></a>For the people, the relevant projection is:</span>
+<span id="cb27-17"><a href="#cb27-17"></a></span>
+<span id="cb27-18"><a href="#cb27-18"></a>$$</span>
+<span id="cb27-19"><a href="#cb27-19"></a>\mathbf{P} = \mathbf{A}\mathbf{A}^T</span>
+<span id="cb27-20"><a href="#cb27-20"></a>$$ {#eq-p}</span>
+<span id="cb27-21"><a href="#cb27-21"></a></span>
+<span id="cb27-22"><a href="#cb27-22"></a>And for the groups:</span>
+<span id="cb27-23"><a href="#cb27-23"></a></span>
+<span id="cb27-24"><a href="#cb27-24"></a>$$</span>
+<span id="cb27-25"><a href="#cb27-25"></a>\mathbf{G} = \mathbf{A}^T\mathbf{A}</span>
+<span id="cb27-26"><a href="#cb27-26"></a>$$ {#eq-g}</span>
+<span id="cb27-27"><a href="#cb27-27"></a></span>
+<span id="cb27-28"><a href="#cb27-28"></a>Let's see how this works out with real data by loading our usual friend, the *Southern Women* data:</span>
+<span id="cb27-29"><a href="#cb27-29"></a></span>
+<span id="cb27-32"><a href="#cb27-32"></a><span class="in">```{r}</span></span>
+<span id="cb27-33"><a href="#cb27-33"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb27-34"><a href="#cb27-34"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb27-35"><a href="#cb27-35"></a>g <span class="ot">&lt;-</span> southern_women</span>
+<span id="cb27-36"><a href="#cb27-36"></a><span class="fu">library</span>(stringr) <span class="co"># using stringr to change names from all caps to title case</span></span>
+<span id="cb27-37"><a href="#cb27-37"></a><span class="fu">V</span>(g)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">str_to_title</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name)</span>
+<span id="cb27-38"><a href="#cb27-38"></a><span class="in">```</span></span>
+<span id="cb27-39"><a href="#cb27-39"></a></span>
+<span id="cb27-40"><a href="#cb27-40"></a>In this case, equations and yield:</span>
+<span id="cb27-41"><a href="#cb27-41"></a></span>
+<span id="cb27-44"><a href="#cb27-44"></a><span class="in">```{r}</span></span>
+<span id="cb27-45"><a href="#cb27-45"></a>A <span class="ot">&lt;-</span> <span class="fu">as_biadjacency_matrix</span>(g)</span>
+<span id="cb27-46"><a href="#cb27-46"></a>P <span class="ot">&lt;-</span> A <span class="sc">%*%</span> <span class="fu">t</span>(A)</span>
+<span id="cb27-47"><a href="#cb27-47"></a>P</span>
+<span id="cb27-48"><a href="#cb27-48"></a>G <span class="ot">&lt;-</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> A</span>
+<span id="cb27-49"><a href="#cb27-49"></a>G</span>
+<span id="cb27-50"><a href="#cb27-50"></a><span class="in">```</span></span>
+<span id="cb27-51"><a href="#cb27-51"></a></span>
+<span id="cb27-52"><a href="#cb27-52"></a>The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) shared by each person (group), and the diagonals are the number of memberships of each person (the size of each group/event).</span>
+<span id="cb27-53"><a href="#cb27-53"></a></span>
+<span id="cb27-54"><a href="#cb27-54"></a>In <span class="in">`igraph,`</span> the relevant function is called <span class="in">`bipartite_projection`</span>. It takes a bipartite graph as an input and returns a list containing <span class="in">`igraph`</span> graph objects of both projections by default:</span>
+<span id="cb27-55"><a href="#cb27-55"></a></span>
+<span id="cb27-58"><a href="#cb27-58"></a><span class="in">```{r}</span></span>
+<span id="cb27-59"><a href="#cb27-59"></a>Proj <span class="ot">&lt;-</span> <span class="fu">bipartite_projection</span>(g)</span>
+<span id="cb27-60"><a href="#cb27-60"></a>G.p <span class="ot">&lt;-</span> Proj[[<span class="dv">1</span>]]</span>
+<span id="cb27-61"><a href="#cb27-61"></a>G.g <span class="ot">&lt;-</span> Proj[[<span class="dv">2</span>]]</span>
+<span id="cb27-62"><a href="#cb27-62"></a><span class="in">```</span></span>
+<span id="cb27-63"><a href="#cb27-63"></a></span>
+<span id="cb27-64"><a href="#cb27-64"></a>In the graph objects produced by the <span class="in">`bipartite_projection`</span> function, the actual shared memberships and shared members are stored as an *attribute* of each edge called <span class="in">`weight`</span> used in the plotting code for to set the <span class="in">`edge.width`</span>:</span>
+<span id="cb27-65"><a href="#cb27-65"></a></span>
+<span id="cb27-68"><a href="#cb27-68"></a><span class="in">```{r}</span></span>
+<span id="cb27-69"><a href="#cb27-69"></a><span class="fu">edge_attr</span>(G.p)</span>
+<span id="cb27-70"><a href="#cb27-70"></a><span class="fu">edge_attr</span>(G.g)</span>
+<span id="cb27-71"><a href="#cb27-71"></a><span class="in">```</span></span>
+<span id="cb27-72"><a href="#cb27-72"></a></span>
+<span id="cb27-73"><a href="#cb27-73"></a>So to get the weighted projection matrix, we need to type:</span>
+<span id="cb27-74"><a href="#cb27-74"></a></span>
+<span id="cb27-77"><a href="#cb27-77"></a><span class="in">```{r}</span></span>
+<span id="cb27-78"><a href="#cb27-78"></a><span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(G.p, <span class="at">attr =</span> <span class="st">"weight"</span>))</span>
+<span id="cb27-79"><a href="#cb27-79"></a><span class="in">```</span></span>
+<span id="cb27-80"><a href="#cb27-80"></a></span>
+<span id="cb27-83"><a href="#cb27-83"></a><span class="in">```{r}</span></span>
+<span id="cb27-84"><a href="#cb27-84"></a><span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(G.g, <span class="at">attr =</span> <span class="st">"weight"</span>))</span>
+<span id="cb27-85"><a href="#cb27-85"></a><span class="in">```</span></span>
+<span id="cb27-86"><a href="#cb27-86"></a>We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the <span class="in">`edge.with`</span> argument to the value of the edge weight attribute in the corresponding graph:</span>
+<span id="cb27-87"><a href="#cb27-87"></a></span>
+<span id="cb27-90"><a href="#cb27-90"></a><span class="in">```{r}</span></span>
+<span id="cb27-91"><a href="#cb27-91"></a><span class="co">#| fig-height: 12</span></span>
+<span id="cb27-92"><a href="#cb27-92"></a><span class="co">#| fig-width: 12</span></span>
+<span id="cb27-93"><a href="#cb27-93"></a><span class="co">#| fig-cap: "One mode projections."</span></span>
+<span id="cb27-94"><a href="#cb27-94"></a><span class="co">#| label: fig-projection</span></span>
+<span id="cb27-95"><a href="#cb27-95"></a><span class="co">#| fig-subcap:</span></span>
+<span id="cb27-96"><a href="#cb27-96"></a><span class="co">#| - "Persons."</span></span>
+<span id="cb27-97"><a href="#cb27-97"></a><span class="co">#| - "Groups."</span></span>
+<span id="cb27-98"><a href="#cb27-98"></a><span class="co">#| layout-ncol: 2</span></span>
+<span id="cb27-99"><a href="#cb27-99"></a></span>
+<span id="cb27-100"><a href="#cb27-100"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb27-101"><a href="#cb27-101"></a><span class="fu">plot</span>(G.p,</span>
+<span id="cb27-102"><a href="#cb27-102"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-103"><a href="#cb27-103"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span>,</span>
+<span id="cb27-104"><a href="#cb27-104"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-105"><a href="#cb27-105"></a>  <span class="at">edge.width =</span> <span class="fu">E</span>(G.p)<span class="sc">$</span>weight</span>
+<span id="cb27-106"><a href="#cb27-106"></a>)</span>
+<span id="cb27-107"><a href="#cb27-107"></a></span>
+<span id="cb27-108"><a href="#cb27-108"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb27-109"><a href="#cb27-109"></a><span class="fu">plot</span>(G.g,</span>
+<span id="cb27-110"><a href="#cb27-110"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-111"><a href="#cb27-111"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span>,</span>
+<span id="cb27-112"><a href="#cb27-112"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-113"><a href="#cb27-113"></a>  <span class="at">edge.width =</span> <span class="fu">E</span>(G.g)<span class="sc">$</span>weight</span>
+<span id="cb27-114"><a href="#cb27-114"></a>)</span>
+<span id="cb27-115"><a href="#cb27-115"></a><span class="in">```</span></span>
+<span id="cb27-116"><a href="#cb27-116"></a></span>
+<span id="cb27-117"><a href="#cb27-117"></a>Note that because both <span class="in">`G.p`</span> and <span class="in">`G.g`</span> are **weighted graphs**, we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).</span>
+<span id="cb27-118"><a href="#cb27-118"></a></span>
+<span id="cb27-119"><a href="#cb27-119"></a>In <span class="in">`igraph,`</span> we can do this using the <span class="in">`strength`</span> function, which takes a weighted graph object as input:</span>
+<span id="cb27-120"><a href="#cb27-120"></a></span>
+<span id="cb27-123"><a href="#cb27-123"></a><span class="in">```{r}</span></span>
+<span id="cb27-124"><a href="#cb27-124"></a><span class="fu">strength</span>(G.p)</span>
+<span id="cb27-125"><a href="#cb27-125"></a><span class="fu">strength</span>(G.g)</span>
+<span id="cb27-126"><a href="#cb27-126"></a><span class="in">```</span></span>
+<span id="cb27-127"><a href="#cb27-127"></a></span>
+<span id="cb27-128"><a href="#cb27-128"></a>Interestingly, as noted by @faust97 <span class="co">[</span><span class="ot">p. 167</span><span class="co">]</span>, there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:</span>
+<span id="cb27-129"><a href="#cb27-129"></a></span>
+<span id="cb27-130"><a href="#cb27-130"></a><span class="ss">1. </span>For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.</span>
+<span id="cb27-131"><a href="#cb27-131"></a></span>
+<span id="cb27-132"><a href="#cb27-132"></a><span class="ss">1. </span>For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.</span>
+<span id="cb27-133"><a href="#cb27-133"></a></span>
+<span id="cb27-134"><a href="#cb27-134"></a>We can verify this relationship for Evelyn:</span>
+<span id="cb27-135"><a href="#cb27-135"></a></span>
+<span id="cb27-138"><a href="#cb27-138"></a><span class="in">```{r}</span></span>
+<span id="cb27-139"><a href="#cb27-139"></a>sum.size.evelyn <span class="ot">&lt;-</span> <span class="fu">sum</span>(A[<span class="st">"Evelyn"</span>, ] <span class="sc">*</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>type <span class="sc">==</span> <span class="cn">TRUE</span>)]) <span class="co"># sum of the sizes of the groups Evelyn belongs to</span></span>
+<span id="cb27-140"><a href="#cb27-140"></a>sum.size.evelyn <span class="sc">-</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"Evelyn"</span>)]</span>
+<span id="cb27-141"><a href="#cb27-141"></a><span class="in">```</span></span>
+<span id="cb27-142"><a href="#cb27-142"></a></span>
+<span id="cb27-143"><a href="#cb27-143"></a>Which is indeed Evelyn's vertex strength. </span>
+<span id="cb27-144"><a href="#cb27-144"></a></span>
+<span id="cb27-145"><a href="#cb27-145"></a>Dually, the same relation applies to groups:</span>
+<span id="cb27-146"><a href="#cb27-146"></a></span>
+<span id="cb27-149"><a href="#cb27-149"></a><span class="in">```{r}</span></span>
+<span id="cb27-150"><a href="#cb27-150"></a>sum.mem.<span class="fl">6.27</span> <span class="ot">&lt;-</span> <span class="fu">sum</span>(A[, <span class="st">"6/27"</span>] <span class="sc">*</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>type <span class="sc">==</span> <span class="cn">FALSE</span>)]) <span class="co"># sum of the memberships of people in the first group</span></span>
+<span id="cb27-151"><a href="#cb27-151"></a>sum.mem.<span class="fl">6.27</span> <span class="sc">-</span> <span class="fu">degree</span>(g)[<span class="fu">which</span>(<span class="fu">V</span>(g)<span class="sc">$</span>name <span class="sc">==</span> <span class="st">"6/27"</span>)]</span>
+<span id="cb27-152"><a href="#cb27-152"></a><span class="in">```</span></span>
+<span id="cb27-153"><a href="#cb27-153"></a></span>
+<span id="cb27-154"><a href="#cb27-154"></a>Which is indeed the vertex strength of the event held on 6/27.</span>
+<span id="cb27-155"><a href="#cb27-155"></a></span>
+<span id="cb27-156"><a href="#cb27-156"></a><span class="fu">## Visualizing Dual Projections Using the Minimum Spanning Tree</span></span>
+<span id="cb27-157"><a href="#cb27-157"></a></span>
+<span id="cb27-158"><a href="#cb27-158"></a>As we just saw, projecting the original biadjacency matrix using Breiger's <span class="co">[</span><span class="ot">-@breiger74</span><span class="co">]</span> approach results in two weighted one-mode networks. Because there is an edge between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.</span>
+<span id="cb27-159"><a href="#cb27-159"></a></span>
+<span id="cb27-160"><a href="#cb27-160"></a>One approach to simplifying the visual projections of two-mode networks is to compute the **minimum spanning tree** of the resulting weighted graph. For any weighted network, the minimum spanning tree is the graph that connects all nodes using the smallest number of edges that form a tree^<span class="co">[</span><span class="ot">Recall that a tree is a connected graph without any cycles.</span><span class="co">]</span>, which happens to be $N-1$ where $N$ is the number of nodes. </span>
+<span id="cb27-161"><a href="#cb27-161"></a></span>
+<span id="cb27-162"><a href="#cb27-162"></a>To do this, we can follow **Kruskal's Algorithm**. It goes like this:</span>
+<span id="cb27-163"><a href="#cb27-163"></a></span>
+<span id="cb27-164"><a href="#cb27-164"></a><span class="ss">- </span>First, we create an edgelist containing each of the edge weights of the one-mode projection graph.</span>
+<span id="cb27-165"><a href="#cb27-165"></a><span class="ss">- </span>Then we sort the edgelist by weight in increasing order (smallest weights first).</span>
+<span id="cb27-166"><a href="#cb27-166"></a><span class="ss">- </span>Then, we create an undirected empty graph with $N$ nodes.</span>
+<span id="cb27-167"><a href="#cb27-167"></a><span class="ss">- </span>Now, we go down the edgelist, adding edges to the empty graph one at a time, at each step checking that:</span>
+<span id="cb27-168"><a href="#cb27-168"></a><span class="ss"> 1. </span>We are not connecting nodes that have already been connected (avoiding **multiedges**).</span>
+<span id="cb27-169"><a href="#cb27-169"></a><span class="ss"> 1. </span>Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). </span>
+<span id="cb27-170"><a href="#cb27-170"></a></span>
+<span id="cb27-171"><a href="#cb27-171"></a>We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.</span>
+<span id="cb27-172"><a href="#cb27-172"></a></span>
+<span id="cb27-173"><a href="#cb27-173"></a>Here's a function that does all of this, taking the weighted projection <span class="in">`igraph`</span> object as input and returning the minimum spanning tree:</span>
+<span id="cb27-174"><a href="#cb27-174"></a></span>
+<span id="cb27-177"><a href="#cb27-177"></a><span class="in">```{r}</span></span>
+<span id="cb27-178"><a href="#cb27-178"></a>make.mst <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb27-179"><a href="#cb27-179"></a>  E <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">as_edgelist</span>(x), <span class="at">w =</span> <span class="fu">E</span>(x)<span class="sc">$</span>weight) <span class="co"># creating weighted edge list</span></span>
+<span id="cb27-180"><a href="#cb27-180"></a>  E <span class="ot">&lt;-</span> E[<span class="fu">order</span>(E<span class="sc">$</span>w), ] <span class="co"># ordering by edge weight</span></span>
+<span id="cb27-181"><a href="#cb27-181"></a>  Tr <span class="ot">&lt;-</span> <span class="fu">make_empty_graph</span>(<span class="at">n =</span> <span class="fu">vcount</span>(x), <span class="at">directed =</span> <span class="cn">FALSE</span>) <span class="co"># creating empty graph</span></span>
+<span id="cb27-182"><a href="#cb27-182"></a>  <span class="fu">V</span>(Tr)<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="fu">V</span>(x)<span class="sc">$</span>name</span>
+<span id="cb27-183"><a href="#cb27-183"></a>  k <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb27-184"><a href="#cb27-184"></a>  n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr)</span>
+<span id="cb27-185"><a href="#cb27-185"></a>  n.v <span class="ot">&lt;-</span> <span class="fu">vcount</span>(Tr) <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb27-186"><a href="#cb27-186"></a>  <span class="cf">while</span> (n.e <span class="sc">&lt;</span> n.v) {</span>
+<span id="cb27-187"><a href="#cb27-187"></a>    i <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(x)<span class="sc">$</span>name <span class="sc">==</span> E[k, <span class="dv">1</span>])</span>
+<span id="cb27-188"><a href="#cb27-188"></a>    j <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">V</span>(x)<span class="sc">$</span>name <span class="sc">==</span> E[k, <span class="dv">2</span>])</span>
+<span id="cb27-189"><a href="#cb27-189"></a>    <span class="cf">if</span> (<span class="fu">are_adjacent</span>(Tr, i, j) <span class="sc">==</span> <span class="dv">0</span>) { <span class="co"># checking nodes are not adjacent</span></span>
+<span id="cb27-190"><a href="#cb27-190"></a>      Tr <span class="ot">&lt;-</span> <span class="fu">add_edges</span>(Tr, <span class="fu">c</span>(i, j)) <span class="co"># add edge</span></span>
+<span id="cb27-191"><a href="#cb27-191"></a>      n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr) <span class="co"># new edge id</span></span>
+<span id="cb27-192"><a href="#cb27-192"></a>      <span class="cf">if</span> (<span class="fu">is_acyclic</span>(Tr) <span class="sc">==</span> <span class="dv">0</span>) { <span class="co"># checking new edge does not add a cycle</span></span>
+<span id="cb27-193"><a href="#cb27-193"></a>        Tr <span class="ot">&lt;-</span> <span class="fu">delete_edges</span>(Tr, n.e) <span class="co"># delete edge if it adds a cycle</span></span>
+<span id="cb27-194"><a href="#cb27-194"></a>      }</span>
+<span id="cb27-195"><a href="#cb27-195"></a>    }</span>
+<span id="cb27-196"><a href="#cb27-196"></a>    n.e <span class="ot">&lt;-</span> <span class="fu">ecount</span>(Tr)</span>
+<span id="cb27-197"><a href="#cb27-197"></a>    k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb27-198"><a href="#cb27-198"></a>  }</span>
+<span id="cb27-199"><a href="#cb27-199"></a>  <span class="fu">return</span>(Tr)</span>
+<span id="cb27-200"><a href="#cb27-200"></a>}</span>
+<span id="cb27-201"><a href="#cb27-201"></a><span class="in">```</span></span>
+<span id="cb27-202"><a href="#cb27-202"></a></span>
+<span id="cb27-203"><a href="#cb27-203"></a>We can now build the minimum spanning tree graph for each weighted projection:</span>
+<span id="cb27-204"><a href="#cb27-204"></a></span>
+<span id="cb27-207"><a href="#cb27-207"></a><span class="in">```{r}</span></span>
+<span id="cb27-208"><a href="#cb27-208"></a>Tr.p <span class="ot">&lt;-</span> <span class="fu">make.mst</span>(G.p)</span>
+<span id="cb27-209"><a href="#cb27-209"></a>Tr.g <span class="ot">&lt;-</span> <span class="fu">make.mst</span>(G.g)</span>
+<span id="cb27-210"><a href="#cb27-210"></a><span class="in">```</span></span>
+<span id="cb27-211"><a href="#cb27-211"></a></span>
+<span id="cb27-212"><a href="#cb27-212"></a>And here's a point and line plot of the minimum spanning tree for persons and groups in the *Southern Women* data (we use the <span class="in">`layout_as_tree`</span> option in <span class="in">`igraph`</span>):</span>
+<span id="cb27-213"><a href="#cb27-213"></a></span>
+<span id="cb27-216"><a href="#cb27-216"></a><span class="in">```{r}</span></span>
+<span id="cb27-217"><a href="#cb27-217"></a><span class="co">#| fig-height: 12</span></span>
+<span id="cb27-218"><a href="#cb27-218"></a><span class="co">#| fig-width: 12</span></span>
+<span id="cb27-219"><a href="#cb27-219"></a><span class="co">#| fig-cap: "One mode projection MST."</span></span>
+<span id="cb27-220"><a href="#cb27-220"></a><span class="co">#| label: fig-mst</span></span>
+<span id="cb27-221"><a href="#cb27-221"></a><span class="co">#| fig-subcap:</span></span>
+<span id="cb27-222"><a href="#cb27-222"></a><span class="co">#| - "Persons."</span></span>
+<span id="cb27-223"><a href="#cb27-223"></a><span class="co">#| - "Groups."</span></span>
+<span id="cb27-224"><a href="#cb27-224"></a><span class="co">#| layout-ncol: 1</span></span>
+<span id="cb27-225"><a href="#cb27-225"></a></span>
+<span id="cb27-226"><a href="#cb27-226"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb27-227"><a href="#cb27-227"></a><span class="fu">plot</span>(Tr.p,</span>
+<span id="cb27-228"><a href="#cb27-228"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-229"><a href="#cb27-229"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">layout =</span> layout_as_tree,</span>
+<span id="cb27-230"><a href="#cb27-230"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-231"><a href="#cb27-231"></a>  <span class="at">edge.width =</span> <span class="dv">3</span>, <span class="at">vertex.color =</span> <span class="fu">cluster_edge_betweenness</span>(Tr.p)<span class="sc">$</span>membership</span>
+<span id="cb27-232"><a href="#cb27-232"></a>)</span>
+<span id="cb27-233"><a href="#cb27-233"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb27-234"><a href="#cb27-234"></a><span class="fu">plot</span>(Tr.g,</span>
+<span id="cb27-235"><a href="#cb27-235"></a>  <span class="at">vertex.size =</span> <span class="dv">8</span>, <span class="at">vertex.frame.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-236"><a href="#cb27-236"></a>  <span class="at">vertex.label.dist =</span> <span class="dv">2</span>, <span class="at">layout =</span> layout_as_tree,</span>
+<span id="cb27-237"><a href="#cb27-237"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.5</span>, <span class="at">edge.color =</span> <span class="st">"lightgray"</span>,</span>
+<span id="cb27-238"><a href="#cb27-238"></a>  <span class="at">edge.width =</span> <span class="dv">3</span>, <span class="at">vertex.color =</span> <span class="fu">cluster_edge_betweenness</span>(Tr.g)<span class="sc">$</span>membership</span>
+<span id="cb27-239"><a href="#cb27-239"></a>)</span>
+<span id="cb27-240"><a href="#cb27-240"></a><span class="in">```</span></span>
+<span id="cb27-241"><a href="#cb27-241"></a></span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
