@@ -103,7 +103,7 @@ status1 <- function(w) {
     o.x <- x # old status scores
     x <- w %*% o.x # new scores are a function of old scores and adjacency matrix
     x <- x / norm(x, type = "E") # normalizing new status scores
-    d <- abs(sum(abs(x) - abs(o.x))) # delta between new and old scores
+    d <- sqrt(sum((x - o.x)^2)) # Euclidean distance between new and old status vectors
   } # end while loop
   return(as.vector(x))
 }
@@ -308,15 +308,16 @@ When $\delta = \gamma = 0$, then $\mathbf{W} = \mathbf{A}$ and we recover the st
 Here is a function that packages everything above into the generalized version:
 
 ```{r}
-prestige.sim <- function(x, delta = 0, gamma = 0) {
-  A <- as.matrix(as_adjacency_matrix(x))
+prestige.sim <- function(w, delta = 0, gamma = 0) {
+  A <- as.matrix(as_adjacency_matrix(w))
   A.p <- A %*% A
   A.q <- A %*% (1 - A)
   A.r <- (1 - A) %*% A
   S <- A.p / (A.p + A.q + A.r)
   D <- 1 - S
   W <- A * S^delta * D^gamma
-  return(abs(eigen(W)$vectors[, 1]))
+  s <- status1(W)
+  return(s)
 }
 ```
 
@@ -474,7 +475,18 @@ round(s.katz / max(s.katz), 3)
 
 It all comes together!
 
+Of course, `igraph` also has a dedicated function to compute the Katz centrality scores, called `alpha_centrality`. It takes a graph as input and returns the scores as output:
+
+```{r}
+    a <- 1 / eigen(A)$values[1] - 1e-05
+    s.katz <- alpha_centrality(g, alpha = a)
+    round(s.katz / max(s.katz), 3)
+```
+
+Note that you have to specify the alpha value to be close to the reciprocal of the first eigenvectors to get the same scores. 
+
 ## Generalizing Katz: Beta Centrality
+
 In another neat (and also hugely cited) paper, @bonacich87 recognized these linkages between the eigenvector and Katz approaches and proposed a more general way to assign prestige scores in networks, which he referred to as **Beta Centrality**. 
 
 The basic idea is that the $\alpha$ parameter in above has a more general interpretation and can be assigned values other than something close to the reciprocal of the largest eigenvalue of the adjacency matrix (which makes it the same as the regular eigenvector score and thus redundant). So we substitute it with a free parameter $\beta$, and rewrite as follows:
@@ -503,7 +515,7 @@ beta.cent <- function(w, beta) {
 }
 ```
 
-This function takes the adjacency matrix (`w`) as input and returns the vector of Beta Centrality scores (`s`) as output, normalized to fall in the zero to one interval. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
+This function takes the adjacency matrix (`w`) as input and returns the vector of Beta Centrality scores (`s`) as output, normalized to fall in the zero to one interval. We use min-max normalization here because a negative `beta` can result in negative scores, and this approach scales them appropriately. Note that if a value outside of the outlawed range is given for the parameter $\beta$, the function computes scores close to the eigenvector centrality ordering. 
 
 And now let's see different rankings of nodes based on different values of $\beta$:
 

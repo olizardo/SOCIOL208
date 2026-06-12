@@ -27,7 +27,8 @@ library(networkdata)
 library(igraph)
 g <- as_undirected(ht_friends, mode = "collapse")
 A <- as.matrix(as_adjacency_matrix(g))
-D.o <- diag(1 / rowSums(A))
+out_degree <- rowSums(A)
+D.o <- diag(ifelse(out_degree == 0, 0, 1 / out_degree))
 ```
 
 Recalling that the function `rowSums` gives us the row sums of the adjacency matrix, which is the same as each node's outdegree.
@@ -120,8 +121,8 @@ round(s2, 3)
 And, of course, the (normalized) scores produced by this approach are identical to those computed by the `page_rank` function in `igraph` with "damping factor" (to be explained in a second ) set to 1.0:
 
 ```{r}
-pr <- page_rank(g, damping = 1, algo = "arpack")$vector
-round(pr / max(pr), 3)
+pr_scores <- page_rank(g, damping = 1, algo = "arpack")$vector
+round(pr_scores / max(pr_scores), 3)
 ```
 
 So the distributional model of status is the same one implemented in the PageRank algorithm! 
@@ -211,8 +212,8 @@ markov.chain2 <- function(w, seed = 1, q = 100) {
     state[t] <- sample(1:ncol(w), 1, prob = w[i, ])
     i <- state[t]
   }
-  count <- table(states)
-  p <- count / length(states)
+  count <- table(state)
+  p <- count / length(state)
   names(p) <- names(count)
   return(p)
 }
@@ -266,8 +267,8 @@ Which are the same as our more complicated function above.
 Now you may have noticed this already, but these are the same numbers produced by the the PageRank status game!
 
 ```{r}
-names(pr) <- 1:21
-round(pr, 2)
+names(pr_scores) <- 1:21
+round(pr_scores, 2)
 ```
 
 This gives us another (and perhaps) more intuitive interpretation of what the PageRank prestige ranking is all about. Nodes have more prestige if they are more "central" in a network where something is spreading via a random walk process. Higher ranked nodes will be visited more often by the random walker, less-highly-ranked nodes less. 
@@ -283,7 +284,7 @@ g <- ht_advice
 A <- as.matrix(as_adjacency_matrix(g))
 ```
 
-A plot of the advice network is shown in . 
+A plot of the advice network is shown in @fig-krack. 
 
 ```{r}
 #| label: fig-krack
@@ -303,7 +304,8 @@ plot(ht_advice,
 We then compute the $\mathbf{P}$ matrix corresponding to this network:
 
 ```{r}
-D.o <- diag(1 / rowSums(A))
+out_degree <- rowSums(A)
+D.o <- diag(ifelse(out_degree == 0, 0, 1 / out_degree))
 P <- D.o %*% A
 ```
 
@@ -337,8 +339,8 @@ round(s3 / max(s3), 3)
 Which is the same answer you would get from the `igraph` function `page_rank` by setting the "damping" parameter to 0.85:
 
 ```{r}
-pr <- page_rank(g, damping = 0.85, algo = "arpack")$vector
-round(pr / max(pr), 3)
+pr_scores <- page_rank(g, damping = 0.85, algo = "arpack")$vector
+round(pr_scores / max(pr_scores), 3)
 ```
 
 We can see therefore that the damping parameter simply controls the extent to which the PageRank ranking is driven by the directed connectivity of the $\mathbf{P}$ matrix, versus a stochastic or random component. 
