@@ -831,7 +831,7 @@ window.Quarto = {
 <p>This is why the eigenvector idea rewards nodes who are connected to popular others more. Even though everyone begins with a single unit of status, well-connected nodes by degree end up having more of it to distribute.</p>
 <section id="a-degree-normalized-model-of-status" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="a-degree-normalized-model-of-status"><span class="header-section-number">1</span> A Degree-Normalized Model of Status</h2>
-<p>But what if status propagated in the network proportionately to the number of connections one had? For instance, if someone has 100 friends and they only had so much time or energy, they would only have a fraction of status to distribute to others than a person with 10 friends.</p>
+<p>But what if status propagated in the network <em>proportionately</em> to the number of connections one had? For instance, if someone has 100 friends and they only had so much time or energy, they would only have a fraction of status to distribute to others than a person with 10 friends.</p>
 <p>In that case, the node with a hundred friends would only have 1/100 of status units to distribute to each of their connections while the node with 10 friends would have 1/10 units. Under this formulation, being connected to <em>discerning</em> others, that is people who only connect to a few, is better than being connected to others who connect to everyone else indiscriminately.</p>
 <p>How would we implement this model? First, let’s create a variation of the undirected friendship nomination adjacency matrix called the <span class="math inline">\(\mathbf{P}\)</span> matrix. It is defined like this:</p>
 <p><span class="math display">\[
@@ -846,7 +846,8 @@ window.Quarto = {
 <span id="cb1-2"><a href="#cb1-2"></a><span class="fu">library</span>(igraph)</span>
 <span id="cb1-3"><a href="#cb1-3"></a>g <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(ht_friends, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
 <span id="cb1-4"><a href="#cb1-4"></a>A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb1-5"><a href="#cb1-5"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">rowSums</span>(A))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-5"><a href="#cb1-5"></a>out_degree <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb1-6"><a href="#cb1-6"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">ifelse</span>(out_degree <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span> <span class="sc">/</span> out_degree))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>Recalling that the function <code>rowSums</code> gives us the row sums of the adjacency matrix, which is the same as each node’s outdegree.</p>
@@ -984,8 +985,8 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>pr <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="dv">1</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
-<span id="cb18-2"><a href="#cb18-2"></a><span class="fu">round</span>(pr <span class="sc">/</span> <span class="fu">max</span>(pr), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1"></a>pr_scores <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="dv">1</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
+<span id="cb18-2"><a href="#cb18-2"></a><span class="fu">round</span>(pr_scores <span class="sc">/</span> <span class="fu">max</span>(pr_scores), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.500 0.556 0.333 0.389 0.556 0.389 0.167 0.278 0.333 0.444 0.778 0.444
@@ -1034,10 +1035,10 @@ window.Quarto = {
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1"></a><span class="fu">markov.chain1</span>(P)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>  [1]  4  8 17 11 19  3 14 15  6 21  6  9 11  2  5 11 19  1 19  1 17  7 14 15 11
- [26] 18 20 10 20 10  3 10 12 11 20 11 13 11  5 10 20 19  5 11 17 16  2 16 10 12
- [51]  1 12  1 15 11 12 21  6 15 19 17 11 12 21 18 21 12  6 12  1  2  4 17 11 13
- [76]  5 10 16  2  5 19  5 19 20 17 15 19 12 11 19  3 10  3 17  4 12 17 20 11 15</code></pre>
+<pre><code>  [1] 11 20 18 21  2 19  1  2 21  2 21 12 10  8  1 15 17 20 17 10 12  4  2  5 11
+ [26] 17  8  1 15  9  5 13  5 10  9 17  4  1  8 10 17 21 12 21  6  7 17  2 16 10
+ [51] 12  4  1 11 18 20 18  2  1 16  1 19  5  9 10 20 10  3 15 19  2 19  2  4  8
+ [76] 11 15 17  8 11  4  2 17  7 14 19 17 16  1 19 20 18 11  1 16  2  1 11  8 10</code></pre>
 </div>
 </div>
 <p>We can of course create a longer one by changing the <code>q</code> argument while setting the seed node to 5:</p>
@@ -1047,26 +1048,26 @@ window.Quarto = {
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1"></a><span class="fu">markov.chain1</span>(P, <span class="at">q =</span> <span class="dv">500</span>, <span class="at">seed =</span> <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>  [1] 10  9  6 12 11 18 21 18 21  5 15  6 17  5 11  4  2  5 10 20 19  2 19  2 19
- [26] 12 17  7 17  2 21 17  6  2  6 17  7 17  4 11  3 11  9  6  7 17  8  4 12  1
- [51] 15 17  5 21  5 21 18 20 10  5  2  1  4  2 16 17 16  2 21 17 16 10  3 19  3
- [76] 19 15  3 17 15 17  5 19 17  1  2  4  8  4  1  8  1 19 17  9  6 12 11 19  2
-[101]  6 21  6  7  6  7 17  4 16  4  1 12  1  8 11  8  1 11  4 11 15 19 20 18 20
-[126] 11 18  2  5 11 15 19 14 19 15  5  9 15 14 19  2 18 21  2  4 16 10 17 21  2
-[151] 11 20 10 12 11  4  1 11 17  8  4 16  4 11 19 12  6  9 15 11 18 11 13 11 12
-[176]  1 16 17  5 19  1 11  4 17 14 19  5 19 14 15  9  6 17  5 15  9  5 19 20 10
-[201]  9 11 20 10 12  4 12  4  8 10  8  1 15 17 21  2 21 17  9 10  8  1 19  1 16
-[226]  1  2  5 17 19  2 17 14  3 15  3 19 12 21  6  7 14  5 19  5 19 11 12 11  8
-[251] 10 16  1 16 17 14  7 14 19 11 20 17  6 21  2 11 12 21 17  1 16  2 11 19 12
-[276]  1  8 11  5 11  9  6 21  2  6  2 11 19 20 18 11 20 18 20 10 12 19  1 15 14
-[301] 19 17  5 19 11  5  2 11 12  6  9 15 19  3 15 14  5 19 17  5 21 12  6 15 17
-[326] 21 17 19  2 16 10 20 10 20 18 21  6  2 18 20 10  5 13  5 21 17 12  6  9 11
-[351] 13 11  2 18 21  6 21  2  4  8  4  8 17  4  2 18  2  4 16  2 17  3 11 20 17
-[376] 14 19 14  3 10 16 17 14 17  4 17 10  9 10  8  1  4  1 12  1 17 11 19 14  7
-[401] 17 12 17 10  3 14  5 10 17  8  4  8 11 13  5 19 14 15 14  7 17 12  4  8 10
-[426] 12  4 12 17 15 11  8  4 17 21  6  9 10 12 10 20 11 19 11 13  5 14  5 10  9
-[451] 11  5 14  7 17 16  4  8 10 12 21 18 11 15  1 12 21 18 11 17  1 11 19  5 13
-[476]  5 11  8  1  8  4 16  4 11  5 19 11  4  2 11  9 17 12 19 14  5 15  6  2  6</code></pre>
+<pre><code>  [1] 21  6  9 17  3 11  8  1 19 20 10  9 10 12 19  2  5 17 19 20 10  5 14  3 19
+ [26] 17  1  4  1  4  1 12  4 16  2 17 14 19 20 19 20 10 17 21  5 13  5 11 15  9
+ [51]  6 21  5 10  9 10 17  1 17  9  5 17  9  5 14  5 19  2  6  7  6 21 18 11  1
+ [76] 16  1 12 17  8  4  8  4  8 11 20 10  9 15 17  4  1 17 16 10  3 14 17 20 11
+[101]  9 10 16 17  3 17 15 11 18  2 18 21 17 14 15  6 17 11  3 19 14  5 15 11 13
+[126] 11 13 11 12 11 15 14 15  6 21  2 21 18 21 12 21  2 16  2  4 17  9  5 19 20
+[151] 19  3 11 12  6  7 14 19  5 17 21  6  2  5  2 17  8 10  9 15 14  7 17  8 10
+[176] 16  2 18 20 19 14  3 11 13 11 17  9 17 12 21  5 15  1  2  5 15 14  5  2 17
+[201]  3 15 11 17 21 17  2  1  8  4 12  1  4  1  4  8 17  2 11 20 17  5 17  7 14
+[226]  5 19  3 10 16  1  4 12 11  4 11  4 12 10  8  1 19 12  4 11  3 15  5 14  5
+[251] 13  5 13  5 21  5 15  5  2 16  4 11 19 20 18 20 18  2  1 12  6 15 17  6  2
+[276]  6 21  6  2  6  2  4 12  4 16  1 15  6  7 14  5 19 17 19 11 20 17 11 13 11
+[301]  4  8  4 11 18 21  5 19  3 19  5 10  3 17  8  1 19 17  7 14 15  1  2  6  7
+[326] 14  3 14 19 11 15 19 20 17  8 10  9 17  7 14 19 17  1  2 18 21  2  1 19 11
+[351]  8  1 12  1 17 12 19  5 10  8 11  1  2 19 20 17  2 19  1 11 15  1  4  1  8
+[376]  4  2 19  1 17  6  9 11  2  4 16  2 21  5  9 17 10 20 18 11 12  4 11  5 14
+[401] 19 20 18 21  5 17  7 17 16  1 12  4 16  2 18 21  2  6 21  2  4  8 17  5 13
+[426] 11  5 11  5 11 15 19 11 19 14  7 14  3 17 20 10 16 10  8  1 16 17 21 18 21
+[451] 18  2 11 18 21  6 21 18 21  5  9 17 16 17 10 16  1  8  4  1 17 21  6  2 11
+[476]  2 21  6 15  6  9 11  8 17  9  5 11 17  2  5 11  9 17  6  9  5  2 18 11  4</code></pre>
 </div>
 </div>
 <p>Note that one thing that happens here is that the rumor goes through some nodes more often than others. Another thing that you may be thinking is that the odds that a node will keep repeating itself in this chain has to do with how many neighbors they have since that increases the chances that they will be chosen in the <code>sample</code> line of the function. If you think that, you will be right!</p>
@@ -1085,7 +1086,7 @@ window.Quarto = {
 <pre><code>   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
 0.06 0.06 0.04 0.04 0.06 0.04 0.02 0.03 0.04 0.05 0.09 0.05 0.01 0.04 0.06 0.03 
   17   18   19   20   21 
-0.11 0.02 0.06 0.03 0.04 </code></pre>
+0.11 0.03 0.06 0.03 0.04 </code></pre>
 </div>
 </div>
 <p>Line 1 computes the states of the markov chain after 50000 iterations using our <code>markov.chain1</code> function. Then line 2 uses the native <code>R</code> function <code>table</code> as a handy trick to compute how many times each node shows up in the chain stored in the <code>count</code> object:</p>
@@ -1097,13 +1098,13 @@ window.Quarto = {
 <div class="cell-output cell-output-stdout">
 <pre><code>states
    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
-2828 3100 1969 2206 3207 2208  874 1550 1940 2529 4578 2536  655 1885 2954 1509 
+2782 3090 1937 2235 3211 2184  989 1534 1943 2567 4439 2497  608 1956 2898 1627 
   17   18   19   20   21 
-5672 1217 3178 1550 1855 </code></pre>
+5605 1265 3160 1595 1878 </code></pre>
 </div>
 </div>
 <p>Finally, line 4 divides these numbers by the length of the chain to get the probability.</p>
-<p>Note that the numbers stored in the <code>p</code> vector are readily interpretable. For instance, the <code>0.06</code> in the first spot tells us that if we were to run this chain many times and check where the rumor is at step fifty-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth.</p>
+<p>Note that the numbers stored in the <code>p</code> vector are readily interpretable. For instance, the <code>0.06</code> in the first spot tells us that if we were to run this chain many times and check where the rumor is at step fifty-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth. For instance,</p>
 <p>Like well behaved probabilities, these numbers sum to 1.0:</p>
 <div class="cell">
 <details open="" class="code-fold">
@@ -1125,8 +1126,8 @@ window.Quarto = {
 <span id="cb33-5"><a href="#cb33-5"></a>    state[t] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w), <span class="dv">1</span>, <span class="at">prob =</span> w[i, ])</span>
 <span id="cb33-6"><a href="#cb33-6"></a>    i <span class="ot">&lt;-</span> state[t]</span>
 <span id="cb33-7"><a href="#cb33-7"></a>  }</span>
-<span id="cb33-8"><a href="#cb33-8"></a>  count <span class="ot">&lt;-</span> <span class="fu">table</span>(states)</span>
-<span id="cb33-9"><a href="#cb33-9"></a>  p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(states)</span>
+<span id="cb33-8"><a href="#cb33-8"></a>  count <span class="ot">&lt;-</span> <span class="fu">table</span>(state)</span>
+<span id="cb33-9"><a href="#cb33-9"></a>  p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(state)</span>
 <span id="cb33-10"><a href="#cb33-10"></a>  <span class="fu">names</span>(p) <span class="ot">&lt;-</span> <span class="fu">names</span>(count)</span>
 <span id="cb33-11"><a href="#cb33-11"></a>  <span class="fu">return</span>(p)</span>
 <span id="cb33-12"><a href="#cb33-12"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -1139,12 +1140,10 @@ window.Quarto = {
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1"></a><span class="fu">markov.chain2</span>(P, <span class="at">q =</span> <span class="dv">500</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>      1       2       3       4       5       6       7       8       9      10 
-0.05656 0.06200 0.03938 0.04412 0.06414 0.04416 0.01748 0.03100 0.03880 0.05058 
-     11      12      13      14      15      16      17      18      19      20 
-0.09156 0.05072 0.01310 0.03770 0.05908 0.03018 0.11344 0.02434 0.06356 0.03100 
-     21 
-0.03710 </code></pre>
+<pre><code>    1     2     3     4     5     6     7     8     9    10    11    12    13 
+0.056 0.066 0.026 0.046 0.062 0.032 0.008 0.036 0.024 0.056 0.096 0.072 0.010 
+   14    15    16    17    18    19    20    21 
+0.024 0.050 0.020 0.122 0.024 0.086 0.044 0.040 </code></pre>
 </div>
 </div>
 <p>There is another way to compute these probabilities more directly from the <span class="math inline">\(\mathbf{P}\)</span> matrix. The basic idea is that at any time <span class="math inline">\(t\)</span>, the distribution of probabilities across nodes in the network stored in the vector <span class="math inline">\(\mathbf{x}\)</span> is given by:</p>
@@ -1192,8 +1191,8 @@ window.Quarto = {
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a><span class="fu">names</span>(pr) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb39-2"><a href="#cb39-2"></a><span class="fu">round</span>(pr, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1"></a><span class="fu">names</span>(pr_scores) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb39-2"><a href="#cb39-2"></a><span class="fu">round</span>(pr_scores, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16 
@@ -1215,7 +1214,7 @@ window.Quarto = {
 <span id="cb41-2"><a href="#cb41-2"></a>A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>A plot of the advice network is shown in .</p>
+<p>A plot of the advice network is shown in <a href="#fig-krack" class="quarto-xref">Figure&nbsp;1</a>.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div id="fig-krack" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -1234,8 +1233,9 @@ Figure&nbsp;1: Krackhardt’s managers directed advice network.
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">rowSums</span>(A))</span>
-<span id="cb42-2"><a href="#cb42-2"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1"></a>out_degree <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb42-2"><a href="#cb42-2"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">ifelse</span>(out_degree <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span> <span class="sc">/</span> out_degree))</span>
+<span id="cb42-3"><a href="#cb42-3"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>One issue that arises in computing the <span class="math inline">\(\mathbf{P}\)</span> for directed graphs is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in <a href="#fig-krack" class="quarto-xref">Figure&nbsp;1</a>, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21.</p>
@@ -1270,8 +1270,8 @@ Figure&nbsp;1: Krackhardt’s managers directed advice network.
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>pr <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="fl">0.85</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
-<span id="cb46-2"><a href="#cb46-2"></a><span class="fu">round</span>(pr <span class="sc">/</span> <span class="fu">max</span>(pr), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1"></a>pr_scores <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="fl">0.85</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
+<span id="cb46-2"><a href="#cb46-2"></a><span class="fu">round</span>(pr_scores <span class="sc">/</span> <span class="fu">max</span>(pr_scores), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] 0.302 0.573 0.165 0.281 0.100 0.437 0.635 0.256 0.091 0.180 0.237 0.242
@@ -1825,321 +1825,323 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb48-29"><a href="#cb48-29"></a><span class="fu">library</span>(igraph)</span>
 <span id="cb48-30"><a href="#cb48-30"></a>g <span class="ot">&lt;-</span> <span class="fu">as_undirected</span>(ht_friends, <span class="at">mode =</span> <span class="st">"collapse"</span>)</span>
 <span id="cb48-31"><a href="#cb48-31"></a>A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb48-32"><a href="#cb48-32"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">rowSums</span>(A))</span>
-<span id="cb48-33"><a href="#cb48-33"></a><span class="in">```</span></span>
-<span id="cb48-34"><a href="#cb48-34"></a></span>
-<span id="cb48-35"><a href="#cb48-35"></a>Recalling that the function <span class="in">`rowSums`</span> gives us the row sums of the adjacency matrix, which is the same as each node's outdegree.</span>
-<span id="cb48-36"><a href="#cb48-36"></a></span>
-<span id="cb48-37"><a href="#cb48-37"></a>We can check out that the $\mathbf{D}_{out}^{-1}$ indeed contains the quantities we seek by looking at its first few rows and columns:</span>
-<span id="cb48-38"><a href="#cb48-38"></a></span>
-<span id="cb48-41"><a href="#cb48-41"></a><span class="in">```{r}</span></span>
-<span id="cb48-42"><a href="#cb48-42"></a><span class="fu">round</span>(D.o[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span>
-<span id="cb48-43"><a href="#cb48-43"></a><span class="in">```</span></span>
-<span id="cb48-44"><a href="#cb48-44"></a></span>
-<span id="cb48-45"><a href="#cb48-45"></a>We can then create the $\mathbf{P}$ matrix corresponding to the undirected version of the Krackhardt friendship network using matrix multiplication like this:</span>
-<span id="cb48-46"><a href="#cb48-46"></a></span>
+<span id="cb48-32"><a href="#cb48-32"></a>out_degree <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb48-33"><a href="#cb48-33"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">ifelse</span>(out_degree <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span> <span class="sc">/</span> out_degree))</span>
+<span id="cb48-34"><a href="#cb48-34"></a><span class="in">```</span></span>
+<span id="cb48-35"><a href="#cb48-35"></a></span>
+<span id="cb48-36"><a href="#cb48-36"></a>Recalling that the function <span class="in">`rowSums`</span> gives us the row sums of the adjacency matrix, which is the same as each node's outdegree.</span>
+<span id="cb48-37"><a href="#cb48-37"></a></span>
+<span id="cb48-38"><a href="#cb48-38"></a>We can check out that the $\mathbf{D}_{out}^{-1}$ indeed contains the quantities we seek by looking at its first few rows and columns:</span>
+<span id="cb48-39"><a href="#cb48-39"></a></span>
+<span id="cb48-42"><a href="#cb48-42"></a><span class="in">```{r}</span></span>
+<span id="cb48-43"><a href="#cb48-43"></a><span class="fu">round</span>(D.o[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span>
+<span id="cb48-44"><a href="#cb48-44"></a><span class="in">```</span></span>
+<span id="cb48-45"><a href="#cb48-45"></a></span>
+<span id="cb48-46"><a href="#cb48-46"></a>We can then create the $\mathbf{P}$ matrix corresponding to the undirected version of the Krackhardt friendship network using matrix multiplication like this:</span>
 <span id="cb48-47"><a href="#cb48-47"></a></span>
-<span id="cb48-50"><a href="#cb48-50"></a><span class="in">```{r}</span></span>
-<span id="cb48-51"><a href="#cb48-51"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span>
-<span id="cb48-52"><a href="#cb48-52"></a><span class="in">```</span></span>
-<span id="cb48-53"><a href="#cb48-53"></a></span>
-<span id="cb48-54"><a href="#cb48-54"></a>Recalling that <span class="in">`%*%`</span> is the <span class="in">`R`</span> matrix multiplication operator.</span>
-<span id="cb48-55"><a href="#cb48-55"></a></span>
-<span id="cb48-56"><a href="#cb48-56"></a>So the resulting $\mathbf{P}$ is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. </span>
-<span id="cb48-57"><a href="#cb48-57"></a></span>
-<span id="cb48-58"><a href="#cb48-58"></a>Here are the first 10 rows and columns of the new matrix:</span>
-<span id="cb48-59"><a href="#cb48-59"></a></span>
-<span id="cb48-62"><a href="#cb48-62"></a><span class="in">```{r}</span></span>
-<span id="cb48-63"><a href="#cb48-63"></a><span class="fu">round</span>(P[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span>
-<span id="cb48-64"><a href="#cb48-64"></a><span class="in">```</span></span>
-<span id="cb48-65"><a href="#cb48-65"></a></span>
-<span id="cb48-66"><a href="#cb48-66"></a>Note that the entries are now numbers between zero and one and the matrix is *asymmetric*; that is, $p_{ij}$ is not necessarily equal to $p_{ji}$. In fact $p_{ij}$ will only be equal to $p_{ji}$ when $k_i = k_j$ (nodes have the same degree). Each cell in the matrix is thus equal to $1/k_i$ where $k_i$ is the degree of the node in row $i$. </span>
-<span id="cb48-67"><a href="#cb48-67"></a></span>
-<span id="cb48-68"><a href="#cb48-68"></a>Moreover the rows of $\mathbf{P}$ sum to one:</span>
-<span id="cb48-69"><a href="#cb48-69"></a></span>
-<span id="cb48-72"><a href="#cb48-72"></a><span class="in">```{r}</span></span>
-<span id="cb48-73"><a href="#cb48-73"></a><span class="fu">rowSums</span>(P)</span>
-<span id="cb48-74"><a href="#cb48-74"></a><span class="in">```</span></span>
-<span id="cb48-75"><a href="#cb48-75"></a></span>
-<span id="cb48-76"><a href="#cb48-76"></a>Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "outdegree" of each node in the matrix is forced to sum to a fixed number. Substantively this means that we are equalizing the total amount of prestige or status that each node can distribute in the system to a fixed quantity. </span>
-<span id="cb48-77"><a href="#cb48-77"></a></span>
-<span id="cb48-78"><a href="#cb48-78"></a>This means that nodes with a lot of out-neighbors will dissipate this quantity by distributing it across a larger number of recipients (hence their corresponding non-zero entries in the rows of $\mathbf{P}$) will be a small number) and nodes with a few out-neighbors will have more to distribute. </span>
-<span id="cb48-79"><a href="#cb48-79"></a></span>
-<span id="cb48-80"><a href="#cb48-80"></a>Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columns* of the same matrix do not:</span>
-<span id="cb48-81"><a href="#cb48-81"></a></span>
-<span id="cb48-84"><a href="#cb48-84"></a><span class="in">```{r}</span></span>
-<span id="cb48-85"><a href="#cb48-85"></a><span class="fu">round</span>(<span class="fu">colSums</span>(P), <span class="dv">2</span>)</span>
-<span id="cb48-86"><a href="#cb48-86"></a><span class="in">```</span></span>
-<span id="cb48-87"><a href="#cb48-87"></a></span>
-<span id="cb48-88"><a href="#cb48-88"></a>This means that inequalities in the system will be tied to the *indegree* of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix $\mathbf{P}^T$:</span>
-<span id="cb48-89"><a href="#cb48-89"></a></span>
-<span id="cb48-92"><a href="#cb48-92"></a><span class="in">```{r}</span></span>
-<span id="cb48-93"><a href="#cb48-93"></a><span class="fu">round</span>(<span class="fu">rowSums</span>(<span class="fu">t</span>(P)), <span class="dv">2</span>)</span>
-<span id="cb48-94"><a href="#cb48-94"></a><span class="in">```</span></span>
-<span id="cb48-95"><a href="#cb48-95"></a></span>
-<span id="cb48-96"><a href="#cb48-96"></a>This will come in handy in a second.</span>
-<span id="cb48-97"><a href="#cb48-97"></a></span>
-<span id="cb48-98"><a href="#cb48-98"></a>The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a larger indegree in $\mathbf{P}$. </span>
-<span id="cb48-99"><a href="#cb48-99"></a></span>
-<span id="cb48-100"><a href="#cb48-100"></a>Now we can just adapt the the model of status distribution we used for <span class="co">[</span><span class="ot">eigenvector centrality</span><span class="co">](prest-eigen.qmd)</span> but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$, just like we did for the @bonacich72 status score. </span>
-<span id="cb48-101"><a href="#cb48-101"></a></span>
-<span id="cb48-102"><a href="#cb48-102"></a>Here's our old status game function:</span>
-<span id="cb48-103"><a href="#cb48-103"></a></span>
-<span id="cb48-106"><a href="#cb48-106"></a><span class="in">```{r}</span></span>
-<span id="cb48-107"><a href="#cb48-107"></a>status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb48-108"><a href="#cb48-108"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">nrow</span>(w), <span class="fu">nrow</span>(w)) <span class="co"># initial status vector set to one over the number of nodes</span></span>
-<span id="cb48-109"><a href="#cb48-109"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co"># initial delta</span></span>
-<span id="cb48-110"><a href="#cb48-110"></a>  <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
-<span id="cb48-111"><a href="#cb48-111"></a>    o.x <span class="ot">&lt;-</span> x <span class="co"># old status scores</span></span>
-<span id="cb48-112"><a href="#cb48-112"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co"># new scores a function of old scores and adjacency matrix</span></span>
-<span id="cb48-113"><a href="#cb48-113"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new status scoress</span></span>
-<span id="cb48-114"><a href="#cb48-114"></a>    d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co"># delta between new and old scores</span></span>
-<span id="cb48-115"><a href="#cb48-115"></a>  } <span class="co"># end while loop</span></span>
-<span id="cb48-116"><a href="#cb48-116"></a>  <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
-<span id="cb48-117"><a href="#cb48-117"></a>}</span>
-<span id="cb48-118"><a href="#cb48-118"></a><span class="in">```</span></span>
-<span id="cb48-119"><a href="#cb48-119"></a></span>
-<span id="cb48-120"><a href="#cb48-120"></a>At each step, the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:</span>
-<span id="cb48-121"><a href="#cb48-121"></a></span>
-<span id="cb48-124"><a href="#cb48-124"></a><span class="in">```{r}</span></span>
-<span id="cb48-125"><a href="#cb48-125"></a>s2 <span class="ot">&lt;-</span> <span class="fu">status1</span>(<span class="fu">t</span>(P))</span>
-<span id="cb48-126"><a href="#cb48-126"></a>s2 <span class="ot">&lt;-</span> s2 <span class="sc">/</span> <span class="fu">max</span>(s2)</span>
-<span id="cb48-127"><a href="#cb48-127"></a><span class="fu">round</span>(s2, <span class="dv">3</span>)</span>
-<span id="cb48-128"><a href="#cb48-128"></a><span class="in">```</span></span>
-<span id="cb48-129"><a href="#cb48-129"></a></span>
-<span id="cb48-130"><a href="#cb48-130"></a>What if I told you that these numbers are the same as the leading eigenvector of $\mathbf{P}^T$?</span>
-<span id="cb48-131"><a href="#cb48-131"></a></span>
-<span id="cb48-134"><a href="#cb48-134"></a><span class="in">```{r}</span></span>
-<span id="cb48-135"><a href="#cb48-135"></a>s2 <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">eigen</span>(<span class="fu">t</span>(P))<span class="sc">$</span>vector[, <span class="dv">1</span>])</span>
-<span id="cb48-136"><a href="#cb48-136"></a>s2 <span class="ot">&lt;-</span> s2 <span class="sc">/</span> <span class="fu">max</span>(s2)</span>
-<span id="cb48-137"><a href="#cb48-137"></a><span class="fu">round</span>(s2, <span class="dv">3</span>)</span>
-<span id="cb48-138"><a href="#cb48-138"></a><span class="in">```</span></span>
-<span id="cb48-139"><a href="#cb48-139"></a></span>
-<span id="cb48-140"><a href="#cb48-140"></a>And, of course, the (normalized) scores produced by this approach are identical to those computed by the <span class="in">`page_rank`</span> function in <span class="in">`igraph`</span> with "damping factor" (to be explained in a second ) set to 1.0:</span>
-<span id="cb48-141"><a href="#cb48-141"></a></span>
-<span id="cb48-144"><a href="#cb48-144"></a><span class="in">```{r}</span></span>
-<span id="cb48-145"><a href="#cb48-145"></a>pr <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="dv">1</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
-<span id="cb48-146"><a href="#cb48-146"></a><span class="fu">round</span>(pr <span class="sc">/</span> <span class="fu">max</span>(pr), <span class="dv">3</span>)</span>
-<span id="cb48-147"><a href="#cb48-147"></a><span class="in">```</span></span>
-<span id="cb48-148"><a href="#cb48-148"></a></span>
-<span id="cb48-149"><a href="#cb48-149"></a>So the distributional model of status is the same one implemented in the PageRank algorithm! </span>
-<span id="cb48-150"><a href="#cb48-150"></a></span>
-<span id="cb48-151"><a href="#cb48-151"></a><span class="fu">## PageRank as a Markov Diffusion Model</span></span>
-<span id="cb48-152"><a href="#cb48-152"></a></span>
-<span id="cb48-153"><a href="#cb48-153"></a>Remember how we just said that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on node $i$ and the with probability $p_{ij}$ jumps to $j$, who is one of node $i$'s out-neighbors. The probabilities for each $i$ and $j$ combination are stored in the matrix $\mathbf{P}$. </span>
-<span id="cb48-154"><a href="#cb48-154"></a></span>
-<span id="cb48-155"><a href="#cb48-155"></a>So our status game can best be understood as a special case of a **diffusion** game, where what's being diffused through the network is status itself. Let's see how this would work. </span>
-<span id="cb48-156"><a href="#cb48-156"></a></span>
-<span id="cb48-157"><a href="#cb48-157"></a>Imagine we want to spread something through the Krackhardt managers friendship network like a rumor or a piece of information. We start with a seed node $i$ and then track "where" the rumor is at each time step in the network (where the location is a person in the network). The rules of the game are the Markov diffusion model we described above. At each time step the rumor sits on some $j$ and it diffuses to one of $j$'s neighbors $k$ with probability $p_{jk}$. Where the rumor has been before that time step does not affect where it goes in the present.</span>
-<span id="cb48-158"><a href="#cb48-158"></a></span>
-<span id="cb48-159"><a href="#cb48-159"></a>This sequence of transmission events is called a **markov chain**, and when it happens in a graph it is called a **random walk** on the graph. The node at which the rumor sits at a given time $t$ is called the **state** of the markov chain at $t$. For instance, the following function prints out *every* state of the markov chain for some series of steps $q$, given a network transition matrix $\mathbf{P}$ (the <span class="in">`w`</span> argument in the function):</span>
-<span id="cb48-160"><a href="#cb48-160"></a></span>
-<span id="cb48-163"><a href="#cb48-163"></a><span class="in">```{r}</span></span>
-<span id="cb48-164"><a href="#cb48-164"></a>markov.chain1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">q =</span> <span class="dv">100</span>) {</span>
-<span id="cb48-165"><a href="#cb48-165"></a>  state <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co"># initializing state vector</span></span>
-<span id="cb48-166"><a href="#cb48-166"></a>  i <span class="ot">&lt;-</span> seed <span class="co"># setting seed node</span></span>
-<span id="cb48-167"><a href="#cb48-167"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>q) {</span>
-<span id="cb48-168"><a href="#cb48-168"></a>    state[t] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w), <span class="dv">1</span>, <span class="at">prob =</span> w[i, ]) <span class="co"># new state of the chain</span></span>
-<span id="cb48-169"><a href="#cb48-169"></a>    i <span class="ot">&lt;-</span> state[t] <span class="co"># new source node</span></span>
-<span id="cb48-170"><a href="#cb48-170"></a>  }</span>
-<span id="cb48-171"><a href="#cb48-171"></a>  <span class="fu">return</span>(state)</span>
-<span id="cb48-172"><a href="#cb48-172"></a>}</span>
-<span id="cb48-173"><a href="#cb48-173"></a><span class="in">```</span></span>
-<span id="cb48-174"><a href="#cb48-174"></a></span>
-<span id="cb48-175"><a href="#cb48-175"></a>The function above sets the "seed" node to that given in the argument <span class="in">`seed`</span> (by default, node 1) in line 2. Then, in line 4, it enters the <span class="in">`for`</span> loop to run <span class="in">`q`</span> times (in this case 100 times). In line 6 the <span class="in">`state`</span> vector at <span class="in">`t`</span> is set to a random node $j$ sampled from the $\mathbf{P}$ matrix with probability equal to the entry $p_{ij}$ in the $i^{th}$ row of the matrix. </span>
-<span id="cb48-176"><a href="#cb48-176"></a></span>
-<span id="cb48-177"><a href="#cb48-177"></a>For instance when it comes to first node that row looks like:</span>
-<span id="cb48-178"><a href="#cb48-178"></a></span>
-<span id="cb48-181"><a href="#cb48-181"></a><span class="in">```{r}</span></span>
-<span id="cb48-182"><a href="#cb48-182"></a><span class="fu">round</span>(P[<span class="dv">1</span>, ], <span class="dv">2</span>)</span>
-<span id="cb48-183"><a href="#cb48-183"></a><span class="in">```</span></span>
-<span id="cb48-184"><a href="#cb48-184"></a></span>
-<span id="cb48-185"><a href="#cb48-185"></a>Which means that nodes {<span class="in">`r which(P[1, ]!=0)`</span>} (the neighbors of node 1) have an 11% chance each of being sampled in line 6 and the other ones have no chance. Then in line 7 the new source node is set to whatever neighbor of $i$ was sampled in line 6. </span>
-<span id="cb48-186"><a href="#cb48-186"></a></span>
-<span id="cb48-187"><a href="#cb48-187"></a>Here's a markov chain state sequence of length 100 from the managers friendship network, starting with node 1 as the seed:</span>
-<span id="cb48-188"><a href="#cb48-188"></a></span>
-<span id="cb48-191"><a href="#cb48-191"></a><span class="in">```{r}</span></span>
-<span id="cb48-192"><a href="#cb48-192"></a><span class="fu">markov.chain1</span>(P)</span>
-<span id="cb48-193"><a href="#cb48-193"></a><span class="in">```</span></span>
-<span id="cb48-194"><a href="#cb48-194"></a></span>
-<span id="cb48-195"><a href="#cb48-195"></a>We can of course create a longer one by changing the <span class="in">`q`</span> argument while setting the seed node to 5:</span>
-<span id="cb48-196"><a href="#cb48-196"></a></span>
-<span id="cb48-199"><a href="#cb48-199"></a><span class="in">```{r}</span></span>
-<span id="cb48-200"><a href="#cb48-200"></a><span class="fu">markov.chain1</span>(P, <span class="at">q =</span> <span class="dv">500</span>, <span class="at">seed =</span> <span class="dv">5</span>)</span>
-<span id="cb48-201"><a href="#cb48-201"></a><span class="in">```</span></span>
-<span id="cb48-202"><a href="#cb48-202"></a></span>
-<span id="cb48-203"><a href="#cb48-203"></a>Note that one thing that happens here is that the rumor goes through some nodes more often than others. Another thing that you may be thinking is that the odds that a node will keep repeating itself in this chain has to do with how many neighbors they have since that increases the chances that they will be chosen in the <span class="in">`sample`</span> line of the function. If you think that, you will be right!</span>
-<span id="cb48-204"><a href="#cb48-204"></a></span>
-<span id="cb48-205"><a href="#cb48-205"></a>One thing we can do with the long vector of numbers above is compute the *probability* that the chain will be in some state or another after a number of steps $q$. To do that, all we have to do is find out the number of times each of the numbers (from one through twenty one) repeats itself, and then divide by the total number of steps. </span>
-<span id="cb48-206"><a href="#cb48-206"></a></span>
-<span id="cb48-207"><a href="#cb48-207"></a>In <span class="in">`R`</span> we can do that like this, using <span class="in">`q = 50000`</span>:</span>
-<span id="cb48-208"><a href="#cb48-208"></a></span>
-<span id="cb48-211"><a href="#cb48-211"></a><span class="in">```{r}</span></span>
-<span id="cb48-212"><a href="#cb48-212"></a>states <span class="ot">&lt;-</span> <span class="fu">markov.chain1</span>(P, <span class="at">q =</span> <span class="dv">50000</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
-<span id="cb48-213"><a href="#cb48-213"></a>count <span class="ot">&lt;-</span> <span class="fu">table</span>(states)</span>
-<span id="cb48-214"><a href="#cb48-214"></a>p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(states)</span>
-<span id="cb48-215"><a href="#cb48-215"></a><span class="fu">names</span>(p) <span class="ot">&lt;-</span> <span class="fu">names</span>(count)</span>
-<span id="cb48-216"><a href="#cb48-216"></a><span class="fu">round</span>(p, <span class="dv">2</span>)</span>
-<span id="cb48-217"><a href="#cb48-217"></a><span class="in">```</span></span>
-<span id="cb48-218"><a href="#cb48-218"></a></span>
-<span id="cb48-219"><a href="#cb48-219"></a>Line 1 computes the states of the markov chain after 50000 iterations using our <span class="in">`markov.chain1`</span> function. Then line 2 uses the native <span class="in">`R`</span> function <span class="in">`table`</span> as a handy trick to compute how many times each node shows up in the chain stored in the <span class="in">`count`</span> object: </span>
-<span id="cb48-220"><a href="#cb48-220"></a></span>
-<span id="cb48-223"><a href="#cb48-223"></a><span class="in">```{r}</span></span>
-<span id="cb48-224"><a href="#cb48-224"></a><span class="co">#| code-line-numbers: false</span></span>
-<span id="cb48-225"><a href="#cb48-225"></a>count</span>
-<span id="cb48-226"><a href="#cb48-226"></a><span class="in">```</span></span>
-<span id="cb48-227"><a href="#cb48-227"></a></span>
-<span id="cb48-228"><a href="#cb48-228"></a>Finally, line 4 divides these numbers by the length of the chain to get the probability. </span>
-<span id="cb48-229"><a href="#cb48-229"></a></span>
-<span id="cb48-230"><a href="#cb48-230"></a>Note that the numbers stored in the <span class="in">`p`</span> vector are readily interpretable. For instance, the <span class="in">`0.06`</span> in the first spot tells us that if we were to run this chain many times and check where the rumor is at step fifty-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth. For instance, </span>
-<span id="cb48-231"><a href="#cb48-231"></a></span>
-<span id="cb48-232"><a href="#cb48-232"></a>Like well behaved probabilities, these numbers sum to 1.0:</span>
-<span id="cb48-233"><a href="#cb48-233"></a></span>
-<span id="cb48-236"><a href="#cb48-236"></a><span class="in">```{r}</span></span>
-<span id="cb48-237"><a href="#cb48-237"></a><span class="fu">sum</span>(p)</span>
-<span id="cb48-238"><a href="#cb48-238"></a><span class="in">```</span></span>
-<span id="cb48-239"><a href="#cb48-239"></a></span>
-<span id="cb48-240"><a href="#cb48-240"></a>We can incorporate these steps in to a new and improved function like thus:</span>
-<span id="cb48-241"><a href="#cb48-241"></a></span>
-<span id="cb48-244"><a href="#cb48-244"></a><span class="in">```{r}</span></span>
-<span id="cb48-245"><a href="#cb48-245"></a>markov.chain2 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">q =</span> <span class="dv">100</span>) {</span>
-<span id="cb48-246"><a href="#cb48-246"></a>  state <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb48-247"><a href="#cb48-247"></a>  i <span class="ot">&lt;-</span> seed</span>
-<span id="cb48-248"><a href="#cb48-248"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>q) {</span>
-<span id="cb48-249"><a href="#cb48-249"></a>    state[t] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w), <span class="dv">1</span>, <span class="at">prob =</span> w[i, ])</span>
-<span id="cb48-250"><a href="#cb48-250"></a>    i <span class="ot">&lt;-</span> state[t]</span>
-<span id="cb48-251"><a href="#cb48-251"></a>  }</span>
-<span id="cb48-252"><a href="#cb48-252"></a>  count <span class="ot">&lt;-</span> <span class="fu">table</span>(states)</span>
-<span id="cb48-253"><a href="#cb48-253"></a>  p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(states)</span>
-<span id="cb48-254"><a href="#cb48-254"></a>  <span class="fu">names</span>(p) <span class="ot">&lt;-</span> <span class="fu">names</span>(count)</span>
-<span id="cb48-255"><a href="#cb48-255"></a>  <span class="fu">return</span>(p)</span>
-<span id="cb48-256"><a href="#cb48-256"></a>}</span>
-<span id="cb48-257"><a href="#cb48-257"></a><span class="in">```</span></span>
-<span id="cb48-258"><a href="#cb48-258"></a></span>
-<span id="cb48-259"><a href="#cb48-259"></a>Which now does everything in one step:</span>
-<span id="cb48-260"><a href="#cb48-260"></a></span>
-<span id="cb48-263"><a href="#cb48-263"></a><span class="in">```{r}</span></span>
-<span id="cb48-264"><a href="#cb48-264"></a><span class="fu">markov.chain2</span>(P, <span class="at">q =</span> <span class="dv">500</span>)</span>
-<span id="cb48-265"><a href="#cb48-265"></a><span class="in">```</span></span>
-<span id="cb48-266"><a href="#cb48-266"></a></span>
-<span id="cb48-267"><a href="#cb48-267"></a>There is another way to compute these probabilities more directly from the $\mathbf{P}$ matrix. The basic idea is that at any time $t$, the distribution of probabilities across nodes in the network stored in the vector $\mathbf{x}$ is given by:</span>
-<span id="cb48-268"><a href="#cb48-268"></a></span>
-<span id="cb48-269"><a href="#cb48-269"></a>$$</span>
-<span id="cb48-270"><a href="#cb48-270"></a>\mathbf{x}(t) = \mathbf{P}^T\mathbf{x}(t-1)</span>
-<span id="cb48-271"><a href="#cb48-271"></a>$$</span>
-<span id="cb48-272"><a href="#cb48-272"></a></span>
-<span id="cb48-273"><a href="#cb48-273"></a>With the initial probability vector given by:</span>
-<span id="cb48-274"><a href="#cb48-274"></a></span>
-<span id="cb48-275"><a href="#cb48-275"></a>$$</span>
-<span id="cb48-276"><a href="#cb48-276"></a>\mathbf{x}(0) = \mathbf{e}^{(i)}</span>
-<span id="cb48-277"><a href="#cb48-277"></a>$$</span>
-<span id="cb48-278"><a href="#cb48-278"></a></span>
-<span id="cb48-279"><a href="#cb48-279"></a>Where $e^{(i)}$ is a vector containing all zeros except for the $i^{th}$ spot, where it contains a one, indicating the initial seed node. </span>
-<span id="cb48-280"><a href="#cb48-280"></a></span>
-<span id="cb48-281"><a href="#cb48-281"></a>Here's an <span class="in">`R`</span> function that implements this idea:</span>
-<span id="cb48-282"><a href="#cb48-282"></a></span>
-<span id="cb48-285"><a href="#cb48-285"></a><span class="in">```{r}</span></span>
-<span id="cb48-286"><a href="#cb48-286"></a>markov.chain3 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">init =</span> <span class="dv">1</span>, <span class="at">steps =</span> <span class="dv">100</span>) {</span>
-<span id="cb48-287"><a href="#cb48-287"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(w))</span>
-<span id="cb48-288"><a href="#cb48-288"></a>  x[init] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb48-289"><a href="#cb48-289"></a>  P.t <span class="ot">&lt;-</span> <span class="fu">t</span>(w)</span>
-<span id="cb48-290"><a href="#cb48-290"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>steps) {</span>
-<span id="cb48-291"><a href="#cb48-291"></a>    x <span class="ot">&lt;-</span> P.t <span class="sc">%*%</span> x</span>
-<span id="cb48-292"><a href="#cb48-292"></a>  }</span>
-<span id="cb48-293"><a href="#cb48-293"></a>  x <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(x)</span>
-<span id="cb48-294"><a href="#cb48-294"></a>  <span class="fu">names</span>(x) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w)</span>
-<span id="cb48-295"><a href="#cb48-295"></a>  <span class="fu">return</span>(x)</span>
-<span id="cb48-296"><a href="#cb48-296"></a>}</span>
-<span id="cb48-297"><a href="#cb48-297"></a><span class="in">```</span></span>
-<span id="cb48-298"><a href="#cb48-298"></a></span>
-<span id="cb48-299"><a href="#cb48-299"></a>And we can see what it spits out:</span>
-<span id="cb48-300"><a href="#cb48-300"></a></span>
-<span id="cb48-303"><a href="#cb48-303"></a><span class="in">```{r}</span></span>
-<span id="cb48-304"><a href="#cb48-304"></a>p3 <span class="ot">&lt;-</span> <span class="fu">markov.chain3</span>(P)</span>
-<span id="cb48-305"><a href="#cb48-305"></a><span class="fu">round</span>(p3, <span class="dv">2</span>)</span>
-<span id="cb48-306"><a href="#cb48-306"></a><span class="in">```</span></span>
-<span id="cb48-307"><a href="#cb48-307"></a></span>
-<span id="cb48-308"><a href="#cb48-308"></a>Which are the same as our more complicated function above.</span>
-<span id="cb48-309"><a href="#cb48-309"></a></span>
-<span id="cb48-310"><a href="#cb48-310"></a>Now you may have noticed this already, but these are the same numbers produced by the the PageRank status game!</span>
-<span id="cb48-311"><a href="#cb48-311"></a></span>
-<span id="cb48-314"><a href="#cb48-314"></a><span class="in">```{r}</span></span>
-<span id="cb48-315"><a href="#cb48-315"></a><span class="fu">names</span>(pr) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb48-316"><a href="#cb48-316"></a><span class="fu">round</span>(pr, <span class="dv">2</span>)</span>
-<span id="cb48-317"><a href="#cb48-317"></a><span class="in">```</span></span>
-<span id="cb48-318"><a href="#cb48-318"></a></span>
-<span id="cb48-319"><a href="#cb48-319"></a>This gives us another (and perhaps) more intuitive interpretation of what the PageRank prestige ranking is all about. Nodes have more prestige if they are more "central" in a network where something is spreading via a random walk process. Higher ranked nodes will be visited more often by the random walker, less-highly-ranked nodes less. </span>
-<span id="cb48-320"><a href="#cb48-320"></a></span>
-<span id="cb48-321"><a href="#cb48-321"></a>Note that if a random walker is just a *web surfer* then it makes sense that a more highly visited page should be more prestigious (and show up toward the top in your Google search) than a less frequently visited page <span class="co">[</span><span class="ot">@brin_page98</span><span class="co">]</span>.</span>
-<span id="cb48-322"><a href="#cb48-322"></a></span>
-<span id="cb48-323"><a href="#cb48-323"></a><span class="fu">## PageRank with Damping and Teleportation in Directed Graphs</span></span>
-<span id="cb48-324"><a href="#cb48-324"></a></span>
-<span id="cb48-325"><a href="#cb48-325"></a>PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. </span>
-<span id="cb48-326"><a href="#cb48-326"></a></span>
-<span id="cb48-329"><a href="#cb48-329"></a><span class="in">```{r}</span></span>
-<span id="cb48-330"><a href="#cb48-330"></a>g <span class="ot">&lt;-</span> ht_advice</span>
-<span id="cb48-331"><a href="#cb48-331"></a>A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
-<span id="cb48-332"><a href="#cb48-332"></a><span class="in">```</span></span>
-<span id="cb48-333"><a href="#cb48-333"></a></span>
-<span id="cb48-334"><a href="#cb48-334"></a>A plot of the advice network is shown in . </span>
-<span id="cb48-335"><a href="#cb48-335"></a></span>
-<span id="cb48-338"><a href="#cb48-338"></a><span class="in">```{r}</span></span>
-<span id="cb48-339"><a href="#cb48-339"></a><span class="co">#| label: fig-krack</span></span>
-<span id="cb48-340"><a href="#cb48-340"></a><span class="co">#| fig-cap: "Krackhardt's managers directed advice network."</span></span>
-<span id="cb48-341"><a href="#cb48-341"></a><span class="co">#| fig-width: 8</span></span>
-<span id="cb48-342"><a href="#cb48-342"></a><span class="co">#| fig-height: 8</span></span>
-<span id="cb48-343"><a href="#cb48-343"></a><span class="co">#| echo: false</span></span>
-<span id="cb48-344"><a href="#cb48-344"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb48-345"><a href="#cb48-345"></a><span class="fu">plot</span>(ht_advice,</span>
-<span id="cb48-346"><a href="#cb48-346"></a>  <span class="at">vertex.size =</span> <span class="dv">7</span>, <span class="at">vertex.frame.color =</span> <span class="st">"gray"</span>, <span class="at">edge.color =</span> <span class="st">"gray"</span>,</span>
-<span id="cb48-347"><a href="#cb48-347"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
-<span id="cb48-348"><a href="#cb48-348"></a>  <span class="at">vertex.label.color =</span> <span class="st">"red"</span>,</span>
-<span id="cb48-349"><a href="#cb48-349"></a>  <span class="at">vertex.label.dist =</span> <span class="fl">1.5</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span></span>
-<span id="cb48-350"><a href="#cb48-350"></a>)</span>
-<span id="cb48-351"><a href="#cb48-351"></a><span class="in">```</span></span>
-<span id="cb48-352"><a href="#cb48-352"></a></span>
-<span id="cb48-353"><a href="#cb48-353"></a>We then compute the $\mathbf{P}$ matrix corresponding to this network:</span>
-<span id="cb48-354"><a href="#cb48-354"></a></span>
-<span id="cb48-357"><a href="#cb48-357"></a><span class="in">```{r}</span></span>
-<span id="cb48-358"><a href="#cb48-358"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">rowSums</span>(A))</span>
-<span id="cb48-359"><a href="#cb48-359"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span>
-<span id="cb48-360"><a href="#cb48-360"></a><span class="in">```</span></span>
-<span id="cb48-361"><a href="#cb48-361"></a></span>
-<span id="cb48-362"><a href="#cb48-362"></a>One issue that arises in computing the $\mathbf{P}$ for directed graphs is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in @fig-krack, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. </span>
+<span id="cb48-48"><a href="#cb48-48"></a></span>
+<span id="cb48-51"><a href="#cb48-51"></a><span class="in">```{r}</span></span>
+<span id="cb48-52"><a href="#cb48-52"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span>
+<span id="cb48-53"><a href="#cb48-53"></a><span class="in">```</span></span>
+<span id="cb48-54"><a href="#cb48-54"></a></span>
+<span id="cb48-55"><a href="#cb48-55"></a>Recalling that <span class="in">`%*%`</span> is the <span class="in">`R`</span> matrix multiplication operator.</span>
+<span id="cb48-56"><a href="#cb48-56"></a></span>
+<span id="cb48-57"><a href="#cb48-57"></a>So the resulting $\mathbf{P}$ is the original adjacency matrix, in which each non-zero entry is equal to one divided by the outdegree of the corresponding node in each row. </span>
+<span id="cb48-58"><a href="#cb48-58"></a></span>
+<span id="cb48-59"><a href="#cb48-59"></a>Here are the first 10 rows and columns of the new matrix:</span>
+<span id="cb48-60"><a href="#cb48-60"></a></span>
+<span id="cb48-63"><a href="#cb48-63"></a><span class="in">```{r}</span></span>
+<span id="cb48-64"><a href="#cb48-64"></a><span class="fu">round</span>(P[<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>], <span class="dv">2</span>)</span>
+<span id="cb48-65"><a href="#cb48-65"></a><span class="in">```</span></span>
+<span id="cb48-66"><a href="#cb48-66"></a></span>
+<span id="cb48-67"><a href="#cb48-67"></a>Note that the entries are now numbers between zero and one and the matrix is *asymmetric*; that is, $p_{ij}$ is not necessarily equal to $p_{ji}$. In fact $p_{ij}$ will only be equal to $p_{ji}$ when $k_i = k_j$ (nodes have the same degree). Each cell in the matrix is thus equal to $1/k_i$ where $k_i$ is the degree of the node in row $i$. </span>
+<span id="cb48-68"><a href="#cb48-68"></a></span>
+<span id="cb48-69"><a href="#cb48-69"></a>Moreover the rows of $\mathbf{P}$ sum to one:</span>
+<span id="cb48-70"><a href="#cb48-70"></a></span>
+<span id="cb48-73"><a href="#cb48-73"></a><span class="in">```{r}</span></span>
+<span id="cb48-74"><a href="#cb48-74"></a><span class="fu">rowSums</span>(P)</span>
+<span id="cb48-75"><a href="#cb48-75"></a><span class="in">```</span></span>
+<span id="cb48-76"><a href="#cb48-76"></a></span>
+<span id="cb48-77"><a href="#cb48-77"></a>Which means that the $\mathbf{P}$ matrix is **row stochastic**. That is the "outdegree" of each node in the matrix is forced to sum to a fixed number. Substantively this means that we are equalizing the total amount of prestige or status that each node can distribute in the system to a fixed quantity. </span>
+<span id="cb48-78"><a href="#cb48-78"></a></span>
+<span id="cb48-79"><a href="#cb48-79"></a>This means that nodes with a lot of out-neighbors will dissipate this quantity by distributing it across a larger number of recipients (hence their corresponding non-zero entries in the rows of $\mathbf{P}$) will be a small number) and nodes with a few out-neighbors will have more to distribute. </span>
+<span id="cb48-80"><a href="#cb48-80"></a></span>
+<span id="cb48-81"><a href="#cb48-81"></a>Another thing to note is that while the sums of the $\mathbf{P}$ matrix sum to a fixed number (1.0) the sums of the *columns* of the same matrix do not:</span>
+<span id="cb48-82"><a href="#cb48-82"></a></span>
+<span id="cb48-85"><a href="#cb48-85"></a><span class="in">```{r}</span></span>
+<span id="cb48-86"><a href="#cb48-86"></a><span class="fu">round</span>(<span class="fu">colSums</span>(P), <span class="dv">2</span>)</span>
+<span id="cb48-87"><a href="#cb48-87"></a><span class="in">```</span></span>
+<span id="cb48-88"><a href="#cb48-88"></a></span>
+<span id="cb48-89"><a href="#cb48-89"></a>This means that inequalities in the system will be tied to the *indegree* of each node in the $\mathbf{P}$ matrix, which is given by either the column sums of the matrix (as we just saw) or the *row sums* of the *transpose* of the same matrix $\mathbf{P}^T$:</span>
+<span id="cb48-90"><a href="#cb48-90"></a></span>
+<span id="cb48-93"><a href="#cb48-93"></a><span class="in">```{r}</span></span>
+<span id="cb48-94"><a href="#cb48-94"></a><span class="fu">round</span>(<span class="fu">rowSums</span>(<span class="fu">t</span>(P)), <span class="dv">2</span>)</span>
+<span id="cb48-95"><a href="#cb48-95"></a><span class="in">```</span></span>
+<span id="cb48-96"><a href="#cb48-96"></a></span>
+<span id="cb48-97"><a href="#cb48-97"></a>This will come in handy in a second.</span>
+<span id="cb48-98"><a href="#cb48-98"></a></span>
+<span id="cb48-99"><a href="#cb48-99"></a>The $\mathbf{P}$ matrix has many interpretations, but here it just quantifies the idea that the amount of centrality each node can distribute is proportional to their degree, and that the larger the degree, the less there is to distribute (the smaller each cell $p_{ij}$ will be). Meanwhile, it is clear that nodes that are pointed to by many other nodes who themselves don't point to many others have a larger indegree in $\mathbf{P}$. </span>
+<span id="cb48-100"><a href="#cb48-100"></a></span>
+<span id="cb48-101"><a href="#cb48-101"></a>Now we can just adapt the the model of status distribution we used for <span class="co">[</span><span class="ot">eigenvector centrality</span><span class="co">](prest-eigen.qmd)</span> but this time using the $\mathbf{P}$ rather than the $\mathbf{A}$ matrix. Note that because we are interested in the status that comes **into** each node we use the *transpose* of $\mathbf{P}$ rather than $\mathbf{P}$, just like we did for the @bonacich72 status score. </span>
+<span id="cb48-102"><a href="#cb48-102"></a></span>
+<span id="cb48-103"><a href="#cb48-103"></a>Here's our old status game function:</span>
+<span id="cb48-104"><a href="#cb48-104"></a></span>
+<span id="cb48-107"><a href="#cb48-107"></a><span class="in">```{r}</span></span>
+<span id="cb48-108"><a href="#cb48-108"></a>status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb48-109"><a href="#cb48-109"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">nrow</span>(w), <span class="fu">nrow</span>(w)) <span class="co"># initial status vector set to one over the number of nodes</span></span>
+<span id="cb48-110"><a href="#cb48-110"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co"># initial delta</span></span>
+<span id="cb48-111"><a href="#cb48-111"></a>  <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb48-112"><a href="#cb48-112"></a>    o.x <span class="ot">&lt;-</span> x <span class="co"># old status scores</span></span>
+<span id="cb48-113"><a href="#cb48-113"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co"># new scores a function of old scores and adjacency matrix</span></span>
+<span id="cb48-114"><a href="#cb48-114"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new status scoress</span></span>
+<span id="cb48-115"><a href="#cb48-115"></a>    d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co"># delta between new and old scores</span></span>
+<span id="cb48-116"><a href="#cb48-116"></a>  } <span class="co"># end while loop</span></span>
+<span id="cb48-117"><a href="#cb48-117"></a>  <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
+<span id="cb48-118"><a href="#cb48-118"></a>}</span>
+<span id="cb48-119"><a href="#cb48-119"></a><span class="in">```</span></span>
+<span id="cb48-120"><a href="#cb48-120"></a></span>
+<span id="cb48-121"><a href="#cb48-121"></a>At each step, the status of a node is equivalent to the sum of the status scores of their in-neighbors, with more discerning in-neighbors passing along more status than less discerning ones:</span>
+<span id="cb48-122"><a href="#cb48-122"></a></span>
+<span id="cb48-125"><a href="#cb48-125"></a><span class="in">```{r}</span></span>
+<span id="cb48-126"><a href="#cb48-126"></a>s2 <span class="ot">&lt;-</span> <span class="fu">status1</span>(<span class="fu">t</span>(P))</span>
+<span id="cb48-127"><a href="#cb48-127"></a>s2 <span class="ot">&lt;-</span> s2 <span class="sc">/</span> <span class="fu">max</span>(s2)</span>
+<span id="cb48-128"><a href="#cb48-128"></a><span class="fu">round</span>(s2, <span class="dv">3</span>)</span>
+<span id="cb48-129"><a href="#cb48-129"></a><span class="in">```</span></span>
+<span id="cb48-130"><a href="#cb48-130"></a></span>
+<span id="cb48-131"><a href="#cb48-131"></a>What if I told you that these numbers are the same as the leading eigenvector of $\mathbf{P}^T$?</span>
+<span id="cb48-132"><a href="#cb48-132"></a></span>
+<span id="cb48-135"><a href="#cb48-135"></a><span class="in">```{r}</span></span>
+<span id="cb48-136"><a href="#cb48-136"></a>s2 <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">eigen</span>(<span class="fu">t</span>(P))<span class="sc">$</span>vector[, <span class="dv">1</span>])</span>
+<span id="cb48-137"><a href="#cb48-137"></a>s2 <span class="ot">&lt;-</span> s2 <span class="sc">/</span> <span class="fu">max</span>(s2)</span>
+<span id="cb48-138"><a href="#cb48-138"></a><span class="fu">round</span>(s2, <span class="dv">3</span>)</span>
+<span id="cb48-139"><a href="#cb48-139"></a><span class="in">```</span></span>
+<span id="cb48-140"><a href="#cb48-140"></a></span>
+<span id="cb48-141"><a href="#cb48-141"></a>And, of course, the (normalized) scores produced by this approach are identical to those computed by the <span class="in">`page_rank`</span> function in <span class="in">`igraph`</span> with "damping factor" (to be explained in a second ) set to 1.0:</span>
+<span id="cb48-142"><a href="#cb48-142"></a></span>
+<span id="cb48-145"><a href="#cb48-145"></a><span class="in">```{r}</span></span>
+<span id="cb48-146"><a href="#cb48-146"></a>pr_scores <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="dv">1</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
+<span id="cb48-147"><a href="#cb48-147"></a><span class="fu">round</span>(pr_scores <span class="sc">/</span> <span class="fu">max</span>(pr_scores), <span class="dv">3</span>)</span>
+<span id="cb48-148"><a href="#cb48-148"></a><span class="in">```</span></span>
+<span id="cb48-149"><a href="#cb48-149"></a></span>
+<span id="cb48-150"><a href="#cb48-150"></a>So the distributional model of status is the same one implemented in the PageRank algorithm! </span>
+<span id="cb48-151"><a href="#cb48-151"></a></span>
+<span id="cb48-152"><a href="#cb48-152"></a><span class="fu">## PageRank as a Markov Diffusion Model</span></span>
+<span id="cb48-153"><a href="#cb48-153"></a></span>
+<span id="cb48-154"><a href="#cb48-154"></a>Remember how we just said that there are multiple ways of thinking about $\mathbf{P}$? Another way of thinking about the $\mathbf{P}$ matrix is as characterizing the behavior of a **random walker** in the graph. At any time point $t$ the walker (a piece of information, a virus, or status itself) sits on node $i$ and the with probability $p_{ij}$ jumps to $j$, who is one of node $i$'s out-neighbors. The probabilities for each $i$ and $j$ combination are stored in the matrix $\mathbf{P}$. </span>
+<span id="cb48-155"><a href="#cb48-155"></a></span>
+<span id="cb48-156"><a href="#cb48-156"></a>So our status game can best be understood as a special case of a **diffusion** game, where what's being diffused through the network is status itself. Let's see how this would work. </span>
+<span id="cb48-157"><a href="#cb48-157"></a></span>
+<span id="cb48-158"><a href="#cb48-158"></a>Imagine we want to spread something through the Krackhardt managers friendship network like a rumor or a piece of information. We start with a seed node $i$ and then track "where" the rumor is at each time step in the network (where the location is a person in the network). The rules of the game are the Markov diffusion model we described above. At each time step the rumor sits on some $j$ and it diffuses to one of $j$'s neighbors $k$ with probability $p_{jk}$. Where the rumor has been before that time step does not affect where it goes in the present.</span>
+<span id="cb48-159"><a href="#cb48-159"></a></span>
+<span id="cb48-160"><a href="#cb48-160"></a>This sequence of transmission events is called a **markov chain**, and when it happens in a graph it is called a **random walk** on the graph. The node at which the rumor sits at a given time $t$ is called the **state** of the markov chain at $t$. For instance, the following function prints out *every* state of the markov chain for some series of steps $q$, given a network transition matrix $\mathbf{P}$ (the <span class="in">`w`</span> argument in the function):</span>
+<span id="cb48-161"><a href="#cb48-161"></a></span>
+<span id="cb48-164"><a href="#cb48-164"></a><span class="in">```{r}</span></span>
+<span id="cb48-165"><a href="#cb48-165"></a>markov.chain1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">q =</span> <span class="dv">100</span>) {</span>
+<span id="cb48-166"><a href="#cb48-166"></a>  state <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="co"># initializing state vector</span></span>
+<span id="cb48-167"><a href="#cb48-167"></a>  i <span class="ot">&lt;-</span> seed <span class="co"># setting seed node</span></span>
+<span id="cb48-168"><a href="#cb48-168"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>q) {</span>
+<span id="cb48-169"><a href="#cb48-169"></a>    state[t] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w), <span class="dv">1</span>, <span class="at">prob =</span> w[i, ]) <span class="co"># new state of the chain</span></span>
+<span id="cb48-170"><a href="#cb48-170"></a>    i <span class="ot">&lt;-</span> state[t] <span class="co"># new source node</span></span>
+<span id="cb48-171"><a href="#cb48-171"></a>  }</span>
+<span id="cb48-172"><a href="#cb48-172"></a>  <span class="fu">return</span>(state)</span>
+<span id="cb48-173"><a href="#cb48-173"></a>}</span>
+<span id="cb48-174"><a href="#cb48-174"></a><span class="in">```</span></span>
+<span id="cb48-175"><a href="#cb48-175"></a></span>
+<span id="cb48-176"><a href="#cb48-176"></a>The function above sets the "seed" node to that given in the argument <span class="in">`seed`</span> (by default, node 1) in line 2. Then, in line 4, it enters the <span class="in">`for`</span> loop to run <span class="in">`q`</span> times (in this case 100 times). In line 6 the <span class="in">`state`</span> vector at <span class="in">`t`</span> is set to a random node $j$ sampled from the $\mathbf{P}$ matrix with probability equal to the entry $p_{ij}$ in the $i^{th}$ row of the matrix. </span>
+<span id="cb48-177"><a href="#cb48-177"></a></span>
+<span id="cb48-178"><a href="#cb48-178"></a>For instance when it comes to first node that row looks like:</span>
+<span id="cb48-179"><a href="#cb48-179"></a></span>
+<span id="cb48-182"><a href="#cb48-182"></a><span class="in">```{r}</span></span>
+<span id="cb48-183"><a href="#cb48-183"></a><span class="fu">round</span>(P[<span class="dv">1</span>, ], <span class="dv">2</span>)</span>
+<span id="cb48-184"><a href="#cb48-184"></a><span class="in">```</span></span>
+<span id="cb48-185"><a href="#cb48-185"></a></span>
+<span id="cb48-186"><a href="#cb48-186"></a>Which means that nodes {<span class="in">`r which(P[1, ]!=0)`</span>} (the neighbors of node 1) have an 11% chance each of being sampled in line 6 and the other ones have no chance. Then in line 7 the new source node is set to whatever neighbor of $i$ was sampled in line 6. </span>
+<span id="cb48-187"><a href="#cb48-187"></a></span>
+<span id="cb48-188"><a href="#cb48-188"></a>Here's a markov chain state sequence of length 100 from the managers friendship network, starting with node 1 as the seed:</span>
+<span id="cb48-189"><a href="#cb48-189"></a></span>
+<span id="cb48-192"><a href="#cb48-192"></a><span class="in">```{r}</span></span>
+<span id="cb48-193"><a href="#cb48-193"></a><span class="fu">markov.chain1</span>(P)</span>
+<span id="cb48-194"><a href="#cb48-194"></a><span class="in">```</span></span>
+<span id="cb48-195"><a href="#cb48-195"></a></span>
+<span id="cb48-196"><a href="#cb48-196"></a>We can of course create a longer one by changing the <span class="in">`q`</span> argument while setting the seed node to 5:</span>
+<span id="cb48-197"><a href="#cb48-197"></a></span>
+<span id="cb48-200"><a href="#cb48-200"></a><span class="in">```{r}</span></span>
+<span id="cb48-201"><a href="#cb48-201"></a><span class="fu">markov.chain1</span>(P, <span class="at">q =</span> <span class="dv">500</span>, <span class="at">seed =</span> <span class="dv">5</span>)</span>
+<span id="cb48-202"><a href="#cb48-202"></a><span class="in">```</span></span>
+<span id="cb48-203"><a href="#cb48-203"></a></span>
+<span id="cb48-204"><a href="#cb48-204"></a>Note that one thing that happens here is that the rumor goes through some nodes more often than others. Another thing that you may be thinking is that the odds that a node will keep repeating itself in this chain has to do with how many neighbors they have since that increases the chances that they will be chosen in the <span class="in">`sample`</span> line of the function. If you think that, you will be right!</span>
+<span id="cb48-205"><a href="#cb48-205"></a></span>
+<span id="cb48-206"><a href="#cb48-206"></a>One thing we can do with the long vector of numbers above is compute the *probability* that the chain will be in some state or another after a number of steps $q$. To do that, all we have to do is find out the number of times each of the numbers (from one through twenty one) repeats itself, and then divide by the total number of steps. </span>
+<span id="cb48-207"><a href="#cb48-207"></a></span>
+<span id="cb48-208"><a href="#cb48-208"></a>In <span class="in">`R`</span> we can do that like this, using <span class="in">`q = 50000`</span>:</span>
+<span id="cb48-209"><a href="#cb48-209"></a></span>
+<span id="cb48-212"><a href="#cb48-212"></a><span class="in">```{r}</span></span>
+<span id="cb48-213"><a href="#cb48-213"></a>states <span class="ot">&lt;-</span> <span class="fu">markov.chain1</span>(P, <span class="at">q =</span> <span class="dv">50000</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb48-214"><a href="#cb48-214"></a>count <span class="ot">&lt;-</span> <span class="fu">table</span>(states)</span>
+<span id="cb48-215"><a href="#cb48-215"></a>p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(states)</span>
+<span id="cb48-216"><a href="#cb48-216"></a><span class="fu">names</span>(p) <span class="ot">&lt;-</span> <span class="fu">names</span>(count)</span>
+<span id="cb48-217"><a href="#cb48-217"></a><span class="fu">round</span>(p, <span class="dv">2</span>)</span>
+<span id="cb48-218"><a href="#cb48-218"></a><span class="in">```</span></span>
+<span id="cb48-219"><a href="#cb48-219"></a></span>
+<span id="cb48-220"><a href="#cb48-220"></a>Line 1 computes the states of the markov chain after 50000 iterations using our <span class="in">`markov.chain1`</span> function. Then line 2 uses the native <span class="in">`R`</span> function <span class="in">`table`</span> as a handy trick to compute how many times each node shows up in the chain stored in the <span class="in">`count`</span> object: </span>
+<span id="cb48-221"><a href="#cb48-221"></a></span>
+<span id="cb48-224"><a href="#cb48-224"></a><span class="in">```{r}</span></span>
+<span id="cb48-225"><a href="#cb48-225"></a><span class="co">#| code-line-numbers: false</span></span>
+<span id="cb48-226"><a href="#cb48-226"></a>count</span>
+<span id="cb48-227"><a href="#cb48-227"></a><span class="in">```</span></span>
+<span id="cb48-228"><a href="#cb48-228"></a></span>
+<span id="cb48-229"><a href="#cb48-229"></a>Finally, line 4 divides these numbers by the length of the chain to get the probability. </span>
+<span id="cb48-230"><a href="#cb48-230"></a></span>
+<span id="cb48-231"><a href="#cb48-231"></a>Note that the numbers stored in the <span class="in">`p`</span> vector are readily interpretable. For instance, the <span class="in">`0.06`</span> in the first spot tells us that if we were to run this chain many times and check where the rumor is at step fifty-thousand, there is 6% chance that the rumor will be sitting on node 1, while there is a 11% chance that it would be sitting on node 17, a 3% chance that it will be on node 18, and so forth. For instance, </span>
+<span id="cb48-232"><a href="#cb48-232"></a></span>
+<span id="cb48-233"><a href="#cb48-233"></a>Like well behaved probabilities, these numbers sum to 1.0:</span>
+<span id="cb48-234"><a href="#cb48-234"></a></span>
+<span id="cb48-237"><a href="#cb48-237"></a><span class="in">```{r}</span></span>
+<span id="cb48-238"><a href="#cb48-238"></a><span class="fu">sum</span>(p)</span>
+<span id="cb48-239"><a href="#cb48-239"></a><span class="in">```</span></span>
+<span id="cb48-240"><a href="#cb48-240"></a></span>
+<span id="cb48-241"><a href="#cb48-241"></a>We can incorporate these steps in to a new and improved function like thus:</span>
+<span id="cb48-242"><a href="#cb48-242"></a></span>
+<span id="cb48-245"><a href="#cb48-245"></a><span class="in">```{r}</span></span>
+<span id="cb48-246"><a href="#cb48-246"></a>markov.chain2 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">q =</span> <span class="dv">100</span>) {</span>
+<span id="cb48-247"><a href="#cb48-247"></a>  state <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb48-248"><a href="#cb48-248"></a>  i <span class="ot">&lt;-</span> seed</span>
+<span id="cb48-249"><a href="#cb48-249"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>q) {</span>
+<span id="cb48-250"><a href="#cb48-250"></a>    state[t] <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w), <span class="dv">1</span>, <span class="at">prob =</span> w[i, ])</span>
+<span id="cb48-251"><a href="#cb48-251"></a>    i <span class="ot">&lt;-</span> state[t]</span>
+<span id="cb48-252"><a href="#cb48-252"></a>  }</span>
+<span id="cb48-253"><a href="#cb48-253"></a>  count <span class="ot">&lt;-</span> <span class="fu">table</span>(state)</span>
+<span id="cb48-254"><a href="#cb48-254"></a>  p <span class="ot">&lt;-</span> count <span class="sc">/</span> <span class="fu">length</span>(state)</span>
+<span id="cb48-255"><a href="#cb48-255"></a>  <span class="fu">names</span>(p) <span class="ot">&lt;-</span> <span class="fu">names</span>(count)</span>
+<span id="cb48-256"><a href="#cb48-256"></a>  <span class="fu">return</span>(p)</span>
+<span id="cb48-257"><a href="#cb48-257"></a>}</span>
+<span id="cb48-258"><a href="#cb48-258"></a><span class="in">```</span></span>
+<span id="cb48-259"><a href="#cb48-259"></a></span>
+<span id="cb48-260"><a href="#cb48-260"></a>Which now does everything in one step:</span>
+<span id="cb48-261"><a href="#cb48-261"></a></span>
+<span id="cb48-264"><a href="#cb48-264"></a><span class="in">```{r}</span></span>
+<span id="cb48-265"><a href="#cb48-265"></a><span class="fu">markov.chain2</span>(P, <span class="at">q =</span> <span class="dv">500</span>)</span>
+<span id="cb48-266"><a href="#cb48-266"></a><span class="in">```</span></span>
+<span id="cb48-267"><a href="#cb48-267"></a></span>
+<span id="cb48-268"><a href="#cb48-268"></a>There is another way to compute these probabilities more directly from the $\mathbf{P}$ matrix. The basic idea is that at any time $t$, the distribution of probabilities across nodes in the network stored in the vector $\mathbf{x}$ is given by:</span>
+<span id="cb48-269"><a href="#cb48-269"></a></span>
+<span id="cb48-270"><a href="#cb48-270"></a>$$</span>
+<span id="cb48-271"><a href="#cb48-271"></a>\mathbf{x}(t) = \mathbf{P}^T\mathbf{x}(t-1)</span>
+<span id="cb48-272"><a href="#cb48-272"></a>$$</span>
+<span id="cb48-273"><a href="#cb48-273"></a></span>
+<span id="cb48-274"><a href="#cb48-274"></a>With the initial probability vector given by:</span>
+<span id="cb48-275"><a href="#cb48-275"></a></span>
+<span id="cb48-276"><a href="#cb48-276"></a>$$</span>
+<span id="cb48-277"><a href="#cb48-277"></a>\mathbf{x}(0) = \mathbf{e}^{(i)}</span>
+<span id="cb48-278"><a href="#cb48-278"></a>$$</span>
+<span id="cb48-279"><a href="#cb48-279"></a></span>
+<span id="cb48-280"><a href="#cb48-280"></a>Where $e^{(i)}$ is a vector containing all zeros except for the $i^{th}$ spot, where it contains a one, indicating the initial seed node. </span>
+<span id="cb48-281"><a href="#cb48-281"></a></span>
+<span id="cb48-282"><a href="#cb48-282"></a>Here's an <span class="in">`R`</span> function that implements this idea:</span>
+<span id="cb48-283"><a href="#cb48-283"></a></span>
+<span id="cb48-286"><a href="#cb48-286"></a><span class="in">```{r}</span></span>
+<span id="cb48-287"><a href="#cb48-287"></a>markov.chain3 <span class="ot">&lt;-</span> <span class="cf">function</span>(w, <span class="at">init =</span> <span class="dv">1</span>, <span class="at">steps =</span> <span class="dv">100</span>) {</span>
+<span id="cb48-288"><a href="#cb48-288"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">nrow</span>(w))</span>
+<span id="cb48-289"><a href="#cb48-289"></a>  x[init] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb48-290"><a href="#cb48-290"></a>  P.t <span class="ot">&lt;-</span> <span class="fu">t</span>(w)</span>
+<span id="cb48-291"><a href="#cb48-291"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>steps) {</span>
+<span id="cb48-292"><a href="#cb48-292"></a>    x <span class="ot">&lt;-</span> P.t <span class="sc">%*%</span> x</span>
+<span id="cb48-293"><a href="#cb48-293"></a>  }</span>
+<span id="cb48-294"><a href="#cb48-294"></a>  x <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(x)</span>
+<span id="cb48-295"><a href="#cb48-295"></a>  <span class="fu">names</span>(x) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(w)</span>
+<span id="cb48-296"><a href="#cb48-296"></a>  <span class="fu">return</span>(x)</span>
+<span id="cb48-297"><a href="#cb48-297"></a>}</span>
+<span id="cb48-298"><a href="#cb48-298"></a><span class="in">```</span></span>
+<span id="cb48-299"><a href="#cb48-299"></a></span>
+<span id="cb48-300"><a href="#cb48-300"></a>And we can see what it spits out:</span>
+<span id="cb48-301"><a href="#cb48-301"></a></span>
+<span id="cb48-304"><a href="#cb48-304"></a><span class="in">```{r}</span></span>
+<span id="cb48-305"><a href="#cb48-305"></a>p3 <span class="ot">&lt;-</span> <span class="fu">markov.chain3</span>(P)</span>
+<span id="cb48-306"><a href="#cb48-306"></a><span class="fu">round</span>(p3, <span class="dv">2</span>)</span>
+<span id="cb48-307"><a href="#cb48-307"></a><span class="in">```</span></span>
+<span id="cb48-308"><a href="#cb48-308"></a></span>
+<span id="cb48-309"><a href="#cb48-309"></a>Which are the same as our more complicated function above.</span>
+<span id="cb48-310"><a href="#cb48-310"></a></span>
+<span id="cb48-311"><a href="#cb48-311"></a>Now you may have noticed this already, but these are the same numbers produced by the the PageRank status game!</span>
+<span id="cb48-312"><a href="#cb48-312"></a></span>
+<span id="cb48-315"><a href="#cb48-315"></a><span class="in">```{r}</span></span>
+<span id="cb48-316"><a href="#cb48-316"></a><span class="fu">names</span>(pr_scores) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb48-317"><a href="#cb48-317"></a><span class="fu">round</span>(pr_scores, <span class="dv">2</span>)</span>
+<span id="cb48-318"><a href="#cb48-318"></a><span class="in">```</span></span>
+<span id="cb48-319"><a href="#cb48-319"></a></span>
+<span id="cb48-320"><a href="#cb48-320"></a>This gives us another (and perhaps) more intuitive interpretation of what the PageRank prestige ranking is all about. Nodes have more prestige if they are more "central" in a network where something is spreading via a random walk process. Higher ranked nodes will be visited more often by the random walker, less-highly-ranked nodes less. </span>
+<span id="cb48-321"><a href="#cb48-321"></a></span>
+<span id="cb48-322"><a href="#cb48-322"></a>Note that if a random walker is just a *web surfer* then it makes sense that a more highly visited page should be more prestigious (and show up toward the top in your Google search) than a less frequently visited page <span class="co">[</span><span class="ot">@brin_page98</span><span class="co">]</span>.</span>
+<span id="cb48-323"><a href="#cb48-323"></a></span>
+<span id="cb48-324"><a href="#cb48-324"></a><span class="fu">## PageRank with Damping and Teleportation in Directed Graphs</span></span>
+<span id="cb48-325"><a href="#cb48-325"></a></span>
+<span id="cb48-326"><a href="#cb48-326"></a>PageRank of course was designed to deal with **directed graphs** (like the World Wide Web). So let's load up the version of the Krackhardt's Managers data that contains the **advice network** which is an unambiguously directed relation. </span>
+<span id="cb48-327"><a href="#cb48-327"></a></span>
+<span id="cb48-330"><a href="#cb48-330"></a><span class="in">```{r}</span></span>
+<span id="cb48-331"><a href="#cb48-331"></a>g <span class="ot">&lt;-</span> ht_advice</span>
+<span id="cb48-332"><a href="#cb48-332"></a>A <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(g))</span>
+<span id="cb48-333"><a href="#cb48-333"></a><span class="in">```</span></span>
+<span id="cb48-334"><a href="#cb48-334"></a></span>
+<span id="cb48-335"><a href="#cb48-335"></a>A plot of the advice network is shown in @fig-krack. </span>
+<span id="cb48-336"><a href="#cb48-336"></a></span>
+<span id="cb48-339"><a href="#cb48-339"></a><span class="in">```{r}</span></span>
+<span id="cb48-340"><a href="#cb48-340"></a><span class="co">#| label: fig-krack</span></span>
+<span id="cb48-341"><a href="#cb48-341"></a><span class="co">#| fig-cap: "Krackhardt's managers directed advice network."</span></span>
+<span id="cb48-342"><a href="#cb48-342"></a><span class="co">#| fig-width: 8</span></span>
+<span id="cb48-343"><a href="#cb48-343"></a><span class="co">#| fig-height: 8</span></span>
+<span id="cb48-344"><a href="#cb48-344"></a><span class="co">#| echo: false</span></span>
+<span id="cb48-345"><a href="#cb48-345"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb48-346"><a href="#cb48-346"></a><span class="fu">plot</span>(ht_advice,</span>
+<span id="cb48-347"><a href="#cb48-347"></a>  <span class="at">vertex.size =</span> <span class="dv">7</span>, <span class="at">vertex.frame.color =</span> <span class="st">"gray"</span>, <span class="at">edge.color =</span> <span class="st">"gray"</span>,</span>
+<span id="cb48-348"><a href="#cb48-348"></a>  <span class="at">vertex.label.cex =</span> <span class="fl">1.25</span>, <span class="at">edge.arrow.size =</span> <span class="fl">0.25</span>,</span>
+<span id="cb48-349"><a href="#cb48-349"></a>  <span class="at">vertex.label.color =</span> <span class="st">"red"</span>,</span>
+<span id="cb48-350"><a href="#cb48-350"></a>  <span class="at">vertex.label.dist =</span> <span class="fl">1.5</span>, <span class="at">edge.curved =</span> <span class="fl">0.2</span></span>
+<span id="cb48-351"><a href="#cb48-351"></a>)</span>
+<span id="cb48-352"><a href="#cb48-352"></a><span class="in">```</span></span>
+<span id="cb48-353"><a href="#cb48-353"></a></span>
+<span id="cb48-354"><a href="#cb48-354"></a>We then compute the $\mathbf{P}$ matrix corresponding to this network:</span>
+<span id="cb48-355"><a href="#cb48-355"></a></span>
+<span id="cb48-358"><a href="#cb48-358"></a><span class="in">```{r}</span></span>
+<span id="cb48-359"><a href="#cb48-359"></a>out_degree <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(A)</span>
+<span id="cb48-360"><a href="#cb48-360"></a>D.o <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">ifelse</span>(out_degree <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span> <span class="sc">/</span> out_degree))</span>
+<span id="cb48-361"><a href="#cb48-361"></a>P <span class="ot">&lt;-</span> D.o <span class="sc">%*%</span> A</span>
+<span id="cb48-362"><a href="#cb48-362"></a><span class="in">```</span></span>
 <span id="cb48-363"><a href="#cb48-363"></a></span>
-<span id="cb48-364"><a href="#cb48-364"></a>To avoid this issue the original designers of the PageRank algorithm <span class="co">[</span><span class="ot">@brin_page98</span><span class="co">]</span> added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.</span>
+<span id="cb48-364"><a href="#cb48-364"></a>One issue that arises in computing the $\mathbf{P}$ for directed graphs is that there could be nodes with no out-neighbors (so-called sink nodes) or like node 6 in @fig-krack, who has just one out-neighbor (e.g., seeks advice from just one person), in which case the probability is 1.0 that if the random walker is at node 6 it will go to node 21. </span>
 <span id="cb48-365"><a href="#cb48-365"></a></span>
-<span id="cb48-366"><a href="#cb48-366"></a>How do we do that? Well we need to "fix" the $\mathbf{P}$ matrix to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for **G**oogle):</span>
+<span id="cb48-366"><a href="#cb48-366"></a>To avoid this issue the original designers of the PageRank algorithm <span class="co">[</span><span class="ot">@brin_page98</span><span class="co">]</span> added a "fudge" factor: That is, with probability $\alpha$ the random walker should hop from node to node following the directed links in the graph. But once in a while with probability $1-\alpha$ the walker should decide to "teleport" (with uniform probability) to *any* node in the graph whether it is an out-neighbor of the current node or not.</span>
 <span id="cb48-367"><a href="#cb48-367"></a></span>
-<span id="cb48-368"><a href="#cb48-368"></a>$$</span>
-<span id="cb48-369"><a href="#cb48-369"></a> \mathbf{G} = \alpha \mathbf{P} + (1 - \alpha) \mathbf{E}</span>
+<span id="cb48-368"><a href="#cb48-368"></a>How do we do that? Well we need to "fix" the $\mathbf{P}$ matrix to allow for such behavior. So instead of $\mathbf{P}$ we estimate our distributive status model on the matrix $\mathbf{G}$ (yes, for **G**oogle):</span>
+<span id="cb48-369"><a href="#cb48-369"></a></span>
 <span id="cb48-370"><a href="#cb48-370"></a>$$</span>
-<span id="cb48-371"><a href="#cb48-371"></a></span>
-<span id="cb48-372"><a href="#cb48-372"></a>Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being "teleported" to.</span>
+<span id="cb48-371"><a href="#cb48-371"></a> \mathbf{G} = \alpha \mathbf{P} + (1 - \alpha) \mathbf{E}</span>
+<span id="cb48-372"><a href="#cb48-372"></a>$$</span>
 <span id="cb48-373"><a href="#cb48-373"></a></span>
-<span id="cb48-374"><a href="#cb48-374"></a>So, fixing $\alpha = 0.85$ (the standard value chosen by @brin_page98 in their original paper) our $\mathbf{G}$ matrix would be:</span>
+<span id="cb48-374"><a href="#cb48-374"></a>Where $\mathbf{E}$ is a matrix of the same dimensions as $\mathbf{P}$ but containing $1/n$ in every cell indicating that every node has an equal chance of being "teleported" to.</span>
 <span id="cb48-375"><a href="#cb48-375"></a></span>
-<span id="cb48-378"><a href="#cb48-378"></a><span class="in">```{r}</span></span>
-<span id="cb48-379"><a href="#cb48-379"></a>n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
-<span id="cb48-380"><a href="#cb48-380"></a>E <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span> <span class="sc">/</span> n, n, n)</span>
-<span id="cb48-381"><a href="#cb48-381"></a>G <span class="ot">&lt;-</span> (<span class="fl">0.85</span> <span class="sc">*</span> P) <span class="sc">+</span> (<span class="fl">0.15</span> <span class="sc">*</span> E)</span>
-<span id="cb48-382"><a href="#cb48-382"></a><span class="in">```</span></span>
-<span id="cb48-383"><a href="#cb48-383"></a></span>
-<span id="cb48-384"><a href="#cb48-384"></a>And then we just play our status distribution game on the transpose of $\mathbf{G}$:</span>
+<span id="cb48-376"><a href="#cb48-376"></a>So, fixing $\alpha = 0.85$ (the standard value chosen by @brin_page98 in their original paper) our $\mathbf{G}$ matrix would be:</span>
+<span id="cb48-377"><a href="#cb48-377"></a></span>
+<span id="cb48-380"><a href="#cb48-380"></a><span class="in">```{r}</span></span>
+<span id="cb48-381"><a href="#cb48-381"></a>n <span class="ot">&lt;-</span> <span class="fu">vcount</span>(g)</span>
+<span id="cb48-382"><a href="#cb48-382"></a>E <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span> <span class="sc">/</span> n, n, n)</span>
+<span id="cb48-383"><a href="#cb48-383"></a>G <span class="ot">&lt;-</span> (<span class="fl">0.85</span> <span class="sc">*</span> P) <span class="sc">+</span> (<span class="fl">0.15</span> <span class="sc">*</span> E)</span>
+<span id="cb48-384"><a href="#cb48-384"></a><span class="in">```</span></span>
 <span id="cb48-385"><a href="#cb48-385"></a></span>
-<span id="cb48-388"><a href="#cb48-388"></a><span class="in">```{r}</span></span>
-<span id="cb48-389"><a href="#cb48-389"></a>s3 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">status1</span>(<span class="fu">t</span>(G)), <span class="dv">3</span>)</span>
-<span id="cb48-390"><a href="#cb48-390"></a><span class="fu">round</span>(s3 <span class="sc">/</span> <span class="fu">max</span>(s3), <span class="dv">3</span>)</span>
-<span id="cb48-391"><a href="#cb48-391"></a><span class="in">```</span></span>
-<span id="cb48-392"><a href="#cb48-392"></a></span>
-<span id="cb48-393"><a href="#cb48-393"></a>Which is the same answer you would get from the <span class="in">`igraph`</span> function <span class="in">`page_rank`</span> by setting the "damping" parameter to 0.85:</span>
+<span id="cb48-386"><a href="#cb48-386"></a>And then we just play our status distribution game on the transpose of $\mathbf{G}$:</span>
+<span id="cb48-387"><a href="#cb48-387"></a></span>
+<span id="cb48-390"><a href="#cb48-390"></a><span class="in">```{r}</span></span>
+<span id="cb48-391"><a href="#cb48-391"></a>s3 <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">status1</span>(<span class="fu">t</span>(G)), <span class="dv">3</span>)</span>
+<span id="cb48-392"><a href="#cb48-392"></a><span class="fu">round</span>(s3 <span class="sc">/</span> <span class="fu">max</span>(s3), <span class="dv">3</span>)</span>
+<span id="cb48-393"><a href="#cb48-393"></a><span class="in">```</span></span>
 <span id="cb48-394"><a href="#cb48-394"></a></span>
-<span id="cb48-397"><a href="#cb48-397"></a><span class="in">```{r}</span></span>
-<span id="cb48-398"><a href="#cb48-398"></a>pr <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="fl">0.85</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
-<span id="cb48-399"><a href="#cb48-399"></a><span class="fu">round</span>(pr <span class="sc">/</span> <span class="fu">max</span>(pr), <span class="dv">3</span>)</span>
-<span id="cb48-400"><a href="#cb48-400"></a><span class="in">```</span></span>
-<span id="cb48-401"><a href="#cb48-401"></a></span>
-<span id="cb48-402"><a href="#cb48-402"></a>We can see therefore that the damping parameter simply controls the extent to which the PageRank ranking is driven by the directed connectivity of the $\mathbf{P}$ matrix, versus a stochastic or random component. </span>
+<span id="cb48-395"><a href="#cb48-395"></a>Which is the same answer you would get from the <span class="in">`igraph`</span> function <span class="in">`page_rank`</span> by setting the "damping" parameter to 0.85:</span>
+<span id="cb48-396"><a href="#cb48-396"></a></span>
+<span id="cb48-399"><a href="#cb48-399"></a><span class="in">```{r}</span></span>
+<span id="cb48-400"><a href="#cb48-400"></a>pr_scores <span class="ot">&lt;-</span> <span class="fu">page_rank</span>(g, <span class="at">damping =</span> <span class="fl">0.85</span>, <span class="at">algo =</span> <span class="st">"arpack"</span>)<span class="sc">$</span>vector</span>
+<span id="cb48-401"><a href="#cb48-401"></a><span class="fu">round</span>(pr_scores <span class="sc">/</span> <span class="fu">max</span>(pr_scores), <span class="dv">3</span>)</span>
+<span id="cb48-402"><a href="#cb48-402"></a><span class="in">```</span></span>
+<span id="cb48-403"><a href="#cb48-403"></a></span>
+<span id="cb48-404"><a href="#cb48-404"></a>We can see therefore that the damping parameter simply controls the extent to which the PageRank ranking is driven by the directed connectivity of the $\mathbf{P}$ matrix, versus a stochastic or random component. </span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
