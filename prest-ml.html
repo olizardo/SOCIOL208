@@ -832,12 +832,13 @@ window.Quarto = {
 <p><span id="eq-super"><span class="math display">\[
 \mathbf{S} = \mathbf{C} + \alpha(\tilde{\mathbf{A}} \otimes \mathbf{I})
 \tag{1}\]</span></span></p>
-<p>Where <span class="math inline">\(\mathbf{C}\)</span> is a <strong>block-diagonal matrix</strong> of dimensions <span class="math inline">\(NL \times NL\)</span> (<span class="math inline">\(N\)</span> being the number of nodes and <span class="math inline">\(L\)</span> being the number of layers) with each block in the diagonal containing the relevant <span class="math inline">\(N \times N\)</span> centrality matrix for the <span class="math inline">\(l^{th}\)</span> layer, and <span class="math inline">\(\tilde{\mathbf{A}}\)</span> is an <span class="math inline">\(L \times L\)</span> matrix containing the dependencies between each layer, <span class="math inline">\(\mathbf{I}\)</span> is the <span class="math inline">\(N \times N\)</span> <strong>identity matrix</strong> (containing ones along the diagonals and zero in every other cell); finally, <span class="math inline">\(\alpha\)</span> is a tunable parameter (<span class="math inline">\(0 \geq \alpha \leq \infty\)</span>) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more “strongly coupled” the layers are (e.g., scores in one layer affecting scores in the others).</p>
-<p>The <span class="math inline">\(\otimes\)</span> symbol in refers to the <strong>Kronecker product</strong> between the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> and <span class="math inline">\(\mathbf{I}\)</span> (e.g., the supermatrix in which each block is composed of the <span class="math inline">\(\mathbf{I}\)</span> matrix multiplied by the value each cell of the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> matrix).<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>Where <span class="math inline">\(\mathbf{C}\)</span> is a <strong>block-diagonal matrix</strong> of dimensions <span class="math inline">\(NL \times NL\)</span> (<span class="math inline">\(N\)</span> being the number of nodes and <span class="math inline">\(L\)</span> being the number of layers) with each block in the diagonal containing the relevant <span class="math inline">\(N \times N\)</span> centrality matrix for the <span class="math inline">\(l^{th}\)</span> layer, and <span class="math inline">\(\tilde{\mathbf{A}}\)</span> is an <span class="math inline">\(L \times L\)</span> matrix containing the dependencies between each layer, <span class="math inline">\(\mathbf{I}\)</span> is the <span class="math inline">\(N \times N\)</span> <strong>identity matrix</strong> (containing ones along the diagonals and zero in every other cell); finally, <span class="math inline">\(\alpha\)</span> is a tunable parameter (<span class="math inline">\(0 \le \alpha \le \infty\)</span>) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more “strongly coupled” the layers are (e.g., scores in one layer affecting scores in the others).</p>
+<p>The <span class="math inline">\(\otimes\)</span> symbol in <a href="#eq-super" class="quarto-xref">Equation&nbsp;1</a> refers to the <strong>Kronecker product</strong> between the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> and <span class="math inline">\(\mathbf{I}\)</span> (e.g., the supermatrix in which each block is composed of the <span class="math inline">\(\mathbf{I}\)</span> matrix multiplied by the value each cell of the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> matrix).<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p>
+<p>To understand the Kronecker product (<span class="math inline">\(\tilde{\mathbf{A}} \otimes \mathbf{I}\)</span>) without getting bogged down in the linear algebra, think of it as a <strong>macro-level blueprint translator</strong>. Our matrix <span class="math inline">\(\tilde{\mathbf{A}}\)</span> is a high-level map that simply tells us which <em>layers</em> are allowed to talk to each other (for instance, whether friendship influence can spill over into advice). But to build our supermatrix, we need to translate that layer-to-layer blueprint into actual, individual-level connections. Crucially, a person in one layer only links to <em>themselves</em> in another layer—person 5 in friendship doesn’t directly jump to person 12 in advice. The Kronecker product does this translation by taking our layer-to-layer blueprint and stamping a copy of the identity matrix (<span class="math inline">\(\mathbf{I}\)</span>) inside every single slot. Wherever two layers are connected, it automatically lays down a bridge of direct lines connecting every person in the first layer to their exact counterpart in the second layer. Wherever the blueprint says the layers don’t connect, it leaves a block of zeros. It is a mathematical shortcut for scaling a high-level layer map up into a detailed person-to-person bridge network.</p>
 </section>
 <section id="krackhardt-managers-multilayer-network-example" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="krackhardt-managers-multilayer-network-example"><span class="header-section-number">2</span> Krackhardt Managers Multilayer Network Example</h2>
-<p>Let’s see how this would work in real data. We first load the Krackchardt Manager’s data from the <code>networkdata</code> package. Recall that this data records three types of ties between 21 high-tech managers: Friendship, Advice, and who reports to whom. We store each in a <code>list</code> object and transform each graph into an adjacency matrix using <code>lapply</code>:</p>
+<p>Let’s see how this would work in real data. We first load the Krackhardt Manager’s data from the <code>networkdata</code> package. Recall that this data records three types of ties between 21 high-tech managers: Friendship, Advice, and who reports to whom. We store each in a <code>list</code> object and transform each graph into an adjacency matrix using <code>lapply</code>:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -910,7 +911,7 @@ r 1 1 0</code></pre>
 </details>
 </div>
 <p>The result will be a vector of length <span class="math inline">\(N \times L\)</span> (in our case, <span class="math inline">\(21 \times 3 = 63\)</span>) containing the prestige scores for each network layer.</p>
-<p>We can arrange the long vector into an <span class="math inline">\(N \times L\)</span> rectangular martrix <span class="math inline">\(\mathbf{W}\)</span> containing the <em>joint</em> status scores of each node at each layer:</p>
+<p>We can arrange the long vector into an <span class="math inline">\(N \times L\)</span> rectangular matrix <span class="math inline">\(\mathbf{W}\)</span> containing the <em>joint</em> status scores of each node at each layer:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1042,7 +1043,7 @@ r 1 1 0</code></pre>
 </section>
 <section id="changing-interlayer-dependency-assumptions" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="changing-interlayer-dependency-assumptions"><span class="header-section-number">3</span> Changing Interlayer Dependency Assumptions</h2>
-<p>As we noted before, the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the orders-to-layer. To encode this hypothesis into the status calculation, we create a new <span class="math inline">\(\mathbf{A}\)</span> matrix:</p>
+<p>As we noted before, the <span class="math inline">\(\tilde{\mathbf{A}}\)</span> matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the reports-to layer. To encode this hypothesis into the status calculation, we create a new <span class="math inline">\(\mathbf{A}\)</span> matrix:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1095,7 +1096,7 @@ r 1 1 0</code></pre>
 21 0.073 0.089 0.102</code></pre>
 </div>
 </div>
-<p>Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node remains the highest-status node, but only in the advice layer.</p>
+<p>Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node 2 remains the highest-status node, but only in the advice layer.</p>
 
 
 <!-- -->
@@ -1634,152 +1635,154 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb21-14"><a href="#cb21-14"></a>\mathbf{S} = \mathbf{C} + \alpha(\tilde{\mathbf{A}} \otimes \mathbf{I})</span>
 <span id="cb21-15"><a href="#cb21-15"></a>$${#eq-super}</span>
 <span id="cb21-16"><a href="#cb21-16"></a></span>
-<span id="cb21-17"><a href="#cb21-17"></a>Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \geq \alpha \leq \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). </span>
+<span id="cb21-17"><a href="#cb21-17"></a>Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \le \alpha \le \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). </span>
 <span id="cb21-18"><a href="#cb21-18"></a></span>
-<span id="cb21-19"><a href="#cb21-19"></a>The $\otimes$ symbol in refers to the **Kronecker product** between the $\tilde{\mathbf{A}}$ and $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of the $\mathbf{I}$ matrix multiplied by the value each cell of the $\tilde{\mathbf{A}}$ matrix).^[<span class="co">[</span><span class="ot">https://en.wikipedia.org/wiki/Kronecker_product</span><span class="co">](https://en.wikipedia.org/wiki/Kronecker_product)</span>]</span>
+<span id="cb21-19"><a href="#cb21-19"></a>The $\otimes$ symbol in @eq-super refers to the **Kronecker product** between the $\tilde{\mathbf{A}}$ and $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of the $\mathbf{I}$ matrix multiplied by the value each cell of the $\tilde{\mathbf{A}}$ matrix).^[<span class="co">[</span><span class="ot">https://en.wikipedia.org/wiki/Kronecker_product</span><span class="co">](https://en.wikipedia.org/wiki/Kronecker_product)</span>]</span>
 <span id="cb21-20"><a href="#cb21-20"></a></span>
-<span id="cb21-21"><a href="#cb21-21"></a><span class="fu">## Krackhardt Managers Multilayer Network Example</span></span>
+<span id="cb21-21"><a href="#cb21-21"></a>To understand the Kronecker product ($\tilde{\mathbf{A}} \otimes \mathbf{I}$) without getting bogged down in the linear algebra, think of it as a **macro-level blueprint translator**. Our matrix $\tilde{\mathbf{A}}$ is a high-level map that simply tells us which *layers* are allowed to talk to each other (for instance, whether friendship influence can spill over into advice). But to build our supermatrix, we need to translate that layer-to-layer blueprint into actual, individual-level connections. Crucially, a person in one layer only links to *themselves* in another layer—person 5 in friendship doesn't directly jump to person 12 in advice. The Kronecker product does this translation by taking our layer-to-layer blueprint and stamping a copy of the identity matrix ($\mathbf{I}$) inside every single slot. Wherever two layers are connected, it automatically lays down a bridge of direct lines connecting every person in the first layer to their exact counterpart in the second layer. Wherever the blueprint says the layers don't connect, it leaves a block of zeros. It is a mathematical shortcut for scaling a high-level layer map up into a detailed person-to-person bridge network.</span>
 <span id="cb21-22"><a href="#cb21-22"></a></span>
-<span id="cb21-23"><a href="#cb21-23"></a>Let's see how this would work in real data. We first load the Krackhardt Manager's data from the <span class="in">`networkdata`</span> package. Recall that this data records three types of ties between 21 high-tech managers: Friendship, Advice, and who reports to whom. We store each in a <span class="in">`list`</span> object and transform each graph into an adjacency matrix using <span class="in">`lapply`</span>:</span>
+<span id="cb21-23"><a href="#cb21-23"></a><span class="fu">## Krackhardt Managers Multilayer Network Example</span></span>
 <span id="cb21-24"><a href="#cb21-24"></a></span>
-<span id="cb21-27"><a href="#cb21-27"></a><span class="in">```{r}</span></span>
-<span id="cb21-28"><a href="#cb21-28"></a><span class="fu">library</span>(networkdata)</span>
-<span id="cb21-29"><a href="#cb21-29"></a><span class="fu">library</span>(igraph)</span>
-<span id="cb21-30"><a href="#cb21-30"></a>layers <span class="ot">&lt;-</span> <span class="fu">list</span>(ht_friends, ht_advice, ht_reports)</span>
-<span id="cb21-31"><a href="#cb21-31"></a>layers <span class="ot">&lt;-</span> <span class="fu">lapply</span>(layers, <span class="cf">function</span>(x) {</span>
-<span id="cb21-32"><a href="#cb21-32"></a>  <span class="fu">t</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x)))</span>
-<span id="cb21-33"><a href="#cb21-33"></a>})</span>
-<span id="cb21-34"><a href="#cb21-34"></a><span class="in">```</span></span>
-<span id="cb21-35"><a href="#cb21-35"></a></span>
-<span id="cb21-36"><a href="#cb21-36"></a>We then create the block diagonal matrix $\mathbf{C}$, using the function <span class="in">`bdiag`</span> from the package <span class="in">`Matrix`</span></span>
+<span id="cb21-25"><a href="#cb21-25"></a>Let's see how this would work in real data. We first load the Krackhardt Manager's data from the <span class="in">`networkdata`</span> package. Recall that this data records three types of ties between 21 high-tech managers: Friendship, Advice, and who reports to whom. We store each in a <span class="in">`list`</span> object and transform each graph into an adjacency matrix using <span class="in">`lapply`</span>:</span>
+<span id="cb21-26"><a href="#cb21-26"></a></span>
+<span id="cb21-29"><a href="#cb21-29"></a><span class="in">```{r}</span></span>
+<span id="cb21-30"><a href="#cb21-30"></a><span class="fu">library</span>(networkdata)</span>
+<span id="cb21-31"><a href="#cb21-31"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb21-32"><a href="#cb21-32"></a>layers <span class="ot">&lt;-</span> <span class="fu">list</span>(ht_friends, ht_advice, ht_reports)</span>
+<span id="cb21-33"><a href="#cb21-33"></a>layers <span class="ot">&lt;-</span> <span class="fu">lapply</span>(layers, <span class="cf">function</span>(x) {</span>
+<span id="cb21-34"><a href="#cb21-34"></a>  <span class="fu">t</span>(<span class="fu">as.matrix</span>(<span class="fu">as_adjacency_matrix</span>(x)))</span>
+<span id="cb21-35"><a href="#cb21-35"></a>})</span>
+<span id="cb21-36"><a href="#cb21-36"></a><span class="in">```</span></span>
 <span id="cb21-37"><a href="#cb21-37"></a></span>
-<span id="cb21-40"><a href="#cb21-40"></a><span class="in">```{r}</span></span>
-<span id="cb21-41"><a href="#cb21-41"></a><span class="co"># install.packages("Matrix")</span></span>
-<span id="cb21-42"><a href="#cb21-42"></a><span class="fu">library</span>(Matrix)</span>
-<span id="cb21-43"><a href="#cb21-43"></a>C <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">bdiag</span>(layers))</span>
-<span id="cb21-44"><a href="#cb21-44"></a><span class="in">```</span></span>
-<span id="cb21-45"><a href="#cb21-45"></a></span>
-<span id="cb21-46"><a href="#cb21-46"></a>Note that by using the transpose of the original adjacency matrices to create the diagonal blocks of the $\mathbf{C}$ matrix, we are specifying that we want to compute the multilayer Eigenvector centrality.^<span class="co">[</span><span class="ot">To compute the other prestige scores (e.g., PageRank or HITS) we would feed different matrices here (e.g., the row-normalized adjacency matrix or the common-neighbors matrix).</span><span class="co">]</span></span>
+<span id="cb21-38"><a href="#cb21-38"></a>We then create the block diagonal matrix $\mathbf{C}$, using the function <span class="in">`bdiag`</span> from the package <span class="in">`Matrix`</span></span>
+<span id="cb21-39"><a href="#cb21-39"></a></span>
+<span id="cb21-42"><a href="#cb21-42"></a><span class="in">```{r}</span></span>
+<span id="cb21-43"><a href="#cb21-43"></a><span class="co"># install.packages("Matrix")</span></span>
+<span id="cb21-44"><a href="#cb21-44"></a><span class="fu">library</span>(Matrix)</span>
+<span id="cb21-45"><a href="#cb21-45"></a>C <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(<span class="fu">bdiag</span>(layers))</span>
+<span id="cb21-46"><a href="#cb21-46"></a><span class="in">```</span></span>
 <span id="cb21-47"><a href="#cb21-47"></a></span>
-<span id="cb21-48"><a href="#cb21-48"></a>We now need to create the interlayer dependency matrix $\tilde{\mathbf{A}}$. We use the simplest assumption, which is that all the layers mutually depend on one another equally, which means that $\tilde{\mathbf{A}}$ is the all ones matrix with diagonals set to zero:</span>
+<span id="cb21-48"><a href="#cb21-48"></a>Note that by using the transpose of the original adjacency matrices to create the diagonal blocks of the $\mathbf{C}$ matrix, we are specifying that we want to compute the multilayer Eigenvector centrality.^<span class="co">[</span><span class="ot">To compute the other prestige scores (e.g., PageRank or HITS) we would feed different matrices here (e.g., the row-normalized adjacency matrix or the common-neighbors matrix).</span><span class="co">]</span></span>
 <span id="cb21-49"><a href="#cb21-49"></a></span>
-<span id="cb21-52"><a href="#cb21-52"></a><span class="in">```{r}</span></span>
-<span id="cb21-53"><a href="#cb21-53"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>)</span>
-<span id="cb21-54"><a href="#cb21-54"></a><span class="fu">diag</span>(A) <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-55"><a href="#cb21-55"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-56"><a href="#cb21-56"></a><span class="fu">colnames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-57"><a href="#cb21-57"></a>A</span>
-<span id="cb21-58"><a href="#cb21-58"></a><span class="in">```</span></span>
-<span id="cb21-59"><a href="#cb21-59"></a></span>
-<span id="cb21-60"><a href="#cb21-60"></a>Finally, we create $\mathbf{I}$:</span>
+<span id="cb21-50"><a href="#cb21-50"></a>We now need to create the interlayer dependency matrix $\tilde{\mathbf{A}}$. We use the simplest assumption, which is that all the layers mutually depend on one another equally, which means that $\tilde{\mathbf{A}}$ is the all ones matrix with diagonals set to zero:</span>
+<span id="cb21-51"><a href="#cb21-51"></a></span>
+<span id="cb21-54"><a href="#cb21-54"></a><span class="in">```{r}</span></span>
+<span id="cb21-55"><a href="#cb21-55"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb21-56"><a href="#cb21-56"></a><span class="fu">diag</span>(A) <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-57"><a href="#cb21-57"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-58"><a href="#cb21-58"></a><span class="fu">colnames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-59"><a href="#cb21-59"></a>A</span>
+<span id="cb21-60"><a href="#cb21-60"></a><span class="in">```</span></span>
 <span id="cb21-61"><a href="#cb21-61"></a></span>
-<span id="cb21-64"><a href="#cb21-64"></a><span class="in">```{r}</span></span>
-<span id="cb21-65"><a href="#cb21-65"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(layers[[<span class="dv">1</span>]])</span>
-<span id="cb21-66"><a href="#cb21-66"></a>I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
-<span id="cb21-67"><a href="#cb21-67"></a><span class="in">```</span></span>
-<span id="cb21-68"><a href="#cb21-68"></a></span>
-<span id="cb21-69"><a href="#cb21-69"></a>We are now ready to create the $\mathbf{S}$ matrix with $\alpha = 1.5$, using the base <span class="in">`R`</span> function <span class="in">`kronecker`</span> to compute the kronecker product between $\tilde{\mathbf{A}}$ and $\mathbf{I}$:</span>
+<span id="cb21-62"><a href="#cb21-62"></a>Finally, we create $\mathbf{I}$:</span>
+<span id="cb21-63"><a href="#cb21-63"></a></span>
+<span id="cb21-66"><a href="#cb21-66"></a><span class="in">```{r}</span></span>
+<span id="cb21-67"><a href="#cb21-67"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(layers[[<span class="dv">1</span>]])</span>
+<span id="cb21-68"><a href="#cb21-68"></a>I <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span>, n, n)</span>
+<span id="cb21-69"><a href="#cb21-69"></a><span class="in">```</span></span>
 <span id="cb21-70"><a href="#cb21-70"></a></span>
-<span id="cb21-73"><a href="#cb21-73"></a><span class="in">```{r}</span></span>
-<span id="cb21-74"><a href="#cb21-74"></a>S <span class="ot">&lt;-</span> C <span class="sc">+</span> (<span class="fl">1.5</span> <span class="sc">*</span> <span class="fu">kronecker</span>(A, I))</span>
-<span id="cb21-75"><a href="#cb21-75"></a><span class="in">```</span></span>
-<span id="cb21-76"><a href="#cb21-76"></a></span>
-<span id="cb21-77"><a href="#cb21-77"></a>And now, all we need to do is run our old status distribution game on the $\mathbf{S}$ matrix!</span>
+<span id="cb21-71"><a href="#cb21-71"></a>We are now ready to create the $\mathbf{S}$ matrix with $\alpha = 1.5$, using the base <span class="in">`R`</span> function <span class="in">`kronecker`</span> to compute the kronecker product between $\tilde{\mathbf{A}}$ and $\mathbf{I}$:</span>
+<span id="cb21-72"><a href="#cb21-72"></a></span>
+<span id="cb21-75"><a href="#cb21-75"></a><span class="in">```{r}</span></span>
+<span id="cb21-76"><a href="#cb21-76"></a>S <span class="ot">&lt;-</span> C <span class="sc">+</span> (<span class="fl">1.5</span> <span class="sc">*</span> <span class="fu">kronecker</span>(A, I))</span>
+<span id="cb21-77"><a href="#cb21-77"></a><span class="in">```</span></span>
 <span id="cb21-78"><a href="#cb21-78"></a></span>
-<span id="cb21-81"><a href="#cb21-81"></a><span class="in">```{r}</span></span>
-<span id="cb21-82"><a href="#cb21-82"></a>status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
-<span id="cb21-83"><a href="#cb21-83"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w)) <span class="co"># initial status vector set to all ones of length equal to the number of nodes</span></span>
-<span id="cb21-84"><a href="#cb21-84"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co"># initial delta</span></span>
-<span id="cb21-85"><a href="#cb21-85"></a>  <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
-<span id="cb21-86"><a href="#cb21-86"></a>    o.x <span class="ot">&lt;-</span> x <span class="co"># old status scores</span></span>
-<span id="cb21-87"><a href="#cb21-87"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co"># new scores are a function of old scores and adjacency matrix</span></span>
-<span id="cb21-88"><a href="#cb21-88"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new status scores</span></span>
-<span id="cb21-89"><a href="#cb21-89"></a>    d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co"># delta between new and old scores</span></span>
-<span id="cb21-90"><a href="#cb21-90"></a>  } <span class="co"># end while loop</span></span>
-<span id="cb21-91"><a href="#cb21-91"></a>  <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
-<span id="cb21-92"><a href="#cb21-92"></a>}</span>
-<span id="cb21-93"><a href="#cb21-93"></a>ml.eig <span class="ot">&lt;-</span> <span class="fu">status1</span>(S)</span>
-<span id="cb21-94"><a href="#cb21-94"></a><span class="in">```</span></span>
-<span id="cb21-95"><a href="#cb21-95"></a></span>
-<span id="cb21-96"><a href="#cb21-96"></a>The result will be a vector of length $N \times L$ (in our case, $21 \times 3 = 63$) containing the prestige scores for each network layer. </span>
+<span id="cb21-79"><a href="#cb21-79"></a>And now, all we need to do is run our old status distribution game on the $\mathbf{S}$ matrix!</span>
+<span id="cb21-80"><a href="#cb21-80"></a></span>
+<span id="cb21-83"><a href="#cb21-83"></a><span class="in">```{r}</span></span>
+<span id="cb21-84"><a href="#cb21-84"></a>status1 <span class="ot">&lt;-</span> <span class="cf">function</span>(w) {</span>
+<span id="cb21-85"><a href="#cb21-85"></a>  x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(w)) <span class="co"># initial status vector set to all ones of length equal to the number of nodes</span></span>
+<span id="cb21-86"><a href="#cb21-86"></a>  d <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="co"># initial delta</span></span>
+<span id="cb21-87"><a href="#cb21-87"></a>  <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
+<span id="cb21-88"><a href="#cb21-88"></a>    o.x <span class="ot">&lt;-</span> x <span class="co"># old status scores</span></span>
+<span id="cb21-89"><a href="#cb21-89"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co"># new scores are a function of old scores and adjacency matrix</span></span>
+<span id="cb21-90"><a href="#cb21-90"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new status scores</span></span>
+<span id="cb21-91"><a href="#cb21-91"></a>    d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co"># delta between new and old scores</span></span>
+<span id="cb21-92"><a href="#cb21-92"></a>  } <span class="co"># end while loop</span></span>
+<span id="cb21-93"><a href="#cb21-93"></a>  <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
+<span id="cb21-94"><a href="#cb21-94"></a>}</span>
+<span id="cb21-95"><a href="#cb21-95"></a>ml.eig <span class="ot">&lt;-</span> <span class="fu">status1</span>(S)</span>
+<span id="cb21-96"><a href="#cb21-96"></a><span class="in">```</span></span>
 <span id="cb21-97"><a href="#cb21-97"></a></span>
-<span id="cb21-98"><a href="#cb21-98"></a>We can arrange the long vector into an $N \times L$ rectangular matrix $\mathbf{W}$ containing the *joint* status scores of each node at each layer:</span>
+<span id="cb21-98"><a href="#cb21-98"></a>The result will be a vector of length $N \times L$ (in our case, $21 \times 3 = 63$) containing the prestige scores for each network layer. </span>
 <span id="cb21-99"><a href="#cb21-99"></a></span>
-<span id="cb21-102"><a href="#cb21-102"></a><span class="in">```{r}</span></span>
-<span id="cb21-103"><a href="#cb21-103"></a>W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(ml.eig, <span class="dv">21</span>, <span class="dv">3</span>)</span>
-<span id="cb21-104"><a href="#cb21-104"></a><span class="fu">rownames</span>(W) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb21-105"><a href="#cb21-105"></a><span class="fu">colnames</span>(W) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-106"><a href="#cb21-106"></a><span class="fu">round</span>(W, <span class="dv">3</span>)</span>
-<span id="cb21-107"><a href="#cb21-107"></a><span class="in">```</span></span>
-<span id="cb21-108"><a href="#cb21-108"></a></span>
-<span id="cb21-109"><a href="#cb21-109"></a>Each column of the matrix is a network layer (friendship, advice, and reports to), and each row is an individual. The entries in the matrix is the (unnormalized) status score of individual $i$ on layer $l$. </span>
+<span id="cb21-100"><a href="#cb21-100"></a>We can arrange the long vector into an $N \times L$ rectangular matrix $\mathbf{W}$ containing the *joint* status scores of each node at each layer:</span>
+<span id="cb21-101"><a href="#cb21-101"></a></span>
+<span id="cb21-104"><a href="#cb21-104"></a><span class="in">```{r}</span></span>
+<span id="cb21-105"><a href="#cb21-105"></a>W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(ml.eig, <span class="dv">21</span>, <span class="dv">3</span>)</span>
+<span id="cb21-106"><a href="#cb21-106"></a><span class="fu">rownames</span>(W) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb21-107"><a href="#cb21-107"></a><span class="fu">colnames</span>(W) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-108"><a href="#cb21-108"></a><span class="fu">round</span>(W, <span class="dv">3</span>)</span>
+<span id="cb21-109"><a href="#cb21-109"></a><span class="in">```</span></span>
 <span id="cb21-110"><a href="#cb21-110"></a></span>
-<span id="cb21-111"><a href="#cb21-111"></a>The *marginal status* of each node is given by the sum of its scores across all layers:</span>
+<span id="cb21-111"><a href="#cb21-111"></a>Each column of the matrix is a network layer (friendship, advice, and reports to), and each row is an individual. The entries in the matrix is the (unnormalized) status score of individual $i$ on layer $l$. </span>
 <span id="cb21-112"><a href="#cb21-112"></a></span>
-<span id="cb21-115"><a href="#cb21-115"></a><span class="in">```{r}</span></span>
-<span id="cb21-116"><a href="#cb21-116"></a>ml.node <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(W)</span>
-<span id="cb21-117"><a href="#cb21-117"></a><span class="fu">round</span>(ml.node <span class="sc">/</span> <span class="fu">max</span>(ml.node), <span class="dv">3</span>)</span>
-<span id="cb21-118"><a href="#cb21-118"></a><span class="in">```</span></span>
-<span id="cb21-119"><a href="#cb21-119"></a></span>
-<span id="cb21-120"><a href="#cb21-120"></a>We can see that indeed, Manager 2 is the most central node across all three layers, followed by Manager 21. </span>
+<span id="cb21-113"><a href="#cb21-113"></a>The *marginal status* of each node is given by the sum of its scores across all layers:</span>
+<span id="cb21-114"><a href="#cb21-114"></a></span>
+<span id="cb21-117"><a href="#cb21-117"></a><span class="in">```{r}</span></span>
+<span id="cb21-118"><a href="#cb21-118"></a>ml.node <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(W)</span>
+<span id="cb21-119"><a href="#cb21-119"></a><span class="fu">round</span>(ml.node <span class="sc">/</span> <span class="fu">max</span>(ml.node), <span class="dv">3</span>)</span>
+<span id="cb21-120"><a href="#cb21-120"></a><span class="in">```</span></span>
 <span id="cb21-121"><a href="#cb21-121"></a></span>
-<span id="cb21-122"><a href="#cb21-122"></a>We can also do the same thing to figure out which *layer* is the most important, but this time we sum the columns and normalize:</span>
+<span id="cb21-122"><a href="#cb21-122"></a>We can see that indeed, Manager 2 is the most central node across all three layers, followed by Manager 21. </span>
 <span id="cb21-123"><a href="#cb21-123"></a></span>
-<span id="cb21-126"><a href="#cb21-126"></a><span class="in">```{r}</span></span>
-<span id="cb21-127"><a href="#cb21-127"></a>ml.layer <span class="ot">&lt;-</span> <span class="fu">colSums</span>(W)</span>
-<span id="cb21-128"><a href="#cb21-128"></a><span class="fu">round</span>(ml.layer <span class="sc">/</span> <span class="fu">max</span>(ml.layer), <span class="dv">3</span>)</span>
-<span id="cb21-129"><a href="#cb21-129"></a><span class="in">```</span></span>
-<span id="cb21-130"><a href="#cb21-130"></a></span>
-<span id="cb21-131"><a href="#cb21-131"></a>This indicates that the advice layer is the most important, and the "reports to" layer is the least important for determining status across layers. </span>
+<span id="cb21-124"><a href="#cb21-124"></a>We can also do the same thing to figure out which *layer* is the most important, but this time we sum the columns and normalize:</span>
+<span id="cb21-125"><a href="#cb21-125"></a></span>
+<span id="cb21-128"><a href="#cb21-128"></a><span class="in">```{r}</span></span>
+<span id="cb21-129"><a href="#cb21-129"></a>ml.layer <span class="ot">&lt;-</span> <span class="fu">colSums</span>(W)</span>
+<span id="cb21-130"><a href="#cb21-130"></a><span class="fu">round</span>(ml.layer <span class="sc">/</span> <span class="fu">max</span>(ml.layer), <span class="dv">3</span>)</span>
+<span id="cb21-131"><a href="#cb21-131"></a><span class="in">```</span></span>
 <span id="cb21-132"><a href="#cb21-132"></a></span>
-<span id="cb21-133"><a href="#cb21-133"></a>The *conditional* status of each node in each layer can be obtained as follows:</span>
+<span id="cb21-133"><a href="#cb21-133"></a>This indicates that the advice layer is the most important, and the "reports to" layer is the least important for determining status across layers. </span>
 <span id="cb21-134"><a href="#cb21-134"></a></span>
-<span id="cb21-137"><a href="#cb21-137"></a><span class="in">```{r}</span></span>
-<span id="cb21-138"><a href="#cb21-138"></a>cond.node <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(W) <span class="sc">/</span> ml.layer)</span>
-<span id="cb21-139"><a href="#cb21-139"></a><span class="fu">round</span>(cond.node, <span class="dv">3</span>)</span>
-<span id="cb21-140"><a href="#cb21-140"></a><span class="in">```</span></span>
-<span id="cb21-141"><a href="#cb21-141"></a></span>
-<span id="cb21-142"><a href="#cb21-142"></a>Reinforcing the previous results showing node 2 to be the most important in all three layers. </span>
+<span id="cb21-135"><a href="#cb21-135"></a>The *conditional* status of each node in each layer can be obtained as follows:</span>
+<span id="cb21-136"><a href="#cb21-136"></a></span>
+<span id="cb21-139"><a href="#cb21-139"></a><span class="in">```{r}</span></span>
+<span id="cb21-140"><a href="#cb21-140"></a>cond.node <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(W) <span class="sc">/</span> ml.layer)</span>
+<span id="cb21-141"><a href="#cb21-141"></a><span class="fu">round</span>(cond.node, <span class="dv">3</span>)</span>
+<span id="cb21-142"><a href="#cb21-142"></a><span class="in">```</span></span>
 <span id="cb21-143"><a href="#cb21-143"></a></span>
-<span id="cb21-144"><a href="#cb21-144"></a>We can also calculate the node-specific importance of each layer:</span>
+<span id="cb21-144"><a href="#cb21-144"></a>Reinforcing the previous results showing node 2 to be the most important in all three layers. </span>
 <span id="cb21-145"><a href="#cb21-145"></a></span>
-<span id="cb21-148"><a href="#cb21-148"></a><span class="in">```{r}</span></span>
-<span id="cb21-149"><a href="#cb21-149"></a>cond.layer <span class="ot">&lt;-</span> W <span class="sc">/</span> ml.node</span>
-<span id="cb21-150"><a href="#cb21-150"></a><span class="fu">round</span>(cond.layer, <span class="dv">3</span>)</span>
-<span id="cb21-151"><a href="#cb21-151"></a><span class="in">```</span></span>
-<span id="cb21-152"><a href="#cb21-152"></a></span>
-<span id="cb21-153"><a href="#cb21-153"></a>Which gives us the relative importance of each *layer* in determining each node's status. For instance, the friendship layer is pretty important for Manager 9, but relatively unimportant for Manager 6. The reports-to layer is relatively unimportant for most managers, but it's definitely most important for Manager 7. </span>
+<span id="cb21-146"><a href="#cb21-146"></a>We can also calculate the node-specific importance of each layer:</span>
+<span id="cb21-147"><a href="#cb21-147"></a></span>
+<span id="cb21-150"><a href="#cb21-150"></a><span class="in">```{r}</span></span>
+<span id="cb21-151"><a href="#cb21-151"></a>cond.layer <span class="ot">&lt;-</span> W <span class="sc">/</span> ml.node</span>
+<span id="cb21-152"><a href="#cb21-152"></a><span class="fu">round</span>(cond.layer, <span class="dv">3</span>)</span>
+<span id="cb21-153"><a href="#cb21-153"></a><span class="in">```</span></span>
 <span id="cb21-154"><a href="#cb21-154"></a></span>
-<span id="cb21-155"><a href="#cb21-155"></a><span class="fu">## Changing Interlayer Dependency Assumptions</span></span>
+<span id="cb21-155"><a href="#cb21-155"></a>Which gives us the relative importance of each *layer* in determining each node's status. For instance, the friendship layer is pretty important for Manager 9, but relatively unimportant for Manager 6. The reports-to layer is relatively unimportant for most managers, but it's definitely most important for Manager 7. </span>
 <span id="cb21-156"><a href="#cb21-156"></a></span>
-<span id="cb21-157"><a href="#cb21-157"></a>As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the orders-to-layer. To encode this hypothesis into the status calculation, we create a new $\mathbf{A}$ matrix:</span>
+<span id="cb21-157"><a href="#cb21-157"></a><span class="fu">## Changing Interlayer Dependency Assumptions</span></span>
 <span id="cb21-158"><a href="#cb21-158"></a></span>
-<span id="cb21-161"><a href="#cb21-161"></a><span class="in">```{r}</span></span>
-<span id="cb21-162"><a href="#cb21-162"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>)</span>
-<span id="cb21-163"><a href="#cb21-163"></a><span class="fu">diag</span>(A) <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-164"><a href="#cb21-164"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-165"><a href="#cb21-165"></a><span class="fu">colnames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-166"><a href="#cb21-166"></a>A[<span class="st">"a"</span>, <span class="st">"r"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-167"><a href="#cb21-167"></a>A[<span class="st">"f"</span>, <span class="st">"r"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-168"><a href="#cb21-168"></a>A[<span class="st">"r"</span>, <span class="st">"f"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-169"><a href="#cb21-169"></a>A[<span class="st">"a"</span>, <span class="st">"f"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb21-170"><a href="#cb21-170"></a><span class="in">```</span></span>
-<span id="cb21-171"><a href="#cb21-171"></a></span>
-<span id="cb21-172"><a href="#cb21-172"></a>We now create a new $\mathbf{S}$ matrix and compute the status scores:</span>
+<span id="cb21-159"><a href="#cb21-159"></a>As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the reports-to layer. To encode this hypothesis into the status calculation, we create a new $\mathbf{A}$ matrix:</span>
+<span id="cb21-160"><a href="#cb21-160"></a></span>
+<span id="cb21-163"><a href="#cb21-163"></a><span class="in">```{r}</span></span>
+<span id="cb21-164"><a href="#cb21-164"></a>A <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb21-165"><a href="#cb21-165"></a><span class="fu">diag</span>(A) <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-166"><a href="#cb21-166"></a><span class="fu">rownames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-167"><a href="#cb21-167"></a><span class="fu">colnames</span>(A) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-168"><a href="#cb21-168"></a>A[<span class="st">"a"</span>, <span class="st">"r"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-169"><a href="#cb21-169"></a>A[<span class="st">"f"</span>, <span class="st">"r"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-170"><a href="#cb21-170"></a>A[<span class="st">"r"</span>, <span class="st">"f"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-171"><a href="#cb21-171"></a>A[<span class="st">"a"</span>, <span class="st">"f"</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb21-172"><a href="#cb21-172"></a><span class="in">```</span></span>
 <span id="cb21-173"><a href="#cb21-173"></a></span>
-<span id="cb21-176"><a href="#cb21-176"></a><span class="in">```{r}</span></span>
-<span id="cb21-177"><a href="#cb21-177"></a>S <span class="ot">&lt;-</span> C <span class="sc">+</span> (<span class="fl">1.5</span> <span class="sc">*</span> <span class="fu">kronecker</span>(A, I))</span>
-<span id="cb21-178"><a href="#cb21-178"></a>ml.eig <span class="ot">&lt;-</span> <span class="fu">status1</span>(S)</span>
-<span id="cb21-179"><a href="#cb21-179"></a>W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(ml.eig, <span class="dv">21</span>, <span class="dv">3</span>)</span>
-<span id="cb21-180"><a href="#cb21-180"></a><span class="fu">rownames</span>(W) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
-<span id="cb21-181"><a href="#cb21-181"></a><span class="fu">colnames</span>(W) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
-<span id="cb21-182"><a href="#cb21-182"></a>ml.node <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(W)</span>
-<span id="cb21-183"><a href="#cb21-183"></a>ml.layer <span class="ot">&lt;-</span> <span class="fu">colSums</span>(W)</span>
-<span id="cb21-184"><a href="#cb21-184"></a>cond.node <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(W) <span class="sc">/</span> ml.layer)</span>
-<span id="cb21-185"><a href="#cb21-185"></a><span class="fu">round</span>(cond.node, <span class="dv">3</span>)</span>
-<span id="cb21-186"><a href="#cb21-186"></a><span class="in">```</span></span>
-<span id="cb21-187"><a href="#cb21-187"></a></span>
-<span id="cb21-188"><a href="#cb21-188"></a>Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node remains the highest-status node, but only in the advice layer. </span>
+<span id="cb21-174"><a href="#cb21-174"></a>We now create a new $\mathbf{S}$ matrix and compute the status scores:</span>
+<span id="cb21-175"><a href="#cb21-175"></a></span>
+<span id="cb21-178"><a href="#cb21-178"></a><span class="in">```{r}</span></span>
+<span id="cb21-179"><a href="#cb21-179"></a>S <span class="ot">&lt;-</span> C <span class="sc">+</span> (<span class="fl">1.5</span> <span class="sc">*</span> <span class="fu">kronecker</span>(A, I))</span>
+<span id="cb21-180"><a href="#cb21-180"></a>ml.eig <span class="ot">&lt;-</span> <span class="fu">status1</span>(S)</span>
+<span id="cb21-181"><a href="#cb21-181"></a>W <span class="ot">&lt;-</span> <span class="fu">matrix</span>(ml.eig, <span class="dv">21</span>, <span class="dv">3</span>)</span>
+<span id="cb21-182"><a href="#cb21-182"></a><span class="fu">rownames</span>(W) <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">21</span></span>
+<span id="cb21-183"><a href="#cb21-183"></a><span class="fu">colnames</span>(W) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"f"</span>, <span class="st">"a"</span>, <span class="st">"r"</span>)</span>
+<span id="cb21-184"><a href="#cb21-184"></a>ml.node <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(W)</span>
+<span id="cb21-185"><a href="#cb21-185"></a>ml.layer <span class="ot">&lt;-</span> <span class="fu">colSums</span>(W)</span>
+<span id="cb21-186"><a href="#cb21-186"></a>cond.node <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">t</span>(W) <span class="sc">/</span> ml.layer)</span>
+<span id="cb21-187"><a href="#cb21-187"></a><span class="fu">round</span>(cond.node, <span class="dv">3</span>)</span>
+<span id="cb21-188"><a href="#cb21-188"></a><span class="in">```</span></span>
+<span id="cb21-189"><a href="#cb21-189"></a></span>
+<span id="cb21-190"><a href="#cb21-190"></a>Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node 2 remains the highest-status node, but only in the advice layer. </span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
