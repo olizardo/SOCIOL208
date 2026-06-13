@@ -14,9 +14,11 @@ $$
 \mathbf{S} = \mathbf{C} + \alpha(\tilde{\mathbf{A}} \otimes \mathbf{I})
 $${#eq-super}
 
-Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \geq \alpha \leq \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). 
+Where $\mathbf{C}$ is a **block-diagonal matrix** of dimensions $NL \times NL$ ($N$ being the number of nodes and $L$ being the number of layers) with each block in the diagonal containing the relevant $N \times N$ centrality matrix for the $l^{th}$ layer, and $\tilde{\mathbf{A}}$ is an $L \times L$ matrix containing the dependencies between each layer, $\mathbf{I}$ is the $N \times N$ **identity matrix** (containing ones along the diagonals and zero in every other cell); finally, $\alpha$ is a tunable parameter ($0 \le \alpha \le \infty$) specifying how much the interlayer dependencies matter in determining the prestige scores, the higher the parameter the more "strongly coupled" the layers are (e.g., scores in one layer affecting scores in the others). 
 
-The $\otimes$ symbol in refers to the **Kronecker product** between the $\tilde{\mathbf{A}}$ and $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of the $\mathbf{I}$ matrix multiplied by the value each cell of the $\tilde{\mathbf{A}}$ matrix).^[[https://en.wikipedia.org/wiki/Kronecker_product](https://en.wikipedia.org/wiki/Kronecker_product)]
+The $\otimes$ symbol in @eq-super refers to the **Kronecker product** between the $\tilde{\mathbf{A}}$ and $\mathbf{I}$ (e.g., the supermatrix in which each block is composed of the $\mathbf{I}$ matrix multiplied by the value each cell of the $\tilde{\mathbf{A}}$ matrix).^[[https://en.wikipedia.org/wiki/Kronecker_product](https://en.wikipedia.org/wiki/Kronecker_product)]
+
+To understand the Kronecker product ($\tilde{\mathbf{A}} \otimes \mathbf{I}$) without getting bogged down in the linear algebra, think of it as a **macro-level blueprint translator**. Our matrix $\tilde{\mathbf{A}}$ is a high-level map that simply tells us which *layers* are allowed to talk to each other (for instance, whether friendship influence can spill over into advice). But to build our supermatrix, we need to translate that layer-to-layer blueprint into actual, individual-level connections. Crucially, a person in one layer only links to *themselves* in another layer—person 5 in friendship doesn't directly jump to person 12 in advice. The Kronecker product does this translation by taking our layer-to-layer blueprint and stamping a copy of the identity matrix ($\mathbf{I}$) inside every single slot. Wherever two layers are connected, it automatically lays down a bridge of direct lines connecting every person in the first layer to their exact counterpart in the second layer. Wherever the blueprint says the layers don't connect, it leaves a block of zeros. It is a mathematical shortcut for scaling a high-level layer map up into a detailed person-to-person bridge network.
 
 ## Krackhardt Managers Multilayer Network Example
 
@@ -132,7 +134,7 @@ Which gives us the relative importance of each *layer* in determining each node'
 
 ## Changing Interlayer Dependency Assumptions
 
-As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the orders-to-layer. To encode this hypothesis into the status calculation, we create a new $\mathbf{A}$ matrix:
+As we noted before, the $\tilde{\mathbf{A}}$ matrix contains our hypotheses about interlayer dependencies. Suppose we have a theory that the advice layer does not affect the reports-to layer. To encode this hypothesis into the status calculation, we create a new $\mathbf{A}$ matrix:
 
 ```{r}
 A <- matrix(1, 3, 3)
@@ -159,4 +161,4 @@ cond.node <- t(t(W) / ml.layer)
 round(cond.node, 3)
 ```
 
-Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node remains the highest-status node, but only in the advice layer. 
+Note that this new set of assumptions about interlayer dependencies changes our results. Node 17 is now the highest-status node in the friendship and reports to layers, while node 2 remains the highest-status node, but only in the advice layer. 
