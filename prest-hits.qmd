@@ -18,7 +18,7 @@ $$
  x^a_i = \sum_j a_{ji} x^h_j
 $$
 
-Which says that the hub score $x^h$ of a node is the sum of the authority scores $x^a$ of the nodes they point to (sum over $j$; the outdegree), and the authority score of a node is the sum of the hub scores of the nodes that point to it (sum over $i$; the indegree). 
+Which says that the hub score $x^h$ of a node is the sum of the authority scores $x^a$ of the nodes they point to (sum over $j$; the outdegree), and the authority score of a node is the sum of the hub scores of the nodes that point to it (sum over $j$; the indegree). 
 
 So we need to make our [status game](prest-eigen.qmd) a bit more complicated (but not too much) to account for this duality:
 
@@ -40,7 +40,7 @@ status2 <- function(w) {
 }
 ```
 
-Everything is like [our previous](prest-eigen.qmd) `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes or the number of rows in the adjacency matrix) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then updates the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7 normalize them in line 8 and update the new authority scores to be the sum (across each in-neighbor) of these new hub scores, which are then themselves normalized in line 10. 
+Everything is like [our previous](prest-eigen.qmd) `status1` function except now we are keeping track of two mutually defining scores `a` and `h`. We first initialize the authority scores by setting them to the value of $1/n$ (where $n$ is the number of nodes or the number of rows in the adjacency matrix) in line 2. We then initialize the $\delta$ difference and $k$ counter in lines 3-4. The `while` loop in lines 5-13 then updates the hub scores (to be the sum of the authority scores of each out-neighbor) in line 7, normalizes them in line 8, and updates the new authority scores to be the sum (across each in-neighbor) of these new hub scores, which are then themselves normalized in line 10. 
 
 So at each step $t$, the authority and hub scores are calculated like this:
 
@@ -115,7 +115,7 @@ You may have guessed that the diagonals of matrix $\mathbf{M}^a$ contain the **i
 degree(g, mode = "in")[1:10]
 ```
 
-Which means that the *off-diagonals* cells of each matrix $m^h_{ij}$ and $m^a_{ij}$ when $i \neq j$, contain the **common out-neighbors** and **common in-neighbors** shared by nodes $i$ and $j$ in the graph, respectively.
+Which means that the *off-diagonal* cells of each matrix $m^h_{ij}$ and $m^a_{ij}$ when $i \neq j$, contain the **common out-neighbors** and **common in-neighbors** shared by nodes $i$ and $j$ in the graph, respectively.
 
 
 ```{r}
@@ -144,7 +144,7 @@ p
 
 In information science, $\mathbf{M}^h$ and $\mathbf{M}^a$ matrices have special interpretations. Consider the subgraph shown in @fig-sub, which contains nodes 2 and 11 from the Krackhardt advice network and their respective neighbors: 
 
-If these nodes where papers, then we would say that both 2 and 11 point to a common third node 1. In an information network, the papers that other papers point to are their common references. Therefore the number of *common out-neighbors* of two nodes is is called the **bibliographic coupling** score between the two papers. In the same way, we can see that 2 and 11 are pointed to by a common third neighbor 21. The number of *common in-neighbors* between two-papers is called their **co-citation** score.
+If these nodes were papers, then we would say that both 2 and 11 point to a common third node 1. In an information network, the papers that other papers point to are their common references. Therefore the number of *common out-neighbors* of two nodes is called the **bibliographic coupling** score between the two papers. In the same way, we can see that 2 and 11 are pointed to by a common third neighbor 21. The number of *common in-neighbors* between two-papers is called their **co-citation** score.
 
 Both the bibliographic coupling and the co-citation scores get at two ways that nodes can be similar in a directed graph. In the social context of advice seeking, for instance, two people can be similar if they seek advice from the same others, or two people can be similar if they are sought after for advice by the same others. 
 
@@ -215,7 +215,7 @@ $$
 \mathbf{P}_{h} = \mathbf{D}_{in}^{-1} \mathbf{A}^T
 $$
 
-Where $\mathbf{D}_{in}^{-1}$ is a matrix containing the inverse of the indegrees along the diagonals (and zeroes elsewhere) and $\mathbf{A}^T$ is the transpose of the adjacency matrix. Each non-zero entry of is thus equal to one divided by that row node's indegree. 
+Where $\mathbf{D}_{in}^{-1}$ is a matrix containing the inverse of the indegrees along the diagonals (and zeroes elsewhere) and $\mathbf{A}^T$ is the transpose of the adjacency matrix. Each non-zero entry of $\mathbf{P}_{h}$ is thus equal to one divided by that row node's indegree. 
 
 In `R` we compute it like this:
 
@@ -225,7 +225,7 @@ P.h <- D.i %*% t(A)
 ```
 
 
-Like the $\mathbf{P}_{a}$ matrix, the $\mathbf{P}_{a}$ matrix is row-stochastic, meaning its rows sum to 1.0:
+Like the $\mathbf{P}_{a}$ matrix, the $\mathbf{P}_{h}$ matrix is row-stochastic, meaning its rows sum to 1.0:
 
 ```{r}
 rowSums(P.h)
@@ -252,7 +252,7 @@ Q.h <- P.a %*% P.h
 Q.a <- P.h %*% P.a
 ```
 
-Each of these matrices are row stochastic:
+Each of these matrices is row stochastic:
 
 ```{r}
 rowSums(Q.h)
@@ -287,7 +287,7 @@ The reason for this is that, as @fouss_etal04 explain, these numbers have a stra
 
 ## HITS as Principal Components Analysis
 
-@saerens_fouss05 argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA). In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which in the this case is the network's adjacency matrix). Technically we could also just argue that PCA is just HITS on a **centered adjacency matrix**, as we will see right now.
+@saerens_fouss05 argue that there is an intimate relationship between the HITS dual ranking scores and one of the most widely used multivariate analysis techniques, Principal Components Analysis (PCA). In fact, they argue that HITS is just PCA on an *uncentered data matrix* (which in this case is the network's adjacency matrix). Technically we could also just argue that PCA is just HITS on a **centered adjacency matrix**, as we will see right now.
 
 Let's see how this works. First, let's create a *centered* version of the network adjacency matrix. To center a typical data matrix (e.g., of individuals in the rows by variables in the columns) we subtract the *column mean* (the average score of all individuals on that variable) from each individual's score.^[Note that the column mean of the adjacency matrix will be equivalent to each individual's **indegree** (the sum of the columns) divided by the total number of nodes in the network ($k^{in}/n$), which is kind of a normalized degree centrality score, except the usual normalization is to divide by $n-1$ (so as to have a maximum of 1.0) as we saw in our discussion of [degree centrality](cent-deg.qmd).] 
 
@@ -346,9 +346,9 @@ C <- cov(A)
 round(C[1:10, 1:10], 3)
 ```
 
-Recall that the covariance between two vectors $x$ and $y$ is just the sum of the values in the vector composed by multiplying the first vector (minus its mean) from the second vector (minus its mean) divided by the length of the vector minus one. 
+Recall that the covariance between two vectors $x$ and $y$ is just the sum of the values in the vector composed by multiplying the first vector (minus its mean) by the second vector (minus its mean) divided by the length of the vector minus one. 
 
-In the network adjacency matrix case, the vectors in questions are the *columns* of the adjacency matrix for each individual, recording each of the incoming ties to that person. So if $\mathbf{a}_i$ is the column vector recording the in-neighbors of $i$ and $\mathbf{a}_j$ is the column vector recording the in-neighbors of $j$, the covariance between nodes $i$ and $j$ is given by:
+In the network adjacency matrix case, the vectors in question are the *columns* of the adjacency matrix for each individual, recording each of the incoming ties to that person. So if $\mathbf{a}_i$ is the column vector recording the in-neighbors of $i$ and $\mathbf{a}_j$ is the column vector recording the in-neighbors of $j$, the covariance between nodes $i$ and $j$ is given by:
 
 $$
 \begin{equation}
@@ -375,7 +375,7 @@ Now that we have the covariance matrix `C`, all we need to do is extract the lea
 cov.a <- status1(C)
 ```
 
-These scores should be equivalent to the normalized authority scores we computed earlier (because they are based on the indegree). Now to compute the hub scores from the PCA analysis, all we need to do is add up the authority score of each node that a given node points to. We can do this by post-multyplying the adjacency matrix times the PCA score vector:
+These scores should be equivalent to the normalized authority scores we computed earlier (because they are based on the indegree). Now to compute the hub scores from the PCA analysis, all we need to do is add up the authority score of each node that a given node points to. We can do this by post-multiplying the adjacency matrix times the PCA score vector:
 
 ```{r}
 cov.h <- as.vector(A %*% cov.a)
@@ -496,7 +496,7 @@ ca.a <- ca.res$col$coord[, 1]
 names(ca.a) <- 1:21
 ```
 
-In line 2 we store the CA results in the object`ca.res`. We then grab the CA scores associated with the rows of the adjacency matrix and put them in the object `ca.h` in line 3 and the scores associated with the columns of the adjacency matrix and put them in the object `ca.a` inline 4.
+In line 2, we store the CA results in the object `ca.res`. We then grab the CA scores associated with the rows of the adjacency matrix and put them in the object `ca.h` in line 3, and the scores associated with the columns of the adjacency matrix and put them in the object `ca.a` in line 4.
 
 Now for the big reveal:
 
@@ -524,7 +524,7 @@ kbl(ha.tab,
   column_spec(1, bold = TRUE)
 ```
 
-Using information in the table, the figure below shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes with positive scores (hub score larger than their authority scores) appear in blue and nodes with negative scores (authority scores larger than their hub scores) appear in red. 
+Using information in the table, the figure below shows a point and line network plot but using the CA hub and authority scores to embed the nodes in a common two-dimensional space. In the plot, nodes are colored by the *difference* between their SALSA hub and authority scores such that nodes where the hub score is larger than the authority score appear in blue, and nodes where the authority score is larger than the hub score appear in red. 
 
 ```{r}
 #| label: fig-ca
@@ -565,7 +565,7 @@ p <- p + theme(
   axis.text = element_text(size = 12),
   axis.title = element_text(size = 16)
 )
-p <- p + labs(x = "PCA Hub Score", y = "PCA Authority Score")
+p <- p + labs(x = "CA Hub Score", y = "CA Authority Score")
 p
 l <- as.matrix(data.frame(h2, a2))
 p <- ggraph(g, layout = l)
@@ -592,7 +592,7 @@ p <- p + theme(
   axis.text = element_text(size = 12),
   axis.title = element_text(size = 16)
 )
-p <- p + labs(x = "CA Hub Score", y = "CA Authority Score")
+p <- p + labs(x = "PCA Hub Score", y = "PCA Authority Score")
 p
 ```
 
@@ -681,6 +681,7 @@ hits.res3 <- status4(A)
 round(hits.res3$a / max(hits.res3$a), 3)
 round(hits.res3$h / max(hits.res3$h), 3)
 ```
+
 
 
 <!--
