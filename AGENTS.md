@@ -58,6 +58,22 @@ CANVAS_API_TOKEN="<token>"
 * **Question Requirement:** Discussion leaders collaborate to formulate and submit **at least two discussion questions on each assigned reading** for their scheduled week.
 * **Deadline:** Posted to the **Discussion Leaders Summary and Questions** forum on Bruin Learn by **Sunday at 5:00 p.m. PT** prior to class.
 * **Sign-Up:** Students submit their preferences during Week 1 via the **Discussion Leader Week Preference** survey (Quiz ID: `1131287`).
+* **Finalized Two-Person Schedule (Weeks 2–10):** All 7 enrolled students responded to the preference survey; the schedule below was built to respect every student's stated availability while spreading the 18 total slots as evenly as possible (4 students lead 3 weeks, 3 students lead 2 weeks). Posted live to the [Discussion Leaders Summary and Questions forum](https://bruinlearn.ucla.edu/courses/239524/discussion_topics/1466035) and to the front page (`front-page.html`) and each weekly overview page (`WEEKS_DATA` `leaders` field in `deploy_all_to_canvas.py`) on 2026-09-28.
+
+  | Week | Leader 1 | Leader 2 |
+  |---|---|---|
+  | Week 2 | George Garcia | Anoushka Patel |
+  | Week 3 | Mayra Varillas Cilia | Alvin Chu |
+  | Week 4 | Mayra Varillas Cilia | Anoushka Patel |
+  | Week 5 | Mayra Varillas Cilia | Sarah Stigers |
+  | Week 6 | Sarah Stigers | Noor Amanullah |
+  | Week 7 | Alvin Chu | Anoushka Patel |
+  | Week 8 | Travis Ashby | Alvin Chu |
+  | Week 9 | Noor Amanullah | Travis Ashby |
+  | Week 10 | Travis Ashby | George Garcia |
+
+  Per-student totals: Mayra Varillas Cilia (3: Weeks 3–5), Alvin Chu (3: Weeks 3, 7, 8), Anoushka Patel (3: Weeks 2, 4, 7), Travis Ashby (3: Weeks 8–10), George Garcia (2: Weeks 2, 10), Sarah Stigers (2: Weeks 5–6), Noor Amanullah (2: Weeks 6, 9).
+  * **To update this schedule going forward:** edit the table above, edit the `'leaders'` key in each week's dict in `WEEKS_DATA` within `deploy_all_to_canvas.py`, edit the matching "🗳️ Discussion Leaders" `<div>` inside each week's card in `front-page.html`, then run `python3 deploy_all_to_canvas.py` to push both to Canvas.
 
 ### C. Final Course Paper (50% of Grade)
 * **Options:**

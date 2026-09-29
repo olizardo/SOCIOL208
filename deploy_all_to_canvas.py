@@ -260,6 +260,7 @@ WEEKS_DATA = [
         'memo_id': 2041280,
         'memo_due': 'Sunday, Oct. 4 at 5:00 pm PT',
         'slug': 'week-2-brokerage-and-intermediation-readings-and-overview',
+        'leaders': 'George Garcia &amp; Anoushka Patel',
         'part1_title': 'Weak Ties, Brokerage Roles, and Mediation',
         'part1_readings': [
             ('Granovetter, M. S. (1973). The Strength of Weak Ties. <em>American Journal of Sociology</em>, 78(3), 1360–1380.', '10.1086/225469'),
@@ -287,6 +288,7 @@ WEEKS_DATA = [
         'memo_id': 2041281,
         'memo_due': 'Sunday, Oct. 11 at 5:00 pm PT',
         'slug': 'week-3-networks-and-the-economy-and-organizations-readings-and-overview',
+        'leaders': 'Mayra Varillas Cilia &amp; Alvin Chu',
         'part1_title': 'Embeddedness, Price Setting, and Market Dynamics',
         'part1_readings': [
             ('Uzzi, B. (1996). The Sources and Consequences of Embeddedness for the Economic Performance of Organizations: The Network Effect. <em>American Sociological Review</em>, 61(4), 674–698.', '10.2307/2096399'),
@@ -310,6 +312,7 @@ WEEKS_DATA = [
         'memo_id': 2041282,
         'memo_due': 'Sunday, Oct. 18 at 5:00 pm PT',
         'slug': 'week-4-networks-in-science-readings-and-overview',
+        'leaders': 'Mayra Varillas Cilia &amp; Anoushka Patel',
         'part1_title': 'Specialization, Novelty, and Idea Diffusion',
         'part1_readings': [
             ('Smith, D., Kennard, N., Du, T., & McFarland, D. (2025). How Values and Uncertainty Shape Scientific Advance in Peer Review. <em>American Sociological Review</em>, 90(5), 879–915.', '10.1177/00031224251362254'),
@@ -333,6 +336,7 @@ WEEKS_DATA = [
         'memo_id': 2041283,
         'memo_due': 'Sunday, Oct. 25 at 5:00 pm PT',
         'slug': 'week-5-collaboration-creativity-and-field-dynamics-readings-and-overview',
+        'leaders': 'Mayra Varillas Cilia &amp; Sarah Stigers',
         'part1_title': 'Structural Folds & Small Worlds of Creativity',
         'part1_readings': [
             ('Vedres, B., & Stark, D. (2010). Structural Folds: Generative Disruption In Overlapping Groups. <em>American Journal of Sociology</em>, 115(4), 1150–1190.', '10.1086/649497'),
@@ -356,6 +360,7 @@ WEEKS_DATA = [
         'memo_id': 2041284,
         'memo_due': 'Sunday, Nov. 1 at 5:00 pm PT',
         'slug': 'week-6-networks-and-culture-and-culture-in-networks-readings-and-overview',
+        'leaders': 'Sarah Stigers &amp; Noor Amanullah',
         'part1_title': 'Dualities of Culture & Structure and Tie Formation',
         'part1_readings': [
             ('Breiger, R. L. (2010). Dualities of culture and structure: Seeing through cultural holes. Pp. 37–47 in <em>Relationale soziologie</em>. VS Verlag für Sozialwissenschaften.', '10.1007/978-3-531-92402-1_2'),
@@ -381,6 +386,7 @@ WEEKS_DATA = [
         'memo_id': 2041285,
         'memo_due': 'Sunday, Nov. 8 at 5:00 pm PT',
         'slug': 'week-7-diffusion-in-networks-readings-and-overview',
+        'leaders': 'Alvin Chu &amp; Anoushka Patel',
         'part1_title': 'Complex Contagion, Clustering, and Spatial Diffusion',
         'part1_readings': [
             ('Centola, D., & Macy, M. (2007). Complex Contagions and the Weakness of Long Ties. <em>American Journal of Sociology</em>, 113(3), 702–734.', '10.1086/521848'),
@@ -406,6 +412,7 @@ WEEKS_DATA = [
         'memo_id': 2041286,
         'memo_due': 'Sunday, Nov. 15 at 5:00 pm PT',
         'slug': 'week-8-networks-in-history-readings-and-overview',
+        'leaders': 'Travis Ashby &amp; Alvin Chu',
         'part1_title': 'Robust Action, Mobilization, and Historical Networks',
         'part1_readings': [
             ('Padgett, J. F., & Ansell, C. K. (1993). Robust Action and the Rise of the Medici, 1400–1434. <em>American Journal of Sociology</em>, 98(6), 1259–1319.', '10.1086/230190'),
@@ -427,6 +434,7 @@ WEEKS_DATA = [
         'memo_id': 2041287,
         'memo_due': 'Sunday, Nov. 22 at 5:00 pm PT',
         'slug': 'week-9-networks-and-inequality-readings-and-overview',
+        'leaders': 'Noor Amanullah &amp; Travis Ashby',
         'part1_title': 'Homophily, Elite Kinship, and Intergroup Network Inequalities',
         'part1_readings': [
             ('DiMaggio, P., & Garip, F. (2011). How network externalities can exacerbate intergroup inequality. <em>American Journal of Sociology</em>, 116(6), 1887–1933.', '10.1086/659653'),
@@ -450,6 +458,7 @@ WEEKS_DATA = [
         'memo_id': 2041279,
         'memo_due': 'Sunday, Nov. 29 at 5:00 pm PT',
         'slug': 'week-10-networks-and-the-micro-slash-macro-link-readings-and-overview',
+        'leaders': 'Travis Ashby &amp; George Garcia',
         'part1_title': 'Network Ecology & Romantic/Sexual Networks',
         'part1_readings': [
             ('McFarland, D. A., Moody, J., Diehl, D., Smith, J. A., & Thomas, R. J. (2014). Network Ecology and Adolescent Social Structure. <em>American Sociological Review</em>, 79(6), 1088–1121.', '10.1177/0003122414554001'),
@@ -466,6 +475,11 @@ WEEKS_DATA = [
 ]
 
 def make_weekly_page_html(w):
+    leaders = w.get('leaders')
+    if leaders:
+        leaders_line = f'<div><strong>Discussion Leaders This Week:</strong> {leaders}</div>'
+    else:
+        leaders_line = ''
     p1_lis = []
     for r, doi in w['part1_readings']:
         if doi:
@@ -502,6 +516,7 @@ def make_weekly_page_html(w):
       <div><strong>Weekly Analytic Memo:</strong> <a href="/courses/239524/assignments/{w['memo_id']}" style="color: #2563eb; font-weight: 600;">Week {w['week']} Analytic Memo Submission Box &rarr;</a> (Due: <strong>{w['memo_due']}</strong>)</div>
       <div><strong>Reading Requirement:</strong> Make reference to at least <em>four readings total</em>, including at least <em>one reading from Part 1</em> and at least <em>one reading from Part 2</em> to put in conversation with each other.</div>
       <div><strong>Discussion Leaders:</strong> Post at least two questions per assigned reading to the <a href="/courses/239524/discussion_topics/1466035" style="color: #2563eb; font-weight: 600;">Discussion Leaders Summary &amp; Questions Board &rarr;</a></div>
+      {leaders_line}
       <div><strong>Readings Access:</strong> Articles with DOIs link directly via <strong>[DOI ↗]</strong>. Readings without DOIs are available in the <a href="{GDRIVE_URL}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Course Files Folder ↗</a></div>
     </div>
   </div>
