@@ -288,7 +288,7 @@ WEEKS_DATA = [
         'memo_id': 2041281,
         'memo_due': 'Sunday, Oct. 11 at 5:00 pm PT',
         'slug': 'week-3-networks-and-the-economy-and-organizations-readings-and-overview',
-        'leaders': 'Mayra Varillas Cilia &amp; Alvin Chu',
+        'leaders': 'Alvin Chu &amp; Noor Amanullah',
         'part1_title': 'Embeddedness, Price Setting, and Market Dynamics',
         'part1_readings': [
             ('Uzzi, B. (1996). The Sources and Consequences of Embeddedness for the Economic Performance of Organizations: The Network Effect. <em>American Sociological Review</em>, 61(4), 674–698.', '10.2307/2096399'),
@@ -312,7 +312,7 @@ WEEKS_DATA = [
         'memo_id': 2041282,
         'memo_due': 'Sunday, Oct. 18 at 5:00 pm PT',
         'slug': 'week-4-networks-in-science-readings-and-overview',
-        'leaders': 'Mayra Varillas Cilia &amp; Anoushka Patel',
+        'leaders': 'Anoushka Patel &amp; Sarah Stigers',
         'part1_title': 'Specialization, Novelty, and Idea Diffusion',
         'part1_readings': [
             ('Smith, D., Kennard, N., Du, T., & McFarland, D. (2025). How Values and Uncertainty Shape Scientific Advance in Peer Review. <em>American Sociological Review</em>, 90(5), 879–915.', '10.1177/00031224251362254'),
@@ -336,7 +336,7 @@ WEEKS_DATA = [
         'memo_id': 2041283,
         'memo_due': 'Sunday, Oct. 25 at 5:00 pm PT',
         'slug': 'week-5-collaboration-creativity-and-field-dynamics-readings-and-overview',
-        'leaders': 'Mayra Varillas Cilia &amp; Sarah Stigers',
+        'leaders': 'George Garcia &amp; Sarah Stigers',
         'part1_title': 'Structural Folds & Small Worlds of Creativity',
         'part1_readings': [
             ('Vedres, B., & Stark, D. (2010). Structural Folds: Generative Disruption In Overlapping Groups. <em>American Journal of Sociology</em>, 115(4), 1150–1190.', '10.1086/649497'),

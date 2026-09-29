@@ -63,16 +63,16 @@ CANVAS_API_TOKEN="<token>"
   | Week | Leader 1 | Leader 2 |
   |---|---|---|
   | Week 2 | George Garcia | Anoushka Patel |
-  | Week 3 | Mayra Varillas Cilia | Alvin Chu |
-  | Week 4 | Mayra Varillas Cilia | Anoushka Patel |
-  | Week 5 | Mayra Varillas Cilia | Sarah Stigers |
+  | Week 3 | Alvin Chu | Noor Amanullah |
+  | Week 4 | Anoushka Patel | Sarah Stigers |
+  | Week 5 | George Garcia | Sarah Stigers |
   | Week 6 | Sarah Stigers | Noor Amanullah |
   | Week 7 | Alvin Chu | Anoushka Patel |
   | Week 8 | Travis Ashby | Alvin Chu |
   | Week 9 | Noor Amanullah | Travis Ashby |
   | Week 10 | Travis Ashby | George Garcia |
 
-  Per-student totals: Mayra Varillas Cilia (3: Weeks 3–5), Alvin Chu (3: Weeks 3, 7, 8), Anoushka Patel (3: Weeks 2, 4, 7), Travis Ashby (3: Weeks 8–10), George Garcia (2: Weeks 2, 10), Sarah Stigers (2: Weeks 5–6), Noor Amanullah (2: Weeks 6, 9).
+  Mayra Varillas Cilia withdrew/was excluded from the discussion-leader rotation (2026-09-28); her 3 slots (Weeks 3–5) were redistributed across the remaining 6 students so each leads exactly 3 of the 18 total slots: George Garcia (Weeks 2, 5, 10), Anoushka Patel (Weeks 2, 4, 7), Alvin Chu (Weeks 3, 7, 8), Sarah Stigers (Weeks 4–6), Noor Amanullah (Weeks 3, 6, 9), Travis Ashby (Weeks 8–10).
   * **To update this schedule going forward:** edit the table above, edit the `'leaders'` key in each week's dict in `WEEKS_DATA` within `deploy_all_to_canvas.py`, edit the matching "🗳️ Discussion Leaders" `<div>` inside each week's card in `front-page.html`, then run `python3 deploy_all_to_canvas.py` to push both to Canvas.
 
 ### C. Final Course Paper (50% of Grade)
