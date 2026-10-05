@@ -1,5 +1,11 @@
-import os, json, urllib.request, re
+import os, sys, json, urllib.request, re
 from pathlib import Path
+
+# --dry-run: preview all Canvas updates without sending any API requests.
+# Local HTML template writes still occur (they are idempotent relabelings).
+DRY_RUN = '--dry-run' in sys.argv
+if DRY_RUN:
+    print('*** DRY RUN MODE: no changes will be pushed to Canvas ***')
 
 def get_credentials():
     token = os.environ.get('CANVAS_API_TOKEN')
@@ -24,6 +30,21 @@ headers = {
 }
 course_id = 239524
 GDRIVE_URL = 'https://bruinlearn.ucla.edu/courses/239524/files'
+
+def api_put(path, payload, label):
+    """PUT to the Canvas API, or print a preview when DRY_RUN is set."""
+    if DRY_RUN:
+        print(f'[DRY RUN] Would PUT {path} ({label}): '
+              f'{len(json.dumps(payload))} bytes')
+        return {'url': None}
+    req = urllib.request.Request(
+        f'{url}{path}',
+        data=json.dumps(payload).encode('utf-8'),
+        headers=headers,
+        method='PUT'
+    )
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read().decode('utf-8'))
 
 doi_map = {
     'Wellman, B. (1988)': None,
@@ -153,74 +174,59 @@ print('Updated local HTML templates with [DOI ↗] labels.')
 
 # 1. Push Front Page to Canvas
 print('\n--- Deploying Front Page to Canvas ---')
-put_front = urllib.request.Request(
-    f'{url}/api/v1/courses/{course_id}/pages/sociol-208b-social-network-methods',
-    data=json.dumps({
+res = api_put(
+    f'/api/v1/courses/{course_id}/pages/sociol-208b-social-network-methods',
+    {
         'wiki_page': {
             'title': 'SOCIOL 208B: Social Network Methods',
             'body': fp_text,
             'published': True
         }
-    }).encode('utf-8'),
-    headers=headers,
-    method='PUT'
+    },
+    'Front Page'
 )
-with urllib.request.urlopen(put_front) as resp:
-    res = json.loads(resp.read().decode('utf-8'))
-    print('Front Page updated on Canvas successfully! Slug:', res.get('url'))
+if not DRY_RUN: print('Front Page updated on Canvas successfully! Slug:', res.get('url'))
 
 # Ensure it is set as front page
-set_fp = urllib.request.Request(
-    f'{url}/api/v1/courses/{course_id}',
-    data=json.dumps({
-        'course': {
-            'default_view': 'wiki'
-        }
-    }).encode('utf-8'),
-    headers=headers,
-    method='PUT'
+api_put(
+    f'/api/v1/courses/{course_id}',
+    {'course': {'default_view': 'wiki'}},
+    'course default_view'
 )
-with urllib.request.urlopen(set_fp):
-    print('Course default view verified as wiki')
+if not DRY_RUN: print('Course default view verified as wiki')
 
 # 2. Push Reading Schedule to Canvas
 print('\n--- Deploying Reading Schedule Page to Canvas ---')
-put_sched = urllib.request.Request(
-    f'{url}/api/v1/courses/{course_id}/pages/sociol-208b-reading-schedule-fall-2026',
-    data=json.dumps({
+res = api_put(
+    f'/api/v1/courses/{course_id}/pages/sociol-208b-reading-schedule-fall-2026',
+    {
         'wiki_page': {
             'title': 'SOCIOL 208B Reading Schedule (Fall 2026)',
             'body': sched_text,
             'published': True
         }
-    }).encode('utf-8'),
-    headers=headers,
-    method='PUT'
+    },
+    'Reading Schedule'
 )
-with urllib.request.urlopen(put_sched) as resp:
-    res = json.loads(resp.read().decode('utf-8'))
-    print('Reading Schedule Page updated on Canvas successfully! Slug:', res.get('url'))
+if not DRY_RUN: print('Reading Schedule Page updated on Canvas successfully! Slug:', res.get('url'))
 
 # 2b. Push Syllabus Page to Canvas
 print('\n--- Deploying Syllabus Page to Canvas ---')
 with open('bruinlearn_course_materials/pages/sociol-208b-syllabus-fall-2026.html') as f:
     syl_text = f.read()
 
-put_syl = urllib.request.Request(
-    f'{url}/api/v1/courses/{course_id}/pages/sociol-208b-syllabus-fall-2026',
-    data=json.dumps({
+res = api_put(
+    f'/api/v1/courses/{course_id}/pages/sociol-208b-syllabus-fall-2026',
+    {
         'wiki_page': {
             'title': 'SOCIOL 208B Syllabus (Fall 2026)',
             'body': syl_text,
             'published': True
         }
-    }).encode('utf-8'),
-    headers=headers,
-    method='PUT'
+    },
+    'Syllabus'
 )
-with urllib.request.urlopen(put_syl) as resp:
-    res = json.loads(resp.read().decode('utf-8'))
-    print('Syllabus Page updated on Canvas successfully! Slug:', res.get('url'))
+if not DRY_RUN: print('Syllabus Page updated on Canvas successfully! Slug:', res.get('url'))
 
 # 3. Deploy all 10 Weekly Pages to Canvas with DOI links
 print('\n--- Deploying Weekly Overview Pages to Canvas ---')
@@ -559,20 +565,18 @@ for w in WEEKS_DATA:
     page_title = f"Week {w['week']}: {w['title']} (Readings & Overview)"
     page_html = make_weekly_page_html(w)
     
-    put_req = urllib.request.Request(
-        f'{url}/api/v1/courses/{course_id}/pages/{slug}',
-        data=json.dumps({
+    res = api_put(
+        f'/api/v1/courses/{course_id}/pages/{slug}',
+        {
             'wiki_page': {
                 'title': page_title,
                 'body': page_html,
                 'published': True
             }
-        }).encode('utf-8'),
-        headers=headers,
-        method='PUT'
+        },
+        f'Week {w["week"]} page'
     )
-    with urllib.request.urlopen(put_req) as resp:
-        res = json.loads(resp.read().decode('utf-8'))
+    if not DRY_RUN:
         print(f"Week {w['week']} page updated on Canvas: {res.get('url')}")
 
-print('\nALL 10 Weekly Pages successfully deployed to Canvas with direct DOI links!')
+print('\nDRY RUN complete: 10 weekly pages would be deployed.' if DRY_RUN else '\nALL 10 Weekly Pages successfully deployed to Canvas with direct DOI links!')
