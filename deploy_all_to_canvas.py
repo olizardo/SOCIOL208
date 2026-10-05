@@ -342,7 +342,7 @@ WEEKS_DATA = [
         'memo_id': 2041283,
         'memo_due': 'Sunday, Oct. 25 at 5:00 pm PT',
         'slug': 'week-5-collaboration-creativity-and-field-dynamics-readings-and-overview',
-        'leaders': 'George Garcia &amp; Sarah Stigers',
+        'leaders': 'Alvin Chu &amp; Sarah Stigers',
         'part1_title': 'Structural Folds & Small Worlds of Creativity',
         'part1_readings': [
             ('Vedres, B., & Stark, D. (2010). Structural Folds: Generative Disruption In Overlapping Groups. <em>American Journal of Sociology</em>, 115(4), 1150–1190.', '10.1086/649497'),
@@ -366,7 +366,7 @@ WEEKS_DATA = [
         'memo_id': 2041284,
         'memo_due': 'Sunday, Nov. 1 at 5:00 pm PT',
         'slug': 'week-6-networks-and-culture-and-culture-in-networks-readings-and-overview',
-        'leaders': 'Sarah Stigers &amp; Noor Amanullah',
+        'leaders': 'Travis Ashby &amp; Noor Amanullah',
         'part1_title': 'Dualities of Culture & Structure and Tie Formation',
         'part1_readings': [
             ('Breiger, R. L. (2010). Dualities of culture and structure: Seeing through cultural holes. Pp. 37–47 in <em>Relationale soziologie</em>. VS Verlag für Sozialwissenschaften.', '10.1007/978-3-531-92402-1_2'),
@@ -464,7 +464,7 @@ WEEKS_DATA = [
         'memo_id': 2041279,
         'memo_due': 'Sunday, Nov. 29 at 5:00 pm PT',
         'slug': 'week-10-networks-and-the-micro-slash-macro-link-readings-and-overview',
-        'leaders': 'Travis Ashby &amp; George Garcia',
+        'leaders': 'Travis Ashby &amp; Sarah Stigers',
         'part1_title': 'Network Ecology & Romantic/Sexual Networks',
         'part1_readings': [
             ('McFarland, D. A., Moody, J., Diehl, D., Smith, J. A., & Thomas, R. J. (2014). Network Ecology and Adolescent Social Structure. <em>American Sociological Review</em>, 79(6), 1088–1121.', '10.1177/0003122414554001'),
