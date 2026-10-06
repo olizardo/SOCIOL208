@@ -95,17 +95,15 @@ doi_map = {
     'Rossman, G.': '10.1177/0003122409359164',
 
     # Week 6
-    'Breiger, R. L. (2010)': '10.1007/978-3-531-92402-1_2',
-    'Lizardo, O. (2023)': '10.4135/9781529614695.n13',
     'Lewis, K.': '10.1086/697525',
     'Fuhse, J. A., & Gondal': '10.1016/j.socnet.2021.12.005',
     'Fuhse, J. A., &amp; Gondal': '10.1016/j.socnet.2021.12.005',
     'Fuhse, J. A. (2009)': '10.1111/j.1467-9558.2009.00338.x',
     'Ikegami, E. (2000)': None,
-    'Mützel, S.': '10.1093/oxfordhb/9780190251765.013.9',
-    'M&uuml;tzel, S.': '10.1093/oxfordhb/9780190251765.013.9',
-    'Fuhse, J., & Mische': '10.4135/9781529614695.n5',
-    'Fuhse, J., &amp; Mische': '10.4135/9781529614695.n5',
+    'Boutyline': '10.1086/691274',
+    'Goldberg, A. (2011)': '10.1086/657976',
+    'Askin, N.': '10.1177/0003122417728662',
+    'Leung, M. D.': '10.1086/675891',
 
     # Week 7
     'Centola, D., & Macy': '10.1086/521848',
@@ -113,18 +111,17 @@ doi_map = {
     'DellaPosta, D.': '10.1086/681254',
     'Centola, D. (2015)': '10.1086/681275',
     'Becker, S. O.': '10.1177/0003122420948059',
-    'Goldberg, A., & Stein': '10.1177/0003122418797576',
-    'Goldberg, A., &amp; Stein': '10.1177/0003122418797576',
     'Bail, C. A.': '10.1177/0003122417733673',
 
     # Week 8
     'Padgett, J. F.': '10.1086/230190',
     'Gould, R. V. (1991)': '10.2307/2096251',
+    'Barkey, K.': '10.1086/231086',
     'Erikson, E., & Feltham': '10.1093/oxfordhb/9780190251765.013.40',
     'Erikson, E., &amp; Feltham': '10.1093/oxfordhb/9780190251765.013.40',
     'Erikson, E., & Bearman': '10.1086/502694',
     'Erikson, E., &amp; Bearman': '10.1086/502694',
-    'Bearman, P., Faris': '10.1017/s0145553200021854',
+    'Stamatov, P.': '10.1177/0003122410374084',
 
     # Week 9
     'McPherson, M.': '10.1146/annurev.soc.27.1.415',
@@ -369,17 +366,17 @@ WEEKS_DATA = [
         'leaders': 'Travis Ashby &amp; Noor Amanullah',
         'part1_title': 'Dualities of Culture & Structure and Tie Formation',
         'part1_readings': [
-            ('Breiger, R. L. (2010). Dualities of culture and structure: Seeing through cultural holes. Pp. 37–47 in <em>Relationale soziologie</em>. VS Verlag für Sozialwissenschaften.', '10.1007/978-3-531-92402-1_2'),
-            ('Lizardo, O. (2023). Culture and Networks. Pp. 188–201 in <em>The SAGE Handbook of Social Network Analysis</em>. SAGE Publications Ltd.', '10.4135/9781529614695.n13'),
             ('Lewis, K., & Kaufman, J. (2018). The Conversion of Cultural Tastes Into Social Network Ties. <em>American Journal of Sociology</em>, 123(6), 1684–1742.', '10.1086/697525'),
-            ('Fuhse, J. A., & Gondal, N. (2024). Networks from culture: Mechanisms of tie-formation follow institutionalized rules in social fields. <em>Social Networks</em>, 77, 43–54.', '10.1016/j.socnet.2021.12.005')
+            ('Fuhse, J. A., & Gondal, N. (2024). Networks from culture: Mechanisms of tie-formation follow institutionalized rules in social fields. <em>Social Networks</em>, 77, 43–54.', '10.1016/j.socnet.2021.12.005'),
+            ('Boutyline, A., & Vaisey, S. (2017). Belief Network Analysis: A Relational Approach to Understanding the Structure of Attitudes. <em>American Journal of Sociology</em>, 122(5), 1371–1447.', '10.1086/691274'),
+            ('Goldberg, A. (2011). Mapping Shared Understandings Using Relational Class Analysis: The Case of the Cultural Omnivore Reexamined. <em>American Journal of Sociology</em>, 116(5), 1397–1436.', '10.1086/657976')
         ],
-        'part2_title': 'Meaning Structures, Relational Sociology, and Publics',
+        'part2_title': 'Meaning Structures, Publics, and Cultural Categories',
         'part2_readings': [
             ('Fuhse, J. A. (2009). The Meaning Structure of Social Networks. <em>Sociological Theory</em>, 27(1), 51–73.', '10.1111/j.1467-9558.2009.00338.x'),
             ('Ikegami, E. (2000). A Sociological Theory of Publics: Identity and Culture As Emergent Properties In Networks. <em>Social Research</em>, 989–1029.', None),
-            ('Mützel, S., & Breiger, R. (2021). Duality Beyond Persons and Groups. In <em>The Oxford Handbook of Social Networks</em>. Oxford University Press.', '10.1093/oxfordhb/9780190251765.013.9'),
-            ('Fuhse, J., & Mische, A. (2024). Relational Sociology: Networks, Culture and Interaction. In J. McLevey, J. Scott, & P. J. Carrington (Eds.), <em>The SAGE Handbook of Social Network Analysis</em> (2nd ed., pp. 55–71). SAGE.', '10.4135/9781529614695.n5')
+            ('Askin, N., & Mauskapf, M. (2017). What Makes Popular Culture Popular? Product Features and Optimal Distinctiveness in Music. <em>American Sociological Review</em>, 82(5), 910–944.', '10.1177/0003122417728662'),
+            ('Leung, M. D. (2014). Dilettante or Renaissance Man? How the Order of Job Experiences Shapes Evaluator Perceptions of Categorical Spanners. <em>American Journal of Sociology</em>, 119(5), 1362–1403.', '10.1086/675891')
         ]
     },
     {
@@ -396,15 +393,13 @@ WEEKS_DATA = [
         'part1_title': 'Complex Contagion, Clustering, and Spatial Diffusion',
         'part1_readings': [
             ('Centola, D., & Macy, M. (2007). Complex Contagions and the Weakness of Long Ties. <em>American Journal of Sociology</em>, 113(3), 702–734.', '10.1086/521848'),
-            ('DellaPosta, D., Shi, Y., & Macy, M. (2015). Why Do Liberals Drink Lattes? <em>American Journal of Sociology</em>, 120(5), 1473–1511.', '10.1086/681254'),
             ('Centola, D. (2015). The social origins of networks and diffusion. <em>American Journal of Sociology</em>, 120(5), 1295–1338.', '10.1086/681275'),
             ('Cheng, M., Smith, D. S., Ren, X., Cao, H., Smith, S., & McFarland, D. A. (2023). How new ideas diffuse in science. <em>American Sociological Review</em>, 88(3), 522–561.', '10.1177/00031224231166955'),
-            ('Becker, S. O., Hsiao, Y., Pfaff, S., & Rubin, J. (2020). Multiplex Network Ties and the Spatial Diffusion of Radical Innovations: Martin Luther\'s Leadership In The Early Reformation. <em>American Sociological Review</em>, 85(5), 857–894.', '10.1177/0003122420948059'),
             ('Keuchenius, A., Törnberg, P., & Uitermark, J. (2021). Adoption and Adaptation: A Computational Case Study of the Spread of Granovetter\'s Weak Ties Hypothesis. <em>Social Networks</em>, 66, 10–25.', '10.1016/j.socnet.2021.01.001')
         ],
-        'part2_title': 'Associative Diffusion & Cultural Currents',
+        'part2_title': 'Associative Diffusion & Public Conversation',
         'part2_readings': [
-            ('Goldberg, A., & Stein, S. K. (2018). Beyond Social Contagion: Associative Diffusion and The Emergence of Cultural Variation. <em>American Sociological Review</em>, 83(5), 897–932.', '10.1177/0003122418797576'),
+            ('DellaPosta, D., Shi, Y., & Macy, M. (2015). Why Do Liberals Drink Lattes? <em>American Journal of Sociology</em>, 120(5), 1473–1511.', '10.1086/681254'),
             ('Bail, C. A., Brown, T. W., & Mann, M. (2017). Channeling hearts and minds: Advocacy organizations, cognitive-emotional currents, and public conversation. <em>American Sociological Review</em>, 82(6), 1188–1213.', '10.1177/0003122417733673')
         ]
     },
@@ -422,12 +417,14 @@ WEEKS_DATA = [
         'part1_title': 'Robust Action, Mobilization, and Historical Networks',
         'part1_readings': [
             ('Padgett, J. F., & Ansell, C. K. (1993). Robust Action and the Rise of the Medici, 1400–1434. <em>American Journal of Sociology</em>, 98(6), 1259–1319.', '10.1086/230190'),
-            ('Gould, R. V. (1991). Multiple Networks and Mobilization In The Paris Commune, 1871. <em>American Sociological Review</em>, 56(6), 716–729.', '10.2307/2096251')
+            ('Gould, R. V. (1991). Multiple Networks and Mobilization In The Paris Commune, 1871. <em>American Sociological Review</em>, 56(6), 716–729.', '10.2307/2096251'),
+            ('Becker, S. O., Hsiao, Y., Pfaff, S., & Rubin, J. (2020). Multiplex Network Ties and the Spatial Diffusion of Radical Innovations: Martin Luther\'s Leadership In The Early Reformation. <em>American Sociological Review</em>, 85(5), 857–894.', '10.1177/0003122420948059')
         ],
-        'part2_title': 'Global Trade, Malfeasance, and Historical Sequences',
+        'part2_title': 'Empires, Trade, and Long-Distance Networks',
         'part2_readings': [
+            ('Barkey, K., & Van Rossem, R. (1997). Networks of Contention: Villages and Regional Structure in the Seventeenth-Century Ottoman Empire. <em>American Journal of Sociology</em>, 102(5), 1345–1382.', '10.1086/231086'),
             ('Erikson, E., & Bearman, P. (2006). Malfeasance and the Foundations For Global Trade: The Structure of English Trade In The East Indies, 1601–1833. <em>American Journal of Sociology</em>, 112(1), 195–230.', '10.1086/502694'),
-            ('Bearman, P., Faris, R., & Moody, J. (1999). Blocking The Future: New Solutions For Old Problems In Historical Social Science. <em>Social Science History</em>, 23(4), 501–533.', '10.1017/s0145553200021854')
+            ('Stamatov, P. (2010). Activist Religion, Empire, and the Emergence of Modern Long-Distance Advocacy Networks. <em>American Sociological Review</em>, 75(4), 607–628.', '10.1177/0003122410374084')
         ]
     },
     {

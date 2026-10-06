@@ -91,6 +91,8 @@ CANVAS_API_TOKEN="<token>"
 
 ## 4. 10-Week Course Sequence & Lesson Plan
 
+*Weekly reading lists below are synced to the live Bruin Learn site (source of truth: `WEEKS_DATA` in `deploy_all_to_canvas.py`) as of 2026-10-05.*
+
 ### Module 1: Foundations & The Relational Turn (Weeks 1–2)
 
 #### Week 1: Networks As Theory and Perspective (Mon., Sep. 28)
@@ -101,7 +103,7 @@ CANVAS_API_TOKEN="<token>"
   * Rivera, M. T., Soderstrom, S. B., & Uzzi, B. (2010). Dynamics of Dyads in Social Networks: Assortative, Relational, and Proximity Mechanisms. *Annual Review of Sociology*, 36(1), 91–115.
 * **Part 2: Relational Sociology, Culture, and Agency**
   * Erikson, E. (2013). Formalist and Relationalist Theory In Social Network Analysis. *Sociological Theory*, 31(3), 219–242.
-  * Erices-Ocampo, P., Lubbers, M. J., & adams, j. (2025). Toward a Unified Conceptualization of Social Capital. *Annual Review of Sociology*, 51.
+  * Mische, A. (2011). Relational Sociology, Culture, and Agency. In J. Scott & P. J. Carrington (Eds.), *The Sage Handbook of Social Network Analysis* (pp. 80–97). Sage.
   * Fuhse, J. (2020). Theories of Social Networks. In R. Light & J. Moody (Eds.), *The Oxford Handbook of Social Networks* (pp. 34–49). Oxford University Press.
 * **Deliverable:** Analytic Memo 1 (due Sun., Sep. 27 at 5:00 pm PT).
 
@@ -111,6 +113,7 @@ CANVAS_API_TOKEN="<token>"
   * *(Optional)* Rejection letter from *American Sociological Review* of the first (1969) version of the paper (`https://scatter.wordpress.com/wp-content/uploads/2014/10/granovetter-rejection.pdf`).
   * *(Optional)* Granovetter, M. S. (1969). Alienation Reconsidered: The Strength of Weak Ties. Reprinted in *Connections* 5(2): 4–16 (`https://assets.noviams.com/novi-file-uploads/insna/Connections_Archive/1982_Volume_5__Issue_2-b2c89e8d.pdf`).
   * Kim, M., & Fernandez, R. M. (2023). What Makes Weak Ties Strong? *Annual Review of Sociology*, 49(1), 177–193.
+  * Gould, R. V., & Fernandez, R. M. (1989). Structures of Mediation: A Formal Approach To Brokerage In Transaction Networks. *Sociological Methodology*, 89–126.
   * Obstfeld, D., Borgatti, S. P., & Davis, J. (2014). Brokerage As a Process: Decoupling Third Party Action From Social Network Structure. *Research In The Sociology of Organizations*, 40, 135–159.
   * Stovel, K., & Shaw, L. (2012). Brokerage. *Annual Review of Sociology*, 38, 139–158.
 * **Part 2: Structural Holes, Embeddedness, and Information Bandwidth**
@@ -123,7 +126,7 @@ CANVAS_API_TOKEN="<token>"
 
 ### Module 2: Structural Positions & Substantive Arenas (Weeks 3–5)
 
-#### Week 3: Networks and Markets (Mon., Oct. 12)
+#### Week 3: Networks and the Economy and Organizations (Mon., Oct. 12)
 * **Part 1: Embeddedness, Price Setting, and Market Dynamics**
   * Uzzi, B. (1996). The Sources and Consequences of Embeddedness for the Economic Performance of Organizations: The Network Effect. *American Sociological Review*, 61(4), 674–698.
   * Fernandez-Mateo, I. (2007). Who Pays the Price of Brokerage? Transferring Constraint through Price Setting in the Staffing Sector. *American Sociological Review*, 72(2), 291–317.
@@ -162,13 +165,15 @@ CANVAS_API_TOKEN="<token>"
 
 #### Week 6: Networks and Culture and Culture in Networks (Mon., Nov. 2)
 * **Part 1: Dualities of Culture & Structure and Tie Formation**
-  * Lizardo, O. (2023). Culture and Networks. Pp. 188–201 in *The SAGE Handbook of Social Network Analysis*. SAGE Publications Ltd.
   * Lewis, K., & Kaufman, J. (2018). The Conversion of Cultural Tastes Into Social Network Ties. *American Journal of Sociology*, 123(6), 1684–1742.
   * Fuhse, J. A., & Gondal, N. (2024). Networks from culture: Mechanisms of tie-formation follow institutionalized rules in social fields. *Social Networks*, 77, 43–54.
-* **Part 2: Meaning Structures, Relational Sociology, and Publics**
+  * Boutyline, A., & Vaisey, S. (2017). Belief Network Analysis: A Relational Approach to Understanding the Structure of Attitudes. *American Journal of Sociology*, 122(5), 1371–1447.
+  * Goldberg, A. (2011). Mapping Shared Understandings Using Relational Class Analysis: The Case of the Cultural Omnivore Reexamined. *American Journal of Sociology*, 116(5), 1397–1436.
+* **Part 2: Meaning Structures, Publics, and Cultural Categories**
   * Fuhse, J. A. (2009). The Meaning Structure of Social Networks. *Sociological Theory*, 27(1), 51–73.
-  * Mützel, S., & Breiger, R. (2021). Duality Beyond Persons and Groups. In *The Oxford Handbook of Social Networks*. Oxford University Press.
-  * Fuhse, J., & Mische, A. (2024). Relational Sociology: Networks, Culture and Interaction. In J. McLevey, J. Scott, & P. J. Carrington (Eds.), *The SAGE Handbook of Social Network Analysis* (2nd ed., pp. 55–71). SAGE.
+  * Ikegami, E. (2000). A Sociological Theory of Publics: Identity and Culture As Emergent Properties In Networks. *Social Research*, 989–1029.
+  * Askin, N., & Mauskapf, M. (2017). What Makes Popular Culture Popular? Product Features and Optimal Distinctiveness in Music. *American Sociological Review*, 82(5), 910–944.
+  * Leung, M. D. (2014). Dilettante or Renaissance Man? How the Order of Job Experiences Shapes Evaluator Perceptions of Categorical Spanners. *American Journal of Sociology*, 119(5), 1362–1403.
 * **Deliverables:**
   * Analytic Memo 6 (due Sun., Nov. 1 at 5:00 pm PT).
   * 📌 **Final Project Extended Abstract** (due Fri., Nov. 6 at 11:59 pm PT).
@@ -176,11 +181,11 @@ CANVAS_API_TOKEN="<token>"
 #### Week 7: Diffusion In Networks (Mon., Nov. 9)
 * **Part 1: Complex Contagion, Clustering, and Spatial Diffusion**
   * Centola, D., & Macy, M. (2007). Complex Contagions and the Weakness of Long Ties. *American Journal of Sociology*, 113(3), 702–734.
-  * DellaPosta, D., Shi, Y., & Macy, M. (2015). Why Do Liberals Drink Lattes? *American Journal of Sociology*, 120(5), 1473–1511.
   * Centola, D. (2015). The social origins of networks and diffusion. *American Journal of Sociology*, 120(5), 1295–1338.
   * Cheng, M., Smith, D. S., Ren, X., Cao, H., Smith, S., & McFarland, D. A. (2023). How new ideas diffuse in science. *American Sociological Review*, 88(3), 522–561.
-* **Part 2: Associative Diffusion & Cultural Currents**
-  * Goldberg, A., & Stein, S. K. (2018). Beyond Social Contagion: Associative Diffusion and The Emergence of Cultural Variation. *American Sociological Review*, 83(5), 897–932.
+  * Keuchenius, A., Törnberg, P., & Uitermark, J. (2021). Adoption and Adaptation: A Computational Case Study of the Spread of Granovetter's Weak Ties Hypothesis. *Social Networks*, 66, 10–25.
+* **Part 2: Associative Diffusion & Public Conversation**
+  * DellaPosta, D., Shi, Y., & Macy, M. (2015). Why Do Liberals Drink Lattes? *American Journal of Sociology*, 120(5), 1473–1511.
   * Bail, C. A., Brown, T. W., & Mann, M. (2017). Channeling hearts and minds: Advocacy organizations, cognitive-emotional currents, and public conversation. *American Sociological Review*, 82(6), 1188–1213.
 * **Deliverable:** Analytic Memo 7 & Discussion Leader Questions (due Sun., Nov. 8 at 5:00 pm PT).
 
@@ -188,12 +193,12 @@ CANVAS_API_TOKEN="<token>"
 * **Part 1: Robust Action, Mobilization, and Historical Networks**
   * Padgett, J. F., & Ansell, C. K. (1993). Robust Action and the Rise of the Medici, 1400–1434. *American Journal of Sociology*, 98(6), 1259–1319.
   * Gould, R. V. (1991). Multiple Networks and Mobilization In The Paris Commune, 1871. *American Sociological Review*, 56(6), 716–729.
-  * Hillmann, H. (2008). Mediation in Multiple Networks: Elite Mobilization Before the English Civil War. *American Sociological Review*, 73(3), 426–454.
   * Becker, S. O., Hsiao, Y., Pfaff, S., & Rubin, J. (2020). Multiplex Network Ties and the Spatial Diffusion of Radical Innovations: Martin Luther's Leadership In The Early Reformation. *American Sociological Review*, 85(5), 857–894.
-  * Erikson, E., & Feltham, E. (2021). Historical Network Research. In *The Oxford Handbook of Social Networks*. Oxford University Press.
-* **Part 2: Global Trade, Malfeasance, and Historical Sequences**
+
+* **Part 2: Empires, Trade, and Long-Distance Networks**
+  * Barkey, K., & Van Rossem, R. (1997). Networks of Contention: Villages and Regional Structure in the Seventeenth-Century Ottoman Empire. *American Journal of Sociology*, 102(5), 1345–1382.
   * Erikson, E., & Bearman, P. (2006). Malfeasance and the Foundations For Global Trade: The Structure of English Trade In The East Indies, 1601–1833. *American Journal of Sociology*, 112(1), 195–230.
-  * Bearman, P., Faris, R., & Moody, J. (1999). Blocking The Future: New Solutions For Old Problems In Historical Social Science. *Social Science History*, 23(4), 501–533.
+  * Stamatov, P. (2010). Activist Religion, Empire, and the Emergence of Modern Long-Distance Advocacy Networks. *American Sociological Review*, 75(4), 607–628.
 * **Deliverable:** Analytic Memo 8 & Discussion Leader Questions (due Sun., Nov. 15 at 5:00 pm PT).
 
 ---
