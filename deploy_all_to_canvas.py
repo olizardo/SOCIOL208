@@ -101,8 +101,7 @@ doi_map = {
     'Fuhse, J. A. (2009)': '10.1111/j.1467-9558.2009.00338.x',
     'Ikegami, E. (2000)': None,
     'Boutyline': '10.1086/691274',
-    'Goldberg, A. (2011)': '10.1086/657976',
-    'Askin, N.': '10.1177/0003122417728662',
+'Askin, N.': '10.1177/0003122417728662',
     'Leung, M. D.': '10.1086/675891',
 
     # Week 7
@@ -369,7 +368,6 @@ WEEKS_DATA = [
             ('Lewis, K., & Kaufman, J. (2018). The Conversion of Cultural Tastes Into Social Network Ties. <em>American Journal of Sociology</em>, 123(6), 1684–1742.', '10.1086/697525'),
             ('Fuhse, J. A., & Gondal, N. (2024). Networks from culture: Mechanisms of tie-formation follow institutionalized rules in social fields. <em>Social Networks</em>, 77, 43–54.', '10.1016/j.socnet.2021.12.005'),
             ('Boutyline, A., & Vaisey, S. (2017). Belief Network Analysis: A Relational Approach to Understanding the Structure of Attitudes. <em>American Journal of Sociology</em>, 122(5), 1371–1447.', '10.1086/691274'),
-            ('Goldberg, A. (2011). Mapping Shared Understandings Using Relational Class Analysis: The Case of the Cultural Omnivore Reexamined. <em>American Journal of Sociology</em>, 116(5), 1397–1436.', '10.1086/657976')
         ],
         'part2_title': 'Meaning Structures, Publics, and Cultural Categories',
         'part2_readings': [
