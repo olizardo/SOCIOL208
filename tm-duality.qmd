@@ -60,7 +60,7 @@ G.p <- Proj[[1]]
 G.g <- Proj[[2]]
 ```
 
-In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight`, used in the plotting code to set the `edge.width`:
+In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight`, which the plotting code uses to set the `edge.width`:
 
 ```{r}
 edge_attr(G.p)
@@ -79,7 +79,7 @@ as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
 
 ### Visualizing the Weighted Projections
 
-We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.weight` argument to the value of the edge weight attribute in the corresponding graph:
+We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.width` argument to the value of the edge weight attribute in the corresponding graph:
 
 ```{r}
 #| fig-height: 12
@@ -314,10 +314,10 @@ $$ {#eq-zhou4}
 Where $\mathbf{D}_p^{-1}$ and $\mathbf{D}_g^{-1}$ are the inverses of the diagonal degree matrices of the people and groups, respectively. This matrix formulation allows for more efficient computation of the projections, especially for larger networks, as it leverages matrix operations instead of nested loops. We can compute the person projection using this matrix formulation as follows:
 
 ```{r}
-P.w <- A %*% solve(diag(colSums(A))) %*% t(A) %*% solve(diag(rowSums(A)))
+P.w <- A %*% diag(1 / colSums(A)) %*% t(A) %*% diag(1 / rowSums(A)) # diagonal rescaling, cheaper than inverting via solve()
 colnames(P.w) <- rownames(P.w) <- rownames(A) # set row and column names for person projection
 
-G.w <- t(A) %*% solve(diag(rowSums(A))) %*% A %*% solve(diag(colSums(A)))
+G.w <- t(A) %*% diag(1 / rowSums(A)) %*% A %*% diag(1 / colSums(A))
 colnames(G.w) <- rownames(G.w) <- colnames(A) # set row and column names for group projection
 
 round(P.w[1:5, 1:5], 3) # view the first 5 rows and columns of the person projection
