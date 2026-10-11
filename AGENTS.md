@@ -1997,3 +1997,21 @@ For courses with heavy terminology and quantitative formulas:
 2. **Master Canvas Page:** Build a categorized, searchable Canvas Page with jump-links and Canvas equation images, pinned to the Week 1 / Course Resources Module.
 3. **Per-Lesson Term Summaries:** Inject an expandable `<details>` section into each weekly lesson page containing definitions for that lecture.
 4. **Textbook/Quarto Integration:** Compile `glossary.qmd` into the course website or Quarto book.
+
+## GitHub Pages Lecture-Notes Deployment (SOCIOL208 Website)
+
+The public lecture-notes site (**https://olizardo.github.io/SOCIOL208/**) is deployed by `.github/workflows/publish.yml` (Quarto publish to `gh-pages`, triggered on every push to `main`). Critically, `_quarto.yml` sets **`freeze: true`**, so the CI build does **not** execute R chunks — it reuses the rendered results stored in the `_freeze/<page>/execute-results/` artifacts.
+
+**🚨 Rule: Always commit `_freeze/` together with `.qmd` edits.**
+When editing any lecture-note `.qmd` file at the repo root, the deployed site body is built from the committed `_freeze` artifact, not from the `.qmd` source. Committing only the `.qmd` produces a silently broken deploy: the page body reverts to the last-rendered (stale) version while the "View Source" modal shows the new source — the two visibly diverge.
+
+**Correct workflow for any `.qmd` change:**
+1. Edit the `.qmd` file.
+2. Render locally so the freeze artifact updates: `quarto render <file>.qmd` (or the full site).
+3. Commit **both** the `.qmd` and the updated `_freeze/<page>/` directory together (e.g., `git add <file>.qmd _freeze/<page> && git commit`).
+4. Push to `origin main`; the workflow deploys automatically (~2 minutes). Verify the deployed page's `last-modified` header if in doubt.
+
+**Other notes:**
+- Local rendering requires the `renv` library to be restored (`renv::restore()`); knitr/rmarkdown must be installed or `quarto render` fails with "The knitr package is not available."
+- `ggbump` is archived on CRAN (archived 2025-12-04); its `renv.lock` entry must keep `"Source": "GitHub"` (`davidsjoberg/ggbump`) so restore can resolve it. Do not run a bare `renv::snapshot()` while the library is partially populated — implicit snapshot will shrink the lockfile to the current (broken) library state. Restore the lockfile from git and fix records surgically if that happens.
+- Never push directly to `main` from the assistant environment (blocked by safety rule); ask the user to push, or use a branch + PR.
