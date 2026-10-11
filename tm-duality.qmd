@@ -50,7 +50,7 @@ G <- t(A) %*% A
 G
 ```
 
-The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) each person (group), and the diagonals are each person's number of memberships (the size of each group/event).
+The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) shared by each person (group), and the diagonals are each person's number of memberships (the size of each group/event).
 
 In `igraph`, the relevant function is called `bipartite_projection`. It takes a bipartite graph as an input and returns a list containing `igraph` graph objects of both projections by default:
 
@@ -141,18 +141,20 @@ sum.mem.6.27 <- sum(A[, "6/27"] * degree(g)[which(V(g)$type == FALSE)]) # sum of
 sum.mem.6.27 - degree(g)[which(V(g)$name == "6/27")]
 ```
 
-This is indeed the vertex strength of the event held on `6-27`.
+This is indeed the vertex strength of the event held on `6/27`.
 
-## Visualizing Dual Projections Using the Minimum Spanning Tree
+## Visualizing Dual Projections Using the Maximum Spanning Tree
 
 As we saw, projecting the original biadjacency matrix using Breiger's [-@breiger74] approach yields two weighted one-mode networks. Because an edge exists between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
 
-One approach to simplifying the visual projections of two-mode networks is to compute the **minimum spanning tree** of the resulting weighted graph. For any weighted network, the minimum spanning tree is the graph that connects all nodes with the smallest total edge weight, using $N-1$ edges, where $N$ is the number of nodes.^[Recall that a tree is a connected graph without any cycles.] 
+One approach to simplifying the visual projections of two-mode networks is to compute a **spanning tree** of the resulting weighted graph. For any weighted network, a spanning tree is a graph that connects all nodes using exactly $N-1$ edges, where $N$ is the number of nodes, and contains no cycles.^[Recall that a tree is a connected graph without any cycles.]
 
-To do this, we can follow **Kruskal's Algorithm**. It goes like this:
+Because the edge weights in the projection encode tie *strength* rather than cost or distance, the tree we want is the **maximum spanning tree**: among all spanning trees of the projection, the one that keeps the largest possible total tie strength. This gives us the backbone of strongest ties running through the projected network, rather than the backbone of weakest ties that a cost-oriented minimum spanning tree would return.
+
+To do this, we can follow **Kruskal's Algorithm**, with one change: because we want the maximum spanning tree, we sort edges from strongest to weakest rather than weakest to strongest. Kruskal's greedy procedure is otherwise identical:
 
 - First, we create an edge list containing each of the edge weights of the one-mode projection graph.
-- Then we sort the edge list by weight in increasing order (smallest weights first).
+- Then we sort the edge list by weight in decreasing order (largest weights first).
 - Then, we create an undirected empty graph with $N$ nodes.
 - Now, we go down the edge list, adding edges to the empty graph one at a time, at each step checking that:
   1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
@@ -160,24 +162,29 @@ To do this, we can follow **Kruskal's Algorithm**. It goes like this:
 
 We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.
 
-Here's a function that does all of this, taking the weighted projection `igraph` object as input and returning the minimum spanning tree:
+Note that this is exactly the standard minimum-spanning-tree version of Kruskal's algorithm run on inverted distances $d_{ij} = 1/w_{ij}$ (as built-in implementations such as `mst(G.p, weights = 1 / E(G.p)$weight)` do under the hood), since both induce the same edge ordering. Working directly with the original weights keeps them in their natural shared-membership interpretation.
+
+Here's a function that does all of this, taking the weighted projection `igraph` object as input and returning the maximum spanning tree:
 
 ```{r}
-make.mst <- function(x) {
-  E <- data.frame(as_edgelist(x), w = E(x)$weight) # creating weighted edge list
-  E <- E[order(E$w), ] # ordering by edge weight
+make.max.st <- function(x) {
+  edgelist <- data.frame(as_edgelist(x), w = E(x)$weight) # creating weighted edge list
+  edgelist <- edgelist[order(edgelist$w, decreasing = TRUE), ] # ordering by edge weight (largest first)
   Tr <- make_empty_graph(n = vcount(x), directed = FALSE) # creating empty graph
   V(Tr)$name <- V(x)$name
   k <- 1
   n.e <- ecount(Tr)
   n.v <- vcount(Tr) - 1
   while (n.e < n.v) {
-    i <- which(V(x)$name == E[k, 1])
-    j <- which(V(x)$name == E[k, 2])
-    if (are_adjacent(Tr, i, j) == 0) { # checking nodes are not adjacent
+    if (k > nrow(edgelist)) { # guard: projection is disconnected
+      stop("Graph is disconnected: no spanning tree exists.")
+    }
+    i <- which(V(x)$name == edgelist[k, 1])
+    j <- which(V(x)$name == edgelist[k, 2])
+    if (!are_adjacent(Tr, i, j)) { # checking nodes are not adjacent
       Tr <- add_edges(Tr, c(i, j)) # add edge
       n.e <- ecount(Tr) # new edge id
-      if (is_acyclic(Tr) == 0) { # checking new edge does not add a cycle
+      if (!is_acyclic(Tr)) { # checking new edge does not add a cycle
         Tr <- delete_edges(Tr, n.e) # delete edge if it adds a cycle
       }
     }
@@ -188,19 +195,19 @@ make.mst <- function(x) {
 }
 ```
 
-We can now build the minimum spanning tree graph for each weighted projection:
+We can now build the maximum spanning tree graph for each weighted projection:
 
 ```{r}
-Tr.p <- make.mst(G.p)
-Tr.g <- make.mst(G.g)
+Tr.p <- make.max.st(G.p)
+Tr.g <- make.max.st(G.g)
 ```
 
-And here's a point and line plot of the minimum spanning tree for persons and groups in the *Southern Women* data (we use the `layout_as_tree` option in `igraph`):
+And here's a point and line plot of the maximum spanning tree for persons and groups in the *Southern Women* data (we use the `layout_as_tree` option in `igraph`):
 
 ```{r}
 #| fig-height: 12
 #| fig-width: 12
-#| fig-cap: "One mode projection MST."
+#| fig-cap: "One mode projection maximum spanning tree."
 #| label: fig-mst
 #| fig-subcap:
 #| - "Persons."
