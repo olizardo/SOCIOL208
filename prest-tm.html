@@ -818,6 +818,7 @@ window.Quarto = {
   <li><a href="#the-eigenvector-approach-for-two-mode-pagerank" id="toc-the-eigenvector-approach-for-two-mode-pagerank" class="nav-link" data-scroll-target="#the-eigenvector-approach-for-two-mode-pagerank"><span class="header-section-number">3.1</span> The Eigenvector Approach for Two-Mode PageRank</a></li>
   </ul></li>
   <li><a href="#double-normalized-two-mode-pagerank" id="toc-double-normalized-two-mode-pagerank" class="nav-link" data-scroll-target="#double-normalized-two-mode-pagerank"><span class="header-section-number">4</span> Double Normalized Two-Mode PageRank</a></li>
+  <li><a href="#mapping-to-the-birank-package" id="toc-mapping-to-the-birank-package" class="nav-link" data-scroll-target="#mapping-to-the-birank-package"><span class="header-section-number">5</span> Mapping to the BiRank Package</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/olizardo/SOCIOL208/blob/main/prest-tm.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
     </div>
@@ -874,16 +875,14 @@ window.Quarto = {
 <span id="cb2-5"><a href="#cb2-5" aria-label="5"></a>  <span class="cf">while</span> (delta <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
 <span id="cb2-6"><a href="#cb2-6" aria-label="6"></a>    o.y <span class="ot">&lt;-</span> y <span class="co"># old group status scores</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-label="7"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.y <span class="co"># new people scores a function of people matrix and old group scores</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-label="8"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new people status scores</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-label="8"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co"># normalizing new people status scores</span></span>
 <span id="cb2-9"><a href="#cb2-9" aria-label="9"></a>    y <span class="ot">&lt;-</span> z <span class="sc">%*%</span> x <span class="co"># new group scores a function of group matrix and new people scores</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-label="10"></a>    y <span class="ot">&lt;-</span> y <span class="sc">/</span> <span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new group status scores</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-label="11"></a>    <span class="cf">if</span> (k <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
-<span id="cb2-12"><a href="#cb2-12" aria-label="12"></a>      delta <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(y) <span class="sc">-</span> <span class="fu">abs</span>(o.y))) <span class="co"># diff. between new and old group status scores</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-label="13"></a>    }</span>
-<span id="cb2-14"><a href="#cb2-14" aria-label="14"></a>    k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-label="15"></a>  }</span>
-<span id="cb2-16"><a href="#cb2-16" aria-label="16"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y))</span>
-<span id="cb2-17"><a href="#cb2-17" aria-label="17"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-10"><a href="#cb2-10" aria-label="10"></a>    y <span class="ot">&lt;-</span> y <span class="sc">/</span> <span class="fu">norm</span>(y, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co"># normalizing new group status scores</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-label="11"></a>    delta <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">abs</span>(y <span class="sc">-</span> o.y)) <span class="co"># max element-wise change in group status scores</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-label="12"></a>    k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-label="13"></a>  }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-label="14"></a>  <span class="fu">return</span>(<span class="fu">list</span>(<span class="at">p.s =</span> x, <span class="at">g.s =</span> y))</span>
+<span id="cb2-15"><a href="#cb2-15" aria-label="15"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The function takes the two-mode <strong>biadjacency matrix</strong> <span class="math inline">\(\mathbf{A}\)</span> and its <strong>transpose</strong> <span class="math inline">\(\mathbf{A}^T\)</span> as input and returns a vector of row-mode nodes (e.g., persons) scores <code>p.s</code>, a vector of column-mode (e.g., groups) status scores <code>g.s</code>.</p>
@@ -968,8 +967,8 @@ FLORA     0.188</code></pre>
 <span id="cb8-5"><a href="#cb8-5" aria-label="5"></a>  <span class="cf">while</span> (d <span class="sc">&gt;</span> <span class="fl">1e-10</span>) {</span>
 <span id="cb8-6"><a href="#cb8-6" aria-label="6"></a>    o.x <span class="ot">&lt;-</span> x <span class="co"># old status scores</span></span>
 <span id="cb8-7"><a href="#cb8-7" aria-label="7"></a>    x <span class="ot">&lt;-</span> w <span class="sc">%*%</span> o.x <span class="co"># new scores a function of old scores and adjacency matrix</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-label="8"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"E"</span>) <span class="co"># normalizing new status scores</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-label="9"></a>    d <span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="fu">sum</span>(<span class="fu">abs</span>(x) <span class="sc">-</span> <span class="fu">abs</span>(o.x))) <span class="co"># delta between new and old scores</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-label="8"></a>    x <span class="ot">&lt;-</span> x <span class="sc">/</span> <span class="fu">norm</span>(x, <span class="at">type =</span> <span class="st">"F"</span>) <span class="co"># normalizing new status scores</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-label="9"></a>    d <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">abs</span>(x <span class="sc">-</span> o.x)) <span class="co"># max element-wise difference between new and old scores</span></span>
 <span id="cb8-10"><a href="#cb8-10" aria-label="10"></a>    k <span class="ot">&lt;-</span> k <span class="sc">+</span> <span class="dv">1</span> <span class="co"># incrementing while counter</span></span>
 <span id="cb8-11"><a href="#cb8-11" aria-label="11"></a>  }</span>
 <span id="cb8-12"><a href="#cb8-12" aria-label="12"></a>  <span class="fu">return</span>(<span class="fu">as.vector</span>(x))</span>
@@ -1023,17 +1022,19 @@ FLORA     0.188</code></pre>
 \]</span></p>
 <p>Which says that the status scores of persons <span class="math inline">\(\mathbf{x}\)</span> are just the sums of the status scores of the groups each person is connected to, and the status scores of groups <span class="math inline">\(\mathbf{y}\)</span> are just the sum of the scores of the people that join them.</p>
 <p>Just like we saw in the discussion of <a href="./prest-eigen.html">prestige scoring for one-mode networks</a>, this is the usual cat chasing its own tail circular equation problem. To know the person status scores <span class="math inline">\(\mathbf{x}\)</span> we need to know the group status scores <span class="math inline">\(\mathbf{y}\)</span> and vice versa.</p>
-<p>This is also a classic eigenvector/eigenvaue problem, which means that we can find the person and groups status scores using the <a href="./prest-eigen.html">eigendecomposition</a> approach.</p>
+<p>This is also a classic eigenvector/eigenvalue problem, which means that we can find the person and groups status scores using the <a href="./prest-eigen.html">eigendecomposition</a> approach.</p>
 <p>Since we have a rectangular biadjacency matrix, we can proceed in two ways. We can obtain the eigenvector/eigenvalue pairs via <strong>singular value decomposition</strong> of the biadjacency matrix itself, or via standard eigendecomposition of each of its projections separately.</p>
 <p>Let’s see the first approach in action first, using the <code>R</code> function <code>svd</code>:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-label="1"></a>eig <span class="ot">&lt;-</span> <span class="fu">svd</span>(A) <span class="co"># singular value decomposition of biadjacency matrix</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-label="2"></a>eig.p <span class="ot">&lt;-</span> eig<span class="sc">$</span>u[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span> <span class="co"># vector of person prestige scores</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-label="3"></a>eig.g <span class="ot">&lt;-</span> eig<span class="sc">$</span>v[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span> <span class="co"># vector of group prestige scores</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-label="4"></a><span class="fu">names</span>(eig.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
-<span id="cb13-5"><a href="#cb13-5" aria-label="5"></a><span class="fu">names</span>(eig.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb13-2"><a href="#cb13-2" aria-label="2"></a><span class="co"># SVD/eigenvector signs are arbitrary: standardize by flipping so the largest-magnitude element is positive</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-label="3"></a>std.sign <span class="ot">&lt;-</span> <span class="cf">function</span>(v) v <span class="sc">*</span> <span class="fu">sign</span>(v[<span class="fu">which.max</span>(<span class="fu">abs</span>(v))])</span>
+<span id="cb13-4"><a href="#cb13-4" aria-label="4"></a>eig.p <span class="ot">&lt;-</span> <span class="fu">std.sign</span>(eig<span class="sc">$</span>u[, <span class="dv">1</span>]) <span class="co"># vector of person prestige scores</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-label="5"></a>eig.g <span class="ot">&lt;-</span> <span class="fu">std.sign</span>(eig<span class="sc">$</span>v[, <span class="dv">1</span>]) <span class="co"># vector of group prestige scores</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-label="6"></a><span class="fu">names</span>(eig.p) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-label="7"></a><span class="fu">names</span>(eig.g) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>And for the big reveal:</p>
@@ -1075,8 +1076,8 @@ FLORA     0.188</code></pre>
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-label="1"></a>eig.p <span class="ot">&lt;-</span> <span class="fu">eigen</span>(P)</span>
 <span id="cb18-2"><a href="#cb18-2" aria-label="2"></a>eig.g <span class="ot">&lt;-</span> <span class="fu">eigen</span>(G)</span>
-<span id="cb18-3"><a href="#cb18-3" aria-label="3"></a>p.s <span class="ot">&lt;-</span> eig.p<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-label="4"></a>g.s <span class="ot">&lt;-</span> eig.g<span class="sc">$</span>vector[, <span class="dv">1</span>] <span class="sc">*</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-label="3"></a>p.s <span class="ot">&lt;-</span> <span class="fu">std.sign</span>(eig.p<span class="sc">$</span>vector[, <span class="dv">1</span>])</span>
+<span id="cb18-4"><a href="#cb18-4" aria-label="4"></a>g.s <span class="ot">&lt;-</span> <span class="fu">std.sign</span>(eig.g<span class="sc">$</span>vector[, <span class="dv">1</span>])</span>
 <span id="cb18-5"><a href="#cb18-5" aria-label="5"></a><span class="fu">names</span>(p.s) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
 <span id="cb18-6"><a href="#cb18-6" aria-label="6"></a><span class="fu">names</span>(g.s) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
@@ -1171,8 +1172,14 @@ FLORA     0.188</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-label="1"></a>D.p <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">rowSums</span>(A))</span>
-<span id="cb31-2"><a href="#cb31-2" aria-label="2"></a><span class="fu">round</span>(D.p, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-label="1"></a>inv.deg <span class="ot">&lt;-</span> <span class="cf">function</span>(k, <span class="at">pow =</span> <span class="dv">1</span>) {</span>
+<span id="cb31-2"><a href="#cb31-2" aria-label="2"></a>  <span class="cf">if</span> (<span class="fu">any</span>(k <span class="sc">==</span> <span class="dv">0</span>)) {</span>
+<span id="cb31-3"><a href="#cb31-3" aria-label="3"></a>    <span class="fu">stop</span>(<span class="st">"Isolated nodes present: remove them or handle them explicitly before normalizing."</span>)</span>
+<span id="cb31-4"><a href="#cb31-4" aria-label="4"></a>  }</span>
+<span id="cb31-5"><a href="#cb31-5" aria-label="5"></a>  <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> k<span class="sc">^</span>pow)</span>
+<span id="cb31-6"><a href="#cb31-6" aria-label="6"></a>}</span>
+<span id="cb31-7"><a href="#cb31-7" aria-label="7"></a>D.p <span class="ot">&lt;-</span> <span class="fu">inv.deg</span>(<span class="fu">rowSums</span>(A))</span>
+<span id="cb31-8"><a href="#cb31-8" aria-label="8"></a><span class="fu">round</span>(D.p, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>      [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13]
@@ -1215,12 +1222,12 @@ FLORA     0.188</code></pre>
 [18,]  0.00   0.0   0.0   0.0   0.5</code></pre>
 </div>
 </div>
-<p>Recalling that the row sums of <span class="math inline">\(\mathbf{A}\)</span> give us the person degrees.</p>
+<p>Recalling that the row sums of <span class="math inline">\(\mathbf{A}\)</span> give us the person degrees. Note the guard in the helper function: because the PageRank-style scoring divides by the degrees, it is undefined for nodes with zero ties (isolates), whose presence would silently propagate infinite values through the iteration. The function therefore stops with an informative error rather than proceeding; the fully general solution to this problem is the damped version of the algorithm, which adds a teleportation step so that zero-degree nodes retain their prior score. For large bipartite networks, it is also worth building the diagonal matrices sparsely with <code>Matrix::Diagonal(x = 1 / k^pow)</code> rather than densely, since the dense version is mostly zeros.</p>
 <p>And then we do the same for groups by creating a matrix <span class="math inline">\(\mathbf{D}_g\)</span> containing the <em>inverse</em> of the degrees of each group (number of members) along the diagonals.</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-label="1"></a>D.g <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">colSums</span>(A))</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-label="1"></a>D.g <span class="ot">&lt;-</span> <span class="fu">inv.deg</span>(<span class="fu">colSums</span>(A))</span>
 <span id="cb33-2"><a href="#cb33-2" aria-label="2"></a><span class="fu">round</span>(D.g, <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
@@ -1386,7 +1393,7 @@ FLORA     0.00</code></pre>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-label="1"></a>tm.pr <span class="ot">&lt;-</span> <span class="fu">tm.status</span>(P.n, G.n)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>Note that because the bi-adjacency matrices that go into the <code>tm.status</code> function are already normalized, we can set the <code>norm</code> argument of the function to <code>FALSE</code>.</p>
+<p>Note that because the bi-adjacency matrices that go into the <code>tm.status</code> function are already normalized, the additional Euclidean normalization inside the function is redundant: it only rescales the score vectors by a constant, leaving the rankings unchanged.</p>
 <p>Here are the resulting scores for the people:</p>
 <div class="cell">
 <details open="" class="code-fold">
@@ -1463,15 +1470,13 @@ FLORA     0.250</code></pre>
 </div>
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-label="1"></a><span class="fu">round</span>(pr.p <span class="sc">/</span> <span class="fu">max</span>(pr.g), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-label="1"></a><span class="fu">round</span>(pr.g <span class="sc">/</span> <span class="fu">max</span>(pr.g), <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
-<pre><code>   EVELYN     LAURA   THERESA    BRENDA CHARLOTTE   FRANCES   ELEANOR     PEARL 
-    0.680     0.595     0.680     0.595     0.340     0.340     0.340     0.255 
-     RUTH     VERNE     MYRNA KATHERINE    SYLVIA      NORA     HELEN   DOROTHY 
-    0.340     0.340     0.340     0.510     0.595     0.680     0.425     0.170 
-   OLIVIA     FLORA 
-    0.170     0.170 </code></pre>
+<pre><code> 6/27   3/2  4/12  9/26  2/25  5/19  3/15  9/16   4/8  6/10  2/23   4/7 11/21 
+0.214 0.214 0.429 0.286 0.571 0.571 0.714 1.000 0.857 0.357 0.286 0.429 0.214 
+  8/3 
+0.214 </code></pre>
 </div>
 </div>
 <p>Neat!</p>
@@ -1511,8 +1516,8 @@ FLORA     0.250</code></pre>
 </section>
 <section id="double-normalized-two-mode-pagerank" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="double-normalized-two-mode-pagerank"><span class="header-section-number">4</span> Double Normalized Two-Mode PageRank</h2>
-<p>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person’s centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</p>
-<p>However, the PageRank centrality rankings can still be affected by the sheer <em>number</em> of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events.</p>
+<p>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person’s centrality points according to the size of the group they belong to, so that Evelyn gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</p>
+<p>However, the PageRank centrality rankings can still be affected by the sheer <em>number</em> of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events. It would be nice if a PageRank-style scoring could take into account both the selectivity of the events attended <em>and</em> the number of events attended, so that a person who attends a lot of not-very-selective events doesn’t get an advantage over a person who attends fewer but more selective events.</p>
 <p>To do that, it would be useful to come up with versions of <code>P.n</code> and <code>G.n</code> that normalize (for persons) by the exclusivity of the groups they attend <em>and</em> by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members <em>and</em> by their number of members they go to, so as not to give an advantage to well-attended events.</p>
 <p>For people we can proceed as follows:</p>
 <div class="cell">
@@ -1674,7 +1679,7 @@ FLORA     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-label="1"></a>P.n3 <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">rowSums</span>(A))) <span class="sc">%*%</span> A <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">colSums</span>(A)))</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb70-1"><a href="#cb70-1" aria-label="1"></a>P.n3 <span class="ot">&lt;-</span> <span class="fu">inv.deg</span>(<span class="fu">rowSums</span>(A), <span class="at">pow =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">%*%</span> A <span class="sc">%*%</span> <span class="fu">inv.deg</span>(<span class="fu">colSums</span>(A), <span class="at">pow =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">2</span>)</span>
 <span id="cb70-2"><a href="#cb70-2" aria-label="2"></a><span class="fu">rownames</span>(P.n3) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span>
 <span id="cb70-3"><a href="#cb70-3" aria-label="3"></a><span class="fu">colnames</span>(P.n3) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
@@ -1683,7 +1688,7 @@ FLORA     1.000</code></pre>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-label="1"></a>G.n3 <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">colSums</span>(A))) <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> <span class="fu">diag</span>(<span class="dv">1</span> <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="fu">rowSums</span>(A)))</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-label="1"></a>G.n3 <span class="ot">&lt;-</span> <span class="fu">inv.deg</span>(<span class="fu">colSums</span>(A), <span class="at">pow =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">%*%</span> <span class="fu">t</span>(A) <span class="sc">%*%</span> <span class="fu">inv.deg</span>(<span class="fu">rowSums</span>(A), <span class="at">pow =</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">2</span>)</span>
 <span id="cb71-2"><a href="#cb71-2" aria-label="2"></a><span class="fu">rownames</span>(G.n3) <span class="ot">&lt;-</span> <span class="fu">colnames</span>(A)</span>
 <span id="cb71-3"><a href="#cb71-3" aria-label="3"></a><span class="fu">colnames</span>(G.n3) <span class="ot">&lt;-</span> <span class="fu">rownames</span>(A)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
@@ -2069,6 +2074,62 @@ Table&nbsp;1: Prestige Scores for the Southern Women Data According to Four Algo
 </div>
 </figure>
 </div>
+</section>
+<section id="mapping-to-the-birank-package" class="level2" data-number="5">
+<h2 data-number="5" class="anchored" data-anchor-id="mapping-to-the-birank-package"><span class="header-section-number">5</span> Mapping to the BiRank Package</h2>
+<p>The four algorithms developed above are implemented, under their more standard names, in the <code>birankr</code> (R) and <code>birankpy</code> (Python) packages, which unify them as special cases of a single coupled PageRank-style iteration over the bipartite network <span class="citation" data-cites="yang_etal20">Yang et al. (<a href="#ref-yang_etal20" role="doc-biblioref">2020</a>)</span>. The table below maps each model in this note to its package name and original source.</p>
+<div id="tbl-birankmap" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-birankmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: The four two-mode prestige algorithms in this note and their counterparts in the BiRank package
+</figcaption>
+<div aria-describedby="tbl-birankmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Model in This Note</th>
+<th style="text-align: left;">Matrices Passed to <code>tm.status</code></th>
+<th style="text-align: left;"><code>birankr</code>/<code>birankpy</code> Method</th>
+<th style="text-align: left;">Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Two-Mode Bonacich Prestige (biHITS)</td>
+<td style="text-align: left;"><code>A</code>, <code>t(A)</code> (raw biadjacency matrix)</td>
+<td style="text-align: left;">HITS</td>
+<td style="text-align: left;"><span class="citation" data-cites="kleinberg99">Kleinberg (<a href="#ref-kleinberg99" role="doc-biblioref">1999</a>)</span>; <span class="citation" data-cites="liao_etal14">Liao et al. (<a href="#ref-liao_etal14" role="doc-biblioref">2014</a>)</span> (equivalent to <span class="citation" data-cites="bonacich91">Bonacich (<a href="#ref-bonacich91" role="doc-biblioref">1991</a>)</span>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Two-Mode PageRank</td>
+<td style="text-align: left;"><code>P.n</code> = <span class="math inline">\(\mathbf{A}\mathbf{D}_g\)</span>; <code>G.n</code> = <span class="math inline">\(\mathbf{A}^T\mathbf{D}_p\)</span></td>
+<td style="text-align: left;">CoHITS</td>
+<td style="text-align: left;"><span class="citation" data-cites="deng_etal09">Deng et al. (<a href="#ref-deng_etal09" role="doc-biblioref">2009</a>)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Double-Normalized Two-Mode PageRank</td>
+<td style="text-align: left;"><code>P.n2</code> = <span class="math inline">\(\mathbf{D}_p\mathbf{A}\mathbf{D}_g\)</span>; <code>G.n2</code> = <span class="math inline">\(\mathbf{D}_g\mathbf{A}^T\mathbf{D}_p\)</span></td>
+<td style="text-align: left;">BGRM</td>
+<td style="text-align: left;"><span class="citation" data-cites="rui_etal07">Rui et al. (<a href="#ref-rui_etal07" role="doc-biblioref">2007</a>)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Square-Root Double Normalization</td>
+<td style="text-align: left;"><code>P.n3</code> = <span class="math inline">\(\tilde{\mathbf{D}}_p\mathbf{A}\tilde{\mathbf{D}}_g\)</span>; <code>G.n3</code> = <span class="math inline">\(\tilde{\mathbf{D}}_g\mathbf{A}^T\tilde{\mathbf{D}}_p\)</span>, where <span class="math inline">\(\tilde{\mathbf{D}}\)</span> contains the inverse square-root degrees</td>
+<td style="text-align: left;">BiRank</td>
+<td style="text-align: left;"><span class="citation" data-cites="he_etal16">He et al. (<a href="#ref-he_etal16" role="doc-biblioref">2016</a>)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>One technical difference is worth noting: the package’s update equations include damping factors <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\beta\)</span> (set to 0.85 by default) along with prior score vectors, which add a teleportation step to the iteration. The <code>tm.status</code> function above runs the pure (undamped) power-method version of each algorithm, so the scores converge to the dominant eigenvector pair of the corresponding transition matrices without the smoothing induced by damping.</p>
 
 
 <!-- -->
@@ -2093,16 +2154,22 @@ Faust, Katherine. 1997. <span>“Centrality in Affiliation Networks.”</span> <
 <div id="ref-he_etal16" class="csl-entry" role="listitem">
 He, Xiangnan, Ming Gao, Min-Yen Kan, and Dingxian Wang. 2016. <span>“Birank: Towards Ranking on Bipartite Graphs.”</span> <em>IEEE Transactions on Knowledge and Data Engineering</em> 29 (1): 57–71.
 </div>
+<div id="ref-kleinberg99" class="csl-entry" role="listitem">
+Kleinberg, Jon M. 1999. <span>“Authoritative Sources in a Hyperlinked Environment.”</span> <em>Journal of the ACM (JACM)</em> 46 (5): 604–32.
+</div>
 <div id="ref-liao_etal14" class="csl-entry" role="listitem">
 Liao, Hao, Rui Xiao, Giulio Cimini, and Matúš Medo. 2014. <span>“Network-Driven Reputation in Online Scientific Communities.”</span> <em>PLoS One</em> 9 (12): e112022.
 </div>
 <div id="ref-rui_etal07" class="csl-entry" role="listitem">
 Rui, Xiaoguang, Mingjing Li, Zhiwei Li, Wei-Ying Ma, and Nenghai Yu. 2007. <span>“Bipartite Graph Reinforcement Model for Web Image Annotation.”</span> <em>Proceedings of the 15th ACM International Conference on Multimedia</em>, 585–94.
 </div>
+<div id="ref-yang_etal20" class="csl-entry" role="listitem">
+Yang, Kai-Cheng, Brian Aronson, and Yong-Yeol Ahn. 2020. <span>“BiRank: Fast and Flexible Ranking on Bipartite Networks with <span>R</span> and <span>Python</span>.”</span> <em>Journal of Open Source Software</em> 5 (51): 2315. <a href="https://doi.org/10.21105/joss.02315">https://doi.org/10.21105/joss.02315</a>.
+</div>
 </div></section><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
 
 <ol>
-<li id="fn1"><p>Where the weight (for obscure technical reasons) is the inverse of the square root of the first eigenvalue obtained from the <code>eigen</code> analysis.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>Where the weight is the inverse of the square root of the first eigenvalue obtained from the <code>eigen</code> analysis. The square root is not so mysterious: the nonzero eigenvalues of the projection matrices <span class="math inline">\(\mathbf{P} = \mathbf{A}\mathbf{A}^T\)</span> and <span class="math inline">\(\mathbf{G} = \mathbf{A}^T\mathbf{A}\)</span> are the squares of those of the coupled two-mode system, so the eigenvalue <span class="math inline">\(\lambda\)</span> linking the two modes is the square root of the projections’ leading eigenvalue.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn2"><p>The acronym stands for “Bipartite Graph Reinforcement Model.”<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
@@ -2945,9 +3012,9 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-387"><a href="#cb77-387" aria-label="335"></a></span>
 <span id="cb77-388"><a href="#cb77-388" aria-label="336"></a><span class="fu">## Double Normalized Two-Mode PageRank</span></span>
 <span id="cb77-389"><a href="#cb77-389" aria-label="337"></a></span>
-<span id="cb77-390"><a href="#cb77-390" aria-label="338"></a>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person's centrality points according to the size of the group they belong to, so that evenly gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</span>
+<span id="cb77-390"><a href="#cb77-390" aria-label="338"></a>Recall that the main reason for using the PageRank normalization in the two-mode case (and preferring the PageRank scoring over the eigenvector scoring) is to give more status points to discerning people, so that people who belong to more exclusive clubs distribute more centrality in the system. So to do that we divided each person's centrality points according to the size of the group they belong to, so that Evelyn gets 0.33 centrality points for attending event 6/27 because that event was attended by only three people, which is more than she gets for attending event 4/8 which was attended by twelve people (and the same for events).</span>
 <span id="cb77-391"><a href="#cb77-391" aria-label="339"></a></span>
-<span id="cb77-392"><a href="#cb77-392" aria-label="340"></a>However, the PageRank centrality rankings can still be affected by the sheer *number* of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events. </span>
+<span id="cb77-392"><a href="#cb77-392" aria-label="340"></a>However, the PageRank centrality rankings can still be affected by the sheer *number* of events attended by a person (or the sheer number of members of a group) even if that person is not particularly selective. Thus, a person who attends a whole bunch of not-very selective (well-attended) events still contributes as much centrality to the system as a person who attends fewer but more selective events. It would be nice if a PageRank-style scoring could take into account both the selectivity of the events attended *and* the number of events attended, so that a person who attends a lot of not-very-selective events doesn't get an advantage over a person who attends fewer but more selective events.</span>
 <span id="cb77-393"><a href="#cb77-393" aria-label="341"></a></span>
 <span id="cb77-394"><a href="#cb77-394" aria-label="342"></a>To do that, it would be useful to come up with versions of <span class="in">`P.n`</span> and <span class="in">`G.n`</span> that normalize (for persons) by the exclusivity of the groups they attend *and* by the number of events they go to, so as not to give an advantage to those who attend a lot of events. In the same way, it would be also be useful normalize (for groups) by the discernment of the people who are its members *and* by their number of members they go to, so as not to give an advantage to well-attended events.</span>
 <span id="cb77-395"><a href="#cb77-395" aria-label="343"></a></span>
