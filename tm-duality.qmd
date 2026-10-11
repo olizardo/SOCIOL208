@@ -11,6 +11,9 @@ $$
 As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in another mode, this also reveals the **duality of persons and groups**: The connections between people are made up of the groups they share, and the connections between groups are revealed by the people they share.
 
 ## The Two-Mode Common Neighbors Matrices
+
+### The Dual Projections
+
 Thus, computing the common neighbors matrix for both persons and groups (also called the **projection** of the two-mode network into each of its modes) yields a one-mode similarity matrix between people and groups, where similarities are defined by the number of objects in the other mode they share. 
 
 For the people, the relevant projection is:
@@ -25,6 +28,8 @@ $$
 \mathbf{G} = \mathbf{A}^T\mathbf{A}
 $$ {#eq-g}
 
+### Projections in igraph
+
 Let's see how this works out with real data by loading our usual friend, the *Southern Women* data:
 
 ```{r}
@@ -35,7 +40,7 @@ library(stringr) # using stringr to change names from all caps to title case
 V(g)$name <- str_to_title(V(g)$name)
 ```
 
-In this case, equations and yield:
+In this case, @eq-p and @eq-g yield:
 
 ```{r}
 A <- as_biadjacency_matrix(g)
@@ -71,6 +76,9 @@ as.matrix(as_adjacency_matrix(G.p, attr = "weight"))
 ```{r}
 as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
 ```
+
+### Visualizing the Weighted Projections
+
 We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.with` argument to the value of the edge weight attribute in the corresponding graph:
 
 ```{r}
@@ -99,6 +107,8 @@ plot(G.g,
   edge.width = E(G.g)$weight
 )
 ```
+
+### Vertex Strength and the Dual Connection
 
 Note that because both `G.p` and `G.g` are **weighted graphs**, we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).
 
@@ -145,8 +155,8 @@ To do this, we can follow **Kruskal's Algorithm**. It goes like this:
 - Then we sort the edgelist by weight in increasing order (smallest weights first).
 - Then, we create an undirected empty graph with $N$ nodes.
 - Now, we go down the edgelist, adding edges to the empty graph one at a time, at each step checking that:
- 1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
- 1. Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). 
+  1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
+  1. Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). 
 
 We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.
 
@@ -213,4 +223,158 @@ plot(Tr.g,
 )
 ```
 
+## An Asymmetric Approach to Weighted Projection
 
+@zhou_etal07 describe an asymmetric approach to projecting a two-mode network into two one-mode weighted networks, which addresses two further limitations of the Breiger projections computed above: (1) the fact that the standard projection always results in a *symmetric* weighted adjacency matrix, and (2) the fact that edges incident to degree-one nodes lose all their information in the traditional projection of the *opposite* mode: a group with a single member creates no person-person ties in the person projection, and a person with a single membership creates no group-group ties in the group projection.
+
+### The Weighting Scheme
+
+Formally, in @zhou_etal07's approach, each entry of the person projection matrix is computed by summing over the groups that two people share, but instead of counting each shared group as one point, we weigh it by the degree of the group and the degree of the other person.
+
+So if $\mathbf{k}^p$ is the degree vector of the people, $\mathbf{k}^g$ is the degree vector of the groups, and $m$ is the total number of groups, then the entry $p_{ij}$ of the weighted person projection matrix is computed as:
+
+$$
+p_{ij} = \sum_{l=1}^{m} \frac{a_{il}a_{jl}}{k^p_j k^g_l}
+$${#eq-zhou1}
+
+The numerator of this equation counts the total number of memberships shared by persons $i$ and $j$ as $a_{il}a_{jl}= 1$ only when group $l$ is shared between persons $i$ and $j$, but the denominator weights each shared membership by the number of memberships of person $j$ and the size of the shared group $l$. The intuition is that if person $j$ belongs to many groups, then sharing a group with them is less meaningful, and if group $l$ has many members, then sharing that group is also less meaningful.
+
+On the group side, the entry $g_{ij}$ of the weighted group projection matrix is computed similarly:
+
+$$
+g_{ij} = \sum_{l=1}^{n} \frac{a_{li}a_{lj}}{k^g_j k^p_l}
+$${#eq-zhou2}
+
+Where $n$ is the total number of people, and the intuition is the same as for the person projection: if group $j$ has many members, then sharing a member with that group is less meaningful, and if person $l$ belongs to many groups, then sharing that person is also less meaningful.
+
+### Computing the Weighted Projections
+
+Let's compute these projections in R by defining a function that implements the formulas above: 
+
+```{r}
+# Function to compute the weighted person projection
+zhou.proj <- function(A) {
+  k_p <- rowSums(A) # degree vector of people
+  k_g <- colSums(A) # degree vector of groups     
+  m <- ncol(A) # total number of groups
+  n <- nrow(A) # total number of people   
+  P.w <- matrix(0, nrow = nrow(A), ncol = nrow(A)) # initialize person projection matrix
+  for (i in 1:nrow(A)) {
+    for (j in 1:nrow(A)) {
+      P.w[i, j] <- sum((A[i, ] * A[j, ]) / (k_p[j] * k_g)) # compute entry p_ij
+    }
+  }
+  G.w <- matrix(0, nrow = ncol(A), ncol = ncol(A)) # initialize group projection matrix   
+  for (i in 1:ncol(A)) {
+    for (j in 1:ncol(A)) {
+      G.w[i, j] <- sum((A[, i] * A[, j]) / (k_g[j] * k_p)) # compute entry g_ij
+    }
+  }
+  rownames(P.w) <- colnames(P.w) <- rownames(A) # set row and column names for person projection
+  rownames(G.w) <- colnames(G.w) <- colnames(A) # set row and column names for group projection
+  return(list("P.w" = P.w, "G.w" = G.w))
+}     
+```
+
+Now we can apply this function to our biadjacency matrix `A` to get the weighted person and group projections: 
+
+```{r}
+projections <- zhou.proj(A)
+P.w <- projections$P.w # weighted person projection
+G.w <- projections$G.w # weighted group projection
+round(P.w[1:5, 1:5], 3) # view the first 5 rows and columns of the person projection
+round(G.w[1:5, 1:5], 3) # view the first 5 rows and columns of the group projection
+```
+
+The @zhou_etal07 approach results in two asymmetric weighted adjacency matrices for the person and group projections, which can be used for various analyses such as clustering, centrality analysis, or visualization. The key advantage of this approach is that it accounts for the degree of nodes in the other mode, providing a better representation of the relationships in the two-mode network.
+
+### The Matrix Formulation
+
+Note that we can also express the @zhou_etal07 projection in matrix notation. If $\mathbf{A}$ is the biadjacency matrix, $\mathbf{D}_p$ is the diagonal degree matrix of the people, and $\mathbf{D}_g$ is the diagonal degree matrix of the groups, then the weighted person projection matrix $\mathbf{P}$ and the weighted group projection matrix $\mathbf{G}$ can be computed as:
+
+$$
+\mathbf{P} = \mathbf{A} \mathbf{D}_g^{-1} \mathbf{A}^T \mathbf{D}_p^{-1}
+$$ {#eq-zhou3}
+
+$$
+\mathbf{G} = \mathbf{A}^T \mathbf{D}_p^{-1} \mathbf{A} \mathbf{D}_g^{-1}
+$$ {#eq-zhou4}
+
+Where $\mathbf{D}_p^{-1}$ and $\mathbf{D}_g^{-1}$ are the inverses of the diagonal degree matrices of the people and groups, respectively. This matrix formulation allows for more efficient computation of the projections, especially for larger networks, as it leverages matrix operations instead of nested loops. We can compute the person projection using this matrix formulation as follows:
+
+```{r}
+P.w <- A %*% solve(diag(colSums(A))) %*% t(A) %*% solve(diag(rowSums(A)))
+colnames(P.w) <- rownames(P.w) <- rownames(A) # set row and column names for person projection
+
+G.w <- t(A) %*% solve(diag(rowSums(A))) %*% A %*% solve(diag(colSums(A)))
+colnames(G.w) <- rownames(G.w) <- colnames(A) # set row and column names for group projection
+
+round(P.w[1:5, 1:5], 3) # view the first 5 rows and columns of the person projection
+round(G.w[1:5, 1:5], 3) # view the first 5 rows and columns of the group projection
+```
+
+Which gives us the same result as the nested loop implementation.
+
+### Resource Conservation and Asymmetry
+
+A telltale signature of the @zhou_etal07 approach, which follows directly from the resource-allocation dynamics, is that each column of the projection matrices sums to one (the matrices are column-stochastic): every node distributes a fixed budget of one unit of resource across the other nodes in its mode.
+
+```{r}
+colSums(P.w) # each column should sum to one
+colSums(G.w) # each column should sum to one
+```
+
+Note that as promised, the entries of the person and group projection matrices are not symmetric, meaning that $p_{ij} \neq p_{ji}$ and $g_{ij} \neq g_{ji}$ in general. This is because the weighting scheme accounts for the degree of the column node and the degree of the shared nodes in the other mode, so the ratio of the two directed weights between any pair of nodes is fixed by their degree ratio ($p_{ij}/p_{ji} = k^p_i/k^p_j$ in @zhou_etal07's Equation 7).
+
+We can check this formally using the base `R` function `isSymmetric`:
+
+```{r}
+P.breiger <- A %*% t(A)
+G.breiger <- t(A) %*% A
+isSymmetric(P.breiger) # check if the Breiger person projection is symmetric
+isSymmetric(G.breiger) # check if the Breiger group projection is symmetric
+isSymmetric(P.w) # check if the degree-weighted person projection is symmetric
+isSymmetric(G.w) # check if the degree-weighted group projection is symmetric
+```
+
+The Breiger projections return `TRUE` while the degree-weighted projections return `FALSE`.
+
+### Building the Directed Weighted Projections
+
+We can create weighted directed `igraph` objects from the degree-weighted projections using the function `graph_from_adjacency_matrix` as follows:
+
+```{r}
+g.p <- graph_from_adjacency_matrix(P.w, mode = "directed", weighted = TRUE, diag = FALSE)
+
+g.g <- graph_from_adjacency_matrix(G.w, mode = "directed", weighted = TRUE, diag = FALSE)
+```
+
+Note that we set the `mode` argument to `directed`, the `weighted` argument to `TRUE`, and the `diag` argument to `FALSE` (to ignore the diagonal entries). Two caveats are worth keeping in mind here. First, in @zhou_etal07's resource-allocation semantics, the entry $p_{ij}$ is the fraction of resource that person $j$ transfers to person $i$ (the columns of $\mathbf{P}$ are the resource sources), so the directed edges produced by `graph_from_adjacency_matrix` (which reads entry $[i, j]$ as an arrow from $i$ to $j$) point *against* the direction of resource flow. Second, the diagonal entries $p_{ii}$ that we discard here are not an artifact in @zhou_etal07: each self-weight is the maximum element of its column and encodes how much of a node's resource stays with itself (the paper builds a measure of node "independence" on exactly these diagonal entries), so analyses that want to reproduce the paper's use of the projection should keep the diagonal.
+
+We can, of course, plot the directed weighted graphs on each mode as usual:
+
+```{r}
+#| fig-height: 12
+#| fig-width: 12
+#| fig-cap: "Degree-weighted one mode projections."
+#| label: fig-dgproj
+#| fig-subcap:
+#| - "Persons."
+#| - "Groups."
+#| layout-ncol: 2
+
+set.seed(123)
+plot(g.p,
+  vertex.size = 8, vertex.frame.color = "gray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "gray",
+  edge.width = E(g.p)$weight 
+)
+
+plot(g.g,
+  vertex.size = 8, vertex.frame.color = "gray",
+  vertex.label.dist = 2, edge.curved = 0.2,
+  vertex.label.cex = 1.5, edge.color = "gray",
+  edge.width = E(g.g)$weight 
+)
+```
