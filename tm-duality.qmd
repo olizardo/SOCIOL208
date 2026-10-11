@@ -8,13 +8,13 @@ $$
 \mathbf{M} = \mathbf{A}\mathbf{A}^T
 $$
 
-As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in another mode, this also reveals the **duality of persons and groups**: The connections between people are made up of the groups they share, and the connections between groups are revealed by the people they share.
+As famously noted by @breiger74, doing the same for the affiliation matrix of a two-mode network also returns the common-neighbors matrix, but because objects in one mode can only connect to objects in the other mode, that means that the "common neighbors" of people have to be sets of groups and the common neighbors of groups have to be sets of people. This reveals the **duality of persons and groups**: Indirect connections between people are made up of the groups they share, and indirect connections between groups are composed of the people they share.
 
 ## The Two-Mode Common Neighbors Matrices
 
 ### The Dual Projections
 
-Thus, computing the common neighbors matrix for both persons and groups (also called the **projection** of the two-mode network into each of its modes) yields a one-mode similarity matrix between people and groups, where similarities are defined by the number of objects in the other mode they share. 
+In short, computing the common neighbors matrix for both people and groups, also called the **projection** of the two-mode network into each mode, yields a one-mode similarity matrix between people and groups, where similarity is defined by the number of objects they share in the other mode. 
 
 For the people, the relevant projection is:
 
@@ -50,9 +50,9 @@ G <- t(A) %*% A
 G
 ```
 
-The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) shared by each person (group), and the diagonals are the number of memberships of each person (the size of each group/event).
+The off-diagonal entries of these square person-by-person (group-by-group) matrices are the number of groups (people) each person (group), and the diagonals are each person's number of memberships (the size of each group/event).
 
-In `igraph,` the relevant function is called `bipartite_projection`. It takes a bipartite graph as an input and returns a list containing `igraph` graph objects of both projections by default:
+In `igraph`, the relevant function is called `bipartite_projection`. It takes a bipartite graph as an input and returns a list containing `igraph` graph objects of both projections by default:
 
 ```{r}
 Proj <- bipartite_projection(g)
@@ -60,7 +60,7 @@ G.p <- Proj[[1]]
 G.g <- Proj[[2]]
 ```
 
-In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight` used in the plotting code for to set the `edge.width`:
+In the graph objects produced by the `bipartite_projection` function, the actual shared memberships and shared members are stored as an *attribute* of each edge called `weight`, used in the plotting code to set the `edge.width`:
 
 ```{r}
 edge_attr(G.p)
@@ -79,7 +79,7 @@ as.matrix(as_adjacency_matrix(G.g, attr = "weight"))
 
 ### Visualizing the Weighted Projections
 
-We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.with` argument to the value of the edge weight attribute in the corresponding graph:
+We can also use the weights to draw a weighted graph network plot of people and group projections. All we have to do is set the `edge.weight` argument to the value of the edge weight attribute in the corresponding graph:
 
 ```{r}
 #| fig-height: 12
@@ -112,7 +112,7 @@ plot(G.g,
 
 Note that because both `G.p` and `G.g` are **weighted graphs**, we can calculate the weighted version of degree for both persons and groups from them (sometimes called the **vertex strength**).
 
-In `igraph,` we can do this using the `strength` function, which takes a weighted graph object as input:
+In `igraph`, we can do this using the `strength` function, which takes a weighted graph object as input:
 
 ```{r}
 strength(G.p)
@@ -121,18 +121,18 @@ strength(G.g)
 
 Interestingly, as noted by @faust97 [p. 167], there is a (dual!) mathematical connection between the strength of each vertex in the weighted projection and the centrality of the nodes from the other set they are connected to:
 
-1. For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.
+- For people, the vertex strength is equal to the sum of the sizes of the groups they belong to minus their own degree.
 
-1. For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.
+- For groups, the vertex strength is equal to the sum of the memberships of the people that belong to them, minus their own size.
 
-We can verify this relationship for Evelyn:
+We can verify this relationship for `Evelyn`:
 
 ```{r}
 sum.size.evelyn <- sum(A["Evelyn", ] * degree(g)[which(V(g)$type == TRUE)]) # sum of the sizes of the groups Evelyn belongs to
 sum.size.evelyn - degree(g)[which(V(g)$name == "Evelyn")]
 ```
 
-Which is indeed Evelyn's vertex strength. 
+Which is indeed `Evelyn`'s vertex strength. 
 
 Dually, the same relation applies to groups:
 
@@ -141,20 +141,20 @@ sum.mem.6.27 <- sum(A[, "6/27"] * degree(g)[which(V(g)$type == FALSE)]) # sum of
 sum.mem.6.27 - degree(g)[which(V(g)$name == "6/27")]
 ```
 
-Which is indeed the vertex strength of the event held on 6/27.
+This is indeed the vertex strength of the event held on `6-27`.
 
 ## Visualizing Dual Projections Using the Minimum Spanning Tree
 
-As we just saw, projecting the original biadjacency matrix using Breiger's [-@breiger74] approach results in two weighted one-mode networks. Because there is an edge between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
+As we saw, projecting the original biadjacency matrix using Breiger's [-@breiger74] approach yields two weighted one-mode networks. Because an edge exists between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
 
-One approach to simplifying the visual projections of two-mode networks is to compute the **minimum spanning tree** of the resulting weighted graph. For any weighted network, the minimum spanning tree is the graph that connects all nodes using the smallest number of edges that form a tree^[Recall that a tree is a connected graph without any cycles.], which happens to be $N-1$ where $N$ is the number of nodes. 
+One approach to simplifying the visual projections of two-mode networks is to compute the **minimum spanning tree** of the resulting weighted graph. For any weighted network, the minimum spanning tree is the graph that connects all nodes with the smallest total edge weight, using $N-1$ edges, where $N$ is the number of nodes.^[Recall that a tree is a connected graph without any cycles.] 
 
 To do this, we can follow **Kruskal's Algorithm**. It goes like this:
 
-- First, we create an edgelist containing each of the edge weights of the one-mode projection graph.
-- Then we sort the edgelist by weight in increasing order (smallest weights first).
+- First, we create an edge list containing each of the edge weights of the one-mode projection graph.
+- Then we sort the edge list by weight in increasing order (smallest weights first).
 - Then, we create an undirected empty graph with $N$ nodes.
-- Now, we go down the edgelist, adding edges to the empty graph one at a time, at each step checking that:
+- Now, we go down the edge list, adding edges to the empty graph one at a time, at each step checking that:
   1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
   1. Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). 
 
@@ -225,11 +225,15 @@ plot(Tr.g,
 
 ## An Asymmetric Approach to Weighted Projection
 
-@zhou_etal07 describe an asymmetric approach to projecting a two-mode network into two one-mode weighted networks, which addresses two further limitations of the Breiger projections computed above: (1) the fact that the standard projection always results in a *symmetric* weighted adjacency matrix, and (2) the fact that edges incident to degree-one nodes lose all their information in the traditional projection of the *opposite* mode: a group with a single member creates no person-person ties in the person projection, and a person with a single membership creates no group-group ties in the group projection.
+@zhou_etal07 describe an asymmetric approach to projecting a two-mode network into two one-mode weighted networks, which addresses two limitations of the Breiger projections computed earlier:
+
+- First, there is the fact that the standard projection always results in a *symmetric* weighted adjacency matrix.
+
+- Secondly, the fact that edges incident to degree-one nodes lose all their information in the traditional projection of the *opposite* mode, as a group with a single member creates no person-person ties in the person projection, and a person with a single membership creates no group-group ties in the group projection.
 
 ### The Weighting Scheme
 
-Formally, in @zhou_etal07's approach, each entry of the person projection matrix is computed by summing over the groups that two people share, but instead of counting each shared group as one point, we weigh it by the degree of the group and the degree of the other person.
+Formally, in @zhou_etal07's approach, each entry of the person projection matrix is computed by summing over the groups two people share, but instead of counting each shared group as one point, we weigh it by the group's degree and the *other person's* degree.
 
 So if $\mathbf{k}^p$ is the degree vector of the people, $\mathbf{k}^g$ is the degree vector of the groups, and $m$ is the total number of groups, then the entry $p_{ij}$ of the weighted person projection matrix is computed as:
 
@@ -237,7 +241,7 @@ $$
 p_{ij} = \sum_{l=1}^{m} \frac{a_{il}a_{jl}}{k^p_j k^g_l}
 $${#eq-zhou1}
 
-The numerator of this equation counts the total number of memberships shared by persons $i$ and $j$ as $a_{il}a_{jl}= 1$ only when group $l$ is shared between persons $i$ and $j$, but the denominator weights each shared membership by the number of memberships of person $j$ and the size of the shared group $l$. The intuition is that if person $j$ belongs to many groups, then sharing a group with them is less meaningful, and if group $l$ has many members, then sharing that group is also less meaningful.
+The numerator of this equation counts the total number of memberships shared by persons $i$ and $j$ as $a_{il}a_{jl}= 1$ only when group $l$ is shared between persons $i$ and $j$, but the denominator weights each shared membership by the number of memberships of person $j$ and the size of the shared group $l$. The intuition is that if person $j$ belongs to many groups, sharing a group with them is less meaningful for $i$; similarly, if group $l$ has many members, sharing that group with another person is also less meaningful.
 
 On the group side, the entry $g_{ij}$ of the weighted group projection matrix is computed similarly:
 
@@ -245,7 +249,7 @@ $$
 g_{ij} = \sum_{l=1}^{n} \frac{a_{li}a_{lj}}{k^g_j k^p_l}
 $${#eq-zhou2}
 
-Where $n$ is the total number of people, and the intuition is the same as for the person projection: if group $j$ has many members, then sharing a member with that group is less meaningful, and if person $l$ belongs to many groups, then sharing that person is also less meaningful.
+Where $n$ is the total number of people, and the intuition is the same as for the person projection. If group $j$ has many members, sharing a member matters less from group $i$'s perspective; similarly, if the person $l$ they share belongs to many groups, sharing them should matter less.
 
 ### Computing the Weighted Projections
 
