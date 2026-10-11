@@ -33,12 +33,10 @@ tm.status <- function(w, z) {
   while (delta > 1e-10) {
     o.y <- y # old group status scores
     x <- w %*% o.y # new people scores a function of people matrix and old group scores
-    x <- x / norm(x, type = "E") # normalizing new people status scores
+    x <- x / norm(x, type = "F") # normalizing new people status scores
     y <- z %*% x # new group scores a function of group matrix and new people scores
-    y <- y / norm(y, type = "E") # normalizing new group status scores
-    if (k > 1) {
-      delta <- abs(sum(abs(y) - abs(o.y))) # diff. between new and old group status scores
-    }
+    y <- y / norm(y, type = "F") # normalizing new group status scores
+    delta <- max(abs(y - o.y)) # max element-wise change in group status scores
     k <- k + 1
   }
   return(list(p.s = x, g.s = y))
@@ -88,8 +86,8 @@ status1 <- function(w) {
   while (d > 1e-10) {
     o.x <- x # old status scores
     x <- w %*% o.x # new scores a function of old scores and adjacency matrix
-    x <- x / norm(x, type = "E") # normalizing new status scores
-    d <- abs(sum(abs(x) - abs(o.x))) # delta between new and old scores
+    x <- x / norm(x, type = "F") # normalizing new status scores
+    d <- max(abs(x - o.x)) # max element-wise difference between new and old scores
     k <- k + 1 # incrementing while counter
   }
   return(as.vector(x))
@@ -132,7 +130,7 @@ Which says that the status scores of persons $\mathbf{x}$ are just the sums of t
 
 Just like we saw in the discussion of [prestige scoring for one-mode networks](prest-eigen.qmd), this is the usual cat chasing its own tail circular equation problem. To know the person status scores $\mathbf{x}$ we need to know the group status scores $\mathbf{y}$ and vice versa.
 
-This is also a classic eigenvector/eigenvaue problem, which means that we can find the person and groups status scores using the [eigendecomposition](prest-eigen.qmd) approach. 
+This is also a classic eigenvector/eigenvalue problem, which means that we can find the person and groups status scores using the [eigendecomposition](prest-eigen.qmd) approach.
 
 Since we have a rectangular biadjacency matrix, we can proceed in two ways. We can obtain the eigenvector/eigenvalue pairs via **singular value decomposition** of the biadjacency matrix itself, or via standard eigendecomposition of each of its projections separately. 
 
@@ -140,8 +138,10 @@ Let's see the first approach in action first, using the `R` function `svd`:
 
 ```{r}
 eig <- svd(A) # singular value decomposition of biadjacency matrix
-eig.p <- eig$u[, 1] * -1 # vector of person prestige scores
-eig.g <- eig$v[, 1] * -1 # vector of group prestige scores
+# SVD/eigenvector signs are arbitrary: standardize by flipping so the largest-magnitude element is positive
+std.sign <- function(v) v * sign(v[which.max(abs(v))])
+eig.p <- std.sign(eig$u[, 1]) # vector of person prestige scores
+eig.g <- std.sign(eig$v[, 1]) # vector of group prestige scores
 names(eig.p) <- rownames(A)
 names(eig.g) <- colnames(A)
 ```
@@ -170,8 +170,8 @@ In `R` we can do this using the `eigen` function:
 ```{r}
 eig.p <- eigen(P)
 eig.g <- eigen(G)
-p.s <- eig.p$vector[, 1] * -1
-g.s <- eig.g$vector[, 1] * -1
+p.s <- std.sign(eig.p$vector[, 1])
+g.s <- std.sign(eig.g$vector[, 1])
 names(p.s) <- rownames(A)
 names(g.s) <- colnames(A)
 ```
@@ -189,7 +189,7 @@ The scores are also readily interpretable: The most central people belong to the
 
 ### The Duality of Bonacich Prestige
 
-Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum of the eigenvector centralities on the nodes in the other mode they are connected to [@faust97, p. 170].^[Where the weight (for obscure technical reasons) is the inverse of the square root of the first eigenvalue obtained from the `eigen` analysis.] 
+Another way of thinking of the eigenvector status score of each node in this context is as a weighted sum of the eigenvector centralities on the nodes in the other mode they are connected to [@faust97, p. 170].^[Where the weight is the inverse of the square root of the first eigenvalue obtained from the `eigen` analysis. The square root is not so mysterious: the nonzero eigenvalues of the projection matrices $\mathbf{P} = \mathbf{A}\mathbf{A}^T$ and $\mathbf{G} = \mathbf{A}^T\mathbf{A}$ are the squares of those of the coupled two-mode system, so the eigenvalue $\lambda$ linking the two modes is the square root of the projections' leading eigenvalue.] 
 
 For instance the unnormalized eigenvector status scores for persons and groups are:
 
@@ -227,16 +227,22 @@ To do that, we create new versions of the affiliation matrix $\mathbf{A}$ and it
 To do this, imagine that $\mathbf{D}_p$ is a matrix containing the *inverse* of the degrees of each person (number of memberships) along the diagonals. This matrix can be created in `R` as follows:
 
 ```{r}
-D.p <- diag(1 / rowSums(A))
+inv.deg <- function(k, pow = 1) {
+  if (any(k == 0)) {
+    stop("Isolated nodes present: remove them or handle them explicitly before normalizing.")
+  }
+  diag(1 / k^pow)
+}
+D.p <- inv.deg(rowSums(A))
 round(D.p, 2)
 ```
 
-Recalling that the row sums of $\mathbf{A}$ give us the person degrees.
+Recalling that the row sums of $\mathbf{A}$ give us the person degrees. Note the guard in the helper function: because the PageRank-style scoring divides by the degrees, it is undefined for nodes with zero ties (isolates), whose presence would silently propagate infinite values through the iteration. The function therefore stops with an informative error rather than proceeding; the fully general solution to this problem is the damped version of the algorithm, which adds a teleportation step so that zero-degree nodes retain their prior score. For large bipartite networks, it is also worth building the diagonal matrices sparsely with `Matrix::Diagonal(x = 1 / k^pow)` rather than densely, since the dense version is mostly zeros.
 
 And then we do the same for groups by creating a matrix $\mathbf{D}_g$ containing the *inverse* of the degrees of each group (number of members) along the diagonals.
 
 ```{r}
-D.g <- diag(1 / colSums(A))
+D.g <- inv.deg(colSums(A))
 round(D.g, 2)
 ```
 
@@ -278,7 +284,7 @@ So now, to calculate the two-mode PageRank status score, we just play our two-mo
 tm.pr <- tm.status(P.n, G.n)
 ```
 
-Note that because the bi-adjacency matrices that go into the `tm.status` function are already normalized, we can set the `norm` argument of the function to `FALSE`.
+Note that because the bi-adjacency matrices that go into the `tm.status` function are already normalized, the additional Euclidean normalization inside the function is redundant: it only rescales the score vectors by a constant, leaving the rankings unchanged.
 
 Here are the resulting scores for the people:
 
@@ -306,7 +312,7 @@ pr.g <- status1(G.pr)
 names(pr.p) <- rownames(A)
 names(pr.g) <- colnames(A)
 round(pr.p / max(pr.p), 3)
-round(pr.p / max(pr.g), 3)
+round(pr.g / max(pr.g), 3)
 ```
 
 Neat!
@@ -395,7 +401,7 @@ We can see that the most highly ranked women are now Olivia and Flora (in contra
 Here's how it works. First, we create our new $\mathbf{P}$ matrix for people:
 
 ```{r}
-P.n3 <- diag(1 / sqrt(rowSums(A))) %*% A %*% diag(1 / sqrt(colSums(A)))
+P.n3 <- inv.deg(rowSums(A), pow = 1 / 2) %*% A %*% inv.deg(colSums(A), pow = 1 / 2)
 rownames(P.n3) <- rownames(A)
 colnames(P.n3) <- colnames(A)
 ```
@@ -403,7 +409,7 @@ colnames(P.n3) <- colnames(A)
 And another for the groups:
 
 ```{r}
-G.n3 <- diag(1 / sqrt(colSums(A))) %*% t(A) %*% diag(1 / sqrt(rowSums(A)))
+G.n3 <- inv.deg(colSums(A), pow = 1 / 2) %*% t(A) %*% inv.deg(rowSums(A), pow = 1 / 2)
 rownames(G.n3) <- colnames(A)
 colnames(G.n3) <- rownames(A)
 ```
