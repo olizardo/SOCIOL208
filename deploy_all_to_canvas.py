@@ -10,19 +10,36 @@ if DRY_RUN:
 def get_credentials():
     token = os.environ.get('CANVAS_API_TOKEN')
     url = os.environ.get('CANVAS_URL')
-    renviron = Path.home() / '.Renviron'
-    if renviron.exists():
-        with open(renviron) as f:
+
+    # Check ~/.Renviron plus the OneDrive Documents copy (where R looks on
+    # this machine, since R_USER points there).
+    candidates = [Path.home() / '.Renviron']
+    one_drive = os.environ.get('OneDrive')
+    if one_drive:
+        candidates.append(Path(one_drive) / 'Documents' / '.Renviron')
+
+    for renviron in candidates:
+        if not renviron.exists():
+            continue
+        with open(renviron, encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'): continue
-                if line.startswith('CANVAS_API_TOKEN=') and not token:
-                    token = line.split('=', 1)[1].strip('\"\' ')
-                elif line.startswith('CANVAS_URL=') and not url:
-                    url = line.split('=', 1)[1].strip('\"\' ')
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip().strip('"\' ')
+                if key == 'CANVAS_API_TOKEN' and not token:
+                    token = val
+                elif key == 'CANVAS_URL' and not url:
+                    url = val
     return (url or 'https://bruinlearn.ucla.edu').rstrip('/'), token
 
 url, token = get_credentials()
+if not token:
+    raise SystemExit(
+        'CANVAS_API_TOKEN not found in environment variables or ~/.Renviron files.'
+    )
 headers = {
     'Authorization': f'Bearer {token}',
     'Content-Type': 'application/json',
@@ -146,24 +163,24 @@ def get_doi_for_citation(c):
     return None
 
 # Update front-page.html to use [DOI ↗]
-with open('front-page.html') as f:
+with open('front-page.html', encoding='utf-8') as f:
     fp_text = f.read()
 
 fp_text = fp_text.replace('[link ↗]', '[DOI ↗]')
-with open('front-page.html', 'w') as f:
+with open('front-page.html', 'w', encoding='utf-8') as f:
     f.write(fp_text)
-with open('bruinlearn_course_materials/pages/front-page.html', 'w') as f:
+with open('bruinlearn_course_materials/pages/front-page.html', 'w', encoding='utf-8') as f:
     f.write(fp_text)
 
 # Update sociol-208b-reading-schedule-fall-2026.html to use [DOI ↗]
-with open('bruinlearn_course_materials/pages/sociol-208b-reading-schedule-fall-2026.html') as f:
+with open('bruinlearn_course_materials/pages/sociol-208b-reading-schedule-fall-2026.html', encoding='utf-8') as f:
     sched_text = f.read()
 
 sched_text = sched_text.replace('>[link]</a>', '>[DOI ↗]</a>')
 sched_text = sched_text.replace('>[Course Files]</a>', '>[Course Files ↗]</a>')
-with open('bruinlearn_course_materials/pages/sociol-208b-reading-schedule-fall-2026.html', 'w') as f:
+with open('bruinlearn_course_materials/pages/sociol-208b-reading-schedule-fall-2026.html', 'w', encoding='utf-8') as f:
     f.write(sched_text)
-with open('schedule-208B.html', 'w') as f:
+with open('schedule-208B.html', 'w', encoding='utf-8') as f:
     f.write(sched_text)
 
 print('Updated local HTML templates with [DOI ↗] labels.')
@@ -208,7 +225,7 @@ if not DRY_RUN: print('Reading Schedule Page updated on Canvas successfully! Slu
 
 # 2b. Push Syllabus Page to Canvas
 print('\n--- Deploying Syllabus Page to Canvas ---')
-with open('bruinlearn_course_materials/pages/sociol-208b-syllabus-fall-2026.html') as f:
+with open('bruinlearn_course_materials/pages/sociol-208b-syllabus-fall-2026.html', encoding='utf-8') as f:
     syl_text = f.read()
 
 res = api_put(

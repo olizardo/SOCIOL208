@@ -42,21 +42,37 @@ from pathlib import Path
 def get_credentials():
     token = os.environ.get('CANVAS_API_TOKEN')
     url = os.environ.get('CANVAS_URL')
-    renviron = Path.home() / '.Renviron'
-    if renviron.exists():
-        with open(renviron) as f:
+
+    # Check ~/.Renviron plus the OneDrive Documents copy (where R looks on
+    # this machine, since R_USER points there).
+    candidates = [Path.home() / '.Renviron']
+    one_drive = os.environ.get('OneDrive')
+    if one_drive:
+        candidates.append(Path(one_drive) / 'Documents' / '.Renviron')
+
+    for renviron in candidates:
+        if not renviron.exists():
+            continue
+        with open(renviron, encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith('#') or '=' not in line:
                     continue
-                if line.startswith('CANVAS_API_TOKEN=') and not token:
-                    token = line.split('=', 1)[1].strip('"\' ')
-                elif line.startswith('CANVAS_URL=') and not url:
-                    url = line.split('=', 1)[1].strip('"\' ')
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip().strip('"\' ')
+                if key == 'CANVAS_API_TOKEN' and not token:
+                    token = val
+                elif key == 'CANVAS_URL' and not url:
+                    url = val
     return (url or 'https://bruinlearn.ucla.edu').rstrip('/'), token
 
 
 CANVAS_URL, TOKEN = get_credentials()
+if not TOKEN:
+    raise SystemExit(
+        'CANVAS_API_TOKEN not found in environment variables or ~/.Renviron files.'
+    )
 HEADERS = {
     'Authorization': f'Bearer {TOKEN}',
     'Content-Type': 'application/json',
