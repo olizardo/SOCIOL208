@@ -147,9 +147,9 @@ This is indeed the vertex strength of the event held on `6/27`.
 
 As we saw, projecting the original biadjacency matrix using Breiger's [-@breiger74] approach yields two weighted one-mode networks. Because an edge exists between two persons (groups) if they share at least one person (group), the resulting graphs tend to be dense, with high connectivity between nodes, as in @fig-projection. This can make it hard to discern the connectivity structure of the projected networks and detect patterns.
 
-One approach to simplifying the visual projections of two-mode networks is to compute a **spanning tree** of the resulting weighted graph. For any weighted network, a spanning tree is a graph that connects all nodes using exactly $N-1$ edges, where $N$ is the number of nodes, and contains no cycles.^[Recall that a tree is a connected graph without any cycles.]
+One approach to simplifying the visual projections of two-mode networks is to compute a **spanning tree** of the resulting weighted graph. For any weighted network, a spanning tree connects all nodes using exactly $N-1$ edges, where $N$ is the number of nodes, and contains no cycles.^[Recall that a tree is a connected graph without any cycles.]
 
-Because the edge weights in the projection encode tie *strength* rather than cost or distance, the tree we want is the **maximum spanning tree**: among all spanning trees of the projection, the one that keeps the largest possible total tie strength. This gives us the backbone of strongest ties running through the projected network, rather than the backbone of weakest ties that a cost-oriented minimum spanning tree would return.
+Because the edge weights in the projection encode tie *strength* rather than cost or distance, we want the **maximum spanning tree**: among all spanning trees of the projection, the one that maximizes total tie strength. This gives us the backbone of strongest ties running through the projected network, rather than the backbone of weakest ties that a cost-oriented minimum spanning tree would return.
 
 To do this, we can follow **Kruskal's Algorithm**, with one change: because we want the maximum spanning tree, we sort edges from strongest to weakest rather than weakest to strongest. Kruskal's greedy procedure is otherwise identical:
 
@@ -160,7 +160,7 @@ To do this, we can follow **Kruskal's Algorithm**, with one change: because we w
   1. We are not connecting nodes that have already been connected (avoiding **multiedges**).
   1. Additional edges do not create **cycles** (as the resulting graph would no longer be a tree). 
 
-We stop when we have the desired number of edges ($N-1$), meaning all nodes are connected in the tree.
+We stop when we have the desired number of edges ($N-1$), meaning the tree connects all nodes.
 
 Note that this is exactly the standard minimum-spanning-tree version of Kruskal's algorithm run on inverted distances $d_{ij} = 1/w_{ij}$ (as built-in implementations such as `mst(G.p, weights = 1 / E(G.p)$weight)` do under the hood), since both induce the same edge ordering. Working directly with the original weights keeps them in their natural shared-membership interpretation.
 
@@ -297,11 +297,11 @@ round(P.w[1:5, 1:5], 3) # view the first 5 rows and columns of the person projec
 round(G.w[1:5, 1:5], 3) # view the first 5 rows and columns of the group projection
 ```
 
-The @zhou_etal07 approach results in two asymmetric weighted adjacency matrices for the person and group projections, which can be used for various analyses such as clustering, centrality analysis, or visualization. The key advantage of this approach is that it accounts for the degree of nodes in the other mode, providing a better representation of the relationships in the two-mode network.
+The @zhou_etal07 approach produces two *asymmetric* weighted adjacency matrices for the person and group projections, which can be used for analyses such as clustering, centrality, or visualization. The key advantage is that it accounts for node degrees in the other mode, providing a better representation of relationships in the two-mode network.
 
 ### The Matrix Formulation
 
-Note that we can also express the @zhou_etal07 projection in matrix notation. If $\mathbf{A}$ is the biadjacency matrix, $\mathbf{D}_p$ is the diagonal degree matrix of the people, and $\mathbf{D}_g$ is the diagonal degree matrix of the groups, then the weighted person projection matrix $\mathbf{P}$ and the weighted group projection matrix $\mathbf{G}$ can be computed as:
+We can also express the @zhou_etal07 projection in matrix notation, as with the standard Breiger projection. If $\mathbf{A}$ is the biadjacency matrix, $\mathbf{D}_p$ is the diagonal degree matrix of the people, and $\mathbf{D}_g$ is the diagonal degree matrix of the groups, then the weighted person projection matrix $\mathbf{P}$ and the weighted group projection matrix $\mathbf{G}$ can be computed as:
 
 $$
 \mathbf{P} = \mathbf{A} \mathbf{D}_g^{-1} \mathbf{A}^T \mathbf{D}_p^{-1}
@@ -311,7 +311,9 @@ $$
 \mathbf{G} = \mathbf{A}^T \mathbf{D}_p^{-1} \mathbf{A} \mathbf{D}_g^{-1}
 $$ {#eq-zhou4}
 
-Where $\mathbf{D}_p^{-1}$ and $\mathbf{D}_g^{-1}$ are the inverses of the diagonal degree matrices of the people and groups, respectively. This matrix formulation allows for more efficient computation of the projections, especially for larger networks, as it leverages matrix operations instead of nested loops. We can compute the person projection using this matrix formulation as follows:
+Here, $\mathbf{D}_p^{-1}$ and $\mathbf{D}_g^{-1}$ are the inverses of the diagonal degree matrices for people and groups, respectively. Thus, the Zhou projection is the projection of the group-degree-weighted original biadjacency matrix and the person-degree transpose of the biadjacency matrix.^[This matrix formulation enables more efficient computation of the projections, especially for larger networks, by leveraging matrix operations instead of nested loops.] 
+
+In `R`, we can compute the person projection using this matrix formulation as follows:
 
 ```{r}
 P.w <- A %*% diag(1 / colSums(A)) %*% t(A) %*% diag(1 / rowSums(A)) # diagonal rescaling, cheaper than inverting via solve()
@@ -324,18 +326,18 @@ round(P.w[1:5, 1:5], 3) # view the first 5 rows and columns of the person projec
 round(G.w[1:5, 1:5], 3) # view the first 5 rows and columns of the group projection
 ```
 
-Which gives us the same result as the nested loop implementation.
+As you can see, this gives the same result as the nested-loop implementation.
 
 ### Resource Conservation and Asymmetry
 
-A telltale signature of the @zhou_etal07 approach, which follows directly from the resource-allocation dynamics, is that each column of the projection matrices sums to one (the matrices are column-stochastic): every node distributes a fixed budget of one unit of resource across the other nodes in its mode.
+A key signature of the @zhou_etal07 projection matrices is that each column sums to one (the matrices are **column-stochastic**; the basic idea is that every node (e.g., a person) ``sends'' some proportion of their fixed membership budget to another person with which they share a group. Obviously, people with many  memberships spread this budget across many memberships, so they have less to share; people with few memberships have  more to share, so they send more to their projection neighbors. 
 
 ```{r}
 colSums(P.w) # each column should sum to one
 colSums(G.w) # each column should sum to one
 ```
 
-Note that as promised, the entries of the person and group projection matrices are not symmetric, meaning that $p_{ij} \neq p_{ji}$ and $g_{ij} \neq g_{ji}$ in general. This is because the weighting scheme accounts for the degree of the column node and the degree of the shared nodes in the other mode, so the ratio of the two directed weights between any pair of nodes is fixed by their degree ratio ($p_{ij}/p_{ji} = k^p_i/k^p_j$ in @zhou_etal07's Equation 7).
+As promised, the entries of the person and group projection matrices are not symmetric, so $p_{ij} \neq p_{ji}$ and $g_{ij} \neq g_{ji}$ in general. This is because the weighting scheme accounts for the degree of the column node and the degree of the shared nodes in the other mode, so the ratio of the two directed weights between any pair of nodes is fixed by their degree ratio ($p_{ij}/p_{ji} = k^p_i/k^p_j$ in @zhou_etal07's Equation 7).
 
 We can check this formally using the base `R` function `isSymmetric`:
 
@@ -360,7 +362,7 @@ g.p <- graph_from_adjacency_matrix(P.w, mode = "directed", weighted = TRUE, diag
 g.g <- graph_from_adjacency_matrix(G.w, mode = "directed", weighted = TRUE, diag = FALSE)
 ```
 
-Note that we set the `mode` argument to `directed`, the `weighted` argument to `TRUE`, and the `diag` argument to `FALSE` (to ignore the diagonal entries). Two caveats are worth keeping in mind here. First, in @zhou_etal07's resource-allocation semantics, the entry $p_{ij}$ is the fraction of resource that person $j$ transfers to person $i$ (the columns of $\mathbf{P}$ are the resource sources), so the directed edges produced by `graph_from_adjacency_matrix` (which reads entry $[i, j]$ as an arrow from $i$ to $j$) point *against* the direction of resource flow. Second, the diagonal entries $p_{ii}$ that we discard here are not an artifact in @zhou_etal07: each self-weight is the maximum element of its column and encodes how much of a node's resource stays with itself (the paper builds a measure of node "independence" on exactly these diagonal entries), so analyses that want to reproduce the paper's use of the projection should keep the diagonal.
+We set `mode` to `directed`, `weighted` to `TRUE`, and `diag` to `FALSE` (to ignore the diagonal entries). Two caveats are worth keeping in mind here. First, in @zhou_etal07's resource-allocation semantics, the entry $p_{ij}$ is the fraction of resource that person $j$ transfers to person $i$ (the columns of $\mathbf{P}$ are the resource sources), so the directed edges produced by `graph_from_adjacency_matrix` (which reads entry $[i, j]$ as an arrow from $i$ to $j$) point *against* the direction of resource flow. Second, the diagonal entries $p_{ii}$ that we discard here are not an artifact in @zhou_etal07: each self-weight is the maximum element of its column and encodes how much of a node's resource stays with itself (the paper builds a measure of node "independence" on exactly these diagonal entries), so analyses that want to reproduce the paper's use of the projection should keep the diagonal.
 
 We can, of course, plot the directed weighted graphs on each mode as usual. Because the @zhou_etal07 weights are small fractions (they sum to one across each column), we rescale the edge widths for display so the edges are visible rather than just the arrowheads:
 
