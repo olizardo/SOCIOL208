@@ -119,7 +119,7 @@ doi_map = {
     'Ikegami, E. (2000)': None,
     'Boutyline': '10.1086/691274',
 'Askin, N.': '10.1177/0003122417728662',
-    'Leung, M. D.': '10.1086/675891',
+    'Leung, M. D.': '10.1177/0003122413518638',
 
     # Week 7
     'Centola, D., & Macy': '10.1086/521848',
@@ -391,7 +391,7 @@ WEEKS_DATA = [
             ('Fuhse, J. A. (2009). The Meaning Structure of Social Networks. <em>Sociological Theory</em>, 27(1), 51–73.', '10.1111/j.1467-9558.2009.00338.x'),
             ('Ikegami, E. (2000). A Sociological Theory of Publics: Identity and Culture As Emergent Properties In Networks. <em>Social Research</em>, 989–1029.', None),
             ('Askin, N., & Mauskapf, M. (2017). What Makes Popular Culture Popular? Product Features and Optimal Distinctiveness in Music. <em>American Sociological Review</em>, 82(5), 910–944.', '10.1177/0003122417728662'),
-            ('Leung, M. D. (2014). Dilettante or Renaissance Man? How the Order of Job Experiences Shapes Evaluator Perceptions of Categorical Spanners. <em>American Journal of Sociology</em>, 119(5), 1362–1403.', '10.1086/675891')
+            ('Leung, M. D. (2014). Dilettante or Renaissance Person? How the Order of Job Experiences Affects Hiring in an External Labor Market. <em>American Sociological Review</em>, 79(1), 136–158.', '10.1177/0003122413518638')
         ]
     },
     {
