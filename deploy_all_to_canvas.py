@@ -137,7 +137,7 @@ doi_map = {
     'Erikson, E., &amp; Feltham': '10.1093/oxfordhb/9780190251765.013.40',
     'Erikson, E., & Bearman': '10.1086/502694',
     'Erikson, E., &amp; Bearman': '10.1086/502694',
-    'Stamatov, P.': '10.1177/0003122410374084',
+    'Stamatov, P.': '10.1177/0003122410374083',
 
     # Week 9
     'McPherson, M.': '10.1146/annurev.soc.27.1.415',
@@ -266,7 +266,7 @@ WEEKS_DATA = [
         'part2_readings': [
             ('Erikson, E. (2013). Formalist and Relationalist Theory In Social Network Analysis. <em>Sociological Theory</em>, 31(3), 219–242.', '10.1177/0735275113501998'),
             ('Mische, A. (2011). Relational Sociology, Culture, and Agency. In J. Scott & P. J. Carrington (Eds.), <em>The Sage Handbook of Social Network Analysis</em> (pp. 80–97). Sage.', '10.4135/9781446294413.n7'),
-            ('Fuhse, J. (2020). Theories of Social Networks. In R. Light & J. Moody (Eds.), <em>The Oxford Handbook of Social Networks</em> (pp. 34–49). Oxford University Press.', '10.1093/oxfordhb/9780190251765.013.5')
+            ('Fuhse, J. (2020). Theories of Social Networks. In R. Light & J. Moody (Eds.), <em>The Oxford Handbook of Social Networks</em> (pp. 33–49). Oxford University Press.', '10.1093/oxfordhb/9780190251765.013.5')
         ]
     },
     {
@@ -439,7 +439,7 @@ WEEKS_DATA = [
         'part2_readings': [
             ('Barkey, K., & Van Rossem, R. (1997). Networks of Contention: Villages and Regional Structure in the Seventeenth-Century Ottoman Empire. <em>American Journal of Sociology</em>, 102(5), 1345–1382.', '10.1086/231086'),
             ('Erikson, E., & Bearman, P. (2006). Malfeasance and the Foundations For Global Trade: The Structure of English Trade In The East Indies, 1601–1833. <em>American Journal of Sociology</em>, 112(1), 195–230.', '10.1086/502694'),
-            ('Stamatov, P. (2010). Activist Religion, Empire, and the Emergence of Modern Long-Distance Advocacy Networks. <em>American Sociological Review</em>, 75(4), 607–628.', '10.1177/0003122410374084')
+            ('Stamatov, P. (2010). Activist Religion, Empire, and the Emergence of Modern Long-Distance Advocacy Networks. <em>American Sociological Review</em>, 75(4), 607–628.', '10.1177/0003122410374083')
         ]
     },
     {
@@ -463,7 +463,7 @@ WEEKS_DATA = [
         'part2_readings': [
             ('Gondal, N. (2018). Duality of departmental specializations and PhD exchange: A Weberian analysis of status in interaction using multilevel exponential random graph models (mERGM). <em>Social Networks</em>, 55, 202–212.', '10.1016/j.socnet.2018.07.005'),
             ('Zhao, L. (2025). Uneven Mixing, Network Segregation, and Immigrant Integration. <em>American Sociological Review</em>, 90(3), 521–559.', ''),
-            ('Leal, D. F. (2021). Network inequalities and international migration in the Americas. <em>American Journal of Sociology</em>, 126(5), 1067–1126.', '10.1086/713745')
+            ('Leal, D. F. (2021). Network inequalities and international migration in the Americas. <em>American Journal of Sociology</em>, 126(5), 1067–1126.', '10.1086/713877')
         ]
     },
     {
@@ -487,7 +487,7 @@ WEEKS_DATA = [
             ('Levy, B. L., Phillips, N. E., & Sampson, R. J. (2020). Triple Disadvantage: Neighborhood Networks of Everyday Urban Mobility and Violence In US Cities. <em>American Sociological Review</em>, 85(6), 925–956.', '10.1177/0003122420972323'),
             ('Papachristos, A. V. (2009). Murder By Structure: Dominance Relations and the Social Structure of Gang Homicide. <em>American Journal of Sociology</em>, 115(1), 74–128.', '10.1086/597791'),
             ('Huang, P., & Butts, C. T. (2023). Rooted America: Immobility and Segregation of the Intercounty Migration Network. <em>American Sociological Review</em>, 88(6), 1031–1065.', '10.1177/00031224231212679'),
-            ('Cheng, S., & Park, B. (2020). Flows and Boundaries: A Network Approach to Studying Occupational Mobility in the Labor Market. <em>American Journal of Sociology</em>, 126(3), 577–631.', '10.1086/712399')
+            ('Cheng, S., & Park, B. (2020). Flows and Boundaries: A Network Approach to Studying Occupational Mobility in the Labor Market. <em>American Journal of Sociology</em>, 126(3), 577–631.', '10.1086/712406')
         ]
     }
 ]

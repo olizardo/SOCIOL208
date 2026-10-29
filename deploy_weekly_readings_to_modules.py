@@ -64,7 +64,7 @@ WEEKS_DATA = [
         'part2_readings': [
             'Erikson, E. (2013). Formalist and Relationalist Theory In Social Network Analysis. <em>Sociological Theory</em>, 31(3), 219–242.',
             'Mische, A. (2011). Relational Sociology, Culture, and Agency. In J. Scott & P. J. Carrington (Eds.), <em>The Sage Handbook of Social Network Analysis</em> (pp. 80–97). Sage.',
-            'Fuhse, J. (2020). Theories of Social Networks. In R. Light & J. Moody (Eds.), <em>The Oxford Handbook of Social Networks</em> (pp. 34–49). Oxford University Press.'
+            'Fuhse, J. (2020). Theories of Social Networks. In R. Light & J. Moody (Eds.), <em>The Oxford Handbook of Social Networks</em> (pp. 33–49). Oxford University Press.'
         ]
     },
     {
