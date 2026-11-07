@@ -280,10 +280,10 @@ round(degree(g) / c(rep(14, 18), rep(18, 14)), 3)
 
 For each person (group) we may also be interested in whether they connect to more or less central groups (persons). As such, we can compute the **average nearest neighbor degree** for persons and groups. 
 
-For people this is equivalent to multiplying the vector of group degrees by the entries of the affiliation matrix, and then dividing by the degrees of each person:
+For people this is equivalent to multiplying the vector of group degrees by the entries of the affiliation matrix, and then dividing by the degrees of each person. Note the use of `rep(..., each = nrow(A))` to scale each column of `A` by the degree of the corresponding group: R recycles vectors column-wise in matrix arithmetic, so a bare `A * colSums(A)` would misalign the degrees unless the recycled length happens to be a multiple of the matrix dimension.
 
 ```{r}
-knn.p <- A * colSums(A)
+knn.p <- A * rep(colSums(A), each = nrow(A))
 knn.p
 knn.p <- rowSums(knn.p) / rowSums(A)
 round(knn.p, 2)
@@ -291,12 +291,12 @@ round(knn.p, 2)
 
 We can see that for Flora, the average number of members of the groups she connects to is very high, while the opposite is the case for Myrna. 
 
-We can do the same for groups:
+We can do the same for groups, multiplying the vector of person degrees by each column of `t(A)`, which holds one group's memberships. Here a matrix product is cleaner than element-wise multiplication:
 
 ```{r}
-knn.g <- t(A) * rowSums(A)
+knn.g <- t(A) %*% rowSums(A)
 knn.g
-knn.g <- rowSums(knn.g) / colSums(A)
+knn.g <- as.numeric(knn.g) / colSums(A)
 round(knn.g, 2)
 ```
 
