@@ -229,6 +229,14 @@ CANVAS_API_TOKEN="<token>"
 * **Deliverable:** Analytic Memo 10 & Discussion Leader Questions (due Sun., Nov. 29 at 5:00 pm PT).
 * **Final Requirement:** Final Course Paper submitted via Bruin Learn Submission Box.
 
+### Extended Reading List (Public Quarto Website — Not Canvas)
+
+* **File:** `extended-reading-list-208B.qmd` at the repo root; rendered to `_site/extended-reading-list-208B.html` by the public GitHub Pages site (https://olizardo.github.io/SOCIOL208/). It is **not** part of the Canvas deployment scripts.
+* **Structure:** Thematic bibliography (not organized by week); each category mirrors a section of `schedule-208B.qmd` and is seeded with the currently assigned readings, with supplementary readings appended after them. Entries use APA-style citations with `[link](https://doi.org/...)` DOIs or `[Course Files](...)` links.
+* **Update workflow:** edit the `.qmd` → `quarto render extended-reading-list-208B.qmd` → commit the `.qmd` (no `_freeze/` artifacts are generated — the page has no code chunks) → push to `origin main` (assistant cannot push to main; ask the user).
+* **Citation-verification rule (applied 2026-11-17):** always verify titles, dates, volumes, and DOIs against the Crossref API (`https://api.crossref.org/works?query.bibliographic=...` or direct `/works/<DOI>`) before adding entries. Fernandez-Mateo's (2007) reference list **mis-cites** two titles: Uzzi (1999) is actually "Embeddedness in the Making of Financial Capital: How Social Relations and Networks Benefit Firms Seeking Financing" (*ASR* 64(4), 481–505), and Granovetter (1985) is actually "Economic Action and Social Structure: The Problem of Embeddedness" (*AJS* 91(3), 481–510) — never copy titles from a paper's reference list without checking.
+* **Additions logged 2026-11-17** (sourced from the Fernandez-Mateo 2007 reference list, Crossref-verified): Granovetter (1985) *AJS* 91(3) → Embeddedness, Price Setting, and Market Dynamics; Uzzi (1999) *ASR* 64(4) → same section; Fernandez & Gould (1994) *AJS* 99(6) → Weak Ties, Brokerage Roles, and Mediation; Baker (1990) *AJS* 96(3) → Market Status, Interfirm Networks, and Hybrid Economic Forms; Fernandez & Weinberg (1997) *ASR* 62(6) → Spatial Mobility, Segregation, and Labor Markets.
+
 ---
 
 ## 5. Live Bruin Learn Pages & Endpoints
