@@ -641,15 +641,15 @@ greedy <- function(x) {
       for (j in unique(comm)) {
         if (i < j) {
           d <- sum(B[comm == i, comm == j]) / m # gain in modularity from merging i and j
-          if (d > best) {
-            best <- d
-            pair <- c(i, j)
+          if (d > best) { # if best merge so far
+            best <- d  # replace best
+            pair <- c(i, j) # record the pair of communities the best gain came from
           }
         }
       }
     }
-    if (is.null(pair)) break # no merge improves modularity
-    comm[comm == pair[2]] <- pair[1] # merge community j into i
+    if (is.null(pair)) break # no merge improved modularity
+    comm[comm == pair[2]] <- pair[1] # merge community j into i from the best remaining gain
   }
   return(comm)
 }
@@ -659,11 +659,11 @@ It works like this:
 
 - Lines 1-4 take a graph as input, compute the modularity matrix (`B`), store the number of edges in the graph in object `m`, and give every node a unique label (a number between 1 and $N$ where $N$ is the number of nodes) stored in the `comm` vector. Because the algorithm is agglomerative, every node starts in a community of one.
 
-- Lines 5-7 and 19 control how long the merging continues. The `repeat` loop keeps going until a full pass finds no improving pair; `best` records the largest gain seen so far and `pair` the communities that gain came from, starting each pass at zero and `NULL`. We set pair to `NULL` because a gain of exactly zero also fails the improvement test, so "no candidate yet" has to be a different value than zero.
+- Lines 5-7 and 19 control how long the merging continues. The `repeat` loop keeps going until a full pass finds no improving pair which means that `pair` remains set to `NULL`. The object `best` records the largest gain seen so far in the `for` loop and `pair` the two communities that gain came from.
 
-- Lines 8-9 loop over every pair of current communities (note we use `unique` on the `comm` vector because it will eventually contain repeated values for nodes assigned to the same community). Because the modularity matrix is symmetric in this case of an undirected graph, the condition on line 10 restricts the scan to pairs with `i < j`, so each unordered pair of communities is visited once rather than twice: the code takes one of the two symmetric blocks, rows from the first community and columns from the second.
+- Lines 8-9 loop over every pair of current communities (note we use `unique` on the `comm` vector because it will eventually contain repeated values for nodes assigned to the same community). Because the modularity matrix is symmetric in this case of an undirected graph, the condition on line 10 restricts the scan to pairs with `i < j`, so each unordered pair of communities is visited once rather than twice.
 
-- Line 11 scores a candidate merge as the sum of the matrix entries lying between the two groups, divided by the total number of links. Because line 10 reads only one of the two symmetric blocks, that sum is half the total weight between the groups, but the denominator is also half the matrix's own scale: the modularity matrix divides by the sum of all entries, which for an undirected graph is twice the number of edges. The two halves cancel, so the quantity computed on line 11 is exactly the gain in modularity that the merge would produce.
+- Line 11 scores a candidate merge as the sum of the matrix entries lying between the two groups, divided by the total number of links. Because line 10 reads only one of the two symmetric blocks, that sum is half the total weight between the groups, but the denominator is also half the matrix's own scale: the modularity matrix divides by the sum of all entries, which for an undirected graph is twice the number of edges. 
 
 - Lines 12-14 keep the pair with the largest positive gain, and line 20 makes that merge by relabelling every node in the second community with the label of the first. When no pair clears zero, line 22 returns the labels.
 
@@ -675,9 +675,9 @@ modularity(ug, gr.res)
 modularity(ug, fg.res$membership)
 ```
 
-The difference between the two is speed. The version in `igraph` keeps the candidate gains in a heap and updates only the pairs affected by each merge, instead of rescanning every pair after every merge; that bookkeeping is what the "fast" in `cluster_fast_greedy` refers to.
+The difference between our little function above and the `igraph` version is speed (not particularly noticeable in a small network like our example). The `igraph` version keeps the candidate gains in a heap and updates only the pairs affected by each merge, instead of rescanning every pair after every merge; that change in bookkeeping efficiency is what the "fast" in `cluster_fast_greedy` refers to.
 
-The resulting list object in `igraph` has various sub-objects as components. One of them is called `merges`, which provides a history of the various merges that led to the final communities. This means we can view the results as a **dendrogram**, just as we did with structural similarity analyses based on hierarchical clustering of a distance matrix. 
+The resulting `fg.res` list object in `igraph` has various sub-objects as components. One of them is called `merges`, which provides a history of the various merges that led to the final communities. This means we can view the results as a **dendrogram**, just as we did with structural similarity analyses based on hierarchical clustering of a distance matrix. 
 
 To do this, we just transform the resulting object into an `hclust` object and plot:
 

@@ -134,7 +134,7 @@ round(mod.check2(B2, clus, A2), 3)
 
 Looks like the spectral clustering results favor a four-community partition although the more parsimonious three and binary community partitions also look pretty good. 
 
- and show a plot of the three and four community solutions according to the CA dimensions (since we already saw the binary partition in the CA handout).
+ and show a plot of the three and four community solutions according to the CA dimensions (since we already saw the binary partition in the [CA handout](tm-ca.qmd)).
 
 Of course, just like we did with one-mode networks, we can also obtain a spectral clustering directly from the eigenvectors of the bipartite modularity matrix in just a couple of lines:
 
@@ -222,28 +222,31 @@ C.g <- k.cuts.g[[2]]
 Given this information, we can create a $4 \times 3$ matrix recording the proportion of ties in the network that go from person-community $l$ to group-community $m$:
 
 ```{r}
+#| label: tbl-e-matrix
+#| tbl-cap: "Proportion of ties from person-community l to group-community m"
 e <- matrix(0, 4, 3)
 for (l in 1:4) {
   for (m in 1:3) {
     e[l, m] <- sum(A[C.p == l, C.g == m]) * 1 / sum(A)
   }
 }
-round(e, 2)
+library(kableExtra)
+kbl(round(e, 2), format = "html", align = "c")
 ```
 
 For instance, this matrix says that 53% of the ties in the Southern women data go from people in the fourth community to groups in the third community, according to the CA spectral partition. 
 
-@suzuki_wakita09, building on work by @murata09, suggest using the `e` matrix above to compute the modularity of any pair of person/group community assignment according to the following formula:
+@suzuki_wakita09, building on work by @murata09, suggest using the `e` matrix in @tbl-e-matrix to compute the modularity of any pair of person/group community assignment according to the following formula:
 
 $$
 Q = \frac{1}{2}\sum_{l, m}\frac{e_{lm}}{e_{l+}}\left(e_{lm} - e_{l+}e_{+m}\right)
-$$
+$$ {#eq-tm-mod}
 
 Where $e_{lm}$ is the proportion of edges connecting people in the $l^{th}$ person-community to groups in the $m^{th}$ event-community, $e_{l+}$ is the proportion of edges originating from person-community $i$ (the corresponding entry of the row sum of `e`), and $e_{+m}$ is the proportion of edges originating from nodes in group-community $j$ (the corresponding entry of the column sum of `e`).
 
-So the idea is that given a partition of the person nodes into $L$ communities and a partition of the group nodes into $M$ communities, we can generate an `e` matrix like the one above and compute the corresponding modularity of that person/group partition using the above equation.
+So the idea is that given a partition of the person nodes into $L$ communities and a partition of the group nodes into $M$ communities, we can generate an `e` matrix like the one above and compute the corresponding modularity of that person/group partition using @eq-tm-mod.
 
-Here's a function that computes the `e` matrix from a pair of person/group partitions and then returns the $Q$ value corresponding to that matrix using the above formula:
+Here's a function that computes the `e` matrix from a pair of person/group partitions and then returns the $Q$ value corresponding to that matrix using @eq-tm-mod:
 
 ```{r}
 find.mod <- function(w, x, y) {
