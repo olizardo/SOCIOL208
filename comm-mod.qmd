@@ -74,25 +74,35 @@ Let's see an example of the modularity computed using our "bag of links" framewo
 ```{r}
 link.bag <- function(x, c) {
   library(dplyr)
-  g.el <- data.frame(as_edgelist(x))
+  g.el <- as.data.frame(as_edgelist(x))
   names(g.el) <- c("vi", "vj")
-  comm.dat <- data.frame(
-    vi = as.vector(V(x)),
-    vj = as.vector(V(x)),
-    c = as.vector(c)
-  )
-  el.temp <- data.frame(vj = g.el[, 2]) %>%
-    left_join(comm.dat, by = "vj") %>%
-    dplyr::select(c("vj", "c")) %>%
-    rename(c2 = c)
-  d.el <- data.frame(vi = g.el[, 1]) %>%
-    left_join(comm.dat, by = "vi") %>%
-    dplyr::select(c("vi", "c")) %>%
-    rename(c1 = c) %>%
+  comm.dat <- data.frame(comm = as.vector(c), node = as.vector(V(x)))
+  el.temp <- g.el["vj"] %>%
+    left_join(comm.dat, by = c(vj = "node")) %>%
+    select("vj", "comm") %>%
+    rename(c2 = comm)
+  d.el <- g.el["vi"] %>%
+    left_join(comm.dat, by = c(vi = "node")) %>%
+    select("vi", "comm") %>%
+    rename(c1 = comm) %>%
     cbind(el.temp)
   return(d.el)
 }
 ```
+
+Here is how it works:
+
+- Lines 1-2 declare the function, which takes a graph `x` and a community-membership vector `c` with one entry per node, and load `dplyr` for the joining and column-renaming verbs used below.
+
+- Lines 4-5 turn the graph's ties into a data frame with one row per link and then rename the two resulting columns to `vi` (the source node) and `vj` (the target node). Line 4 wraps the edge list in `as.data.frame` because `as_edgelist` returns a matrix which don't play well with `dplyr` verbs.
+
+- Line 7 builds the lookup table, with one row per node, pairing that node's identifier with its community label. Wrapping `c` and `V(x)` in `as.vector` makes sure the two are plain vectors that line up row for row.
+
+- Lines 9-12 handle the *target* end of each link. Line 9 starts from the `vj` column, keeping it as a one-column data frame rather than a bare vector. Line 10 joins in each target's community, using named matching so that `vj` on the left is matched to `node` on the right; because it is a `left_join`, no links are dropped. Line 11 keeps just the target and its community, and line 12 renames that column to `c2` to mark it as the target's community.
+
+- Lines 14-17 do the same for the *source* end, matching `vi` to `node` and naming the result `c1`. Line 18 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.
+
+- Line 20 returns the finished edge list, with columns `vi`, `c1`, `vj`, and `c2`: each link tagged with the community of both of its endpoints and ready for the modularity function below.
 
 So if we wanted an edge list data frame containing each node's status membership in the `law_friends` network, we would just type:
 
@@ -123,11 +133,13 @@ mod.Q1 <- function(x, c1 = 2, c2 = 4) {
 
 This function takes the edge list data frame as input. Optionally, you can specify the two columns containing community membership info for the source and destination nodes in each link (in this case, the second and fourth columns). The function works like this: 
 
-- The probability of a link drawn randomly from the bag is just the number of links where the source and destination nodes belong to the same community (`e.same`, computed in line 5) divided by the total number of links (which is the number of rows in the edge list data frame), this ratio is computed in line 9 (`p.same`). 
+- Line 2 sets the running total to zero, and line 3 collects each distinct community that appears in the source column, so that we can loop over them one at a time. Taking the levels from the source column only is safe here because both status categories appear as sources; a category that showed up only as a destination would otherwise be missed.
 
-- The overall probability of a link containing a *source* node in community $k$ is computed in line 10 (`p.sour`), and the overall probability of a link containing a *destination* node in community $k$ is computed in line 11 (`p.dest`). 
+- Lines 4-13 loop over those communities, computing each one's contribution to $Q$ and adding it on. Line 5 pulls out the links whose two endpoints are both in community $k$, line 8 counts all the links, and line 9 divides the first by the second: the probability that a link drawn at random from the bag has both ends in the same community.
 
-- The actual modularity is computed step by step by summation across levels of the community indicator variable in line 12, which is the sum of the difference between `p.same` and the product of `p.sour` times `p.dest` across all communities $m$ (in this case $m = 2$ as there are only two levels of status). 
+- Line 10 computes the overall probability of drawing a link whose *source* node sits in community $k$, and line 11 does the same for the *destination* node. Because the two ends are treated as independent, multiplying them gives the chance we would expect if communities played no role in who links to whom.
+
+- Line 12 takes the observed probability from line 9, subtracts that expected product, and adds the result to the running total. Doing this for every community and summing over all $m$ of them (here $m = 2$, since status has two levels) gives the modularity of the partition, which line 14 returns. 
 
 So if we wanted to check if status was more powerful in structuring the community organization of the `law_friends` network than gender, we would just type:
 
@@ -160,11 +172,21 @@ mod.Q2 <- function(x, c) {
 }
 ```
 
-This function takes a graph and a vector indicating each node's community membership and returns the modularity. Like before the modularity is the difference in the probability of observing a within-community link between two nodes (given by the ratio of the number of links in the sub-adjacency matrix containing only within community-nodes---obtained in line 7---and the overall number of links in the adjacency matrix, computed in line 3) and the *expected* probability of a link between a source node with community membership $k$ and a destination node with the same community membership. 
+This function takes a graph and a vector indicating each node's community membership, and returns the modularity. As with the bag of links, the modularity is the observed probability of a within-community link minus the probability we would expect if communities played no role. It works like this:
 
-This last quantity is given by the product of the sum of links in the sub-adjacency matrix with *row nodes* that belong to community $k$ (the source nodes) and the number of links in the sub adjacency matrix with the *column nodes* belonging to community $k$ (the destination nodes) divided by the *square* of the total number of links observed the network. 
+- Line 2 turns the graph into a plain adjacency matrix, which we need because the code below selects rows and columns by position. Line 3 counts every entry in that matrix, giving the total number of links in the network, and line 4 sets the running total to zero.
 
-In formulese:
+- Line 5 loops over each distinct community in `c`, so that each one's contribution can be computed and added on.
+
+- Lines 6-7 pull out the within-community block: the rows and columns belonging to community $k$, and then the sum of every link inside it. Dividing that sum by the total from line 3 gives the share of all links that stay inside community $k$.
+
+- Lines 8-9 take a different kind of slice. Here only *one* dimension is restricted to community $k$: line 8 keeps all rows for nodes in $k$ (every link leaving the community), and line 9 keeps all columns for nodes in $k$ (every link entering it). These are slices of the full matrix, not of the within-community block, which is why they count above and beyond the internal links.
+
+- Line 10 combines these into community $k$'s contribution. The first term is the observed share from line 7; the second multiplies the two marginal counts and divides by the *square* of the total, which turns two counts-over-the-whole-matrix into two probabilities and then into their product---the link rate we would expect if a source's community and a destination's community had nothing to do with each other.
+
+- Line 12 returns the accumulated total once every community has been visited, which is the modularity of that partition.
+
+In symbols:
 
 $$
  Q = \sum_{k=1}^m \left[\frac{\sum_{i \in k} \sum_{j \in k} a_{ij}}{\sum_i \sum_j a_{ij}} - \frac{(\sum_{i \in k} \sum_j a_{ij})(\sum_i \sum_{j \in k} a_{ij})}{(\sum_i \sum_j a_{ij})^2} \right]
@@ -210,11 +232,11 @@ A function to compute the modularity matrix by looping through every element of 
 
 ```{r}
 mod.mat <- function(x) {
-  A <- as.matrix(as_adjacency_matrix(x))
+  A <- as.matrix(as_adjacency_matrix(x)) # adjacency matrix
   od <- rowSums(A) # outdegrees
   id <- colSums(A) # indegrees
-  vol <- sum(A)
-  n <- nrow(A)
+  vol <- sum(A) # number of links
+  n <- nrow(A) # number of nodes
   B <- matrix(0, n, n)
   for (i in 1:n) {
     for (j in 1:n) {
@@ -224,6 +246,16 @@ mod.mat <- function(x) {
   return(B)
 }
 ```
+
+It works like this:
+
+- Line 2 converts the graph to a plain adjacency matrix so that individual entries can be picked out by position, and lines 3-4 record how many links leave each node (row sums) and how many arrive at each node (column sums). Keeping these separate matters because in a directed graph a node's outdegree and indegree rarely match.
+
+- Line 5 counts every entry in the matrix, giving the total number of links, which is the baseline the expectations are measured against. Line 6 records the number of nodes, and line 7 sets up an empty matrix of the right size to be filled one cell at a time.
+
+- Lines 8-10 walk over every cell of that matrix, one row and one column at a time. For each cell, line 10 compares the observed entry with what random pairing would produce: the chance that a link starts at node $i$ multiplied by the chance that it ends at node $j$, scaled by the total number of links. A positive result means the tie is more frequent than chance, a negative one means it is rarer.
+
+- Line 13 returns the filled matrix. Because every cell is built as an observed minus expected quantity with the expected part fixed by the node's degrees, the rows and columns of the result each add up to zero.
 
 Peeking inside the resulting matrix:
 
@@ -395,9 +427,9 @@ Of course, you may also remember from the [Status and Prestige](prest-eigen.qmd)
 
 $$
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
-$$
+$$ {#eq-mod-eig}
 
-Solving for $\mathbf{v}$ in the equation above yields the nodes' community memberships. In `R`, you can do this using the native `eigen` function as we did for the status scores:
+Solving for $\mathbf{v}$ in @eq-mod-eig yields the nodes' community memberships. In `R`, you can do this using the native `eigen` function as we did for the status scores:
 
 ```{r}
 v <- eigen(Bu)$vectors[, 1]
@@ -423,6 +455,18 @@ split.two <- function(x) {
   return(list(v = v, dummy = dummy))
 }
 ```
+
+It works like this:
+
+- Line 1 defines a function whose input, despite the graph-flavored examples around it, is a *matrix*---in practice the modularity matrix. Line 2 pulls out its leading eigenvector, the vector tied to the largest eigenvalue, whose entries serve as each node's score.
+
+- Lines 3-5 turn those scores into a two-group label. A vector of zeros is created to hold the labels, then nodes with a non-positive score are given the label 1 and nodes with a positive score the label 2. Note that the sign of an eigenvector is arbitrary, so the computer may return the mirror image of the same vector and swap which group gets which label; the partition itself is unaffected.
+
+- Line 6 names the labels after node positions, so the result lines up with the vertex order of the graph rather than with an arbitrary order.
+
+- Lines 7-10 build the same partition in **dummy** form: two columns of zeros and ones, one for each group, marking which nodes belong to it. This second version is needed because the trace-based formula for modularity takes an indicator matrix rather than a single label vector.
+
+- Line 12 returns both versions in a named list, since the divisive routine below uses the scalar labels to describe the split and the indicator matrix to evaluate its modularity.
 
 And check to see if it works:
 
@@ -465,7 +509,19 @@ split.mult <- function(B, vol, u, v, s = 0.01) {
 }
 ```
 
-This function uses the output of the `split.two` function to check whether either of the two sub-communities should be split into two further sub-communities by comparing the modularities pre- and post-second partition. 
+This function uses the output of the `split.two` function to check whether either of the current communities should be split into two further sub-communities, by comparing the modularity before and after the proposed split. It works like this:
+
+- Line 1 takes the modularity matrix `B`, the total number of links `vol` (needed to put the matrix-based score back on the modularity scale), the dummy indicator matrix `u` for the current communities, the current labels `v`, and a minimum improvement `s`, which defaults to 0.01.
+
+- Lines 2-4 set up the machinery: an empty list to hold any splits that get accepted, one slot per community, a vector of zeros to record each community's change in modularity, and a loop that visits each community in turn.
+
+- Line 5 computes the current modularity for community `i`. This uses the same trace formula as before, applied to that community's indicator column, but without dividing by the total number of links. That division is deferred to line 13, where it is applied once to the *difference* instead.
+
+- Lines 6-7 restrict attention to the part of the matrix that the split could possibly change. Line 6 finds the nodes belonging to community `i`, and line 7 takes the square block made of just those rows and columns; links to nodes outside the community are untouched by subdividing it, so they can be ignored.
+
+- Lines 8-12 run the eigenvector split on that block and score the result. The block is split into two candidate sub-communities, and the two halves' modularities are computed and added together, giving the modularity the partition would have if this split were adopted.
+
+- Lines 13-19 compare the new modularity with the old one, scaled by the total number of links. If the gain exceeds the threshold `s`, the split is kept and its labels are re-attached to the original node numbers so they line up with the graph; otherwise nothing is stored for that community, so it is left alone (assigning `NULL` to a list element in R removes it rather than adding a blank slot). Line 21 returns the per-community changes, the unchanged labels, and the list of accepted splits.
 
 Here are the results applied to the `law_friends` network:
 
@@ -557,7 +613,7 @@ So in this network, both status and endogenous group dynamics seem to be at play
 
 The leading eigenvector approach discussed above is a **divisive** clustering algorithm. All nodes begin in one community; we split into two, then try to split one of those two into two others (if the modularity increases), and so forth.
 
-But as we noted in the previous handout, another way to cluster is *bottom up*. All nodes begin in their own singleton cluster, and we join nodes if they maximize some criterion, in this case, the modularity. We then join new nodes to that group. If they increase the modularity, we try other joins, merging communities as we go, until we can't increase it any further.
+But as we noted in the [previous handout](sim-structequiv.qmd), another way to cluster is *bottom up*. All nodes begin in their own singleton cluster, and we join nodes if they maximize some criterion, in this case, the modularity. We then join new nodes to that group. If they increase the modularity, we try other joins, merging communities as we go, until we can't increase it any further.
 
 This **agglomerative** approach to clustering is not guaranteed to reach a global maximum, but it can work in most applied settings, even at the risk of getting stuck in a local optimum. 
 
@@ -568,6 +624,55 @@ Let's try it out to see how it works:
 ```{r}
 fg.res <- cluster_fast_greedy(ug)
 ```
+Before looking at what `igraph` barfs back, it is worth looking at the "greedy" part itself, since that's the conceptually important part (the "fast" is just optimization stuff for large networks). 
+
+The Newman agglomerative approach works like this: At each stage we ask which pair of current communities, if merged, would raise the modularity the most, and we make that merge. The gain from merging two groups turns out to be a simple quantity, namely, twice the sum of the modularity-matrix entries that fall between them, divided by the total number of links. Here's a function that does that:
+```{r}
+greedy <- function(B, m) {
+  comm <- 1:nrow(B) # every node starts in its own community
+  repeat {
+    best <- 0
+    pair <- NULL
+    for (i in unique(comm)) {
+      for (j in unique(comm)) {
+        if (i < j) {
+          d <- 2 * sum(B[comm == i, comm == j]) / m # gain from merging i and j
+          if (d > best) {
+            best <- d
+            pair <- c(i, j)
+          }
+        }
+      }
+    }
+    if (is.null(pair)) break # no merge improves modularity
+    comm[comm == pair[2]] <- pair[1] # merge community j into i
+  }
+  return(comm)
+}
+```
+
+It works like this:
+
+- Lines 1-2 take the modularity matrix and the total number of links, and give every node a label equal to its own position, so that each one begins as a community of size one. Unlike `split.two`, this function works with a single label per node rather than an indicator matrix.
+
+- Lines 3-5 and 17 control how long the merging continues. The `repeat` keeps going until a full pass finds no improving pair; `best` records the largest gain seen so far and `pair` the communities it came from, starting each pass at zero and `NULL`. The `NULL` matters because a gain of exactly zero also fails the improvement test, so "no candidate yet" has to be a different value.
+
+- Lines 6-8 try every pair of current communities. Because the modularity matrix is symmetric here, the condition on line 8 restricts the scan to pairs with `i < j`, so each pair is considered once rather than twice.
+
+- Line 9 scores a candidate merge: twice the sum of the matrix entries lying between the two groups, divided by the total number of links. The factor of two is there because a symmetric matrix records each between-group entry on both sides of the diagonal, and the division puts the result on the same scale as the modularity itself. A positive value means the two groups are joined more often than their degrees alone would predict.
+
+- Lines 10-13 keep the pair with the largest positive gain, and line 18 makes that merge by relabelling every node in the second community with the label of the first. When no pair clears zero, line 20 returns the labels.
+
+The result matches `igraph` exactly---the same three communities and the same modularity:
+
+```{r}
+m <- sum(as.matrix(as_adjacency_matrix(ug)))
+gr.res <- greedy(Bu, m)
+modularity(ug, gr.res)
+modularity(ug, fg.res$membership)
+```
+
+The difference between the two is speed, not answer. The version in `igraph` keeps the candidate gains in a heap and updates only the pairs affected by each merge, instead of rescanning every pair after every merge; that bookkeeping is what the "fast" in `cluster_fast_greedy` refers to.
 
 The resulting list object has various sub-objects as components. One of them is called `merges`, which provides a history of the various merges that led to the final communities. This means we can view the results as a **dendrogram**, just as we did with structural similarity analyses based on hierarchical clustering of a distance matrix. 
 
