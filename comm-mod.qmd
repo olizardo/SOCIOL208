@@ -33,7 +33,7 @@ If you remember your elementary probability theory, you know that the *joint* pr
 
 So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
 
-Let's move to a real example. @fig-friends shows two plots of the friendship nomination network from the `law_friends` data [@lazega01] from the `networkdata` package (dropping nodes that have a degree of one). The first shows nodes colored by status within the firm (partners in tan, associates in blue), and the other shows nodes colored by gender (men in tan, women in blue). 
+Let's move to a real example. @fig-friends shows two plots of the friendship nomination network from the `law_friends` data [@lazega01] from the `networkdata` package (dropping nodes that have a degree of one). The first shows nodes colored by status within the firm (partners in orange, associates in blue), and the other shows nodes colored by gender (men in orange, women in blue). 
 
 It is pretty evident that there is more community partitioning in the network by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.
 
@@ -94,7 +94,7 @@ link.bag <- function(x, c) {
 }
 ```
 
-So if we wanted an edge list data frame containing each node's status membership in the `law_advice` network, we would just type:
+So if we wanted an edge list data frame containing each node's status membership in the `law_friends` network, we would just type:
 
 ```{r}
 link.dat <- link.bag(g, V(g)$status)
@@ -121,9 +121,9 @@ mod.Q1 <- function(x, c1 = 2, c2 = 4) {
 }
 ```
 
-This function takes the edge list data frame as input. Optionally, you can specify the two columns containing community membership info for the source and destination nodes in each link (in this case, the second and fourth columns). The Function works like this: 
+This function takes the edge list data frame as input. Optionally, you can specify the two columns containing community membership info for the source and destination nodes in each link (in this case, the second and fourth columns). The function works like this: 
 
-- The probability of a link drawn randomly from the bag is just the number of links where the source and destination links belong to the same community (`e.same`, computed in line 5) divided by the total number of links (which is the number of rows in the edge list data frame), this ratio is computed in line 9 (`p.same`). 
+- The probability of a link drawn randomly from the bag is just the number of links where the source and destination nodes belong to the same community (`e.same`, computed in line 5) divided by the total number of links (which is the number of rows in the edge list data frame), this ratio is computed in line 9 (`p.same`). 
 
 - The overall probability of a link containing a *source* node in community $k$ is computed in line 10 (`p.sour`), and the overall probability of a link containing a *destination* node in community $k$ is computed in line 11 (`p.dest`). 
 
@@ -162,7 +162,7 @@ mod.Q2 <- function(x, c) {
 
 This function takes a graph and a vector indicating each node's community membership and returns the modularity. Like before the modularity is the difference in the probability of observing a within-community link between two nodes (given by the ratio of the number of links in the sub-adjacency matrix containing only within community-nodes---obtained in line 7---and the overall number of links in the adjacency matrix, computed in line 3) and the *expected* probability of a link between a source node with community membership $k$ and a destination node with the same community membership. 
 
-This last quantity is given by the product of the sum links in a the sub-adjacency matrix with *row nodes* that belong to community $k$ (the source nodes) and the number of links in the sub adjacency matrix with the *column nodes* belonging to community $k$ (the destination nodes) divided by the *square* of the total number of links observed the network. 
+This last quantity is given by the product of the sum of links in the sub-adjacency matrix with *row nodes* that belong to community $k$ (the source nodes) and the number of links in the sub adjacency matrix with the *column nodes* belonging to community $k$ (the destination nodes) divided by the *square* of the total number of links observed the network. 
 
 In formulese:
 
@@ -284,10 +284,10 @@ A more interesting property of the modularity matrix is that we can use it to co
 First, we create a new vector $\mathbf{s}$ that equals one when node $i$ is in the first group (partners) and minus one when node $i$ is in the second group (associates):
 
 ```{r}
-s <- V(g)$status
-s[which(s == 1)] <- 1
-s[which(s == 2)] <- -1
-s
+s.contrast <- V(g)$status
+s.contrast[which(s.contrast == 1)] <- 1
+s.contrast[which(s.contrast == 2)] <- -1
+s.contrast
 ```
 
 Once we have this vector, the modularity is just:
@@ -300,12 +300,12 @@ Which we can readily check in `R`:
 
 ```{r}
 A <- as.matrix(as_adjacency_matrix(g))
-as.numeric(t(s) %*% B %*% s) / (2 * sum(A))
+as.numeric(t(s.contrast) %*% B %*% s.contrast) / (2 * sum(A))
 ```
 
 You can think of the $\mathbf{s}$ vector as identifying the binary community membership via **contrast coding**. 
 
-We can also use the modularity matrix to find the modularity of a partition via **dummy coding**. To do this, we create two vectors for each level of the group membership variable with $u^{(1)}_i = 1$ when when node $i$ is a partner (otherwise $u^{(1)}_i = 0$), and $u^{(2)}_i = 1$ when when node $i$ is an associate (otherwise $u^{(2)}_i = 0$).
+We can also use the modularity matrix to find the modularity of a partition via **dummy coding**. To do this, we create two vectors for each level of the group membership variable with $u^{(1)}_i = 1$ when node $i$ is a partner (otherwise $u^{(1)}_i = 0$), and $u^{(2)}_i = 1$ when node $i$ is an associate (otherwise $u^{(2)}_i = 0$).
 
 In `R`, we can do this as follows:
 
@@ -363,8 +363,8 @@ status1 <- function(w) {
 What if we played it with the modularity matrix? 
 
 ```{r}
-s <- status1(Bu)
-round(s, 2)
+s.eig <- status1(Bu)
+round(s.eig, 2)
 ```
 
 This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actually a **partition** of the original graph into two communities? 
@@ -376,9 +376,9 @@ Let's see some evidence for these claims in real data.
 First, let's turn the "status" vector into a community indicator vector. We assign all nodes with scores larger than zero to one community and nodes with scores equal to zero or less to the other one:
 
 ```{r}
-C <- rep(0, length(s))
-C[which(s <= 0)] <- 1
-C[which(s > 0)] <- 2
+C <- rep(0, length(s.eig))
+C[which(s.eig <= 0)] <- 1
+C[which(s.eig > 0)] <- 2
 names(C) <- 1:length(C)
 C
 ```
@@ -470,16 +470,16 @@ This function uses the output of the `split.two` function to check whether eithe
 Here are the results applied to the `law_friends` network:
 
 ```{r}
-s <- split.mult(
+splits1 <- split.mult(
   B = Bu,
   vol = sum(as.matrix(as_adjacency_matrix(ug))),
   u = split.two(Bu)$dummy,
   v = split.two(Bu)$v
 )
-s
+splits1
 ```
 
-The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in the figure above).
+The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in @fig-mod-1 below).
 
 Nevertheless, the test in the second community was positive, indicating we should split it into two. Because we left one of the original communities alone, the resulting network will have three communities after splitting the second one in two. 
 
@@ -488,8 +488,8 @@ Note that the function returns the original two-split named vector of community 
 We now create a new three-community vector from these results:
 
 ```{r}
-s$v[as.numeric(names(s$split[[2]]))] <- s$split[[2]] + 1
-s$v
+splits1$v[as.numeric(names(splits1$split[[2]]))] <- splits1$split[[2]] + 1
+splits1$v
 ```
 
  @fig-mod-2 shows the results of the three-community partition.
@@ -497,20 +497,20 @@ s$v
 Now let's say we wanted to check if we should *further* split any of these three communities into two. All we need to do is create "dummy" variables for the new three community partition and feed these (and the three community membership vector) to the `split.mult` function, while keeping *the original* modularity matrix [@newman06b]:
 
 ```{r}
-c1 <- rep(0, length(s$v))
-c2 <- rep(0, length(s$v))
-c3 <- rep(0, length(s$v))
-c1[which(s$v == 1)] <- 1
-c2[which(s$v == 2)] <- 1
-c3[which(s$v == 3)] <- 1
+c1 <- rep(0, length(splits1$v))
+c2 <- rep(0, length(splits1$v))
+c3 <- rep(0, length(splits1$v))
+c1[which(splits1$v == 1)] <- 1
+c2[which(splits1$v == 2)] <- 1
+c3[which(splits1$v == 3)] <- 1
 dummies <- cbind(c1, c2, c3)
-s <- split.mult(
+splits2 <- split.mult(
   B = Bu,
   vol = sum(as.matrix(as_adjacency_matrix(ug))),
   u = dummies,
-  v = s$v
+  v = splits1$v
 )
-s
+splits2
 ```
 
 Here, the three modularity-split checks failed, as indicated by the `delta.Q` vector. So no further splits were made (hence the `split` object is an empty list). This tells us that, according to this method, three communities are the optimal partition. 
@@ -530,7 +530,7 @@ names(le.res$membership) <- 1:length(le.res$membership)
 le.res$membership
 ```
 
-Which returns identical community assignments as above (but with the labels between communities 2 and 3 flipped).
+Which returns nearly identical community assignments as above (with the labels between communities 2 and 3 flipped, and a single node classified differently).
 
 ## Communities versus Exogenous Attributes
 
@@ -549,7 +549,7 @@ kbl(t, row.names = TRUE, align = "c", format = "html") %>%
 
 This is just a **contingency table** listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns. 
 
-We find that community one (the most coherent, in orange) comprises `r round((1 - 3/27)*100)`% of partners. So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of nine partners and seven associates. 
+We find that community one (the most coherent, in orange) is `r round((1 - 3/30)*100)`% partners (it contains `r sum(t[, 1])` members, of whom only `r t[2, 1]` are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of nine partners and seven associates. 
 
 So in this network, both status and endogenous group dynamics seem to be at play.
 
@@ -591,7 +591,7 @@ This provides the relevant assignment to communities (if we wanted more communit
 Of course, this information was already stored in our results in the `membership` object:
 
 ```{r}
-names(fg.res$membership) <- 1:68
+names(fg.res$membership) <- 1:length(fg.res$membership)
 fg.res$membership
 ```
 
@@ -616,7 +616,7 @@ plot(ug,
   vertex.label.dist = 1, edge.curved = 0.2
 )
 
-V(ug)$color <- s$v
+V(ug)$color <- splits2$v
 plot(ug,
   layout = ul,
   vertex.size = 6, vertex.frame.color = "lightgray",
