@@ -229,14 +229,6 @@ CANVAS_API_TOKEN="<token>"
 * **Deliverable:** Analytic Memo 10 & Discussion Leader Questions (due Sun., Nov. 29 at 5:00 pm PT).
 * **Final Requirement:** Final Course Paper submitted via Bruin Learn Submission Box.
 
-### Extended Reading List (Public Quarto Website — Not Canvas)
-
-* **File:** `extended-reading-list-208B.qmd` at the repo root; rendered to `_site/extended-reading-list-208B.html` by the public GitHub Pages site (https://olizardo.github.io/SOCIOL208/). It is **not** part of the Canvas deployment scripts.
-* **Structure:** Thematic bibliography (not organized by week); each category mirrors a section of `schedule-208B.qmd` and is seeded with the currently assigned readings, with supplementary readings appended after them. Entries use APA-style citations with `[link](https://doi.org/...)` DOIs or `[Course Files](...)` links.
-* **Update workflow:** edit the `.qmd` → `quarto render extended-reading-list-208B.qmd` → commit the `.qmd` (no `_freeze/` artifacts are generated — the page has no code chunks) → push to `origin main` (assistant cannot push to main; ask the user).
-* **Citation-verification rule (applied 2026-11-17):** always verify titles, dates, volumes, and DOIs against the Crossref API (`https://api.crossref.org/works?query.bibliographic=...` or direct `/works/<DOI>`) before adding entries. Fernandez-Mateo's (2007) reference list **mis-cites** two titles: Uzzi (1999) is actually "Embeddedness in the Making of Financial Capital: How Social Relations and Networks Benefit Firms Seeking Financing" (*ASR* 64(4), 481–505), and Granovetter (1985) is actually "Economic Action and Social Structure: The Problem of Embeddedness" (*AJS* 91(3), 481–510) — never copy titles from a paper's reference list without checking.
-* **Additions logged 2026-11-17** (sourced from the Fernandez-Mateo 2007 reference list, Crossref-verified): Granovetter (1985) *AJS* 91(3) → Embeddedness, Price Setting, and Market Dynamics; Uzzi (1999) *ASR* 64(4) → same section; Fernandez & Gould (1994) *AJS* 99(6) → Weak Ties, Brokerage Roles, and Mediation; Baker (1990) *AJS* 96(3) → Market Status, Interfirm Networks, and Hybrid Economic Forms; Fernandez & Weinberg (1997) *ASR* 62(6) → Spatial Mobility, Segregation, and Labor Markets.
-
 ---
 
 ## 5. Live Bruin Learn Pages & Endpoints
@@ -247,6 +239,7 @@ CANVAS_API_TOKEN="<token>"
 | **Syllabus (Page)** | `sociol-208b-syllabus-fall-2026` | — |
 | **Syllabus (Native)** | `/assignments/syllabus` | — |
 | **Reading Schedule** | `sociol-208b-reading-schedule-fall-2026` | — |
+| **Extended Reading List** | `extended-reading-list-208B` (https://olizardo.github.io/SOCIOL208/extended-reading-list-208B.html) | — |
 | **Week 1 Guide** | `week-1-networks-as-theory-and-perspective-readings-and-overview` | — |
 | **Week 2 Guide** | `week-2-networks-and-the-economy-and-organizations-readings-and-overview` | — |
 | **Week 3 Guide** | `week-3-brokerage-and-intermediation-readings-and-overview` | — |
@@ -275,18 +268,25 @@ Future AI agents must preserve the following page structures and interactive UI 
    * **Collapsible Reading Disclosure Widgets (`<details>` / `<summary>`):** Every single week in the module cards MUST feature an HTML disclosure widget (`<details><summary>View Assigned Readings (X items)</summary></details>`). Clicking the triangle opens a shaded list of Part 1 and Part 2 readings with direct `[DOI ↗]` links or `[Course Files ↗]` links. **Never remove these disclosure widgets.**
 4. **Modular Resources & Research Hubs:** Structured cards for Reference Works (Methods, Handbooks, Overviews, Theory), Textbooks & Online Courses, Data Repositories, Organizations, Specialist Journals, and Curated Resources.
 
-### B. Reading Schedule Page (`sociol-208b-reading-schedule-fall-2026`)
+### B. Extended Reading List (`extended-reading-list-208B.qmd`, added 2026-10-12)
+* **Purpose:** A growing, non-required thematic bibliography for memos, discussion leadership, and final papers. Not a Canvas page — deployed only to the public lecture-notes website (https://olizardo.github.io/SOCIOL208/extended-reading-list-208B.html) via the standard `_freeze`/publish workflow.
+* **Structure:** Organized thematically (not by week) into ~20 sections that mirror the sections of the main reading schedule; each section is seeded with the assigned readings and accumulates supplementary entries over the quarter. Entries use the format `Author (Year). Title. *Journal*, vol(issue), pages. [link](https://doi.org/...)` — DOIs link directly; no-DOI items link to Bruin Learn Course Files.
+* **Update workflow:** Edit `extended-reading-list-208B.qmd` at the repo root, render it (`quarto render extended-reading-list-208B.qmd` — it has no code chunks, so it produces no `_freeze` artifact; committing the `.qmd` alone is sufficient, as the CI render builds the body from source for pure-markdown pages), commit, and push to `origin main` (~2 min deploy).
+* **Entry history:** Created 2026-10-12 (commit `ab6f188`); supplemented with four verified readings (`f5e0afb`) and Fernandez & Weinberg 1997 (`f4ad7d9`) from the other machine; McFarland & Wolff (2022), "Writing into relationships," *Social Networks* 71, 96–114 (DOI 10.1016/j.socnet.2022.06.006) added to "Dualities of Culture & Structure and Tie Formation" on 2026-11-06 (commit `c8244b9`).
+* **Multi-machine note:** This repo is edited from multiple machines; before editing, `git pull --rebase --autostash origin main` and verify the file exists locally (a missing file usually just means a stale local checkout, not a deleted file).
+
+### C. Reading Schedule Page (`sociol-208b-reading-schedule-fall-2026`)
 * Live schedule alert box.
 * Links to internal Canvas Course Files for non-DOI PDFs (`https://bruinlearn.ucla.edu/courses/239524/files`).
 * 10-week breakdown with Part 1 and Part 2 headers, exact DOIs for published articles (`[DOI ↗]`), and links to course files for books/chapters (`[Course Files ↗]`).
 
-### C. Weekly Overview Pages (`week-[1-10]-readings-and-overview`)
+### D. Weekly Overview Pages (`week-[1-10]-readings-and-overview`)
 * **Week Banner:** Blue gradient header card with week number, title, date, and room.
 * **Quick Action Card:** Submission box link, due date, reading requirements (pick 1 from Part 1 and 1 from Part 2), Discussion Leaders board link.
 * **Part 1 & Part 2 Cards:** Styled table-cards with reading list and links (`[DOI ↗]` or `[Course Files ↗]`).
 * **Footer Navigation:** Links back to Modules and Full Schedule.
 
-### D. Automated Deployment Scripts
+### E. Automated Deployment Scripts
 * **`deploy_all_to_canvas.py`**: Reads `WEEKS_DATA`, updates local HTML templates (`front-page.html`, `schedule-208B.html`, `bruinlearn_course_materials/`), and deploys all pages directly to Canvas LMS via REST API.
 * **`deploy_weekly_readings_to_modules.py`**: Pushes weekly pages into Canvas Modules and publishes them.
 
@@ -348,9 +348,6 @@ Data Analysis Exercise assignment **descriptions** are intentionally *not* touch
 
 * **Known Canvas quirk hit repeatedly on this course:** changing a Page's `title` via the API regenerates its URL `slug` (e.g. `reading-schedule` → `sociol-208a-reading-schedule`; `front-page` → `sociol-208a-social-network-methods`), even though the `front_page: true` flag itself is preserved. `deploy_208A_to_canvas.py` works around this by looking up slugs dynamically and omitting `title` from update payloads; any *new* one-off script touching these pages should do the same rather than hardcoding slugs.
 
-
----
-
 ## GitHub Pages Lecture-Notes Deployment (SOCIOL208 Website)
 
 The public lecture-notes site (**https://olizardo.github.io/SOCIOL208/**) is deployed by `.github/workflows/publish.yml` (Quarto publish to `gh-pages`, triggered on every push to `main`). Critically, `_quarto.yml` sets **`freeze: true`**, so the CI build does **not** execute R chunks — it reuses the rendered results stored in the `_freeze/<page>/execute-results/` artifacts.
@@ -369,59 +366,3 @@ When editing any lecture-note `.qmd` file at the repo root, the deployed site bo
 - Local rendering requires the `renv` library to be restored (`renv::restore()`); knitr/rmarkdown must be installed or `quarto render` fails with "The knitr package is not available."
 - `ggbump` is archived on CRAN (archived 2025-12-04); its `renv.lock` entry must keep `"Source": "GitHub"` (`davidsjoberg/ggbump`) so restore can resolve it. Do not run a bare `renv::snapshot()` while the library is partially populated — implicit snapshot will shrink the lockfile to the current (broken) library state. Restore the lockfile from git and fix records surgically if that happens.
 - Never push directly to `main` from the assistant environment (blocked by safety rule); ask the user to push, or use a branch + PR.
-
-## Lecture-Note Code Explainer Style (comm-*.qmd, basic-*.qmd, etc.)
-
-After any code chunk in a handout whose logic benefits from narration, add a short prose explainer of the form used in `basic-random.qmd` (live: https://olizardo.github.io/SOCIOL208/basic-random.html).
-
-**Format rules:**
-- Introduce it with a one-line lead-in ending in a colon, e.g. "Here is how it works:" or "It works like this:".
-- Then use a **small number of prose bullets (typically 3-6)**, each a short paragraph of full sentences — not one bullet per line.
-- **Reference lines by number** ("Line 2 initializes…", "Lines 9-12 handle…", "Line 18 then binds…"), grouping related lines into a single bullet that explains how they work together.
-- **Never repeat the code** in the explainer (no inline restatement of the R expression as the bullet lead-in, no tables of code/line pairs). Assume the reader is looking at the chunk above.
-- Explain *why* a step is needed (e.g. "because `as_edgelist` returns a matrix, which the join verbs will not accept"), not just *what* it does.
-- Prose bullets only — **no markdown tables** for line-by-line walkthroughs.
-- Do **not** add `#| code-line-numbers: true`; line references are given in the prose, matching the model page.
-
-Inline `# 1.`, `# 2.` step comments inside the code are fine and encouraged, but the prose explainer must stand on its own and stay in sync with those numbers.
-
-**Refinements (learned from the `mod.Q1` explainer):**
-- Cover the *whole* function, including the frame: accumulator initialization, the loop header, and the return line. Don't jump straight to the "interesting" computation.
-- Follow the code's control flow in order (setup → loop body → accumulate → return), one coherent block per bullet. Never split a single line's work across two bullets.
-- State the condition that makes a shortcut safe (e.g. taking community levels from the source column only is fine because every category appears as a source), so readers know when the logic would break.
-- Explain the statistical reasoning in plain words (why the product of two marginals is the "no communities" expectation), rather than paraphrasing the expression.
-- **Verify before asserting**: before writing a claim about what the code does (that a row of a matrix sums to zero, that a `NULL` assignment leaves no list slot, that two functions return the same partition), run it in R and check. Several explainers in `comm-mod.qmd` carry claims confirmed this way.
-
-## comm-mod.qmd — Community Structure Handout (verified facts & conventions)
-
-Handout for modularity and community detection. As of 2026-11-17 it carries prose-bullet explainers (style above) for `link.bag`, `mod.Q1`, `mod.Q2`, `mod.mat`, `mod.mat.u`, `split.two`, `split.mult`, and `greedy`.
-
-**Verified numbers on `law_friends` (degree >= 2 subgraph, N = 68, 574 directed edges):**
-- Modularity by status = 0.2715; by gender = 0.0750. All three routes agree exactly: `mod.Q1` (bag of links), `mod.Q2` (adjacency matrix), `igraph::modularity`.
-- Leading-eigenvector bi-partition: Q = 0.2935. Three-community hand-rolled divisive split: Q = 0.3419; `cluster_leading_eigen` gives 0.3435 and differs by **one node** (labels 2/3 flipped).
-- Fast greedy and a naive greedy (`greedy()` in the handout, ~20 lines) return the **identical** partition: 3 communities, Q = 0.3605. "Fast" refers only to the heap/incremental-update bookkeeping (Clauset-Newman-Moore), not a different objective.
-- Status x community contingency for the 3-way split: community 1 = 27 partners + 3 associates (so **90%** partners — the handout's inline `round((1 - 3/30)*100)`); community 2 = 9 partners + 7 associates; community 3 = 22 associates.
-- The directed modularity matrix also has zero row and column sums (max |sum| ~ 5e-16), not just the undirected one.
-
-**Fixes applied (do not regress):**
-- `law_advice` was a misnomer for the `law_friends` network (the code always used `law_friends`).
-- The "comprises X% of partners" sentence used `(1 - 3/27)` (89%), which matched nothing; corrected to share of community members that are partners, computed live from the table.
-- Variable reuse was split apart: `s` had been the +/-1 contrast vector, the eigenvector scores, and the `split.mult` result list. Now `s.contrast`, `s.eig`, `splits1`, `splits2`.
-- `link.bag` was slimmed: `as.data.frame(as_edgelist(x))` (the one needed coercion), a single `node`/`comm` lookup, `g.el["vj"]` instead of `data.frame(...[, 2])`, and named `by = c(vj = "node")` matching.
-- Typos: "formulese" → "In symbols:", "when when", "a the", "source and destination links" → "nodes", "observed the network" → "observed in the network".
-
-**Render/commit:** always `quarto render comm-mod.qmd` after edits and commit the `.qmd` with `_freeze/comm-mod/execute-results/` together (site uses `freeze: true`). Nothing on this page is deployed to Canvas.
-
-## Lecture-Note Cross-Reference Conventions
-
-Quarto's `number-sections: true` is on, but the handouts use **no `{#sec-}` headers and no `@sec-` refs anywhere** — only object cross-refs: `@eq-`, `@tbl-`, `@fig-`. Do not introduce `@sec-` without first adding section IDs sitewide.
-
-**Rules when resolving vague references ("as we saw", "the equation above", "previous handout"):**
-- Convert to a link/cross-ref only when it points to a *different* handout or a *labeled object*. Leave intra-document prose ("as we saw earlier" within the same file) and rhetorical comparisons ("in the one-mode case") untouched.
-- `{#eq-}` attaches only to `$$...$$` display equations. Printed R matrix output (e.g. `round(e, 2)`) cannot take an eq label — promote to a captioned `{#tbl-}` table (`#| label: tbl-…` + `#| tbl-cap`, then `library(kableExtra)` + `kbl(x, format = "html", align = "c")`) only if the object is genuinely tabular. Large/debug/intermediate matrices stay as-is.
-
-**Labels added 2026-11-17 (do not reuse):** `eq-rankp` (basic-eigen), `eq-mod-eig` (comm-mod), `eq-tm-mod` (comm-tm-spectral), `eq-katzsim` (prest-eigen); `tbl-ei-cells` (basic-ego), `tbl-e-matrix` (comm-tm-spectral).
-
-**Handout cross-ref fixes applied 2026-11-17** (vague → linked): stat-ergm2→stat-ergm1; prest-ml→prest-eigen/pagerank/hits; comm-spectral→comm-mod; comm-tm-spectral→tm-ca; comm-mod→sim-structequiv; comm-spectral→basic-eigen; prest-tm→tm-basic; stat-qap→sim-structequiv; prest-hits→@fig-ca; prest-tm→@tbl-birankmap; tm-duality→@eq-zhou1/zhou2; prest-tm-gen→@eq-gen1/gen2, @eq-iter1/iter2; cent-bet→@eq-brandes1; prest-eigen→@eq-eigen, @eq-bonacich, @eq-katzsim.
-
-**Pending:** these `.qmd` edits across ~14 files are **unrendered** — run `quarto render <file>.qmd` for each and commit `.qmd` + `_freeze/<page>/` together (see GitHub Pages deployment rule above).
