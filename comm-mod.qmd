@@ -815,14 +815,20 @@ modularity(ug, lv.res)
 
 ## The Louvain Method, Step 2: Aggregation
 
-Step 1 hands us a partition of the network into communities, some of them containing many nodes and some containing only one. The second phase of the Louvain method takes that partition and *collapses* it: each community becomes a single node in a new, much smaller graph, called the coarsened graph. Two communities that were connected by any links in the original graph are connected in the coarsened graph by an edge whose weight is the total weight running between them, and each new node carries a self-loop whose weight is the total weight of the links internal to the corresponding community. The point of the exercise is that the modularity of the coarsened graph, read under the partition in which every super-node is its own community, is *exactly* the modularity of the original partition in the original graph. Aggregation loses no modularity, but it shrinks the network from 68 nodes to however many communities step 1 found, so the next round of node moves happens at a coarser grain where entire communities, not individual nodes, are the things that get shuffled around. Here is a function that builds the coarsened graph, as directly as possible:
+The `louvain.step1` function gives us a partition of the network into five communities, some of them containing many nodes and some containing only three. So maybe there is a way to come up with a more optimal way to partition the network into a smaller set of communities without losing much ground in the modularity score. 
+
+The second step of the Louvain method does this by *aggregating* the communities found in step 1 into single nodes, and then running step 1 again on the resulting community graph. Thus, each community becomes a single node in a new, much smaller graph, called the coarsened graph. Two communities that were connected by any links in the original graph are connected in the coarsened graph by an edge whose weight is the total number of links running between them, and each new community node carries a self-loop whose weight is the total weight of the links internal to the corresponding community. 
+
+The point of the exercise is that the modularity of the coarsened graph, read under the partition in which every super-node is its own community, is *exactly* the modularity of the first-step partition in the original graph. Aggregation loses no modularity, but it shrinks the network from 68 nodes to however many communities step 1 found (in our case five), so the next round of node moves happens at a coarser grain where entire communities, not individual nodes, are the things that get shuffled around. 
+
+Here that does this:
 
 ```{r}
 louvain.step2 <- function(x, comm) {
   A <- as.matrix(as_adjacency_matrix(x)) # adjacency matrix of the current graph
-  cl <- sort(unique(comm)) # the surviving communities become the new nodes
-  K <- length(cl) # number of communities found by step 1
-  new.id <- match(comm, cl) # renumber communities 1..K
+  u <- unique(comm) # the surviving community labels become the new nodes
+  K <- length(u) # number of communities found by step 1
+  new.id <- match(comm, u) # renumber communities 1..K
   A.new <- matrix(0, K, K) # adjacency matrix of the coarsened graph
   for (i in 1:nrow(A)) {
     for (j in 1:ncol(A)) {
@@ -830,7 +836,7 @@ louvain.step2 <- function(x, comm) {
     }
   }
   diag(A.new) <- diag(A.new) / 2 # halve self-loops (each internal edge is counted twice in the double sum)
-  rownames(A.new) <- colnames(A.new) <- cl # label the new nodes by their original community labels
+  rownames(A.new) <- colnames(A.new) <- u # label the new nodes by their original community labels
   g.new <- graph_from_adjacency_matrix(A.new, mode = "undirected",
                                        weighted = TRUE, diag = TRUE)
   return(g.new)
@@ -841,7 +847,7 @@ It works like this:
 
 - Line 2 converts the current graph to a plain adjacency matrix, exactly as in the `greedy` function.
 
-- Lines 3-5 set up the community-level accounting. Line 3 lists the communities that survived step 1, sorted; line 4 counts them, so the coarsened graph will have this many nodes; and line 5 renumbers the community labels as integers from 1 to `K`, which matters because the community labels coming out of step 1 are not necessarily the numbers 1 through `K` (they are inherited from the labels of the communities' founding nodes).
+- Lines 3-5 set up the community-level accounting. Line 3 lists the communities that survived step 1 with `unique` — the labels that still appear anywhere in `comm` after the merging is done; line 4 counts them, so the coarsened graph will have this many nodes; and line 5 renumbers the community labels as integers from 1 to `K`, which matters because the community labels coming out of step 1 are not necessarily the numbers 1 through `K` (they are inherited from the labels of the communities' founding nodes). Because `match` returns each label's position in the list, the renumbering and the labeling come from the same object `u`, and we keep `u` around as the row and column names so every super-node can still be traced back to its original community label.
 
 - Line 6 sets up an empty `K` by `K` matrix to hold the adjacency structure of the coarsened graph.
 
