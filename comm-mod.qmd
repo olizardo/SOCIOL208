@@ -767,19 +767,19 @@ louvain.step1 <- function(x, seed = 123) {
       adjclust <- setdiff(commNi, comm[i]) # i's adjacent communities, excluding its own
       if (length(adjclust) == 0) next # no adjacent community to move into
       best.mod <- 0
-      target <- NULL
+      t <- NULL
       for (k in adjclust) { # loop over adjacent communities
         tc <- comm
         tc[i] <- k # tentatively move i into community k
-        mod.diff <- modularity(x, tc) - modularity(x, comm) # gain from the move
+        mod.diff <- modularity(x, tc) - modularity(x, comm) # modularity gain from the move
         if (mod.diff > best.mod) {
           best.mod <- mod.diff
-          target <- k
+          t <- k # setting the target community to the one that gives the best gain
           }
-        }
-      if (!is.null(target)) { # confirm only strictly positive moves
-        comm[i] <- target
-        m <- m + 1
+        } # end of loop over adjacent communities
+      if (!is.null(t)) { # if a move was found that improves modularity
+        comm[i] <- t # move i into the best adjacent community
+        m <- m + 1 # update the count of moves made in this pass
         }
       }
     }
@@ -793,15 +793,15 @@ It works like this:
 
 - Line 3 counts the number of nodes, and line 4 gives every node its own community label, so like the greedy algorithm the Louvain method also starts with every node in their own community.
 
-- Lines 5-9 control how long the search runs. The object `m` counts how many nodes were relocated during the most recent full pass, and the `while` loop keeps going as long as that number is greater than zero. Each pass, line 8 increments the pass counter and line 9 resets the move count to zero before the sweep begins. An entire pass over every node that produces no relocations means no single-node move anywhere in the network can improve the modularity, so we have reached a local optimum.
+- Lines 5-9 control how long the search runs. The object `m` counts how many nodes were relocated during the most recent full pass, and the `while` loop keeps going as long as `m` is greater than zero. In each pass (stored in the `p` counter in line 8) line 9 resets the move count to zero before the sweep over nodes begins. An entire pass over every node that produces no relocations (`m = 0`) means no single-node move anywhere in the network can improve the modularity, so we have reached a local optimum.
 
-- Line 10 launches the sweep, drawing a random ordering of the nodes with the native `R` function `sample` applied to the vector of node numbers.
+- The `for` loop in Line 10 launches the sweep over a random ordering of the nodes using the native `R` function `sample` applied to the vector of node numbers to shuffle them around.
 
-- Lines 11-14 identify the candidate destinations for the current node `i`, in three steps. Line 11 collects the neighbors of `i` with `neighbors`; line 12 converts those neighbors into their community labels and collapses the repeats with `unique`; and line 13 drops `i`'s own community from that list with `setdiff`, leaving `adjclust`, the set of *adjacent communities* — the communities containing at least one neighbor of `i` other than `i`'s own. If that set is empty, line 14 skips the node; an isolated node or a node fully embedded in its own community offers no move to evaluate.
+- Lines 11-14 identify the candidate destinations for the current node `i`, in three steps. Line 11 collects the neighbors of `i` using the `igraph` function `neighbors`; line 12 identifies the community labels of those neighbors, eliminating repeats (for neighbors in the same community) using the native `R` function `unique`. Line 13 removes `i`'s own community from that list with `setdiff`, storing the node's adjacent communities in the `adjclust` object (the communities containing at least one neighbor of `i` other than `i`'s own). If that set is empty, line 14 skips the node.
 
-- Lines 15-24 score the candidate moves. For each adjacent community `k`, lines 18-19 copy the current labels into `tc` and tentatively reassign `i` to `k`, and line 20 computes the gain in modularity the slow but transparent way, by recomputing the modularity of the modified partition and subtracting the modularity of the unmodified one. Lines 21-23 keep the largest gain seen so far in `best.mod`, which starts at zero. Because the comparison is strict (`>`), a move is only worth confirming if it makes the modularity *strictly* better; if every candidate gains zero or loses, `target` stays `NULL` and the node stays put.
+- Lines 15-24 score the candidate moves. For each adjacent community `k`, lines 18-19 copy the current labels into `tc` and tentatively reassign `i` to `k`, and line 20 computes the gain in modularity by recomputing the modularity of the modified partition and subtracting the modularity of the unmodified one. Lines 21-23 keep the largest gain seen so far in `best.mod` and record the community that produced it in `t`. Because the initial value of `best.mod` is zero and the comparison is strict (`>`), only moves that make the modularity *strictly* better are ever recorded; if every candidate gains zero or loses, `t` stays `NULL` and the node stays put.
 
-- Lines 26-29 confirm the winning move. If some adjacent community offered a strictly positive gain, line 27 relabels `i` and line 28 adds one to the pass's move count. Note what does *not* need to happen: if `i` was the only member of its old community, that community is now simply empty, and because communities are tracked as labels rather than as objects, the empty label disappears on its own without any bookkeeping.
+- Lines 26-29 confirm the winning move. If some adjacent community offered a strictly positive gain, line 27 moves `i` into community `t` and line 28 adds one to the pass's move count. Note what does *not* need to happen: if `i` was the only member of its old community, that community is now simply empty, and because communities are tracked as labels rather than as objects, the empty label disappears on its own without any bookkeeping.
 
 - Lines 30-32 close the loops and return the final community vector once a full pass produces no moves.
 
