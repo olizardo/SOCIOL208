@@ -2,13 +2,13 @@
 title: "The Louvain Approach to Community Detection"
 ---
 
-Newman's greedy algorithm fuses whole communities, two at a time, and never looks back. The Louvain method [@blondel_etal08] uses a similar bottom-up strategy, with every node starting in their own singleton community, but instead of merging *pairs* of communities, it moves *single nodes* from the community they are in to a neighboring community, one node at a time, keeping any move that strictly increases the modularity.
+As we saw in [the modularity note](comm-mod.qmd#an-agglomerative-approach-based-on-the-modularity), Newman's greedy algorithm fuses whole communities, two at a time, and never looks back. The Louvain method proposed by @blondel_etal08 uses a similar bottom-up strategy, with every node starting in their own singleton community, but instead of merging *pairs* of communities, it moves *single nodes* from the community they are in to a neighboring community (a community where a node they are connected has already been assigned), trying out one move at a time, ultimately keeping any move that strictly increases the modularity. This results in a local search that continues until no single-node move can improve the modularity, at which point the current partition is a local optimum.
 
-Each node is visited in random order, and a full sweep of all nodes is called an *iteration*; iterations repeat until an entire sweep produces no moves.^[This description follows the step-by-step presentation of the Louvain method in @lancichinetti_etal09, Section 8.7.] Only after the local search bottoms out does the second step kick in, which collapses the communities found so far into single super-nodes and runs the whole search again on that much smaller community graph. The alternation repeats until nothing improves, and the communities of the original network are read off by undoing the aggregations.
+Then a second step kicks in, which collapses the communities found so far into single super-nodes creating a smaller weighted graph in which the communities found in the first step are the nodes and the weighted ties between them count how many edges ran between the two communities in the original network. The modularity of the weighted graph under the partition in which every super-node is its own community is *exactly* the modularity of the first-step partition in the original graph, so nothing is lost, but the network is now much smaller. The alternation repeats until nothing improves, and the communities of the original network are read off by undoing the aggregations.
 
-This page builds the method twice. The first build is deliberately literal, scoring every candidate move by recomputing the modularity of the whole partition from nothing, so that the logic of the algorithm stays visible on every line. The second build follows Algorithms 8.7 and 8.8 of @fouss_etal16 [pp. 379-380], whose step 1 swaps that slow scorer for one built on the modularity matrix and whose step 2 is a single matrix product. Putting the two side by side proves more interesting than either on its own, because their version turns out to be faster and exactly reproducible while containing one line that quietly breaks a convention `igraph` depends on.
+Here we explore the method twice. In the first pass, we score every candidate move by recomputing the modularity of the whole partition from nothing, so that the logic of the algorithm stays visible on every line. The second approach follows @fouss_etal16 [pp. 379-380], whose step 1 uses the modularity matrix $\mathbf{B}$ to score candidate moves and whose step 2 is a single matrix product using the membership matrix $\mathbf{U}$ that assigns nodes to communities (as discussed in [the modularity note](comm-mod.qmd#using-the-modularity-matrix-to-find-the-modularity-of-a-partition)). 
 
-The running example is the Lazega law firm friendship network [@lazega01] with degree-one nodes dropped, the same network used throughout these notes.
+The running example is the Lazega law firm friendship network [@lazega01] with degree-one nodes dropped, the same network used in [the modularity note](comm-mod.qmd).
 
 ```{r}
 library(networkdata)
@@ -220,13 +220,13 @@ The winner reaches 0.3724, a four-community split that no single run was guarant
 
 ## Step 1, the Modularity-Matrix Way
 
-The version in @fouss_etal16 follows the same logic and differs only in the scoring engine [p. 379]. Instead of copying the whole partition and recomputing the modularity for each candidate move, it precomputes the [modularity matrix](comm-mod.qmd) $\mathbf{B}$ of the modularity note, whose cells in an undirected graph are $b_{ij} = a_{ij} - k_ik_j/\sum_i\sum_j a_{ij}$, and reduces the gain from moving node $i$ into community $C_l$ to one dot product. Writing $\mathbf{e}_i$ for the unit vector with a one in position $i$, $\mathbf{u}_k$ for the membership vector of $i$'s current community, and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ for column $i$ of $\mathbf{B}$, the gain is
+The version in @fouss_etal16 follows the same logic and differs only in the scoring engine [p. 379]. Instead of copying the whole partition and recomputing the modularity for each candidate move, it precomputes the [modularity matrix](comm-mod.qmd#the-modularity-matrix) $\mathbf{B}$ of the modularity note, whose cells in an undirected graph are $b_{ij} = a_{ij} - k_ik_j/\sum_i\sum_j a_{ij}$, and reduces the gain from moving node $i$ into community $C_l$ to one dot product. Writing $\mathbf{e}_i$ for the unit vector with a one in position $i$, $\mathbf{u}_k$ for the membership vector of $i$'s current community, and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ for column $i$ of $\mathbf{B}$, the gain is
 
 $$
 \Delta Q(i, C_l) = \frac{2}{\sum_i\sum_j a_{ij}}\left(\mathbf{e}_i + \mathbf{u}_l - \mathbf{u}_k\right)^T\mathbf{b}_i
 $$ {#eq-louvain-gain}
 
-which needs only the entries of column $\mathbf{b}_i$ at the positions held by the target community's members. Algorithm 8.7 [@fouss_etal16, p. 379] also tracks the partition in a binary **membership matrix** $\mathbf{U}$, the same dummy-coded matrix the modularity note builds for binary partitions, rather than in a plain label vector. Here is a faithful translation:
+which needs only the entries of column $\mathbf{b}_i$ at the positions held by the target community's members. Algorithm 8.7 [@fouss_etal16, p. 379] also tracks the partition in a binary **membership matrix** $\mathbf{U}$, the same [dummy-coded matrix](comm-mod.qmd#using-the-modularity-matrix-to-find-the-modularity-of-a-partition) the modularity note builds for binary partitions, rather than in a plain label vector. Here is a faithful translation:
 
 ```{r}
 louvain.book.step1 <- function(x, weights = E(x)$weight) {
