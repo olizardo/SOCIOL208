@@ -828,15 +828,14 @@ louvain.step2 <- function(x, comm) {
   A <- as.matrix(as_adjacency_matrix(x)) # adjacency matrix of the current graph
   u <- unique(comm) # the surviving community labels become the new nodes
   K <- length(u) # number of communities found by step 1
-  new.id <- match(comm, u) # renumber communities 1..K
   A.new <- matrix(0, K, K) # adjacency matrix of the coarsened graph
+  rownames(A.new) <- colnames(A.new) <- u # label the new nodes by their original community labels
   for (i in 1:nrow(A)) {
     for (j in 1:ncol(A)) {
-      A.new[new.id[i], new.id[j]] <- A.new[new.id[i], new.id[j]] + A[i, j] # add edge to the community-level count
+      A.new[as.character(comm[i]), as.character(comm[j])] <- A.new[as.character(comm[i]), as.character(comm[j])] + A[i, j] # add the edge's weight to the cell for its two communities
     }
   }
   diag(A.new) <- diag(A.new) / 2 # halve self-loops (each internal edge is counted twice in the double sum)
-  rownames(A.new) <- colnames(A.new) <- u # label the new nodes by their original community labels
   g.new <- graph_from_adjacency_matrix(A.new, mode = "undirected",
                                        weighted = TRUE, diag = TRUE)
   return(g.new)
@@ -847,17 +846,17 @@ It works like this:
 
 - Line 2 converts the current graph to a plain adjacency matrix, exactly as in the `greedy` function.
 
-- Lines 3-5 set up the community-level accounting. Line 3 lists the communities that survived step 1 with `unique` — the labels that still appear anywhere in `comm` after the merging is done; line 4 counts them, so the coarsened graph will have this many nodes; and line 5 renumbers the community labels as integers from 1 to `K`, which matters because the community labels coming out of step 1 are not necessarily the numbers 1 through `K` (they are inherited from the labels of the communities' founding nodes). Because `match` returns each label's position in the list, the renumbering and the labeling come from the same object `u`, and we keep `u` around as the row and column names so every super-node can still be traced back to its original community label.
+- Lines 3-4 set up the community-level accounting. Line 3 lists the communities that survived step 1 with `unique` — the labels that still appear anywhere in `comm` after the merging is done, with gaps and all, since they are inherited from the labels of the communities' founding nodes rather than renumbered. Line 4 counts them, so the coarsened graph will have this many nodes.
 
-- Line 6 sets up an empty `K` by `K` matrix to hold the adjacency structure of the coarsened graph.
+- Lines 5-6 set up an empty `K` by `K` matrix to hold the adjacency structure of the coarsened graph, and immediately label its rows and columns with the original community labels. This labeling is what lets us avoid renumbering altogether: once the matrix's rows have names, R lets us index the matrix *by name*, so a community label can be used directly as a row or column address, and every super-node stays traceable back to its original label for free.
 
-- Lines 7-10 build the new weights with a double loop over every ordered pair of nodes in the original graph. For each pair, line 9 adds the weight of the original edge to the cell of the new matrix standing for the pair of communities the two endpoints belong to. Read the loop as "for every edge in the original graph, add its weight to the total running between the two communities it connects." Edges whose endpoints sit in the same community pile up on the diagonal, which is exactly the within-community total we want the self-loops to carry.
+- Lines 7-11 build the new weights with a double loop over every ordered pair of nodes in the original graph. For each pair, line 9 adds the weight of the original edge to the cell of the new matrix named after the pair of communities the two endpoints belong to, with `as.character` handing R the labels in the character form that name-indexing requires. Read the loop as "for every edge in the original graph, add its weight to the total running between the two communities it connects." Edges whose endpoints sit in the same community pile up on the diagonal, which is exactly the within-community total we want the self-loops to carry.
 
-- Line 11 halves the diagonal. This is pure bookkeeping, not algorithm: the double sum in lines 7-10 walks over the adjacency matrix in both directions, so every unordered pair of nodes contributes twice, and the diagonal accumulates twice the number of internal edges of each community. Halving restores the diagonal to the true count of internal links, which is what keeps the modularity arithmetic consistent when `igraph` reads the self-loops back as single edges.
+- Line 12 halves the diagonal. This is pure bookkeeping, not algorithm: the double sum in lines 7-11 walks over the adjacency matrix in both directions, so every unordered pair of nodes contributes twice, and the diagonal accumulates twice the number of internal edges of each community. Halving restores the diagonal to the true count of internal links, which is what keeps the modularity arithmetic consistent when `igraph` reads the self-loops back as single edges.
 
-- Line 12 labels the rows and columns of the new matrix with the original community labels, so we can always trace a super-node back to the set of original nodes it stands for.
+- Lines 13-14 turn the matrix into an `igraph` graph object, with `diag = TRUE` telling the function to keep the self-loops and `weighted = TRUE` storing the cell values as edge weights.
 
-- Lines 14-15 turn the matrix into an `igraph` graph object, with `diag = TRUE` telling the function to keep the self-loops and `weighted = TRUE` storing the cell values as edge weights.
+- Lines 15-16 return the coarsened graph.
 
 The claim that aggregation loses no modularity is worth checking rather than asserting. Reading the coarsened graph under the partition in which every super-node is its own community should give back exactly the modularity of the original partition:
 
