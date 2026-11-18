@@ -813,15 +813,57 @@ table(lv.res)
 modularity(ug, lv.res)
 ```
 
-We can compare this with the modularity that `igraph`'s full Louvain implementation reaches:
+## The Louvain Method, Step 2: Aggregation
+
+Step 1 hands us a partition of the network into communities, some of them containing many nodes and some containing only one. The second phase of the Louvain method takes that partition and *collapses* it: each community becomes a single node in a new, much smaller graph, called the coarsened graph. Two communities that were connected by any links in the original graph are connected in the coarsened graph by an edge whose weight is the total weight running between them, and each new node carries a self-loop whose weight is the total weight of the links internal to the corresponding community. The point of the exercise is that the modularity of the coarsened graph, read under the partition in which every super-node is its own community, is *exactly* the modularity of the original partition in the original graph. Aggregation loses no modularity, but it shrinks the network from 68 nodes to however many communities step 1 found, so the next round of node moves happens at a coarser grain where entire communities, not individual nodes, are the things that get shuffled around. Here is a function that builds the coarsened graph, as directly as possible:
 
 ```{r}
-lg.res <- cluster_louvain(ug)
-table(membership(lg.res))
-modularity(ug, membership(lg.res))
+louvain.step2 <- function(x, comm) {
+  A <- as.matrix(as_adjacency_matrix(x)) # adjacency matrix of the current graph
+  cl <- sort(unique(comm)) # the surviving communities become the new nodes
+  K <- length(cl) # number of communities found by step 1
+  new.id <- match(comm, cl) # renumber communities 1..K
+  A.new <- matrix(0, K, K) # adjacency matrix of the coarsened graph
+  for (i in 1:nrow(A)) {
+    for (j in 1:ncol(A)) {
+      A.new[new.id[i], new.id[j]] <- A.new[new.id[i], new.id[j]] + A[i, j] # add edge to the community-level count
+    }
+  }
+  diag(A.new) <- diag(A.new) / 2 # halve self-loops (each internal edge is counted twice in the double sum)
+  rownames(A.new) <- colnames(A.new) <- cl # label the new nodes by their original community labels
+  g.new <- graph_from_adjacency_matrix(A.new, mode = "undirected",
+                                       weighted = TRUE, diag = TRUE)
+  return(g.new)
+}
 ```
 
-Something striking has happened here: our deliberately inefficient single-pass version has actually edged out the `igraph` implementation, finding a five-community partition with a higher modularity than the three-community one `cluster_louvain` returns. There is no paradox and no general lesson about hand-coded versus library code here. Both versions are local searches, modularity maximization is NP-hard [@brandes07], and neither is guaranteed to find the global optimum; each is simply a different random walk over the space of partitions, so which one lands higher on any given network is an accident of the random order in which the moves got made. Run either version with different seeds and the modularity will wander between these values and beyond. What the full Louvain method adds is not a guarantee of a better answer at the end but a coarser search strategy: the second phase of the method collapses the communities found by the node-moving phase into super-nodes, restarts the search on the coarsened graph, and alternates the two steps, letting the search escape local optima by changing the grain of the network itself rather than by luck of the draw. We build that aggregation step next.
+It works like this:
+
+- Line 2 converts the current graph to a plain adjacency matrix, exactly as in the `greedy` function.
+
+- Lines 3-5 set up the community-level accounting. Line 3 lists the communities that survived step 1, sorted; line 4 counts them, so the coarsened graph will have this many nodes; and line 5 renumbers the community labels as integers from 1 to `K`, which matters because the community labels coming out of step 1 are not necessarily the numbers 1 through `K` (they are inherited from the labels of the communities' founding nodes).
+
+- Line 6 sets up an empty `K` by `K` matrix to hold the adjacency structure of the coarsened graph.
+
+- Lines 7-10 build the new weights with a double loop over every ordered pair of nodes in the original graph. For each pair, line 9 adds the weight of the original edge to the cell of the new matrix standing for the pair of communities the two endpoints belong to. Read the loop as "for every edge in the original graph, add its weight to the total running between the two communities it connects." Edges whose endpoints sit in the same community pile up on the diagonal, which is exactly the within-community total we want the self-loops to carry.
+
+- Line 11 halves the diagonal. This is pure bookkeeping, not algorithm: the double sum in lines 7-10 walks over the adjacency matrix in both directions, so every unordered pair of nodes contributes twice, and the diagonal accumulates twice the number of internal edges of each community. Halving restores the diagonal to the true count of internal links, which is what keeps the modularity arithmetic consistent when `igraph` reads the self-loops back as single edges.
+
+- Line 12 labels the rows and columns of the new matrix with the original community labels, so we can always trace a super-node back to the set of original nodes it stands for.
+
+- Lines 14-15 turn the matrix into an `igraph` graph object, with `diag = TRUE` telling the function to keep the self-loops and `weighted = TRUE` storing the cell values as edge weights.
+
+The claim that aggregation loses no modularity is worth checking rather than asserting. Reading the coarsened graph under the partition in which every super-node is its own community should give back exactly the modularity of the original partition:
+
+```{r}
+g.new <- louvain.step2(ug, lv.res)
+vcount(g.new)
+modularity(ug, lv.res)
+modularity(g.new, 1:vcount(g.new), weights = E(g.new)$weight)
+```
+
+The two modularities agree to full numerical precision. So after aggregation we are looking at a five-node network carrying the same modularity as a sixty-eight-node partition, and running step 1 again on the coarsened graph — which is just another call to `louvain.step1` with `g.new` in place of `ug` — shuffles *communities* rather than nodes. The full Louvain method is nothing more than alternating the two functions until a pass of step 1 on the current coarsened graph produces no moves, at which point the communities of the *original* network are recovered by un-doing the aggregations, and the sequence of partitions at each level is the hierarchy that makes Louvain attractive for large networks.
+
 
 
 
