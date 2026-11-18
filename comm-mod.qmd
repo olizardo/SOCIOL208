@@ -878,3 +878,107 @@ The two modularities agree to full numerical precision. So after aggregation we 
 
 
 
+
+## The Louvain Method: Putting the Two Steps Together
+
+The full algorithm is a wrapper that alternates the two functions, with one piece of accounting added: because each aggregation renames the nodes of the graph, we have to keep translating the community labels back down to the level of the original network as we climb. Here is a function that does exactly that:
+
+```{r}
+louvain.full <- function(x, seed = 123) {
+  set.seed(seed)
+  comm <- louvain.step1(x, seed = seed) # level-0 partition of the original nodes
+  Q <- modularity(x, comm)
+  history <- list(list(nodes = vcount(x), Q = Q))
+  repeat {
+    g.new <- louvain.step2(x, comm) # aggregate: communities become super-nodes
+    comm.new <- louvain.step1(g.new, seed = seed) # move super-nodes on the coarsened graph
+    Q.new <- modularity(g.new, comm.new, weights = E(g.new)$weight)
+    if (Q.new <= Q + 1e-10) break # no improvement: the search is over
+    u <- unique(comm) # labels of the communities that were aggregated
+    comm <- comm.new[match(comm, u)] # translate super-node labels back to original nodes
+    x <- g.new # continue from the coarsened graph
+    Q <- Q.new
+    history[[length(history) + 1]] <- list(nodes = vcount(x), Q = Q)
+  }
+  list(comm = comm, Q = Q, history = history)
+}
+```
+
+It works like this:
+
+- Lines 1-3 take the graph and a seed, fix the random stream, and produce the level-0 partition by running step 1 on the original network. Note that the seed is passed *through* to `louvain.step1` rather than relying on the stream: because `louvain.step1` re-seeds itself internally on every call, a seed set only in the wrapper would be silently overridden.
+
+- Lines 4-5 record the starting state. Line 4 computes the modularity of the level-0 partition, and line 5 starts a `history` list that will accumulate one entry per run, recording how many nodes the current graph has and what its modularity is. This is the hierarchy the method is named for.
+
+- Lines 6-9 are one full *run* of the method. Line 7 aggregates the current partition into a coarsened graph with `louvain.step2`; line 8 runs step 1 on that coarsened graph, so what gets moved this time are whole communities rather than single nodes; and line 9 computes the modularity of the resulting partition of super-nodes, using the edge weights that aggregation attached to the coarsened graph. Thanks to the modularity invariance we verified above, this number is directly comparable with the modularity of the previous level.
+
+- Lines 10-11 decide whether to keep going. If the new modularity does not exceed the old one (allowing a tiny numerical tolerance), a run of step 1 on the coarsened graph found nothing to improve, so the whole search is over. The comparison is where the invariance result does the real work: when step 1 on the coarsened graph makes no moves, the "new" partition is exactly the one-to-one partition of the super-nodes, whose modularity equals the old one by construction.
+
+- Lines 12-14 are the translation step. The coarsened graph's nodes are labeled with the communities of the previous level (`u`, in first-appearance order), so `match(comm, u)` locates, for every original node, the super-node it was collapsed into, and indexing `comm.new` by those positions hands each original node the label of the community its super-node was just moved into. After this line, `comm` is once again a partition of the *original* network, expressed at the current level of aggregation.
+
+- Lines 15-18 promote the coarsened graph to be the graph we work on, update the running modularity, and append the new level to the history. Then the `repeat` loop goes around again, aggregating and moving at the next coarser grain.
+
+- Lines 19-21 return the final partition of the original nodes, its modularity, and the history of levels.
+
+Running it on the law firm network with the same seed we used above shows an instructive outcome:
+
+```{r}
+fl.res <- louvain.full(ug, seed = 208)
+fl.res$history
+modularity(ug, fl.res$comm)
+```
+
+The history has only one level. The five-community partition step 1 found at the level of the original nodes was already as good as anything the coarser search could find: when step 1 runs on the five-node coarsened graph, every candidate move of a super-node either fails or gains nothing, so the modularity does not budge and the algorithm stops after a single run. Step 1 had gotten lucky; the full method simply confirms it.
+
+A different seed tells the more typical story:
+
+```{r}
+fl.res2 <- louvain.full(ug, seed = 123)
+fl.res2$history
+modularity(ug, fl.res2$comm)
+table(fl.res2$comm)
+```
+
+Here the level-0 partition was less fortunate (a lower modularity at the level of the original nodes), but the full method recovers ground the slow way: the first aggregation collapses the 68 nodes into 7 super-nodes, step 1 shuffles those super-nodes into a better arrangement, and the modularity climbs before the search bottoms out at the next level. The final `comm` vector is a partition of the *original* 68 nodes, translated back down through the aggregation steps, and the `history` records the little hierarchy — two levels of aggregation, each coarser than the last — that the method produced along the way.
+
+### Recovering the Ground Lost to Luck: Restarting the Search
+
+One thing the full method as written above still shares with every other version we have built is that it runs the local search once from a single random starting point, so its answer depends on the seed. The standard response to that fragility, used in one form or another by every serious implementation of the method, is to run the search many times from different random starting points and keep the partition with the best modularity. That is easy to add on top of what we already have:
+
+```{r}
+louvain.multi <- function(x, runs = 50) {
+  best <- NULL
+  bestQ <- -Inf
+  best.seed <- NA
+  for (s in 1:runs) {
+    r <- louvain.full(x, seed = s)
+    if (r$Q > bestQ) { # keep the best partition seen so far
+      bestQ <- r$Q
+      best <- r
+      best.seed <- s
+    }
+  }
+  list(comm = best$comm, Q = bestQ, best.seed = best.seed)
+}
+```
+
+It works like this:
+
+- Lines 1-4 set up the tournament. The function takes the graph and a number of independent restarts, and initializes the best partition found so far to `NULL` with a modularity of negative infinity, so that the very first run is always accepted, along with the seed that produced it.
+
+- Lines 5-12 run the full method once per restart, each with its own seed, and lines 7-10 keep the result whenever its modularity beats the best one seen so far, recording the seed that produced it. Nothing else changes between runs; the only difference is the random visitation order the seed induces, which is exactly the ingredient that steers a local search toward different local optima.
+
+- Line 14 returns the winning partition, its modularity, and the seed that produced it.
+
+Running fifty restarts on the law firm network shows how much the seed alone matters, and what the tournament buys:
+
+```{r}
+qs <- sapply(1:50, function(s) louvain.full(ug, seed = s)$Q)
+range(qs)
+table(round(qs, 3))
+lm.res <- louvain.multi(ug, runs = 50)
+lm.res$Q
+table(lm.res$comm)
+```
+
+The fifty independent runs land anywhere from about 0.328 to 0.372, with most of them piling up in the 0.370-0.372 band; the tournament returns the best of them, a four-community partition with a modularity that no single run was guaranteed to reach. The lesson is worth stating exactly. The optimization machinery inside a library implementation of Louvain (heaps of candidate gains, incremental updates instead of full recomputations) buys speed, not better communities: better modularity comes from restarting the search and keeping the best outcome, which costs nothing conceptually and works identically on top of our deliberately slow, fully transparent functions.
