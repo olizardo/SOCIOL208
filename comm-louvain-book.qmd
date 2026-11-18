@@ -220,16 +220,18 @@ The winner reaches 0.3724, a four-community split that no single run was guarant
 
 ## Doing It the Pseudocode Way
 
-The version in @fouss_etal16 follows the same logic and differs only in the scoring engine [p. 379]. Instead of copying the whole partition and recomputing the modularity for each candidate move, it precomputes the modularity matrix $Q = A - dd^T/\mathrm{vol}(G)$, whose entries are $a_{ij} - d_i d_j / \mathrm{vol}(G)$, and reduces the gain from moving node $i$ into community $C_l$ to one dot product. Writing $e_i$ for the unit vector with a one in position $i$, $u_k$ for the membership vector of $i$'s current community, and $q_i = Qe_i$ for column $i$ of $Q$, the gain is
+The version in @fouss_etal16 follows the same logic and differs only in the scoring engine [p. 379]. Instead of copying the whole partition and recomputing the modularity for each candidate move, it precomputes the [modularity matrix](comm-mod.qmd) $\mathbf{B}$ of the modularity note, whose cells in an undirected graph are $b_{ij} = a_{ij} - k_ik_j/\sum_i\sum_j a_{ij}$, and reduces the gain from moving node $i$ into community $C_l$ to one dot product. Writing $\mathbf{e}_i$ for the unit vector with a one in position $i$, $\mathbf{u}_k$ for the membership vector of $i$'s current community, and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ for column $i$ of $\mathbf{B}$, the gain is
 
-$$Q(i, C_l) = \frac{2}{\mathrm{vol}(G)}(e_i + u_l - u_k)^T q_i$$
+$$
+\Delta Q(i, C_l) = \frac{2}{\sum_i\sum_j a_{ij}}\left(\mathbf{e}_i + \mathbf{u}_l - \mathbf{u}_k\right)^T\mathbf{b}_i
+$$ {#eq-louvain-gain}
 
-which needs only the entries of column $q_i$ at the positions held by the target community's members. The pseudocode also tracks the partition in a binary *membership matrix* `U` with $n$ rows and one column per community, rather than in a plain label vector. Here is a faithful translation:
+which needs only the entries of column $\mathbf{b}_i$ at the positions held by the target community's members. The pseudocode also tracks the partition in a binary **membership matrix** $\mathbf{U}$, the same dummy-coded matrix the modularity note builds for binary partitions, rather than in a plain label vector. Here is a faithful translation:
 
 ```{r}
 louvain.book.step1 <- function(x, weights = E(x)$weight) {
   n <- vcount(x)
-  Q <- modularity_matrix(x, weights = weights, directed = FALSE)
+  B <- modularity_matrix(x, weights = weights, directed = FALSE)
   A.x <- as.matrix(as_adjacency_matrix(x, attr = if (is_weighted(x)) "weight" else NULL))
   vol <- sum(A.x)
   U <- diag(1, n, n) # membership matrix: U = I, each node its own cluster
@@ -240,10 +242,10 @@ louvain.book.step1 <- function(x, weights = E(x)$weight) {
       Ni <- neighbors(x, i)
       adj <- setdiff(unique(lab[Ni]), lab[i]) # adjacent clusters NC(i)
       if (length(adj) == 0) next
-      qi <- Q[i, ] # column i of the modularity matrix
-      inK <- sum(qi[U[, lab[i]] == 1]) # u_k^T q_i, precomputed once per node
+      bi <- B[i, ] # column i of the modularity matrix
+      inK <- sum(bi[U[, lab[i]] == 1]) # u_k^T b_i, precomputed once per node
       gains <- sapply(adj, function(l) {
-        (2 / vol) * (qi[i] + sum(qi[U[, l] == 1]) - inK) # Eq. 8.60
+        (2 / vol) * (bi[i] + sum(bi[U[, l] == 1]) - inK) # Eq. 8.60
       })
       lstar <- adj[which.max(gains)] # first maximum wins ties
       if (max(gains) > 0) { # strictly positive moves only
@@ -263,7 +265,7 @@ louvain.book.step1 <- function(x, weights = E(x)$weight) {
 
 It works like this:
 
-- Lines 2-5 build the scoring machinery. Line 3 computes the modularity matrix with the `igraph` function `modularity_matrix`, passing the graph's edge weights so the matrix matches the weighted modularity whenever the graph is weighted. Lines 4-5 compute $\mathrm{vol}(G)$ as the sum of the adjacency matrix, which counts every undirected edge twice. The adjacency extraction on line 4 has to reach for the `weight` attribute when the graph has one, for the same reason line 3 does; mixing a weighted `Q` with an unweighted `vol` silently corrupts every gain the function computes.
+- Lines 2-5 build the scoring machinery. Line 3 computes the modularity matrix with the `igraph` function `modularity_matrix`, passing the graph's edge weights so the matrix matches the weighted modularity whenever the graph is weighted. Lines 4-5 compute $\sum_i\sum_j a_{ij}$ as the sum of the adjacency matrix, which counts every undirected edge twice. The adjacency extraction on line 4 has to reach for the `weight` attribute when the graph has one, for the same reason line 3 does; mixing a weighted `B` with an unweighted `vol` silently corrupts every gain the function computes.
 
 - Lines 6-7 set up the two bookkeeping objects the pseudocode relies on. Line 6 initializes the membership matrix `U` as the identity, so each node is the sole member of its own cluster, and line 7 sets each node's cluster label to its own column.
 
@@ -271,7 +273,7 @@ It works like this:
 
 - Lines 11-13 identify the candidate destinations for node `i`. Line 11 collects `i`'s neighbors, line 12 lists the communities those neighbors belong to and drops repeats, and line 13 removes `i`'s own community, skipping the node when nothing is left.
 
-- Lines 14-18 score the candidates with Eq. 8.60 [@fouss_etal16, p. 381]. Line 14 pulls column $q_i$ out of the modularity matrix, and line 15 precomputes $u_k^T q_i$, the part of the gain that does not vary across candidate communities (a term the authors point out can be computed once per node). Lines 16-18 then evaluate each adjacent community `l` with a single weighted sum of `q_i` over that community's members. Nothing is recomputed from scratch anywhere; a gain is one dot product.
+- Lines 14-18 score the candidates with @eq-louvain-gain, which is Eq. 8.60 of @fouss_etal16 [p. 381]. Line 14 pulls column $\mathbf{b}_i$ out of the modularity matrix, and line 15 precomputes $\mathbf{u}_k^T\mathbf{b}_i$, the part of the gain that does not vary across candidate communities (a term the authors point out can be computed once per node). Lines 16-18 then evaluate each adjacent community `l` with a single weighted sum of `bi` over that community's members. Nothing is recomputed from scratch anywhere; a gain is one dot product.
 
 - Lines 19-25 confirm the winning move. Line 19 picks the adjacent community with the largest gain, breaking ties by taking the first maximum. Line 20 applies the strict positivity test, and lines 21-24 carry out the move exactly as the pseudocode does; zero out the node's old membership entry, set the new one, update the label, count the move. A node that was alone in its old cluster leaves behind an all-zero column, and that empty cluster sits there until the end of the pass.
 
@@ -281,13 +283,13 @@ Before trusting the formula, take a node that is still alone and score its gains
 
 ```{r}
 i <- 5
-Q <- modularity_matrix(ug, directed = FALSE)
+B <- modularity_matrix(ug, directed = FALSE)
 vol.ug <- sum(as.matrix(as_adjacency_matrix(ug)))
 U0 <- diag(1, vcount(ug))
 lab0 <- 1:vcount(ug)
 Ni <- neighbors(ug, i)
 adj <- setdiff(unique(lab0[Ni]), lab0[i])
-gb <- sapply(adj, function(l) (2/vol.ug)*(Q[i,i] + sum(Q[i, U0[, l] == 1]) - Q[i,i]))
+gb <- sapply(adj, function(l) (2/vol.ug)*(B[i,i] + sum(B[i, U0[, l] == 1]) - B[i,i]))
 gbr <- sapply(adj, function(l) {
   tc <- lab0; tc[i] <- l
   modularity(ug, tc) - modularity(ug, lab0)
@@ -296,7 +298,7 @@ round(rbind(book = gb, brute = gbr), 6)
 max(abs(gb - gbr))
 ```
 
-The two scoring engines agree to machine precision, as the printed maximum difference at the end of the chunk shows. The one-sided formula is not an approximation of the full gain. Expanding the before-and-after difference leaves exactly the cross terms $2(e_i + u_l - u_k)^T q_i$, and the case of a node alone in its cluster survives too, because the vanishing source cluster contributes a $-q_{ii}$ that cancels the $+q_{ii}$ coming from the destination.
+The two scoring engines agree to machine precision, as the printed maximum difference at the end of the chunk shows. The one-sided formula is not an approximation of the full gain. Expanding the before-and-after difference leaves exactly the cross terms in @eq-louvain-gain, and the case of a node alone in its cluster survives too, because the vanishing source cluster contributes a $-b_{ii}$ that cancels the $+b_{ii}$ coming from the destination.
 
 Step 1 written this way does not even need a seed:
 
@@ -310,9 +312,11 @@ Fixed-order step 1 finds six communities, of sizes 8, 5, 14, 3, 20, and 18, with
 
 ## The Coarsening Step in One Line
 
-Step 2 [@fouss_etal16, p. 380] is far more compact than its step 1, because the membership matrix `U` already encodes the partition and the coarsened adjacency matrix is just the triple product
+Step 2 [@fouss_etal16, p. 380] is far more compact than its step 1, because the membership matrix $\mathbf{U}$ already encodes the partition and the coarsened adjacency matrix is just the triple product
 
-$$A' = U^T A U$$
+$$
+\mathbf{A}' = \mathbf{U}^T\mathbf{A}\mathbf{U}
+$$ {#eq-louvain-coarsen}
 
 which sums the original adjacency entries over every pair of nodes mapped to the same pair of communities. Here is the literal translation, with one optional repair switch we will need in a moment:
 
@@ -347,7 +351,7 @@ rbind(
 
 It does not. The literal coarsened graph claims a modularity of 0.4865 where the original partition scored 0.3448, an inflation of more than forty percent out of nowhere, while the halved version reproduces the original score exactly.
 
-What went wrong is a clash of conventions rather than an algebra error. The double product $U^T A U$ counts every unordered pair of nodes twice, so each community's diagonal cell accumulates *twice* its true internal edge weight, and that doubled value becomes the weight of the coarsened graph's self-loop. The convention used in @fouss_etal16 absorbs the doubling consistently, because it computes $\mathrm{vol}(G)$ over all matrix entries, loops included, and counts loops twice in the degrees as well. Under that convention the footnote is correct. `igraph`'s `modularity()` lives in a different convention, one where a self-loop enters the accounting once, so feeding it a coarsened graph with doubled self-loops over-credits every community's internal density. The invariance theorem is convention-relative and the pseudocode does not say which convention it assumes, and the halving on line 4 is the translation from that convention into `igraph`'s. That is why our own `louvain.step2` carries the same halving; here we can see exactly why it is load-bearing rather than decorative.
+What went wrong is a clash of conventions rather than an algebra error. The double product in @eq-louvain-coarsen counts every unordered pair of nodes twice, so each community's diagonal cell accumulates *twice* its true internal edge weight, and that doubled value becomes the weight of the coarsened graph's self-loop. The convention used in @fouss_etal16 absorbs the doubling consistently, because it computes $\mathrm{vol}(G)$ over all matrix entries, loops included, and counts loops twice in the degrees as well. Under that convention the footnote is correct. `igraph`'s `modularity()` lives in a different convention, one where a self-loop enters the accounting once, so feeding it a coarsened graph with doubled self-loops over-credits every community's internal density. The invariance theorem is convention-relative and the pseudocode does not say which convention it assumes, and the halving on line 4 is the translation from that convention into `igraph`'s. That is why our own `louvain.step2` carries the same halving; here we can see exactly why it is load-bearing rather than decorative.
 
 ## Assembling the Pseudocode Version
 
@@ -431,7 +435,7 @@ bench
 
 On the 500-node graph the column-gain version finishes in `r bench$book[2]` seconds where the from-scratch version needs `r bench$from_scratch[2]`, roughly `r round(bench$from_scratch[2]/bench$book[2], 1)` times longer, and the gap widens as networks grow because the from-scratch cost scales with the size of the whole partition while the column-gain cost scales with the size of the candidate community. This is the actual reason the Louvain method reaches enormous networks, and it is the part of the method that our deliberately transparent implementation gives away.
 
-Reading the two implementations side by side leaves a short list of lessons. The column-gain formula is exact rather than approximate, and it is the genuinely scalable version of the local search we slowed down on purpose. The fixed visitation order of Algorithm 8.7 [p. 379] makes the method deterministic and reproducible without seeds, at the price of committing to a single local optimum instead of sampling a few. And the two places the pseudocode is silent or convention-bound, the self-loop accounting hidden inside $A' = U^T A U$ and the un-coarsening bookkeeping absent from Algorithm 8.8's output, are exactly the two places where a literal translation fails, one by inflating modularity and corrupting the stopping rule, the other by scrambling communities against nodes after the first aggregation. Pseudocode, it turns out, is not code, and the distance between the two is precisely where the conventions live.
+Reading the two implementations side by side leaves a short list of lessons. The column-gain formula is exact rather than approximate, and it is the genuinely scalable version of the local search we slowed down on purpose. The fixed visitation order of Algorithm 8.7 [p. 379] makes the method deterministic and reproducible without seeds, at the price of committing to a single local optimum instead of sampling a few. And the two places the pseudocode is silent or convention-bound, the self-loop accounting hidden inside @eq-louvain-coarsen and the un-coarsening bookkeeping absent from Algorithm 8.8's output, are exactly the two places where a literal translation fails, one by inflating modularity and corrupting the stopping rule, the other by scrambling communities against nodes after the first aggregation. Pseudocode, it turns out, is not code, and the distance between the two is precisely where the conventions live.
 
 The two partitions are worth looking at side by side, since their modularity scores are nearly tied:
 
