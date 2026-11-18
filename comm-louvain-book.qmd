@@ -6,7 +6,7 @@ Newman's greedy algorithm fuses whole communities, two at a time, and never look
 
 Each node is visited in random order, and a full sweep of all nodes is called an *iteration*; iterations repeat until an entire sweep produces no moves.^[This description follows the step-by-step presentation of the Louvain method in @lancichinetti_etal09, Section 8.7.] Only after the local search bottoms out does the second step kick in, which collapses the communities found so far into single super-nodes and runs the whole search again on that much smaller community graph. The alternation repeats until nothing improves, and the communities of the original network are read off by undoing the aggregations.
 
-This page builds the method twice. The first build is deliberately literal, scoring every candidate move by recomputing the modularity of the whole partition from nothing, so that the logic of the algorithm stays visible on every line. The second build follows the pseudocode in Fouss, Saerens, and Shimbo [@fouss_etal16], whose step 1 (Algorithm 8.7) swaps that slow scorer for one built on the modularity matrix and whose step 2 (Algorithm 8.8) is a single matrix product [@fouss_etal16, pp. 379-380]. Putting the two side by side proves more interesting than either on its own, because their version turns out to be faster and exactly reproducible while containing one line that quietly breaks a convention `igraph` depends on.
+This page builds the method twice. The first build is deliberately literal, scoring every candidate move by recomputing the modularity of the whole partition from nothing, so that the logic of the algorithm stays visible on every line. The second build follows Algorithms 8.7 and 8.8 of @fouss_etal16 [pp. 379-380], whose step 1 swaps that slow scorer for one built on the modularity matrix and whose step 2 is a single matrix product. Putting the two side by side proves more interesting than either on its own, because their version turns out to be faster and exactly reproducible while containing one line that quietly breaks a convention `igraph` depends on.
 
 The running example is the Lazega law firm friendship network [@lazega01] with degree-one nodes dropped, the same network used throughout these notes.
 
@@ -218,7 +218,7 @@ table(best$comm)
 
 The winner reaches 0.3724, a four-community split that no single run was guaranteed to find. We now have a working method and a benchmark to judge any other version of it against.
 
-## Doing It the Pseudocode Way
+## Step 1, the Modularity-Matrix Way
 
 The version in @fouss_etal16 follows the same logic and differs only in the scoring engine [p. 379]. Instead of copying the whole partition and recomputing the modularity for each candidate move, it precomputes the [modularity matrix](comm-mod.qmd) $\mathbf{B}$ of the modularity note, whose cells in an undirected graph are $b_{ij} = a_{ij} - k_ik_j/\sum_i\sum_j a_{ij}$, and reduces the gain from moving node $i$ into community $C_l$ to one dot product. Writing $\mathbf{e}_i$ for the unit vector with a one in position $i$, $\mathbf{u}_k$ for the membership vector of $i$'s current community, and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ for column $i$ of $\mathbf{B}$, the gain is
 
@@ -226,7 +226,7 @@ $$
 \Delta Q(i, C_l) = \frac{2}{\sum_i\sum_j a_{ij}}\left(\mathbf{e}_i + \mathbf{u}_l - \mathbf{u}_k\right)^T\mathbf{b}_i
 $$ {#eq-louvain-gain}
 
-which needs only the entries of column $\mathbf{b}_i$ at the positions held by the target community's members. The pseudocode also tracks the partition in a binary **membership matrix** $\mathbf{U}$, the same dummy-coded matrix the modularity note builds for binary partitions, rather than in a plain label vector. Here is a faithful translation:
+which needs only the entries of column $\mathbf{b}_i$ at the positions held by the target community's members. Algorithm 8.7 [@fouss_etal16, p. 379] also tracks the partition in a binary **membership matrix** $\mathbf{U}$, the same dummy-coded matrix the modularity note builds for binary partitions, rather than in a plain label vector. Here is a faithful translation:
 
 ```{r}
 louvain.book.step1 <- function(x, weights = E(x)$weight) {
@@ -267,7 +267,7 @@ It works like this:
 
 - Lines 2-5 build the scoring machinery. Line 3 computes the modularity matrix with the `igraph` function `modularity_matrix`, passing the graph's edge weights so the matrix matches the weighted modularity whenever the graph is weighted. Lines 4-5 compute $\sum_i\sum_j a_{ij}$ as the sum of the adjacency matrix, which counts every undirected edge twice. The adjacency extraction on line 4 has to reach for the `weight` attribute when the graph has one, for the same reason line 3 does; mixing a weighted `B` with an unweighted `vol` silently corrupts every gain the function computes.
 
-- Lines 6-7 set up the two bookkeeping objects the pseudocode relies on. Line 6 initializes the membership matrix `U` as the identity, so each node is the sole member of its own cluster, and line 7 sets each node's cluster label to its own column.
+- Lines 6-7 set up the two bookkeeping objects Algorithm 8.7 relies on. Line 6 initializes the membership matrix `U` as the identity, so each node is the sole member of its own cluster, and line 7 sets each node's cluster label to its own column.
 
 - Lines 8-10 control the iteration. The `repeat` loop runs full passes over the nodes, line 9 resets the move counter at the top of each pass, and line 10 walks the nodes in *fixed* order $1, 2, \ldots, n$, precisely as Algorithm 8.7 prescribes. The authors note that the order could be randomized at each iteration [@fouss_etal16, p. 381], but their own procedure does not randomize, and we follow it literally.
 
@@ -275,7 +275,7 @@ It works like this:
 
 - Lines 14-18 score the candidates with @eq-louvain-gain, which is Eq. 8.60 of @fouss_etal16 [p. 381]. Line 14 pulls column $\mathbf{b}_i$ out of the modularity matrix, and line 15 precomputes $\mathbf{u}_k^T\mathbf{b}_i$, the part of the gain that does not vary across candidate communities (a term the authors point out can be computed once per node). Lines 16-18 then evaluate each adjacent community `l` with a single weighted sum of `bi` over that community's members. Nothing is recomputed from scratch anywhere; a gain is one dot product.
 
-- Lines 19-25 confirm the winning move. Line 19 picks the adjacent community with the largest gain, breaking ties by taking the first maximum. Line 20 applies the strict positivity test, and lines 21-24 carry out the move exactly as the pseudocode does; zero out the node's old membership entry, set the new one, update the label, count the move. A node that was alone in its old cluster leaves behind an all-zero column, and that empty cluster sits there until the end of the pass.
+- Lines 19-25 confirm the winning move. Line 19 picks the adjacent community with the largest gain, breaking ties by taking the first maximum. Line 20 applies the strict positivity test, and lines 21-24 carry out the move exactly as Algorithm 8.7 does; zero out the node's old membership entry, set the new one, update the label, count the move. A node that was alone in its old cluster leaves behind an all-zero column, and that empty cluster sits there until the end of the pass.
 
 - Lines 27-29 perform the cleanup at the end of each iteration of Algorithm 8.7. Line 28 deletes the zero columns of `U`, and line 29 recomputes every node's label from the shrunken matrix as the position of its one. The column bookkeeping is the pseudocode's answer to a problem the label-vector version never faces; because communities are columns of a matrix rather than entries of a vector, empty clusters have to be physically removed and every label renumbered before the next pass.
 
@@ -333,7 +333,7 @@ louvain.book.step2 <- function(x, U, halve.diag = FALSE) {
 
 - Line 3 is Algorithm 8.8 verbatim [@fouss_etal16, p. 380]. Edges between different communities pile up in the off-diagonal cells, and edges within a community pile up on the diagonal.
 
-- Line 4 optionally halves the diagonal, a correction the pseudocode does *not* contain.
+- Line 4 optionally halves the diagonal, a correction that Algorithm 8.8 does *not* contain [@fouss_etal16, p. 380].
 
 - Line 5 turns the matrix into a graph, keeping the self-loops and storing the cell values as edge weights.
 
@@ -351,9 +351,9 @@ rbind(
 
 It does not. The literal coarsened graph claims a modularity of 0.4865 where the original partition scored 0.3448, an inflation of more than forty percent out of nowhere, while the halved version reproduces the original score exactly.
 
-What went wrong is a clash of conventions rather than an algebra error. The double product in @eq-louvain-coarsen counts every unordered pair of nodes twice, so each community's diagonal cell accumulates *twice* its true internal edge weight, and that doubled value becomes the weight of the coarsened graph's self-loop. The convention used in @fouss_etal16 absorbs the doubling consistently, because it computes $\mathrm{vol}(G)$ over all matrix entries, loops included, and counts loops twice in the degrees as well. Under that convention the footnote is correct. `igraph`'s `modularity()` lives in a different convention, one where a self-loop enters the accounting once, so feeding it a coarsened graph with doubled self-loops over-credits every community's internal density. The invariance theorem is convention-relative and the pseudocode does not say which convention it assumes, and the halving on line 4 is the translation from that convention into `igraph`'s. That is why our own `louvain.step2` carries the same halving; here we can see exactly why it is load-bearing rather than decorative.
+What went wrong is a clash of conventions rather than an algebra error. The double product in @eq-louvain-coarsen counts every unordered pair of nodes twice, so each community's diagonal cell accumulates *twice* its true internal edge weight, and that doubled value becomes the weight of the coarsened graph's self-loop. The convention used in @fouss_etal16 absorbs the doubling consistently, because it sums the volume over all matrix entries, loops included, and counts loops twice in the degrees as well. Under that convention the footnote is correct. `igraph`'s `modularity()` lives in a different convention, one where a self-loop enters the accounting once, so feeding it a coarsened graph with doubled self-loops over-credits every community's internal density. The invariance theorem is convention-relative and Algorithm 8.8 does not say which convention it assumes, and the halving on line 4 is the translation from that convention into `igraph`'s. That is why our own `louvain.step2` carries the same halving; here we can see exactly why it is load-bearing rather than decorative.
 
-## Assembling the Pseudocode Version
+## Assembling the Two Algorithms
 
 The authors describe the full method as alternating the two steps until nothing improves [@fouss_etal16, p. 378], and stop there. What they never say is how to translate the communities found on the coarsened graph back down to the nodes of the original network, since Algorithm 8.8 returns only the new adjacency matrix with no record of which original node lives inside which super-node. That silence is where a naive implementation goes wrong, and the fix is the same slot vector as before.
 
@@ -414,7 +414,7 @@ fb.lit$Q
 
 The literal run does not crash and does not even return a bad-looking answer. It climbs steadily, from 0.3448 to 0.4878 to 0.4899 on ever-coarser graphs, and keeps going for an extra level because those inflated scores keep "improving." The climb is phantom, though, since the scores come from graphs whose self-loops over-credit internal density, and when the final partition is read back on the original network it scores 0.3687, *lower* than the 0.3712 the repaired version reached while stopping a level earlier. A doubled self-loop did not merely inflate a diagnostic number; it corrupted the stopping rule and cost real modularity, and nothing in the output flags the problem. The only way to catch it is the check we already learned to run, comparing modularity before and after aggregation.
 
-## What the Pseudocode Buys and What It Costs
+## What the Algorithms Buy and What It Costs
 
 The last difference is speed, and it is the reason the method scales. On a small network the two scoring engines are within shouting distance, because recomputing the modularity of a sixty-eight-node partition is cheap. On a larger graph the column-gain engine pulls away sharply:
 
@@ -435,7 +435,7 @@ bench
 
 On the 500-node graph the column-gain version finishes in `r bench$book[2]` seconds where the from-scratch version needs `r bench$from_scratch[2]`, roughly `r round(bench$from_scratch[2]/bench$book[2], 1)` times longer, and the gap widens as networks grow because the from-scratch cost scales with the size of the whole partition while the column-gain cost scales with the size of the candidate community. This is the actual reason the Louvain method reaches enormous networks, and it is the part of the method that our deliberately transparent implementation gives away.
 
-Reading the two implementations side by side leaves a short list of lessons. The column-gain formula is exact rather than approximate, and it is the genuinely scalable version of the local search we slowed down on purpose. The fixed visitation order of Algorithm 8.7 [p. 379] makes the method deterministic and reproducible without seeds, at the price of committing to a single local optimum instead of sampling a few. And the two places the pseudocode is silent or convention-bound, the self-loop accounting hidden inside @eq-louvain-coarsen and the un-coarsening bookkeeping absent from Algorithm 8.8's output, are exactly the two places where a literal translation fails, one by inflating modularity and corrupting the stopping rule, the other by scrambling communities against nodes after the first aggregation. Pseudocode, it turns out, is not code, and the distance between the two is precisely where the conventions live.
+Reading the two implementations side by side leaves a short list of lessons. The column-gain formula is exact rather than approximate, and it is the genuinely scalable version of the local search we slowed down on purpose. The fixed visitation order of Algorithm 8.7 [p. 379] makes the method deterministic and reproducible without seeds, at the price of committing to a single local optimum instead of sampling a few. And the two places @fouss_etal16 is silent or convention-bound, the self-loop accounting hidden inside @eq-louvain-coarsen and the un-coarsening bookkeeping absent from Algorithm 8.8's output, are exactly the two places where a literal translation fails, one by inflating modularity and corrupting the stopping rule, the other by scrambling communities against nodes after the first aggregation. Turning an algorithm into code, it turns out, is not a mechanical act of transcription, and the distance between the two is precisely where the conventions live.
 
 The two partitions are worth looking at side by side, since their modularity scores are nearly tied:
 
