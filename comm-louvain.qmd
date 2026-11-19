@@ -56,15 +56,11 @@ louvain.step1 <- function(x, seed = 123) {
 ```
 
 - Lines 1-2 take the graph as an input and set the random-number seed from the `seed` argument. Fixing the seed is required because the algorithm randomizes the node list before looping through them and different randomization orders can lead to different modularity maximization local optima. Line 3 counts the number of nodes, and line 4 gives every node its own community label (a vector of numbers between 1 and $N$ where $N$ is the number of nodes), so like Newman's greedy algorithm the Louvain method also starts with every node in their own community.
-
 - In line 5 we initialize the object `m` (which counts how many nodes were relocated during the most recent full pass) using the value of `Inf`. The `while` loop that starts in line 6 keeps going as long as `m` is greater than zero at the end of a pass. Line 7 resets the move count to zero before the sweep over nodes begins in the `for` loop in Line 8. The sweep is over a random ordering of the nodes, which we get using the native `R` function `sample` applied to the vector of node numbers. An entire pass over every node that produces no relocations (`m = 0`) means that's the end of the `while` loop.
 
 - Lines 9-12 identify the candidate destinations for the current node `i`, in three steps. First, line 9 collects a vector of the node IDs of the neighbors of `i` using the `igraph` function `neighbors`. Second, line 10 collects a vector of the community labels of those neighbors, eliminating repeats (for neighbors in the same community) using the native `R` function `unique`. Third, line 11 removes `i`'s own community from that list with `setdiff`, storing the node's adjacent communities in the `adjclust` object (the communities containing at least one neighbor of `i` other than `i`'s own). If that set is empty, the `if` condition in line 12 skips the node.
 
-- Lines 13-26 figure out whether the modularity improves based on candidate moves. For each node `i` and each adjacent community `k` of that node, lines 16-17 copy the current vector of community labels into the object `tc` (line 16) and tentatively reassign `i` to `k` (line 17). Line 18 computes the gain in modularity obtained from this reassignment by computing the modularity of the modified partition (`modularity(x, tc)`) and subtracting the modularity of the original one (`modularity(x, comm)`). If the gain in modularity from that node move is the best one we have seen so far in the loop then we store it in `best.mod` and record the community that produced it in object `t` (line 21) If this  happens, line 25 moves `i` into community `t` in the main community vector and line 26 increments the `m` counter.
-
-Let's see `louvain.step1` in action on the law firm network:
-
+- Lines 13-26 figure out whether the modularity improves based on candidate moves. For each node `i` and each adjacent community `k` of that node, lines 16-17 copy the current vector of community labels into the object `tc` (line 16) and tentatively reassign `i` to `k` (line 17). Line 18 finds the gain in modularity obtained from this reassignment by computing the modularity of the modified partition (`modularity(x, tc)`) and subtracting the modularity of the original one (`modularity(x, comm)`). If the gain in modularity from that node move is the best one we have seen so far in the loop then we store it in `best.mod` and record the community that produced it in object `t` (line 21). If this happens, line 25 moves `i` into community `t` in the main community vector and line 26 increments the `m` counter by one.
 ```{r}
 #| column: screen-inset
 lv.res <- louvain.step1(ug)
@@ -72,19 +68,19 @@ table(lv.res)
 modularity(ug, lv.res)
 ```
 
-The `louvain.step1` function puts the sixty-eight lawyers in $k=$ `r length(unique(lv.res))` communities, three of them relatively large and four of them with fewer than ten members, for a modularity of `r modularity(ug, lv.res)`. That is a good partition, but the presence of small clusters alongside the large ones should makes us suspect a better arrangement exists at a coarser grain.
+The `louvain.step1` function with default seed `123` puts the sixty-eight lawyers in $k=$ `r length(unique(lv.res))` communities, three of them relatively large and four of them with fewer than ten members, for a modularity of `r round(modularity(ug, lv.res), 3)`. That is a good partition, but the presence of small clusters alongside the large ones should makes us suspect a better arrangement exists at a coarser grain.
 
 ## Step 2: Aggregation into a Community Graph
 
 The second step in the Louvain approach builds a new weighted graph whose nodes are the *communities* found in step 1. Each community becomes a single node, two communities connected by any links in the original graph become adjacent nodes joined by an edge whose weight is the total weight of the links between them, and each community node carries a self-loop whose weight is the total weight of the links internal to that community.
 
-Here's a function that creates the community graph from the original graph and the community assingments from step 1:
+Here's a function that creates the community graph from the original graph and the community assignments from step 1:
 
 ```{r}
 #| column: screen-inset
-louvain.step2 <- function(x, comm) {
+louvain.step2 <- function(x, l) {
   A <- as.matrix(as_adjacency_matrix(x, attr = if (is_weighted(x)) "weight" else NULL)) # adjacency matrix of the current graph
-  u <- unique(comm) # the community labels become the new nodes
+  u <- unique(l) # the community labels become the new nodes
   K <- length(u) # number of communities found by step 1
   C <- matrix(0, K, K) # empty adjacency matrix of the community graph
   rownames(C) <- u # label the new nodes by their original community labels
@@ -93,8 +89,8 @@ louvain.step2 <- function(x, comm) {
     for (j in i:ncol(A)) { # each unordered pair of nodes, and each diagonal cell, is visited once
       w <- A[i, j] # weight of the link between i and j (zero when there is none)
       if (w == 0) next # nothing to file for a pair that is not linked
-      a <- as.character(comm[i])
-      b <- as.character(comm[j])
+      a <- as.character(l[i])
+      b <- as.character(l[j])
       C[a, b] <- C[a, b] + w # add the edge's weight to the cell for its two communities
       if (a != b) C[b, a] <- C[b, a] + w # mirror the partner cell the upper loop skips
       }
@@ -104,7 +100,7 @@ louvain.step2 <- function(x, comm) {
 }
 ```
 
-This function takes an `igraph` graph object `x` and a vector of community labels `comm` as input and returns a new `igraph` graph object whose nodes are the communities found in step 1.
+This function takes an `igraph` graph object `x` and a vector of community labels `l` as input and returns a new `igraph` graph object whose nodes are the communities found in step 1.
 
 - Line 2 converts the current graph to a plain adjacency matrix. Lines 3-4 set up the community-level accounting. Line 3 creates a vector of unique community labels and stores it in `u`. Line 4 counts the number of communities, which will be the number of nodes of the new weighted graph. Lines 5-7 set up an empty `K` by `K` matrix `C` to hold the adjacency structure of the weighted graph, labeling its rows and columns with the original community labels. 
 
@@ -123,7 +119,7 @@ A.new
 
 We can see that the seven community-nodes are now connected by weighted edges, with the weights counting how many friendship nominations exist between members of the two communities in the original network, and the self-loops counting how many exist within each community.
 
-A key point of the exercise is that the modularity computed in the reduced community graph, where each node is assigned to a community, is the same as the modularity of the first-step partition in the original graph using the same community assignnents for all individual nodes. In this sense, aggregation loses no modularity relevant information, but shrinks the network from sixty-eight nodes to seven, so the next round of node moves using `louvain.step1` works on this smaller network.
+A key point of the exercise is that the modularity computed in the reduced community graph, where each node is assigned to a community, is the same as the modularity of the first-step partition in the original graph using the same community assignments for all individual nodes. In this sense, aggregation loses no modularity relevant information, but shrinks the network from sixty-eight nodes to seven, so the next round of node moves using `louvain.step1` works on this smaller network.
 
 To verify, here's the modularity in the original network with the first-step community assignments:
 
@@ -141,6 +137,8 @@ modularity(g.new, 1:vcount(g.new), weights = E(g.new)$weight)
 
 The two scores are identical; we are looking at a seven-node weighted network carrying the same modularity as a sixty-eight-node unweighted one, and running step 1 again on it is just another call to `louvain.step1` with `g.new` in place of `ug`, which shuffles *communities* rather than nodes. 
 
+Note that in the second call to the `modularity` function we just use a vector of node numbers as the community labels, because each node is its own community in the community graph, and we also have to tell the function to use the edge weights in the new graph using the `weights` argument.
+
 ## Putting the Two Steps Together
 
 The full Louvain algorithm alternates the two steps we just defined until a pass of step 1 on the current community graph produces no modularity-improving moves. 
@@ -157,12 +155,12 @@ louvain.full <- function(x, seed = 123) {
   repeat {
     lv1 <- louvain.step1(x, seed = seed) # step 1 on the current graph
     Q <- modularity(x, lv1, weights = E(x)$weight) # modularity of that partition
-    history <- rbind(history, data.frame(nodes = vcount(x), Q = Q)) # record the level
+    history <- rbind(history, data.frame(nodes = vcount(x), Q = Q)) # record the number of nodes and the modularity score of the current partition
     g.new <- louvain.step2(x, lv1) # communities become super-nodes
-    lv2 <- louvain.step1(g.new, seed = seed) # move super-nodes on the coarsened graph
-    Q.new <- modularity(g.new, lv2, weights = E(g.new)$weight) # modularity score of the super-node partition
+    lv2 <- louvain.step1(g.new, seed = seed) # apply step 1 to the community graph
+    Q.new <- modularity(g.new, lv2, weights = E(g.new)$weight) # modularity score of the community-graph partition
     if (Q.new <= Q) break # no improvement: the search is over
-    comm <- lv1[slot] # vector of current community assingments for each node
+    comm <- lv1[slot] # vector of current community assignments for each node
     slot <- match(comm, unique(lv1)) # matching each node to where its community sits in the new graph
     x <- g.new # replace the current graph with the coarsened graph for the next iteration
     }
@@ -193,7 +191,7 @@ table(fl.res$comm)
 
 The step 1 partition scored only `r round(fl.res$history[1, 2], 4)`, but the full approach improves upon that, with the first aggregation collapsing the sixty-eight nodes into seven community-nodes, step 1 shuffling those community-nodes into a more optimal arrangement. The modularity climbs to `r round(fl.res$Q, 4)` before the search bottoms out at the next level. The final `comm` vector is a partition of the *original* sixty-eight lawyers into the four communities.
 
-Because the method is a local search influenced by the initial randomization order, different seeds can get stuck in different local optima. Running the full method ten times, once from each seed from 1 to 10, and keeping the partition with the highest modularity gives a better look at what the best Louvain partitin might look like:
+Because the method is a local search influenced by the initial randomization order, different seeds can get stuck in different local optima. Running the full method ten times, once from each seed from 1 to 10, and keeping the partition with the highest modularity gives a better look at what the best Louvain partition might look like:
 
 ```{r}
 #| column: screen-inset
@@ -209,22 +207,22 @@ for (s in 1:10) {
 bestQ
 table(best$comm)
 ```
-
-The winner reaches `r round(bestQ, 4)`, a four-community split that no single run of `louvain.full` was guaranteed to find.
+The winner reaches `r round(bestQ, 4)` with a much higher value of the modularity than in the previous runs.
 
 ## The Modularity-Matrix Way
+@fouss_etal16 [pp. 379-380] describe a more efficient implementation of the Louvain method that uses the [modularity matrix](comm-mod.qmd#the-modularity-matrix) $\mathbf{B}$ to score candidate moves, rather than recomputing the modularity of the whole partition from scratch for each move as we did in `louvain.step1`. 
 
-@fouss_etal16 [pp. 379-380] describe a more efficient implementation of the Louvain method that uses the [modularity matrix](comm-mod.qmd#the-modularity-matrix) $\mathbf{B}$ to score candidate moves, rather than recomputing the modularity of the whole partition from scratch for each move. This approach reduces the computational cost of evaluating moves, especially in large networks. The other piece of information we will need is the matrix $U$ which is the $N \times k$ biadjacency matrix of the current partition, where $N$ is the number of nodes and $k$ is the number of communities. Each row of $U$ corresponds to a node, and each column corresponds to a community. The entry $u_{ij} = 1$ if node $i$ belongs to community $j$, and 0 otherwise.
+To implement this strategy we will also need the matrix $U$ which is the $N \times k$ biadjacency matrix of the current partition, where $N$ is the number of nodes and $k$ is the number of communities. Each row of $U$ corresponds to a node, and each column corresponds to a community. The entry $u_{ij} = 1$ if node $i$ belongs to community $j$, and 0 otherwise.
 
-This means that the change in the modularity ($\Delta Q(i, C_l)$) that results from moveing node $i$ from its current community $C_k$ to a neighboring community $C_l$ is given by:
+With these two things in hand, the change in the modularity ($\Delta Q(i, C_l)$) that results from moving node $i$ from its current community $C_k$ to a neighboring community $C_l$ is given by:
 
 $$
-\Delta Q(i, C_l) = \frac{2}{\sum_i\sum_j a_{ij}}\left(\mathbf{e}_i + \mathbf{u}_l - \mathbf{u}_k\right)^T\mathbf{b}_i
+\Delta Q(i, C_l) = \frac{2}{vol(\mathbf{A})}\left(\mathbf{e}_i + \mathbf{u}_l - \mathbf{u}_k\right)^T\mathbf{b}_i
 $$ {#eq-louvain-gain}
 
-Where $\mathbf{e}_i$ is the unit vector of length $N$ (the nummber of nodes) with a one in position $i$ and zero everywhere else, $\mathbf{u}_k$ is the membership vector of $i$'s current community (the $k^{th}$ column of $\mathbf{U}$) also of length $N$, and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ is the $i^{th}$ column of $\mathbf{B}$ also of length $N$.
+Where $vol(\mathbf{A}) = \sum_i \sum_j a_{ij}$ (the sum of the edge weights in the graph), $\mathbf{e}_i$ is the unit vector of length $N$ (the number of nodes) with a one in position $i$ and zero everywhere else, $\mathbf{u}_k$ is the membership vector of $i$'s current community (the $k^{th}$ column of $\mathbf{U}$), and $\mathbf{b}_i = \mathbf{B}\mathbf{e}_i$ is the $i^{th}$ column of $\mathbf{B}$ also of length $N$.
 
-So here's a version of Louvain step 1 using these shortcuts:
+Here's a version of Louvain step 1 using these shortcuts:
 
 
 ```{r}
@@ -245,79 +243,52 @@ louvain.book.step1 <- function(x) {
       bi <- B[i, ] # b_i, i's column of the modularity matrix
       ei <- numeric(n); ei[i] <- 1 # e_i, the unit vector for node i
       uk <- U[, lab[i]] # u_k, the indicator of i's current community
-      gains <- sapply(adj, function(l) {(2 / vol) * as.numeric(t(ei + U[, l] - uk) %*% bi)}) # (e_i + u_l - u_k)^T b_i
+      gains <- sapply(adj, function(l) {(2 / vol) * as.numeric(t(ei + U[, l] - uk) %*% bi)}) # substitute each element of adj into equation 1 as l
       lstar <- adj[which.max(gains)] # first maximum wins ties
       if (max(gains) > 0) { # strictly positive moves only
         U[i, lab[i]] <- 0 # move i out of its current community in U
         U[i, lstar] <- 1 # assign i to the new community in U
         lab[i] <- lstar # update i's community label
-        m <- m + 1
+        m <- m + 1 # update counter
       }
     }
-    if (m == 0) break
+    if (m == 0) break # no moves made, so the search is over
     U <- U[, colSums(U) > 0, drop = FALSE] # delete the empty clusters' columns
     lab <- max.col(U) # recompute every label from the shrunken U
   }
   return(list(U = U, lab = lab))
 }
 ```
-
 This function takes an `igraph` graph object as input and returns a list with two components: the biadjacency membership matrix `U` and the vector of community labels `lab`. 
 
-- Line 3 computes the graph's modularity matrix with the `igraph` function `modularity_matrix`; left to its defaults, that function reads the `weight` edge attribute whenever the graph has one, so the matrix matches the weighted modularity automatically. Lines 4-5 compute $\sum_i\sum_j a_{ij}$ as the sum of the adjacency matrix, which counts every undirected edge twice. Line 4 extracts the graph's adjacency matrix, while line 6 initializes the membership matrix `U` as the identity matrix (as many communities in the columns as there are nodes since each nodes starts in its own community). Line 7 initializes the label vector `lab` to match the number of columns of `U`.
+- Line 3 computes the graph's modularity matrix with the `igraph` function `modularity_matrix`; left to its defaults, that function reads the `weight` edge attribute whenever the graph has one, so the matrix matches the weighted modularity automatically. Lines 4-5 compute $vol(\mathbf{A})$ as the sum of the adjacency matrix, which counts every undirected edge twice. Line 4 extracts the graph's adjacency matrix, while line 6 initializes the membership matrix `U` as the identity matrix (as many communities in the columns as there are nodes since each node starts in its own community). Line 7 initializes the label vector `lab` to match the number of columns of `U` and then updates it as communities merge.
 
 - Line 9 resets the move counter at the top of each pass in the `repeat` loop, and line 10 loops over the each node in order.^[@fouss_etal16 [p. 381] note that the order could be randomized at each iteration.] Line 11 collects `i`'s neighbors in a vector `Ni`, line 12 lists the communities those neighbors belong to and subtracts `i`'s own community using the `setdiff` function. Line 13 skips the node when that node is not connected to nodes in any other community.
 
-- Line 14 pulls column $\mathbf{b}_i$ out of the modularity matrix, line 15 builds the unit vector $\mathbf{e}_i$, and line 16 sets $\mathbf{u}_k$ to the indicator vector of `i`'s own community. Line 17 computes the gain according to @eq-louvain-gain, using the native `R` shorcut `sapply`: for each candidate community `l`. The `as.numeric` wrapper strips the $1 \times 1$ matrix the product returns down to a scalar, so the scores come back as an ordinary vector. Nothing is recomputed from scratch anywhere.
-
+- Line 14 pulls column $\mathbf{b}_i$ out of the modularity matrix, line 15 builds the unit vector $\mathbf{e}_i$, and line 16 sets $\mathbf{u}_k$ to the indicator vector of `i`'s own community. Line 17 computes the gain according to @eq-louvain-gain, using the native `R` shortcut `sapply`: for each candidate community `l`. The `as.numeric` wrapper strips the $1 \times 1$ matrix the product returns down to a scalar, so the scores come back as an ordinary vector. Nothing is recomputed from scratch anywhere.
 - Lines 20-26 confirm the winning move. Line 20 picks the adjacent community with the largest gain, breaking ties by taking the first maximum. Line 21 applies the strict positivity test, and lines 22-25 carry out the move exactly as Algorithm 8.7 does; zero out the node's old membership entry, set the new one, update the label, count the move. A node that was alone in its old cluster leaves behind an all-zero column, and that empty cluster sits there until the end of the pass.
 
 - Lines 28-30 perform the cleanup at the end of each iteration of Algorithm 8.7. Line 29 deletes the zero columns of `U`, and line 30 recomputes every node's label from the shrunken matrix as the position of its one. The column bookkeeping is the pseudocode's answer to a problem the label-vector version never faces; because communities are columns of a matrix rather than entries of a vector, empty clusters have to be physically removed and every label renumbered before the next pass.
 
-Before trusting the formula, take a node that is still alone and score its gains into each adjacent community both ways:
-
-```{r}
-#| column: screen-inset
-i <- 5
-B <- modularity_matrix(ug, directed = FALSE)
-vol.ug <- sum(as.matrix(as_adjacency_matrix(ug)))
-U0 <- diag(1, vcount(ug))
-lab0 <- 1:vcount(ug)
-ei <- numeric(vcount(ug)); ei[i] <- 1
-Ni <- neighbors(ug, i)
-adj <- setdiff(unique(lab0[Ni]), lab0[i])
-gb <- sapply(adj, function(l) (2/vol.ug) * as.numeric(t(ei + U0[, l] - U0[, i]) %*% B[i, ]))
-gbr <- sapply(adj, function(l) {
-  tc <- lab0; tc[i] <- l
-  modularity(ug, tc) - modularity(ug, lab0)
-})
-round(rbind(book = gb, brute = gbr), 6)
-max(abs(gb - gbr))
-```
-
-The two scoring engines agree to machine precision, as the printed maximum difference at the end of the chunk shows. The one-sided formula is not an approximation of the full gain. Expanding the before-and-after difference leaves exactly the cross terms in @eq-louvain-gain, and the case of a node alone in its cluster survives too, because the vanishing source cluster contributes a $-b_{ii}$ that cancels the $+b_{ii}$ coming from the destination.
-
-Step 1 written this way does not even need a seed:
-
+Note that the @fouss_etal16 version of step 1 does not need a seed because it visits the nodes in a fixed order. Let's see it in action:
 ```{r}
 #| column: screen-inset
 b.ug <- louvain.book.step1(ug)
 table(b.ug$lab)
 modularity(ug, b.ug$lab)
 ```
+We can see that `louvain.book.step1` finds `r length(unique(b.ug$lab))` communities, of sizes `r paste(sort(table(b.ug$lab)), collapse = ", ")`, with a modularity of `r round(modularity(ug, b.ug$lab), 4)`, while `louvain.step1`, visiting nodes in random order from seed 123, found `r length(unique(lv.res))` communities with a modularity of only `r round(modularity(ug, lv.res), 4)`. Same algorithm, same network, same stopping rule, different visitation order, different local optimum. However, note that the randomized version was able to find an even better partition with modularity `r round(bestQ, 4)` when we tried ten different seeds, so the fixed-order version is not guaranteed to find the best local optimum either.
 
-Fixed-order step 1 finds six communities, of sizes 8, 5, 14, 3, 20, and 18, with a modularity of 0.3448. Our own randomized version, visiting nodes in random order from seed 123, found seven communities with a modularity of only 0.3256. Same algorithm, same network, same stopping rule, different visitation order, different local optimum, and here the deterministic order of Algorithm 8.7 happens to land in the better one.
+## The Community Graph Step in One Line
 
-## The Coarsening Step in One Line
-
-Step 2 [@fouss_etal16, p. 380] is far more compact than its step 1, because the membership matrix $\mathbf{U}$ already encodes the partition and the coarsened adjacency matrix is just the triple product
+Step 2 of [@fouss_etal16, p. 380] is far more compact than our first version, because the membership matrix $\mathbf{U}$ already encodes the weighted graph of communities $\mathbf{A}'$, which can be obtained by:
 
 $$
 \mathbf{A}' = \mathbf{U}^T\mathbf{A}\mathbf{U}
 $$ {#eq-louvain-coarsen}
+This sums the original adjacency entries over every pair of nodes mapped to the same pair of communities. 
 
-which sums the original adjacency entries over every pair of nodes mapped to the same pair of communities. Here is the literal translation, with one optional repair switch we will need in a moment:
-
+Here is a function that computes that using `R` matrix algebra:
 ```{r}
 #| column: screen-inset
 louvain.book.step2 <- function(x, U, halve.diag = FALSE) {
@@ -328,38 +299,29 @@ louvain.book.step2 <- function(x, U, halve.diag = FALSE) {
 }
 ```
 
-- Line 2 converts the current graph to an adjacency matrix, reaching for the `weight` attribute when the graph is weighted so that aggregation preserves tie strength.
+This function takes the graph object `x` and the membership matrix `U` as input and returns a new graph object whose nodes are the communities found in step 1. The optional argument `halve.diag` argument controls whether the diagonal of the weighted community adjacency matrix is halved before turning it into a graph.
 
-- Line 3 is Algorithm 8.8 verbatim [@fouss_etal16, p. 380]. Edges between different communities pile up in the off-diagonal cells, and edges within a community pile up on the diagonal.
-
-- Line 4 optionally halves the diagonal, a correction that Algorithm 8.8 does *not* contain [@fouss_etal16, p. 380].
-
-- Line 5 turns the matrix into a graph, keeping the self-loops and storing the cell values as edge weights.
-
-The authors assert in a footnote that modularity after aggregation equals modularity before [@fouss_etal16, p. 378]. Our own version of the coarsening step just passed that check exactly. Does the literal matrix version pass it too?
-
+@fouss_etal16 [p. 378] note that modularity after aggregation equals modularity before using their approach just like we found earlier. Let's see if that's the case:
 ```{r}
 #| column: screen-inset
-A.lit <- louvain.book.step2(ug, b.ug$U, halve.diag = FALSE)
-A.hal <- louvain.book.step2(ug, b.ug$U, halve.diag = TRUE)
-rbind(
-  before = modularity(ug, b.ug$lab),
-  literal = modularity(A.lit, 1:vcount(A.lit), weights = E(A.lit)$weight),
-  halved = modularity(A.hal, 1:vcount(A.hal), weights = E(A.hal)$weight)
-)
+A.full <- louvain.book.step2(ug, b.ug$U, halve.diag = FALSE)
+A.half <- louvain.book.step2(ug, b.ug$U, halve.diag = TRUE)
+Q.orig <- modularity(ug , b.ug$lab)
+Q.full <- modularity(A.full, 1:vcount(A.full), weights = E(A.full)$weight)
+Q.half <- modularity(A.half, 1:vcount(A.half), weights = E(A.half)$weight)
+lab <- c("Original", "Full", "Halved")
+Q <- c(Q.orig, Q.full, Q.half)
+data.frame(lab, Q)
 ```
 
-It does not. The literal coarsened graph claims a modularity of 0.4865 where the original partition scored 0.3448, an inflation of more than forty percent out of nowhere, while the halved version reproduces the original score exactly.
+As we can see, without halving the diagonal in `louvain.book.step2`, the modularity of the community graph is inflated relative to the original partition, while halving the diagonal reproduces the original score exactly. So halving is required when implement the @fouss_etal16 version of the Louvain method.
 
-What went wrong is a clash of conventions rather than an algebra error. The double product in @eq-louvain-coarsen counts every unordered pair of nodes twice, so each community's diagonal cell accumulates *twice* its true internal edge weight, and that doubled value becomes the weight of the coarsened graph's self-loop. The convention used in @fouss_etal16 absorbs the doubling consistently, because it sums the volume over all matrix entries, loops included, and counts loops twice in the degrees as well. Under that convention the footnote is correct. `igraph`'s `modularity()` lives in a different convention, one where a self-loop enters the accounting once, so feeding it a coarsened graph with doubled self-loops over-credits every community's internal density. The invariance theorem is convention-relative and Algorithm 8.8 does not say which convention it assumes, and the halving on line 4 is the translation from that convention into `igraph`'s. Our own `louvain.step2` sidesteps the discrepancy by filing each unordered pair once, so no correction is needed there; with the membership matrix in play we can see exactly why the correction is load-bearing rather than decorative.
+## Putting it all together
 
-## Assembling the Two Algorithms
-
-The authors describe the full method as alternating the two steps until nothing improves [@fouss_etal16, p. 378], and stop there. What they never say is how to translate the communities found on the coarsened graph back down to the nodes of the original network, since Algorithm 8.8 returns only the new adjacency matrix with no record of which original node lives inside which super-node. That silence is where a naive implementation goes wrong, and the fix is the same slot vector as before.
-
+Now here's a version that assembles the two @fouss_etal16 steps into a full Louvain community detection algorithm, with the same stopping rule as before:
 ```{r}
 #| column: screen-inset
-louvain.book.full <- function(x, halve.diag = FALSE) {
+louvain.book.full <- function(x) {
   x0 <- x # keep the original graph for the final modularity check
   n <- vcount(x)
   slot <- 1:n # where each original node lives in the current graph
@@ -369,7 +331,7 @@ louvain.book.full <- function(x, halve.diag = FALSE) {
     U <- s1$U; lab <- s1$lab
     Q <- modularity(x, lab, weights = E(x)$weight)
     history <- rbind(history, data.frame(nodes = vcount(x), Q = Q))
-    G <- louvain.book.step2(x, U, halve.diag = halve.diag)
+    G <- louvain.book.step2(x, U, halve.diag = TRUE)
     s2 <- louvain.book.step1(G)
     Q.new <- modularity(G, s2$lab, weights = E(G)$weight)
     if (Q.new <= Q) break # no improvement: the search is over
@@ -382,70 +344,27 @@ louvain.book.full <- function(x, halve.diag = FALSE) {
 ```
 
 It works like this:
+- Lines 2-5 set things up, saving the original graph, starting every node as its community, and initializing the level-specific history recording the number of nodes in the current graph and the modularity of the current partition. Lines 6-10 run one level, calling the step 1 function, scoring the resulting partition, and recording the level.
+- Line 11 creates the weighted community graph using `louvain.book.step2` with `halve.diag` set to `TRUE`, line 12 runs step 1 on the resulting community graph so that whole communities rather than single nodes get shuffled, and lines 13-14 stop the search when the current community graph level fails to beat the current one. If line 14 finds an improvement, Lines 15-16 update the `slot` vector to track where each original node's community sits in the new graph and replace the current graph with the new one for the next iteration.
 
-- Lines 2-5 set things up, stashing the original graph, starting every node at its own position, and opening the per-level history.
+- Line 18 finishes up by reading each original node's community off its slot and returning the partition. 
 
-- Lines 6-10 run one level, calling the step 1 function, scoring the resulting partition, and recording the level.
-
-- Lines 11-14 aggregate and decide. Line 11 coarsens with Algorithm 8.8, line 12 runs step 1 on the coarsened graph so that whole communities rather than single nodes get shuffled, and lines 13-14 stop the search when the coarsened level fails to beat the current one.
-
-- Lines 15-16 keep the books when the search continues, re-addressing every original node to its community's position on the coarsened graph and promoting that graph.
-
-- Lines 18-19 finish up by reading each original node's community off its slot and returning the partition, its modularity on the original graph, and the level history.
-
-Running the repaired version, and then running it a second time to see what the fixed order buys:
-
+Let's try it out:
 ```{r}
 #| column: screen-inset
-fb.ug <- louvain.book.full(ug, halve.diag = TRUE)
+fb.ug <- louvain.book.full(ug)
 fb.ug$history
 fb.ug$Q
-table(fb.ug$comm)
-identical(louvain.book.full(ug, halve.diag = TRUE)$comm, fb.ug$comm)
 ```
+We can see that this version of the function also lands on a pretty high value of the modularity (`r round(fb.ug$Q, 4)`), and the history shows that it took two levels to get there. The first level collapsed the sixty-eight nodes into seven communities, and the second level shuffled those communities into a better arrangement. 
 
-The deterministic version needs no seed and no tournament; every run is the run, and both calls return the same partition. It lands in four communities, of sizes 27, 3, 20, and 18, with a modularity of 0.3712. Our randomized version needed ten starts to beat that, and only just, at 0.3724.
+The @fouss_etal16 version of the Louvain needs no seed and no tournament. It lands in `r length(unique(fb.ug$comm))` communities, of sizes `r paste(sort(table(fb.ug$comm)), collapse = ", ")`, with a modularity of `r round(fb.ug$Q, 4)`. Our randomized version needed ten starts to beat that, and only just, at `r round(bestQ, 4)`.
 
-Skipping the repair gives a more interesting kind of failure:
-
-```{r}
-#| column: screen-inset
-fb.lit <- louvain.book.full(ug, halve.diag = FALSE)
-fb.lit$history
-fb.lit$Q
-```
-
-The literal run does not crash and does not even return a bad-looking answer. It climbs steadily, from 0.3448 to 0.4878 to 0.4899 on ever-coarser graphs, and keeps going for an extra level because those inflated scores keep "improving." The climb is phantom, though, since the scores come from graphs whose self-loops over-credit internal density, and when the final partition is read back on the original network it scores 0.3687, *lower* than the 0.3712 the repaired version reached while stopping a level earlier. A doubled self-loop did not merely inflate a diagnostic number; it corrupted the stopping rule and cost real modularity, and nothing in the output flags the problem. The only way to catch it is the check we already learned to run, comparing modularity before and after aggregation.
-
-## What the Algorithms Buy and What It Costs
-
-The last difference is speed, and it is the reason the method scales. On a small network the two scoring engines are within shouting distance, because recomputing the modularity of a sixty-eight-node partition is cheap. On a larger graph the column-gain engine pulls away sharply:
-
-```{r}
-#| column: screen-inset
-#| results: hold
-set.seed(88)
-gbig <- sample_pa(500, m = 4, directed = FALSE)
-E(gbig)$weight <- sample(1:5, ecount(gbig), replace = TRUE)
-bench <- data.frame(
-  network = c("law firm (68 nodes)", "scale-free (500 nodes)"),
-  book = c(system.time(replicate(5, louvain.book.step1(ug)))["elapsed"],
-    system.time(louvain.book.step1(gbig))["elapsed"]),
-  from_scratch = c(system.time(replicate(5, louvain.step1(ug, seed = 1)))["elapsed"],
-    system.time(louvain.step1(gbig, seed = 1))["elapsed"])
-)
-bench
-```
-
-On the 500-node graph the column-gain version finishes in `r bench$book[2]` seconds where the from-scratch version needs `r bench$from_scratch[2]`, roughly `r round(bench$from_scratch[2]/bench$book[2], 1)` times longer, and the gap widens as networks grow because the from-scratch cost scales with the size of the whole partition while the column-gain cost scales with the size of the candidate community. This is the actual reason the Louvain method reaches enormous networks, and it is the part of the method that our deliberately transparent implementation gives away.
-
-Reading the two implementations side by side leaves a short list of lessons. The column-gain formula is exact rather than approximate, and it is the genuinely scalable version of the local search we slowed down on purpose. The fixed visitation order of Algorithm 8.7 [p. 379] makes the method deterministic and reproducible without seeds, at the price of committing to a single local optimum instead of sampling a few. And the two places @fouss_etal16 is silent or convention-bound, the self-loop accounting hidden inside @eq-louvain-coarsen and the un-coarsening bookkeeping absent from Algorithm 8.8's output, are exactly the two places where a literal translation fails, one by inflating modularity and corrupting the stopping rule, the other by scrambling communities against nodes after the first aggregation. Turning an algorithm into code, it turns out, is not a mechanical act of transcription, and the distance between the two is precisely where the conventions live.
-
-The two partitions are worth looking at side by side, since their modularity scores are nearly tied:
 
 ```{r}
 #| column: screen-inset
 #| label: fig-louvain
+#| fig-cap: "Law Firm Friendship Network Under the Two Louvain Partitions."
 #| fig-height: 6
 #| fig-width: 6
 #| fig-subcap:
@@ -472,4 +391,4 @@ plot(ug,
 )
 ```
 
-@fig-louvain-1 shows the best of the ten randomized runs and @fig-louvain-2 the deterministic run of Algorithm 8.7. The two agree on the large block of partners at the heart of the firm and on the associates' cluster across from it, and they disagree about where to cut the smaller groups at the periphery. Two local optima, modularities that differ by less than five thousandths, and visibly different stories about the structure of the periphery; that is the shape of the uncertainty built into maximizing a non-convex criterion by local search.
+As we can see in @fig-louvain, the best partitions suggested by the two implementations (randomized and deterministic) are not identical, but they are similar. The @fouss_etal16 version puts the two largest communities together, while the randomized version keeps them separate. The two smaller communities are also shuffled around a bit. The two agree on the large block of partners at the heart of the firm and on the associates' cluster across from it, and they disagree about where to cut the smaller groups at the periphery. Here we have two local optima, with modularities that differ by very little, but visibly different stories about the structure of the periphery.
