@@ -397,3 +397,39 @@ When editing any lecture-note `.qmd` file at the repo root, the deployed site bo
 - Local rendering requires the `renv` library to be restored (`renv::restore()`); knitr/rmarkdown must be installed or `quarto render` fails with "The knitr package is not available."
 - `ggbump` is archived on CRAN (archived 2025-12-04); its `renv.lock` entry must keep `"Source": "GitHub"` (`davidsjoberg/ggbump`) so restore can resolve it. Do not run a bare `renv::snapshot()` while the library is partially populated — implicit snapshot will shrink the lockfile to the current (broken) library state. Restore the lockfile from git and fix records surgically if that happens.
 - Never push directly to `main` from the assistant environment (blocked by safety rule); ask the user to push, or use a branch + PR.
+
+## Code Block Width, Scrolling, and Output Alignment (styles.css / custom.scss)
+
+Code-block presentation is controlled entirely by the two stylesheets `_quarto.yml` loads — `styles.css` (via `format: html: css`) and `custom.scss` (the theme file). **Both carry the same rules and must be edited together.** `styles.css` has CRLF line endings; a plain Python text-mode read/write silently converts the whole file to LF and produces a 28-line diff for a one-line change. Edit it in binary (`open(p,'rb')`, append `\r\n`) or restore from git and patch bytes.
+
+Current rules (set 2026-11-18):
+
+```css
+pre.sourceCode { max-height: 900px; overflow-y: auto; }   /* ≈37 code lines at the 23.9px line height */
+main .cell { grid-column: page-start / page-end; display: grid; grid-template-columns: subgrid; }
+main .cell > * { grid-column: 1 / -1; }
+main .cell > .cell-output-stdout, main .cell > .cell-output-stderr {
+  grid-column: body-content-start / body-content-end;
+}
+```
+
+- The `max-height` cutoff was raised from 600px (≈25 lines) to 900px, so no chunk on `comm-louvain-book.qmd` (longest: 34 lines) scrolls.
+- The `main .cell` rules widen **every** code cell on **every** page to the page column, so per-chunk `#| column: page` options in the `.qmd` files are now redundant (harmless; a chunk-level layout class still wins on specificity where present).
+- Because `.cell` is made a subgrid of the page grid, printed output (`cell-output-stdout`/`-stderr`) can be placed on the body column and lines up exactly with the prose, while source code, figures, and `quarto-layout-panel` cells keep the wide column. Quarto itself has no source-only column option — `#| column:` widens the whole cell, output included — so this exemption can only be done in CSS.
+- The rule uses grid line names, not a pixel cap, so alignment tracks the body column at any window width. An earlier `max-width: 946px` version capped the width but left the output hugging the cell's left edge, which looked pushed-left; the grid placement is the correct fix.
+
+Measured widths at a 1500px viewport with a docked sidebar (body column = 946px):
+
+| Setting | Cell spans |
+|---|---|
+| no column option | 254..1200 (946px) |
+| `column: page` | 27..1427 (1400px) |
+| `column: page-inset` | 127..1377 (1250px) |
+| `column: screen-inset` | 27..1458 (1431px) |
+| `column: screen` | 0..1485 (1485px) |
+
+`screen-inset` adds only ~31px over `page` because both start on the same left grid line with a docked sidebar, so `page` is the sensible default; `column: screen` is the only real step up. A fresh build of a page also needs the shared stylesheet refreshed in the local preview (`cp styles.css _site/styles.css`) before measuring; CSS-only changes need no render and leave `_freeze` alone.
+
+**Verifying layout without the Viewer:** `chrome-headless-shell --dump-dom` a copy of the built page with a small injected `<script>` that reports `getBoundingClientRect()` for the elements of interest. Fragment-hash screenshots of a scrolled page come out blank, and mid-page screenshots of wide cells are hard to judge by eye, so measure instead.
+
+**Warning — `comm-louvain-book.qmd` is not render-reproducible:** its timing comparison (§ "What the Algorithms Buy and What It Costs") bakes wall-clock seconds into the frozen output and into interpolated prose ("0.779 seconds … 4.561 … roughly 5.9 times longer"). Every re-render rewrites those numbers (a later run gave 0.802 / 4.844 / "6 times longer") and dirties `_freeze`. When a render was only done to inspect layout, restore the artifact with `git checkout HEAD -- _freeze/comm-louvain-book/execute-results/html.json` rather than committing the new timings.
