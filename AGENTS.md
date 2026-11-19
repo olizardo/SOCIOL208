@@ -400,7 +400,7 @@ When editing any lecture-note `.qmd` file at the repo root, the deployed site bo
 
 ## Code Block Width, Scrolling, and Output Alignment (styles.css / custom.scss)
 
-Code-block presentation is controlled entirely by the two stylesheets `_quarto.yml` loads — `styles.css` (via `format: html: css`) and `custom.scss` (the theme file). **Both carry the same rules and must be edited together.** `styles.css` has CRLF line endings; a plain Python text-mode read/write silently converts the whole file to LF and produces a 28-line diff for a one-line change. Edit it in binary (`open(p,'rb')`, append `\r\n`) or restore from git and patch bytes.
+Code-block presentation lives entirely in `styles.css` (loaded via `format: html: css`), which applies to both the light and the dark theme and comes after the Bootstrap theme CSS in the cascade. `custom.scss` (light) and `custom-dark.scss` (dark) carry theming only — **do not duplicate the code-block rules there.** The duplication had already drifted: `custom-dark.scss` still had a 600px `max-height` until the copies were deleted on 2026-11-18. `styles.css` has CRLF line endings; a plain Python text-mode read/write silently converts the whole file to LF and produces a 28-line diff for a one-line change. Edit it in binary (`open(p,'rb')`, append `\r\n`) or restore from git and patch bytes.
 
 Current rules (set 2026-11-18):
 
