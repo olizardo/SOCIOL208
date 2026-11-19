@@ -350,6 +350,8 @@ Data Analysis Exercise assignment **descriptions** are intentionally *not* touch
 
 ## Function-Explainer Style (lecture-note .qmd files)
 
+- **Equations must be directly readable in code (project preference, 2026-11-19).** When code implements a printed equation, the code line should mirror the equation term-for-term — same variable names as the math (e.g. `bi` for $\mathbf{b}_i$, `uk` for $\mathbf{u}_k$), and the same operator structure, preferring ordinary matrix notation (`t(x) %*% y`) over optimized-but-opaque idioms (`crossprod`) even when the idiom is faster, unless speed is the point of the passage. Mechanical cleanup needed to make R return a scalar (e.g. `[1, 1]` after a `1x1` product) is fine, but name it in the explainer rather than hiding it. Performance-only rewrites that obscure the equation require the user's explicit sign-off.
+
 Conventions for the "It works like this:" walkthroughs that follow every hand-written function in the lecture notes (established in `comm-mod.qmd`; apply everywhere):
 
 - **Format:** after the code chunk, a lead-in sentence ("It works like this:"), then one `- Line N ...` bullet per logical block, in code order.
