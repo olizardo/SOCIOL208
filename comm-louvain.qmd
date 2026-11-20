@@ -401,11 +401,11 @@ As we can see in @fig-louvain, the best partitions suggested by the two implemen
 
 ## From Louvain to Leiden
 
-The Louvain method has a hidden flaw, one that shows up when we look at the communities it produces rather than at the modularity score they earn. Nothing in step 1 prevents a community from ending up internally *disconnected*---split into two or more pieces with no links at all between them. When that happens, step 2 welds the disconnected pieces into a single community-node, and the damage becomes permanent; no later round of node moves can pull the pieces apart again, because the algorithm only ever sees whole communities from then on. @traag_etal19 diagnosed the problem, showed that it is a systematic feature of the method rather than a rare curiosity (Supplementary Information, Appendix B), and proposed a repair that has largely displaced Louvain in practice.
+The Louvain method has a flaw that only shows up once we look at the communities themselves rather than at the modularity score. Nothing in step 1 keeps a community connected, so a community can come out in two or more pieces with no links at all between them. Step 2 then welds the pieces into a single community-node, and since the algorithm only ever sees whole communities after that, no later pass of node moves can pull them apart again. 
 
-The repair inserts a third phase between the two we already have. After the move phase and *before* aggregating, the Leiden algorithm *refines* the partition. The refinement takes each community found by the move phase and re-divides it into its internally well-connected subsets; the aggregation step then builds the community graph on the refined partition, while the unrefined working partition stays in hand for the next round of node moves. The two partitions play different roles. The refined partition decides what the nodes of the next graph will be, so that a community the move phase glued together badly can be pulled apart again. The working partition decides what the move phase is allowed to shuffle, so that information about the coarser grouping survives the aggregation.
+@traag_etal19 showed that this is a systematic feature of the method rather than a rare accident, and proposed a fix. Their Leiden algorithm adds a third phase between the two we already have. After the move phase and *before* aggregating, it *refines* the partition. The refinement takes each community the move phase produced and cuts it into internally well-connected subsets. Aggregation then builds the community graph out of those subsets, while the unrefined partition stays in hand for the next move phase. That split of duties is the whole trick. The refined subsets decide which nodes the next graph gets, so a community that the move phase glued together badly can come apart again. The unrefined labels decide what the move phase is allowed to shuffle, so the coarser grouping is not lost in the aggregation.
 
-What counts as "well connected"? True to form, the criterion has an observed-versus-expected structure. A node $v$ counts as well connected within a subset $S$ when the links it sends into the rest of $S$ run at or above the chance expectation:
+What counts as "well connected"? Once again the test compares what we observe with what chance would produce. A node $v$ counts as well connected within a subset $S$ when the links it sends into the rest of $S$ meet or exceed the chance expectation:
 
 $$
 E(v, S - v) \geq \gamma \frac{k_v (k_S - k_v)}{2m}
@@ -455,7 +455,7 @@ leiden.refine <- function(x, part, gamma = 1, theta = 0.01, seed = 123) {
 }
 ```
 
-This function takes an `igraph` graph object, the working partition to refine, a resolution parameter, a temperature parameter that softens the random-greedy choice, and a random-number seed as input, and returns a vector of refined community labels, one per node, where the labels are a *subpartition* of the input (every refined subset sits wholly inside one of the input communities).
+The function takes a graph, the working partition to refine, a resolution parameter, a temperature that softens the random-greedy choice, and a seed, and it returns refined community labels, one per node. The labels are a *subpartition* of the input, since every refined subset sits wholly inside one of the input communities.
 
 It works like this:
 
@@ -482,16 +482,16 @@ table(ref1)
 modularity(ug, ref1)
 ```
 
-The refinement splits the seven Louvain communities into `r length(unique(ref1))` subsets, none of them larger than `r max(table(ref1))` members. The largest Louvain community (the one with `r max(table(lv.res))` members) splinters into `r max(table(ref1, lv.res))` pieces, while the smallest community survives the refinement intact. The modularity of the refined partition, `r round(modularity(ug, ref1), 3)`, sits far below the step-1 score of `r round(modularity(ug, lv.res), 3)`, which is exactly as it should be. The refinement is not trying to maximize anything; its job is to cut each community into pieces that are internally well connected, and the quality gets recovered at the next move phase. The pieces are what the next aggregation will use as nodes, so the question that matters is whether they hang together, not whether the refined partition scores well:
+The refinement turns the seven Louvain communities into `r length(unique(ref1))` subsets, the largest of them with `r max(table(ref1))` members. The biggest Louvain community, with `r max(table(lv.res))` members, comes apart into `r max(table(ref1, lv.res))` pieces, while the smallest community survives untouched. Modularity drops from `r round(modularity(ug, lv.res), 3)` to `r round(modularity(ug, ref1), 3)`, which is exactly what we want. The refinement is not out to maximize anything. Its job is to leave every community internally well connected, and the quality comes back at the next move phase. What the next aggregation needs is pieces that hang together, not a high-scoring partition:
 
 ```{r}
 #| column: screen-inset
 all(sapply(unique(ref1), function(k) is_connected(induced_subgraph(ug, which(ref1 == k)))))
 ```
 
-Every refined subset induces a connected subgraph, which is the guarantee the whole apparatus is built to deliver.
+Every refined subset is connected, which is the guarantee this whole exercise is about.
 
-Assembling the three phases into a full run follows the same blueprint as `louvain.full`, with one new bookkeeping wrinkle: because the aggregation now uses the refined partition rather than the working one, the mapping from original nodes to current graph positions has to be redrawn through the refined labels at every level.
+Assembling the three phases follows the same plan as `louvain.full`, with one extra bookkeeping step. Aggregation now runs on the refined partition rather than the working one, so the map from original nodes to positions in the current graph has to be redrawn through the refined labels at every level.
 
 ```{r}
 #| column: screen-inset
@@ -518,7 +518,7 @@ leiden.full <- function(x, seed = 123, theta = 0.01) {
 }
 ```
 
-The function takes an `igraph` graph object, a random-number seed, and a temperature as input and returns a list with three components: the final community partition of the original nodes, the modularity of that partition computed on the original graph, and the level-by-level history.
+The function takes a graph, a seed, and a temperature, and returns a list with three components: the final partition of the original nodes, the modularity of that partition on the original graph, and the level-by-level history.
 
 It works like this:
 
@@ -528,11 +528,11 @@ It works like this:
 
 - Line 14 stops the search when the aggregate-graph partition fails to beat the current one.
 
-- Lines 15-17 update the books when the search continues. Line 15 lists the refined subsets, and line 16 re-points every original node to the position its subset occupies in the new aggregate graph, which is the graph line 17 promotes to be the next working graph. The re-pointing goes through the refined labels rather than through the community labels, because the aggregate graph was built from the refined partition.
+- Lines 15-17 update the books when the search continues. Line 15 lists the refined subsets, and line 16 re-points every original node to the position its subset occupies in the new aggregate graph, which is the graph line 17 promotes to be the next working graph.
 
 - Lines 19-20 read off the final partition once the search stops and return it, with the modularity computed on the original graph, along with the history of levels.
 
-One honest simplification is worth flagging. The published Leiden algorithm seeds each move phase with the partition maintained from the previous level, and its `MoveNodesFast` procedure uses a queue-based random-greedy rule rather than full passes (Supplementary Information, p. 4). Our hand-built version reuses `louvain.step1` for the move phase, which always starts from singletons. What we have assembled is Leiden's refinement grafted onto Louvain's move-and-aggregate skeleton, which is enough to see the refinement earn its keep.
+One difference from the published algorithm is worth stating. @traag_etal19 seed each move phase with the partition kept from the previous level, and their move phase uses a queue-based random-greedy rule rather than full passes (Supplementary Information, p. 4). Our version reuses `louvain.step1`, which always starts from singletons. So what we have is Leiden's refinement bolted onto Louvain's move-and-aggregate skeleton, which is enough to see what the refinement does.
 
 Let's see it in action:
 
@@ -544,7 +544,7 @@ l.res$Q
 table(l.res$comm)
 ```
 
-At the same seed `123` where plain Louvain plateaued at `r round(fl.res$Q, 4)`, the refined version reaches `r round(l.res$Q, 4)`, with the first aggregation building a community graph of `r l.res$history[2, 1]` nodes rather than `r fl.res$history[2, 1]`. The refinement gives the move phase a finer menu of building blocks to work with, and the extra freedom shows up directly in the modularity. As with Louvain, different seeds can land in different local optima, so we run the ten-seed tournament:
+At seed `123`, where plain Louvain plateaued at `r round(fl.res$Q, 4)`, the refined version reaches `r round(l.res$Q, 4)`, and the first aggregation builds a community graph of `r l.res$history[2, 1]` nodes instead of `r fl.res$history[2, 1]`. Step 1 now has finer blocks to shuffle, and the difference shows up in the score. As with Louvain, different seeds land in different local optima, so we run the ten-seed tournament:
 
 ```{r}
 #| column: screen-inset
@@ -561,7 +561,7 @@ best.lQ
 table(best.l$comm)
 ```
 
-The refined tournament lands at `r round(best.lQ, 4)` with communities of sizes `r paste(sort(table(best.l$comm)), collapse = ", ")`---the same modularity, and the very same partition (up to label shuffling), as the Louvain tournament winner. On this small network the refinement does not beat the ten-restart Louvain result; what it changes is the route. The refined version reaches the same optimum from every angle we hand it, while plain Louvain needed a lucky seed to get there at all.
+The refined tournament lands at `r round(best.lQ, 4)` with communities of sizes `r paste(sort(table(best.l$comm)), collapse = ", ")`, the same modularity and the same partition, up to label shuffling, as the Louvain tournament winner. Comparing the two runs seed by seed makes the point sharper: at eight of the ten seeds the two versions reach the same modularity, and at the other two plain Louvain does better. The refinement buys no extra quality on this network. What it buys is the guarantee that every community it hands back hangs together.
 
 Of course, `igraph` has a function for this, called (predictably) `cluster_leiden`:
 
@@ -572,4 +572,4 @@ modularity(ug, le.ig$membership)
 table(le.ig$membership)
 ```
 
-The built-in version, which implements the full algorithm including the maintained-partition move phase, reaches a modularity of `r round(modularity(ug, le.ig$membership), 4)` in `r length(unique(le.ig$membership))` communities on this network. Different random draws land in different local optima, so the built-in score lands close to, rather than above, our hand-built tournament result. The lesson of the refinement is not that any single run scores higher; the lesson is that every community it hands back is guaranteed to hang together, which plain Louvain cannot promise.
+The built-in version runs the full algorithm, maintained partition and all, and reaches a modularity of `r round(modularity(ug, le.ig$membership), 4)` in `r length(unique(le.ig$membership))` communities here. Different random draws land in different local optima, so its score comes in close to our hand-built tournament result rather than above it. That is the expected outcome. The promise of the refinement is not a higher score but the shape of the communities it returns.
