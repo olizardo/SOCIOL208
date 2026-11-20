@@ -71,7 +71,7 @@ table(lv.res)
 modularity(ug, lv.res)
 ```
 
-The `louvain.step1` function with default seed `123` puts the sixty-eight lawyers in $k=$ `r length(unique(lv.res))` communities, three of them relatively large and four of them with fewer than ten members, for a modularity of `r round(modularity(ug, lv.res), 3)`. That is a good partition, but the presence of small clusters alongside the large ones should make us suspect a better arrangement exists at a coarser grain.
+The `louvain.step1` function with default seed `123` puts the `r vcount(ug)` lawyers in $k=$ `r length(unique(lv.res))` communities, `r sum(table(lv.res) >= 10)` of them relatively large and `r sum(table(lv.res) < 10)` of them with fewer than ten members, for a modularity of `r round(modularity(ug, lv.res), 3)`. That is a good partition, but the presence of small clusters alongside the large ones should make us suspect a better arrangement exists at a coarser grain.
 
 ## Step 2: Aggregation into a Community Graph
 
@@ -120,9 +120,9 @@ A.new <- as.matrix(as_adjacency_matrix(g.new, attr = "weight"))
 A.new
 ```
 
-We can see that the seven community-nodes are now connected by weighted edges, with the weights counting how many friendship nominations exist between members of the two communities in the original network, and the self-loops counting how many exist within each community.
+We can see that the `r vcount(g.new)` community-nodes are now connected by weighted edges, with the weights counting how many friendship nominations exist between members of the two communities in the original network, and the self-loops counting how many exist within each community.
 
-A key point of the exercise is that the modularity computed in the reduced community graph, where each node is assigned to a community, is the same as the modularity of the first-step partition in the original graph using the same community assignments for all individual nodes. In this sense, aggregation loses no modularity relevant information, but shrinks the network from sixty-eight nodes to seven, so the next round of node moves using `louvain.step1` works on this smaller network.
+A key point of the exercise is that the modularity computed in the reduced community graph, where each node is assigned to a community, is the same as the modularity of the first-step partition in the original graph using the same community assignments for all individual nodes. In this sense, aggregation loses no modularity relevant information, but shrinks the network from `r vcount(ug)` nodes to `r vcount(g.new)`, so the next round of node moves using `louvain.step1` works on this smaller network.
 
 To verify, here's the modularity in the original network with the first-step community assignments:
 
@@ -138,7 +138,7 @@ And here's the modularity in the weighted community network, in which each node 
 modularity(g.new, 1:vcount(g.new), weights = E(g.new)$weight)
 ```
 
-The two scores are identical; we are looking at a seven-node weighted network carrying the same modularity as a sixty-eight-node unweighted one, and running step 1 again on it is just another call to `louvain.step1` with `g.new` in place of `ug`, which shuffles *communities* rather than nodes. 
+The two scores are identical; we are looking at a `r vcount(g.new)`-node weighted network carrying the same modularity as a `r vcount(ug)`-node unweighted one, and running step 1 again on it is just another call to `louvain.step1` with `g.new` in place of `ug`, which shuffles *communities* rather than nodes. 
 
 Note that in the second call to the `modularity` function we just use a vector of node numbers as the community labels, because each node is its own community in the community graph, and we also have to tell the function to use the edge weights in the new graph using the `weights` argument.
 
@@ -192,7 +192,7 @@ fl.res$Q
 table(fl.res$comm)
 ```
 
-The step 1 partition scored only `r round(fl.res$history[1, 2], 4)`, but the full approach improves upon that, with the first aggregation collapsing the sixty-eight nodes into seven community-nodes, step 1 shuffling those community-nodes into a more optimal arrangement. The modularity climbs to `r round(fl.res$Q, 4)` before the search bottoms out at the next level. The final `comm` vector is a partition of the *original* sixty-eight lawyers into the four communities.
+The step 1 partition scored only `r round(fl.res$history[1, 2], 4)`, but the full approach improves upon that, with the first aggregation collapsing the `r fl.res$history[1, 1]` nodes into `r fl.res$history[2, 1]` community-nodes, step 1 shuffling those community-nodes into a more optimal arrangement. The modularity climbs to `r round(fl.res$Q, 4)` before the search bottoms out at the next level. The final `comm` vector is a partition of the *original* `r vcount(ug)` lawyers into the `r length(unique(fl.res$comm))` communities.
 
 Because the method is a local search influenced by the initial randomization order, different seeds can get stuck in different local optima. Running the full method ten times, once from each seed from 1 to 10, and keeping the partition with the highest modularity gives a better look at what the best Louvain partition might look like:
 
@@ -362,7 +362,7 @@ fb.ug <- louvain.book.full(ug)
 fb.ug$history
 fb.ug$Q
 ```
-We can see that this version of the function also lands on a pretty high value of the modularity (`r round(fb.ug$Q, 4)`), and the history shows that it took two levels to get there. The first level collapsed the sixty-eight nodes into seven communities, and the second level shuffled those communities into a better arrangement. 
+We can see that this version of the function also lands on a pretty high value of the modularity (`r round(fb.ug$Q, 4)`), and the history shows that it took `r nrow(fb.ug$history)` levels to get there. The first level collapsed the `r fb.ug$history[1, 1]` nodes into `r fb.ug$history[2, 1]` communities, and the second level shuffled those communities into a better arrangement. 
 
 The @fouss_etal16 version of the Louvain needs no seed and no tournament. It lands in `r length(unique(fb.ug$comm))` communities, of sizes `r paste(sort(table(fb.ug$comm)), collapse = ", ")`, with a modularity of `r round(fb.ug$Q, 4)`. Our randomized version needed ten starts to beat that, and only just, at `r round(bestQ, 4)`.
 
@@ -397,4 +397,4 @@ plot(ug,
 )
 ```
 
-As we can see in @fig-louvain, the best partitions suggested by the two implementations (randomized and deterministic) are not identical, but they are similar. The @fouss_etal16 version puts the two largest communities together, while the randomized version keeps them separate. The two smaller communities are also shuffled around a bit. The two agree on the large block of partners at the heart of the firm and on the associates' cluster across from it, and they disagree about where to cut the smaller groups at the periphery. Here we have two local optima, with modularities that differ by very little, but visibly different stories about the structure of the periphery.
+As we can see in @fig-louvain, the best partitions suggested by the two implementations (randomized and deterministic) are not identical, but they are similar. The randomized winner lands in communities of sizes `r paste(sort(table(best$comm)), collapse = ", ")`, while the @fouss_etal16 version lands in communities of sizes `r paste(sort(table(fb.ug$comm)), collapse = ", ")`. The two agree on the large block of partners at the heart of the firm and on the associates' cluster across from it, and they disagree about where to cut the smaller groups at the periphery. Here we have two local optima, with modularities that differ by very little, but visibly different stories about the structure of the periphery.
