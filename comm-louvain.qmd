@@ -428,7 +428,7 @@ leiden.refine <- function(x, part, gamma = 1, seed = 123) {
     S <- which(part == s)
     kS <- sum(kall[S]) # the size of S is the sum of its degrees
     for (v in sample(S)) { # visit nodes in random order
-      if (length(which(refined == refined[v])) > 1) next # only nodes not yet absorbed
+      if (sum(refined == refined[v]) > 1) next # only nodes still alone in their subset can move
       if (sum(A[v, setdiff(S, v)]) < (gamma / m2) * kall[v] * (kS - kall[v])) next # v not well connected within S
       best.dQ <- 0; best.g <- refined[v]
       for (g in unique(refined[S])) {
@@ -451,7 +451,7 @@ It works like this:
 
 - Lines 1-7 set up and keep the books. Line 1 takes the graph, the working partition, the resolution parameter, and the seed; line 2 fixes the seed, because the refinement visits nodes in random order; line 3 counts the nodes; line 4 extracts the plain adjacency matrix; line 5 computes the volume of the graph; line 6 the degree of every node; and line 7 starts every node as its own singleton subset.
 
-- Lines 8-13 sweep each community of the working partition. Line 8 opens the loop over communities, line 9 collects the positions of the community's members, and line 10 sizes the subset by its degree mass rather than its head count, which is what the modularity version of the criterion requires. Line 11 visits the community's nodes in random order, line 12 skips any node that some other node has already absorbed, and line 13 applies the well-connectedness test of @eq-leiden-refine, passing over nodes whose ties into the rest of the subset fall short of the chance expectation.
+- Lines 8-13 sweep each community of the working partition. Line 8 opens the loop over communities, line 9 collects the positions of the community's members, and line 10 sizes the subset by its degree mass rather than its head count, which is what the modularity version of the criterion requires. Line 11 visits the community's nodes in random order, line 12 skips any node that is no longer a singleton (each node gets a single move in the sweep; once another node has joined its subset, that subset is settled and the node never moves again), and line 13 applies the well-connectedness test of @eq-leiden-refine, passing over nodes whose ties into the rest of the subset fall short of the chance expectation.
 
 - Lines 14-22 pick the best destination. Line 14 initializes the best gain and the best subset, with the node's own singleton label as the fallback. Lines 15-22 loop over the subsets already formed inside the community: line 16 collects the members of the candidate, line 17 skips the subset $v$ already belongs to, line 18 sizes the candidate, line 19 runs the subset-level version of the well-connectedness test, and lines 20-21 score the merge by literally recomputing the modularity of the refined partition before and after, the same from-scratch scoring that `louvain.step1` uses. Line 22 keeps the best strictly improving candidate seen so far.
 
@@ -462,7 +462,7 @@ Let's see the refinement in action on the step-1 partition:
 ```{r}
 #| column: screen-inset
 ref1 <- leiden.refine(ug, lv.res)
-split.big <- length(unique(ref1[lv.res == which.max(table(lv.res))]))
+split.big <- length(unique(ref1[lv.res == names(which.max(table(lv.res)))]))
 table(ref1)
 modularity(ug, ref1)
 ```
