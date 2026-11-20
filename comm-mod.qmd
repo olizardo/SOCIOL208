@@ -11,7 +11,7 @@ So whether a network has community structure, and whether a given guess about wh
 
 But first, we need to develop a criterion for determining whether a given partition of the network into mutually exclusive node subsets actually produces *communities* as we defined them earlier. This criterion should be independent of particular methods and algorithms that claim to find communities, so that we can compare them with one another and see whether the partitions they recommend yield actual communities.
 
-Mark @newman06a, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). 
+Mark @newman06a, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (i.e., the extent to which a partition has identified the "modules" or subsets of the network). 
 
 ## A bag of links
 
@@ -31,7 +31,7 @@ In this equation, $P(s \in k \land d \in k)$ is the probability that a link draw
 
 If you remember your elementary probability theory, you know that the *joint* probability of two events that are assumed to be *independent* of one another is just the product of their individual probabilities. So that means that $P(s \in k) \times P(d \in k)$ is the expected probability of finding that both the source and destination node are in the same community $k$ in a network in which communities don't matter for link formation (because the two probabilities are assumed to be independent).
 
-So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
+So the formula for the modularity subtracts the probability we would expect if communities didn't matter from the observed probability of finding links with two nodes in the same community. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. 
 
 Let's move to a real example. @fig-friends shows two plots of the friendship nomination network from the `law_friends` data [@lazega01] from the `networkdata` package (dropping nodes that have a degree of one). The first shows nodes colored by status within the firm (partners in orange, associates in blue), and the other shows nodes colored by gender (men in orange, women in blue). 
 
@@ -90,19 +90,19 @@ link.bag <- function(x, c) {
 }
 ```
 
-Here is how it works:
+It works like this:
 
 - Lines 1-2 declare the function, which takes a graph `x` and a community-membership vector `c` with one entry per node, and load `dplyr` for the joining and column-renaming verbs used below.
 
-- Lines 4-5 turn the graph's ties into a data frame with one row per link and then rename the two resulting columns to `vi` (the source node) and `vj` (the target node). Line 4 wraps the edge list in `as.data.frame` because `as_edgelist` returns a matrix which don't play well with `dplyr` verbs.
+- Lines 3-4 turn the graph's ties into a data frame with one row per link and then rename the two resulting columns to `vi` (the source node) and `vj` (the target node). Line 3 wraps the edge list in `as.data.frame` because `as_edgelist` returns a matrix which don't play well with `dplyr` verbs.
 
-- Line 7 builds the lookup table, with one row per node, pairing that node's identifier with its community label. Wrapping `c` and `V(x)` in `as.vector` makes sure the two are plain vectors that line up row for row.
+- Line 5 builds the lookup table, with one row per node, pairing that node's identifier with its community label. Wrapping `c` and `V(x)` in `as.vector` makes sure the two are plain vectors that line up row for row.
 
-- Lines 9-12 handle the *target* end of each link. Line 9 starts from the `vj` column, keeping it as a one-column data frame rather than a bare vector. Line 10 joins in each target's community, using named matching so that `vj` on the left is matched to `node` on the right; because it is a `left_join`, no links are dropped. Line 11 keeps just the target and its community, and line 12 renames that column to `c2` to mark it as the target's community.
+- Lines 6-9 handle the *target* end of each link. Line 6 starts from the `vj` column, keeping it as a one-column data frame rather than a bare vector. Line 7 joins in each target's community, using named matching so that `vj` on the left is matched to `node` on the right; because it is a `left_join`, no links are dropped. Line 8 keeps just the target and its community, and line 9 renames that column to `c2` to mark it as the target's community.
 
-- Lines 14-17 do the same for the *source* end, matching `vi` to `node` and naming the result `c1`. Line 18 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.
+- Lines 10-13 do the same for the *source* end, matching `vi` to `node` and naming the result `c1`. Line 14 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.
 
-- Line 20 returns the finished edge list, with columns `vi`, `c1`, `vj`, and `c2`: each link tagged with the community of both of its endpoints and ready for the modularity function below.
+- Line 15 returns the finished edge list, with columns `vi`, `c1`, `vj`, and `c2`: each link tagged with the community of both of its endpoints and ready for the modularity function below.
 
 So if we wanted an edge list data frame containing each node's status membership in the `law_friends` network, we would just type:
 
@@ -148,7 +148,7 @@ mod.Q1(link.bag(g, V(g)$status))
 mod.Q1(link.bag(g, V(g)$gender))
 ```
 
-This indeed confirms that status is a more powerful group formation principle than gender in this network. 
+The two scores indeed confirm that status is a more powerful group formation principle than gender in this network. 
 
 ## Modularity from the Adjacency Matrix
 
@@ -399,9 +399,9 @@ s.eig <- status1(Bu)
 round(s.eig, 2)
 ```
 
-This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actually a **partition** of the original graph into two communities? 
+The resulting vector seems more interesting. The "status" vector has both negative and positive entries. What if we told you that this vector is actually a **partition** of the original graph into two communities? 
 
-Not only that, I have even better news. This is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.^[Actually, this is not true; finding the partition that maximizes the modularity in a graph is an NP hard problem [@brandes07], so this is just a pretty good approximation of that.] 
+Not only that, the news gets even better. The vector is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.^[Actually, this is not true; finding the partition that maximizes the modularity in a graph is an NP hard problem [@brandes07], so this is just a pretty good approximation of that.] 
 
 Let's see some evidence for these claims in real data. 
 
@@ -421,9 +421,9 @@ And for the big check:
 modularity(ug, C)
 ```
 
-This is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is indeed an optimal binary partition of the `law_friends` network.
+A pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is a good binary partition of the `law_friends` network.
 
-Of course, you may also remember from the [Status and Prestige](prest-eigen.qmd) lesson that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
+Of course, you may also remember from the [Status and Prestige](prest-eigen.qmd) lesson that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So it turns out that the modularity maximizing bi-partition of a graph is just given by this vector:
 
 $$
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
@@ -535,7 +535,7 @@ splits1 <- split.mult(
 splits1
 ```
 
-The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in @fig-mod-1 below).
+The `delta.Q` vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. A zero change is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in @fig-mod-1 below).
 
 Nevertheless, the test in the second community was positive, indicating we should split it into two. Because we left one of the original communities alone, the resulting network will have three communities after splitting the second one in two. 
 
@@ -569,7 +569,7 @@ splits2 <- split.mult(
 splits2
 ```
 
-Here, the three modularity-split checks failed, as indicated by the `delta.Q` vector. So no further splits were made (hence the `split` object is an empty list). This tells us that, according to this method, three communities are the optimal partition. 
+Here, the three modularity-split checks failed, as indicated by the `delta.Q` vector. So no further splits were made (hence the `split` object is an empty list). The empty `split` list tells us that, according to this method, three communities are the optimal partition. 
 
 Of course, if you are working on your project, you don't have to mess with all of the functions above, because `igraph` has implemented Newman's leading eigenvector (of the modularity matrix) community detection method [@newman06b] in a single function called `cluster_leading_eigen`. 
 
@@ -603,7 +603,7 @@ kbl(t, row.names = TRUE, align = "c", format = "html") %>%
   )
 ```
 
-This is just a **contingency table** listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns. 
+The output is just a **contingency table** listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns. 
 
 We find that community one (the most coherent, in orange) is `r round((1 - 3/30)*100)`% partners (it contains `r sum(t[, 1])` members, of whom only `r t[2, 1]` are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of nine partners and seven associates. 
 
@@ -687,14 +687,14 @@ par(cex = 0.5) # smaller labels
 plot(hc)
 ```
 
-This gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at $k = 3$:
+The dendrogram gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at $k = 3$:
 
 ```{r}
 library(dendextend)
 cutree(hc, k = 3)
 ```
 
-This provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).
+The `cutree` call provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).
 
 Of course, this information was already stored in our results in the `membership` object:
 
