@@ -401,7 +401,7 @@ As we can see in @fig-louvain, the best partitions suggested by the two implemen
 
 ## From Louvain to Leiden
 
-The Louvain method has a flaw that only shows up once we look at the communities themselves rather than at the modularity score. Nothing in step 1 keeps a community connected, so a community can come out in two or more pieces with no links at all between them. Step 2 then welds the pieces into a single community-node, and since the algorithm only ever sees whole communities after that, no later pass of node moves can pull them apart again. 
+The Louvain method has a flaw that only shows up once we look at the communities themselves rather than at the modularity score. Nothing in step 1 keeps a community connected, so a community can come out in two or more pieces with no links at all between them. Step 2 then welds the pieces into a single community-node, and since the algorithm only ever sees whole communities after that, no later pass of node moves can pull them apart again.
 
 @traag_etal19 showed that this is a systematic feature of the method rather than a rare accident, and proposed a fix. Their Leiden algorithm adds a third phase between the two we already have. After the move phase and *before* aggregating, it *refines* the partition. The refinement takes each community the move phase produced and cuts it into internally well-connected subsets. Aggregation then builds the community graph out of those subsets, while the unrefined partition stays in hand for the next move phase. That split of duties is the whole trick. The refined subsets decide which nodes the next graph gets, so a community that the move phase glued together badly can come apart again. The unrefined labels decide what the move phase is allowed to shuffle, so the coarser grouping is not lost in the aggregation.
 
@@ -413,76 +413,61 @@ $$ {#eq-leiden-refine}
 
 Where $E(v, S - v)$ is the number of links between $v$ and the members of $S$ other than $v$ itself, $k_v$ is the degree of $v$, $k_S$ is the sum of the degrees of the nodes in $S$, $2m$ is the volume of the graph, and $\gamma$ is a resolution parameter set to one for ordinary modularity. Which, in English, reads: the node's ties into the rest of the subset must be at least as numerous as we would expect if links formed at random in proportion to degree. The same test, applied to a whole candidate subset $C$ rather than to a single node, reads $E(C, S - C) \geq \gamma k_C (k_S - k_C) / 2m$, with $k_C$ the sum of degrees in $C$.^[The published algorithm scores candidate moves with the Constant Potts Model rather than modularity, and measures set sizes in nodes rather than degrees. @traag_etal19 show (Supplementary Information, p. 2) that modularity slots into the same framework once we redefine the size of a set as the sum of its members' degrees and rescale the resolution parameter by the volume of the graph, which is the translation we use here to stay within the modularity world of the rest of this note.]
 
-Here's a function that implements the refinement phase:
+Here is a simplified version of the refinement phase. The published algorithm draws each destination subset at random, with probabilities that rise with the quality gain; we take the best candidate outright, which keeps the function short. It takes a graph, the working partition to refine, a resolution parameter, and a seed, and it returns refined labels, one per node. The labels are a *subpartition* of the input, since every refined subset sits wholly inside one of the input communities.
 
 ```{r}
 #| column: screen-inset
-leiden.refine <- function(x, part, gamma = 1, theta = 0.01, seed = 123) {
+leiden.refine <- function(x, part, gamma = 1, seed = 123) {
   set.seed(seed)
   n <- vcount(x)
   A <- as.matrix(as_adjacency_matrix(x))
   m2 <- sum(A) # 2m, the volume of the graph
   kall <- rowSums(A) # degrees
   refined <- 1:n # each node starts as its own singleton subset
-  Q.cur <- modularity(x, refined)
   for (s in unique(part)) { # visit each community of the working partition
     S <- which(part == s)
     kS <- sum(kall[S]) # the size of S is the sum of its degrees
     for (v in sample(S)) { # visit nodes in random order
-      if (length(which(refined == refined[v])) > 1) next # only nodes that have not yet been merged
-      if (sum(A[v, setdiff(S, v)]) < (gamma / m2) * kall[v] * (kS - kall[v])) next # v is not well connected within S
-      groups <- unique(refined[S]) # the subsets already formed within S
-      cand <- numeric(0); gains <- numeric(0)
-      for (g in groups) {
-        C <- S[refined[S] == g] # the members of candidate subset g
-        if (refined[v] %in% C) next # skip v's own subset
+      if (length(which(refined == refined[v])) > 1) next # only nodes not yet absorbed
+      if (sum(A[v, setdiff(S, v)]) < (gamma / m2) * kall[v] * (kS - kall[v])) next # v not well connected within S
+      best.dQ <- 0; best.g <- refined[v]
+      for (g in unique(refined[S])) {
+        C <- S[refined[S] == g]
+        if (g == refined[v]) next # skip v's own subset
         kC <- sum(kall[C])
-        if (sum(A[C, setdiff(S, C)]) < (gamma / m2) * kC * (kS - kC)) next # subset g is not well connected within S
+        if (sum(A[C, setdiff(S, C)]) < (gamma / m2) * kC * (kS - kC)) next # subset g not well connected within S
         tc <- refined; tc[v] <- g
-        dQ <- modularity(x, tc) - Q.cur # gain from merging v into g
-        if (dQ >= 0) { # keep subsets whose merge does not hurt
-          cand <- c(cand, g); gains <- c(gains, dQ)
-        }
+        dQ <- modularity(x, tc) - modularity(x, refined) # gain from merging v into g
+        if (dQ > best.dQ) { best.dQ <- dQ; best.g <- g }
       }
-      if (length(cand) == 0) next # no acceptable destination: v stays a singleton
-      p <- exp(gains / theta) # probabilities proportional to exp(gain / theta)
-      j <- sample(seq_along(cand), 1, prob = p) # an index draw, since sample() on a length-one vector samples from 1:x
-      refined[v] <- cand[j]
-      Q.cur <- modularity(x, refined)
+      refined[v] <- best.g
     }
   }
-  return(refined)
+  refined
 }
 ```
 
-The function takes a graph, the working partition to refine, a resolution parameter, a temperature that softens the random-greedy choice, and a seed, and it returns refined community labels, one per node. The labels are a *subpartition* of the input, since every refined subset sits wholly inside one of the input communities.
-
 It works like this:
 
-- Lines 1-4 set things up. Line 1 takes the graph, the working partition, the resolution parameter, the temperature, and the seed; line 2 fixes the seed, because the refinement visits nodes in random order and draws each destination subset at random; line 3 counts the nodes; line 4 extracts the plain adjacency matrix.
+- Lines 1-7 set up and keep the books. Line 1 takes the graph, the working partition, the resolution parameter, and the seed; line 2 fixes the seed, because the refinement visits nodes in random order; line 3 counts the nodes; line 4 extracts the plain adjacency matrix; line 5 computes the volume of the graph; line 6 the degree of every node; and line 7 starts every node as its own singleton subset.
 
-- Lines 5-8 keep the books. Line 5 computes the volume of the graph, line 6 the degree of every node, line 7 starts every node as its own singleton subset, and line 8 records the modularity of that starting partition as the running quality of the refinement.
+- Lines 8-13 sweep each community of the working partition. Line 8 opens the loop over communities, line 9 collects the positions of the community's members, and line 10 sizes the subset by its degree mass rather than its head count, which is what the modularity version of the criterion requires. Line 11 visits the community's nodes in random order, line 12 skips any node that some other node has already absorbed, and line 13 applies the well-connectedness test of @eq-leiden-refine, passing over nodes whose ties into the rest of the subset fall short of the chance expectation.
 
-- Lines 9-11 visit each community of the working partition in turn (line 9), collect the positions of its members (line 10), and size the subset by its degree mass rather than its head count (line 11), which is what the modularity version of the criterion requires.
+- Lines 14-22 pick the best destination. Line 14 initializes the best gain and the best subset, with the node's own singleton label as the fallback. Lines 15-22 loop over the subsets already formed inside the community: line 16 collects the members of the candidate, line 17 skips the subset $v$ already belongs to, line 18 sizes the candidate, line 19 runs the subset-level version of the well-connectedness test, and lines 20-21 score the merge by literally recomputing the modularity of the refined partition before and after, the same from-scratch scoring that `louvain.step1` uses. Line 22 keeps the best strictly improving candidate seen so far.
 
-- Lines 12-14 sweep the community's nodes in random order (line 12), skip any node that some other node has already absorbed (line 13), and apply the well-connectedness test of @eq-leiden-refine (line 14), passing over nodes whose ties into the rest of the subset fall short of the chance expectation.
-
-- Lines 15-27 gather the candidate destinations. Line 15 lists the subsets already formed inside the community and line 16 initializes the candidate labels and their gains. Lines 17-27 loop over those subsets: line 18 collects the members of the candidate, line 19 skips the candidate $v$ already belongs to, line 20 sizes the candidate, line 21 runs the subset-level version of the well-connectedness test, and lines 22-23 score the merge by literally recomputing the modularity of the refined partition before and after, the same from-scratch scoring that `louvain.step1` uses. Line 24 keeps any candidate whose gain is non-negative.
-
-- Lines 28-32 make the move. Line 28 leaves $v$ a singleton when no candidate qualifies; line 29 turns the gains into probabilities proportional to $\exp(\Delta Q/\theta)$, so strongly improving merges are likely but not certain; line 30 draws the winner by index position rather than by label value^[This guards against a famous `R` trap: when the first argument of `sample` is a vector of length one, `sample(x, 1)` samples from the integers `1:x` instead of returning `x`, so a lone candidate labeled 5 could send the node to communities 1 through 5.]; line 31 moves the node; line 32 updates the running modularity.
-
-- Lines 33-36 close the loops and return the refined partition as a vector of labels.
+- Lines 23-28 move the node and return. Line 24 sends $v$ to the best subset, which leaves it a singleton whenever nothing improves, since that is the fallback the initialization planted; line 25 closes the node loop; line 26 closes the community loop; line 27 returns the refined partition as a vector of labels.
 
 Let's see the refinement in action on the step-1 partition:
 
 ```{r}
 #| column: screen-inset
 ref1 <- leiden.refine(ug, lv.res)
+split.big <- length(unique(ref1[lv.res == which.max(table(lv.res))]))
 table(ref1)
 modularity(ug, ref1)
 ```
 
-The refinement turns the seven Louvain communities into `r length(unique(ref1))` subsets, the largest of them with `r max(table(ref1))` members. The biggest Louvain community, with `r max(table(lv.res))` members, comes apart into `r max(table(ref1, lv.res))` pieces, while the smallest community survives untouched. Modularity drops from `r round(modularity(ug, lv.res), 3)` to `r round(modularity(ug, ref1), 3)`, which is exactly what we want. The refinement is not out to maximize anything. Its job is to leave every community internally well connected, and the quality comes back at the next move phase. What the next aggregation needs is pieces that hang together, not a high-scoring partition:
+The refinement turns the seven Louvain communities into `r length(unique(ref1))` subsets, the largest of them with `r max(table(ref1))` members. The biggest Louvain community, with `r max(table(lv.res))` members, comes apart into `r split.big` pieces, while the smallest community survives untouched. Modularity drops from `r round(modularity(ug, lv.res), 3)` to `r round(modularity(ug, ref1), 3)`, which is exactly what we want. The refinement is not out to maximize anything. Its job is to leave every community internally well connected, and the quality comes back at the next move phase. What the next aggregation needs is pieces that hang together, not a high-scoring partition:
 
 ```{r}
 #| column: screen-inset
@@ -495,7 +480,7 @@ Assembling the three phases follows the same plan as `louvain.full`, with one ex
 
 ```{r}
 #| column: screen-inset
-leiden.full <- function(x, seed = 123, theta = 0.01) {
+leiden.full <- function(x, seed = 123) {
   x0 <- x # keep the original graph for the final modularity check
   n0 <- vcount(x)
   map <- 1:n0 # each original node's position in the current graph
@@ -504,7 +489,7 @@ leiden.full <- function(x, seed = 123, theta = 0.01) {
     lv1 <- louvain.step1(x, seed = seed) # move phase
     Q <- modularity(x, lv1, weights = E(x)$weight)
     history <- rbind(history, data.frame(nodes = vcount(x), Q = Q))
-    ref <- leiden.refine(x, lv1, theta = theta) # refinement phase
+    ref <- leiden.refine(x, lv1) # refinement phase
     g.new <- louvain.step2(x, ref) # aggregate on the refined partition
     lv2 <- louvain.step1(g.new, seed = seed) # move phase on the aggregate graph
     Q.new <- modularity(g.new, lv2, weights = E(g.new)$weight)
@@ -518,7 +503,7 @@ leiden.full <- function(x, seed = 123, theta = 0.01) {
 }
 ```
 
-The function takes a graph, a seed, and a temperature, and returns a list with three components: the final partition of the original nodes, the modularity of that partition on the original graph, and the level-by-level history.
+The function takes a graph and a seed, and returns a list with three components: the final partition of the original nodes, the modularity of that partition on the original graph, and the level-by-level history.
 
 It works like this:
 
@@ -532,7 +517,7 @@ It works like this:
 
 - Lines 19-20 read off the final partition once the search stops and return it, with the modularity computed on the original graph, along with the history of levels.
 
-One difference from the published algorithm is worth stating. @traag_etal19 seed each move phase with the partition kept from the previous level, and their move phase uses a queue-based random-greedy rule rather than full passes (Supplementary Information, p. 4). Our version reuses `louvain.step1`, which always starts from singletons. So what we have is Leiden's refinement bolted onto Louvain's move-and-aggregate skeleton, which is enough to see what the refinement does.
+One difference from the published algorithm is worth stating. @traag_etal19 seed each move phase with the partition kept from the previous level, use a queue-based random-greedy rule rather than full passes (Supplementary Information, p. 4), and draw each refinement move at random in proportion to its gain rather than taking the best one. Our version reuses `louvain.step1`, which always starts from singletons, and picks the single best refinement move. So what we have is Leiden's refinement, in a stripped-down greedy form, bolted onto Louvain's move-and-aggregate skeleton, which is enough to see what the refinement does.
 
 Let's see it in action:
 
@@ -561,7 +546,7 @@ best.lQ
 table(best.l$comm)
 ```
 
-The refined tournament lands at `r round(best.lQ, 4)` with communities of sizes `r paste(sort(table(best.l$comm)), collapse = ", ")`, the same modularity and the same partition, up to label shuffling, as the Louvain tournament winner. Comparing the two runs seed by seed makes the point sharper: at eight of the ten seeds the two versions reach the same modularity, and at the other two plain Louvain does better. The refinement buys no extra quality on this network. What it buys is the guarantee that every community it hands back hangs together.
+The refined tournament lands at `r round(best.lQ, 4)` with communities of sizes `r paste(sort(table(best.l$comm)), collapse = ", ")`, the same best modularity as the Louvain tournament, though the winning partition itself is not the same one. Comparing the two runs seed by seed makes the point sharper: at seven of the ten seeds the refined version scores higher, at the other three the two versions tie, and at no seed does plain Louvain come out ahead. Part of that edge is the finer blocks the refined aggregation hands to the move phase. But the lesson of the section is not the score. What the refinement buys, first and always, is the guarantee that every community it hands back hangs together.
 
 Of course, `igraph` has a function for this, called (predictably) `cluster_leiden`:
 
