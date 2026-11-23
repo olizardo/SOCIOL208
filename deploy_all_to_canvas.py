@@ -462,7 +462,7 @@ WEEKS_DATA = [
         'part2_title': 'Academic Status Hierarchies, Network Segregation, and Migration',
         'part2_readings': [
             ('Gondal, N. (2018). Duality of departmental specializations and PhD exchange: A Weberian analysis of status in interaction using multilevel exponential random graph models (mERGM). <em>Social Networks</em>, 55, 202–212.', '10.1016/j.socnet.2018.07.005'),
-            ('Zhao, L. (2025). Uneven Mixing, Network Segregation, and Immigrant Integration. <em>American Sociological Review</em>, 90(3), 521–559.', ''),
+            ('Zhao, L. (2025). Uneven Mixing, Network Segregation, and Immigrant Integration. <em>American Sociological Review</em>, 90(3), 521–559.', '10.1177/00031224251336471'),
             ('Leal, D. F. (2021). Network inequalities and international migration in the Americas. <em>American Journal of Sociology</em>, 126(5), 1067–1126.', '10.1086/713877')
         ]
     },
