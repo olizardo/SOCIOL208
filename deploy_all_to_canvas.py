@@ -457,12 +457,12 @@ WEEKS_DATA = [
         'part1_readings': [
             ('DiMaggio, P., & Garip, F. (2011). How network externalities can exacerbate intergroup inequality. <em>American Journal of Sociology</em>, 116(6), 1887–1933.', '10.1086/659653'),
             ('Leszczensky, L., & Pink, S. (2019). What drives ethnic homophily? A relational approach on how ethnic identification moderates preferences for same-ethnic friends. <em>American Sociological Review</em>, 84(3), 394–419.', '10.1177/0003122419846849'),
-            ('O’Brien, S. (2026). Kinship Interlocks: How the Intimate Exchange of Wealth, Status, and Power Generates Upper-Class Persistence. <em>American Sociological Review</em>, 91(2), 191–226.', '')
+            ('O’Brien, S. (2026). Kinship Interlocks: How the Intimate Exchange of Wealth, Status, and Power Generates Upper-Class Persistence. <em>American Sociological Review</em>, 91(2), 191–226.', '10.1177/00031224261425688')
         ],
         'part2_title': 'Academic Status Hierarchies, Network Segregation, and Migration',
         'part2_readings': [
             ('Gondal, N. (2018). Duality of departmental specializations and PhD exchange: A Weberian analysis of status in interaction using multilevel exponential random graph models (mERGM). <em>Social Networks</em>, 55, 202–212.', '10.1016/j.socnet.2018.07.005'),
-            ('Zhao, L. (2025). Uneven Mixing, Network Segregation, and Immigrant Integration. <em>American Sociological Review</em>, 90(3), 521–559.', ''),
+            ('Zhao, L. (2025). Uneven Mixing, Network Segregation, and Immigrant Integration. <em>American Sociological Review</em>, 90(3), 521–559.', '10.1177/00031224251336471'),
             ('Leal, D. F. (2021). Network inequalities and international migration in the Americas. <em>American Journal of Sociology</em>, 126(5), 1067–1126.', '10.1086/713877')
         ]
     },
