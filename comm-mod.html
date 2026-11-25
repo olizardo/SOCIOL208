@@ -831,7 +831,7 @@ window.Quarto = {
 <p>A network has <em>community structure</em> if it contains many such subsets or groups of nodes that interact preferentially with one another. Not all networks have to have community structure; a network in which all nodes interact with equal propensity doesn’t have communities.</p>
 <p>So whether a network has community structure, and whether a given guess about what these communities are yields actual <em>communities</em> (a cluster of nodes that interact more among themselves than with outsiders) is an empirical question that needs to be answered with data.</p>
 <p>But first, we need to develop a criterion for determining whether a given partition of the network into mutually exclusive node subsets actually produces <em>communities</em> as we defined them earlier. This criterion should be independent of particular methods and algorithms that claim to find communities, so that we can compare them with one another and see whether the partitions they recommend yield actual communities.</p>
-<p>Mark <span class="citation" data-cites="newman06a">Newman (<a href="#ref-newman06a" role="doc-biblioref">2006b</a>)</span>, who has done the most influential work in this area, proposed such a criterion and called it the <strong>modularity</strong> of a partition (e.g., the extent to which a partition has identified the “modules” or subsets of the network).</p>
+<p>Mark <span class="citation" data-cites="newman06a">Newman (<a href="#ref-newman06a" role="doc-biblioref">2006b</a>)</span>, who has done the most influential work in this area, proposed such a criterion and called it the <strong>modularity</strong> of a partition (i.e., the extent to which a partition has identified the “modules” or subsets of the network).</p>
 </section>
 <section id="a-bag-of-links" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="a-bag-of-links"><span class="header-section-number">2</span> A bag of links</h2>
@@ -844,7 +844,7 @@ Q = \sum_{k = 1}^m \left[P(s \in k \land d \in k) - P(s \in k) \times P(d \in k)
 \]</span></p>
 <p>In this equation, <span class="math inline">\(P(s \in k \land d \in k)\)</span> is the probability that a link drawn at random has a source and a destination node that belong to the same community <span class="math inline">\(k\)</span>; <span class="math inline">\(P(s \in k)\)</span> is just the probability of drawing a link that has a starting node in community <span class="math inline">\(k\)</span> (regardless of the membership of the destination node) and <span class="math inline">\(P(d \in k)\)</span> is the probability of drawing a link that has a destination node that belongs to community <span class="math inline">\(k\)</span> (regardless of the membership of the source node).</p>
 <p>If you remember your elementary probability theory, you know that the <em>joint</em> probability of two events that are assumed to be <em>independent</em> of one another is just the product of their individual probabilities. So that means that <span class="math inline">\(P(s \in k) \times P(d \in k)\)</span> is the expected probability of finding that both the source and destination node are in the same community <span class="math inline">\(k\)</span> in a network in which communities don’t matter for link formation (because the two probabilities are assumed to be independent).</p>
-<p>So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn’t matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network.</p>
+<p>So the formula for the modularity subtracts the probability we would expect if communities didn’t matter from the observed probability of finding links with two nodes in the same community. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network.</p>
 <p>Let’s move to a real example. <a href="#fig-friends" class="quarto-xref">Figure&nbsp;1</a> shows two plots of the friendship nomination network from the <code>law_friends</code> data <span class="citation" data-cites="lazega01">(<a href="#ref-lazega01" role="doc-biblioref">Lazega 2001</a>)</span> from the <code>networkdata</code> package (dropping nodes that have a degree of one). The first shows nodes colored by status within the firm (partners in orange, associates in blue), and the other shows nodes colored by gender (men in orange, women in blue).</p>
 <p>It is pretty evident that there is more community partitioning in the network by status than by gender; that is, friendship nominations tend to go from people of a given rank to people of the same rank, which makes sense. So a measure of modularity should be higher when using status as our partition than when using gender.</p>
 <div id="fig-friends" class="quarto-layout-panel">
@@ -904,14 +904,14 @@ Figure&nbsp;1: Law Firm Friendship Network.
 <span id="cb1-16"><a href="#cb1-16" aria-label="16"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>Here is how it works:</p>
+<p>It works like this:</p>
 <ul>
 <li><p>Lines 1-2 declare the function, which takes a graph <code>x</code> and a community-membership vector <code>c</code> with one entry per node, and load <code>dplyr</code> for the joining and column-renaming verbs used below.</p></li>
-<li><p>Lines 4-5 turn the graph’s ties into a data frame with one row per link and then rename the two resulting columns to <code>vi</code> (the source node) and <code>vj</code> (the target node). Line 4 wraps the edge list in <code>as.data.frame</code> because <code>as_edgelist</code> returns a matrix which don’t play well with <code>dplyr</code> verbs.</p></li>
-<li><p>Line 7 builds the lookup table, with one row per node, pairing that node’s identifier with its community label. Wrapping <code>c</code> and <code>V(x)</code> in <code>as.vector</code> makes sure the two are plain vectors that line up row for row.</p></li>
-<li><p>Lines 9-12 handle the <em>target</em> end of each link. Line 9 starts from the <code>vj</code> column, keeping it as a one-column data frame rather than a bare vector. Line 10 joins in each target’s community, using named matching so that <code>vj</code> on the left is matched to <code>node</code> on the right; because it is a <code>left_join</code>, no links are dropped. Line 11 keeps just the target and its community, and line 12 renames that column to <code>c2</code> to mark it as the target’s community.</p></li>
-<li><p>Lines 14-17 do the same for the <em>source</em> end, matching <code>vi</code> to <code>node</code> and naming the result <code>c1</code>. Line 18 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.</p></li>
-<li><p>Line 20 returns the finished edge list, with columns <code>vi</code>, <code>c1</code>, <code>vj</code>, and <code>c2</code>: each link tagged with the community of both of its endpoints and ready for the modularity function below.</p></li>
+<li><p>Lines 3-4 turn the graph’s ties into a data frame with one row per link and then rename the two resulting columns to <code>vi</code> (the source node) and <code>vj</code> (the target node). Line 3 wraps the edge list in <code>as.data.frame</code> because <code>as_edgelist</code> returns a matrix which don’t play well with <code>dplyr</code> verbs.</p></li>
+<li><p>Line 5 builds the lookup table, with one row per node, pairing that node’s identifier with its community label. Wrapping <code>c</code> and <code>V(x)</code> in <code>as.vector</code> makes sure the two are plain vectors that line up row for row.</p></li>
+<li><p>Lines 6-9 handle the <em>target</em> end of each link. Line 6 starts from the <code>vj</code> column, keeping it as a one-column data frame rather than a bare vector. Line 7 joins in each target’s community, using named matching so that <code>vj</code> on the left is matched to <code>node</code> on the right; because it is a <code>left_join</code>, no links are dropped. Line 8 keeps just the target and its community, and line 9 renames that column to <code>c2</code> to mark it as the target’s community.</p></li>
+<li><p>Lines 10-13 do the same for the <em>source</em> end, matching <code>vi</code> to <code>node</code> and naming the result <code>c1</code>. Line 14 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.</p></li>
+<li><p>Line 15 returns the finished edge list, with columns <code>vi</code>, <code>c1</code>, <code>vj</code>, and <code>c2</code>: each link tagged with the community of both of its endpoints and ready for the modularity function below.</p></li>
 </ul>
 <p>So if we wanted an edge list data frame containing each node’s status membership in the <code>law_friends</code> network, we would just type:</p>
 <div class="cell">
@@ -975,7 +975,7 @@ Figure&nbsp;1: Law Firm Friendship Network.
 <pre><code>[1] 0.07495538</code></pre>
 </div>
 </div>
-<p>This indeed confirms that status is a more powerful group formation principle than gender in this network.</p>
+<p>The two scores indeed confirm that status is a more powerful group formation principle than gender in this network.</p>
 </section>
 <section id="modularity-from-the-adjacency-matrix" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="modularity-from-the-adjacency-matrix"><span class="header-section-number">3</span> Modularity from the Adjacency Matrix</h2>
@@ -1337,8 +1337,8 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 [61]  0.24  0.14  0.17  0.06  0.13  0.09  0.09  0.09</code></pre>
 </div>
 </div>
-<p>This seems more interesting. The resulting “status” vector has both negative and positive entries. What if I told you that this vector is actually a <strong>partition</strong> of the original graph into two communities?</p>
-<p>Not only that, I have even better news. This is the partition that <em>maximizes</em> the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>The resulting vector seems more interesting. The “status” vector has both negative and positive entries. What if we told you that this vector is actually a <strong>partition</strong> of the original graph into two communities?</p>
+<p>Not only that, the news gets even better. The vector is the partition that <em>maximizes</em> the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
 <p>Let’s see some evidence for these claims in real data.</p>
 <p>First, let’s turn the “status” vector into a community indicator vector. We assign all nodes with scores larger than zero to one community and nodes with scores equal to zero or less to the other one:</p>
 <div class="cell">
@@ -1369,8 +1369,8 @@ Q = \frac{\mathbf{s}^T\mathbf{B}\mathbf{s}}{2\sum_i\sum_ja_{ij}}
 <pre><code>[1] 0.2935153</code></pre>
 </div>
 </div>
-<p>This is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. <a href="#fig-mod-1" class="quarto-xref">Figure&nbsp;2</a> shows visual evidence that this is indeed an optimal binary partition of the <code>law_friends</code> network.</p>
-<p>Of course, you may also remember from the <a href="./prest-eigen.html">Status and Prestige</a> lesson that the little status game we played above is also a method (called the “power” method) of computing the <strong>leading eigenvector</strong> (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:</p>
+<p>A pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. <a href="#fig-mod-1" class="quarto-xref">Figure&nbsp;2</a> shows visual evidence that this is a good binary partition of the <code>law_friends</code> network.</p>
+<p>Of course, you may also remember from the <a href="./prest-eigen.html">Status and Prestige</a> lesson that the little status game we played above is also a method (called the “power” method) of computing the <strong>leading eigenvector</strong> (the one associated with the largest eigenvalue) of a matrix. So it turns out that the modularity maximizing bi-partition of a graph is just given by this vector:</p>
 <p><span id="eq-mod-eig"><span class="math display">\[
 \mathbf{B}\mathbf{v} = \lambda\mathbf{v}
 \tag{2}\]</span></span></p>
@@ -1509,7 +1509,7 @@ $split[[2]]
  2  1  1  2  1  1  1  1  1  1  1  1 </code></pre>
 </div>
 </div>
-<p>The <code>delta.Q</code> vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn’t change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined <strong>group</strong> with lots of within-cluster ties, so that splitting it makes no difference (that’s the orange nodes in <a href="#fig-mod-1" class="quarto-xref">Figure&nbsp;2</a> below).</p>
+<p>The <code>delta.Q</code> vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn’t change (the difference between the old and the new is zero) when we tried to split into two smaller communities. A zero change is usually indicative that the original community was a well-defined <strong>group</strong> with lots of within-cluster ties, so that splitting it makes no difference (that’s the orange nodes in <a href="#fig-mod-1" class="quarto-xref">Figure&nbsp;2</a> below).</p>
 <p>Nevertheless, the test in the second community was positive, indicating we should split it into two. Because we left one of the original communities alone, the resulting network will have three communities after splitting the second one in two.</p>
 <p>Note that the function returns the original two-split named vector of community assignments <code>v</code>, a <code>NULL</code> result for the first split, and a new vector assigning nodes in the second original split to two other communities (<code>split[[2]]</code>).</p>
 <p>We now create a new three-community vector from these results:</p>
@@ -1564,7 +1564,7 @@ $split
 list()</code></pre>
 </div>
 </div>
-<p>Here, the three modularity-split checks failed, as indicated by the <code>delta.Q</code> vector. So no further splits were made (hence the <code>split</code> object is an empty list). This tells us that, according to this method, three communities are the optimal partition.</p>
+<p>Here, the three modularity-split checks failed, as indicated by the <code>delta.Q</code> vector. So no further splits were made (hence the <code>split</code> object is an empty list). The empty <code>split</code> list tells us that, according to this method, 3 communities are the optimal partition.</p>
 <p>Of course, if you are working on your project, you don’t have to mess with all of the functions above, because <code>igraph</code> has implemented Newman’s leading eigenvector (of the modularity matrix) community detection method <span class="citation" data-cites="newman06b">(<a href="#ref-newman06b" role="doc-biblioref">Newman 2006a</a>)</span> in a single function called <code>cluster_leading_eigen</code>.</p>
 <p>To use it, just feed it the relevant graph:</p>
 <div class="cell">
@@ -1635,8 +1635,8 @@ list()</code></pre>
 </div>
 </div>
 </div>
-<p>This is just a <strong>contingency table</strong> listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns.</p>
-<p>We find that community one (the most coherent, in orange) is 90% partners (it contains 30 members, of whom only 3 are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of nine partners and seven associates.</p>
+<p>The output is just a <strong>contingency table</strong> listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns.</p>
+<p>We find that community one (the most coherent, in orange) is 90% partners (it contains 30 members, of whom only 3 are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of 9 partners and 7 associates.</p>
 <p>So in this network, both status and endogenous group dynamics seem to be at play.</p>
 </section>
 <section id="an-agglomerative-approach-based-on-the-modularity" class="level2" data-number="8">
@@ -1691,7 +1691,7 @@ list()</code></pre>
 <li><p>Line 11 scores a candidate merge as the sum of the matrix entries lying between the two groups, divided by the total number of links. Because line 10 reads only one of the two symmetric blocks, that sum is half the total weight between the groups, but the denominator is also half the matrix’s own scale: the modularity matrix divides by the sum of all entries, which for an undirected graph is twice the number of edges.</p></li>
 <li><p>Lines 12-14 keep the pair with the largest positive gain, and line 20 makes that merge by relabelling every node in the second community with the label of the first. When no pair clears zero, line 22 returns the labels.</p></li>
 </ul>
-<p>The result matches <code>igraph</code> exactly—the same three communities and the same modularity:</p>
+<p>The result matches <code>igraph</code> exactly—the same 3 communities and the same modularity:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1727,7 +1727,7 @@ list()</code></pre>
 </div>
 </div>
 </div>
-<p>This gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at <span class="math inline">\(k = 3\)</span>:</p>
+<p>The dendrogram gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at <span class="math inline">\(k = 3\)</span>:</p>
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1743,7 +1743,7 @@ list()</code></pre>
  3  3  3  2  3  3  3  2  3  3  3  3  3  3  3  3 </code></pre>
 </div>
 </div>
-<p>This provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).</p>
+<p>The <code>cutree</code> call provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).</p>
 <p>Of course, this information was already stored in our results in the <code>membership</code> object:</p>
 <div class="cell">
 <details open="" class="code-fold">
@@ -2463,7 +2463,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-11"><a href="#cb77-11" aria-label="11"></a></span>
 <span id="cb77-12"><a href="#cb77-12" aria-label="12"></a>But first, we need to develop a criterion for determining whether a given partition of the network into mutually exclusive node subsets actually produces *communities* as we defined them earlier. This criterion should be independent of particular methods and algorithms that claim to find communities, so that we can compare them with one another and see whether the partitions they recommend yield actual communities.</span>
 <span id="cb77-13"><a href="#cb77-13" aria-label="13"></a></span>
-<span id="cb77-14"><a href="#cb77-14" aria-label="14"></a>Mark @newman06a, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (e.g., the extent to which a partition has identified the "modules" or subsets of the network). </span>
+<span id="cb77-14"><a href="#cb77-14" aria-label="14"></a>Mark @newman06a, who has done the most influential work in this area, proposed such a criterion and called it the **modularity** of a partition (i.e., the extent to which a partition has identified the "modules" or subsets of the network). </span>
 <span id="cb77-15"><a href="#cb77-15" aria-label="15"></a></span>
 <span id="cb77-16"><a href="#cb77-16" aria-label="16"></a><span class="fu">## A bag of links</span></span>
 <span id="cb77-17"><a href="#cb77-17" aria-label="17"></a></span>
@@ -2483,7 +2483,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-31"><a href="#cb77-31" aria-label="31"></a></span>
 <span id="cb77-32"><a href="#cb77-32" aria-label="32"></a>If you remember your elementary probability theory, you know that the *joint* probability of two events that are assumed to be *independent* of one another is just the product of their individual probabilities. So that means that $P(s \in k) \times P(d \in k)$ is the expected probability of finding that both the source and destination node are in the same community $k$ in a network in which communities don't matter for link formation (because the two probabilities are assumed to be independent).</span>
 <span id="cb77-33"><a href="#cb77-33" aria-label="33"></a></span>
-<span id="cb77-34"><a href="#cb77-34" aria-label="34"></a>So the formula for the modularity subtracts the observed probability of finding links with two nodes in the same community from what we would expect if communities didn't matter. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. </span>
+<span id="cb77-34"><a href="#cb77-34" aria-label="34"></a>So the formula for the modularity subtracts the probability we would expect if communities didn't matter from the observed probability of finding links with two nodes in the same community. So it measures the extent to which we find within-community links in the network beyond what we would expect by chance. Obviously, the higher this number, the higher the deviation from chance is, and the more community structure there is in the network. </span>
 <span id="cb77-35"><a href="#cb77-35" aria-label="35"></a></span>
 <span id="cb77-36"><a href="#cb77-36" aria-label="36"></a>Let's move to a real example. @fig-friends shows two plots of the friendship nomination network from the <span class="in">`law_friends`</span> data <span class="co">[</span><span class="ot">@lazega01</span><span class="co">]</span> from the <span class="in">`networkdata`</span> package (dropping nodes that have a degree of one). The first shows nodes colored by status within the firm (partners in orange, associates in blue), and the other shows nodes colored by gender (men in orange, women in blue). </span>
 <span id="cb77-37"><a href="#cb77-37" aria-label="37"></a></span>
@@ -2542,19 +2542,19 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-94"><a href="#cb77-94" aria-label="90"></a>}</span>
 <span id="cb77-95"><a href="#cb77-95" aria-label="91"></a><span class="in">```</span></span>
 <span id="cb77-96"><a href="#cb77-96" aria-label="92"></a></span>
-<span id="cb77-97"><a href="#cb77-97" aria-label="93"></a>Here is how it works:</span>
+<span id="cb77-97"><a href="#cb77-97" aria-label="93"></a>It works like this:</span>
 <span id="cb77-98"><a href="#cb77-98" aria-label="94"></a></span>
 <span id="cb77-99"><a href="#cb77-99" aria-label="95"></a><span class="ss">- </span>Lines 1-2 declare the function, which takes a graph <span class="in">`x`</span> and a community-membership vector <span class="in">`c`</span> with one entry per node, and load <span class="in">`dplyr`</span> for the joining and column-renaming verbs used below.</span>
 <span id="cb77-100"><a href="#cb77-100" aria-label="96"></a></span>
-<span id="cb77-101"><a href="#cb77-101" aria-label="97"></a><span class="ss">- </span>Lines 4-5 turn the graph's ties into a data frame with one row per link and then rename the two resulting columns to <span class="in">`vi`</span> (the source node) and <span class="in">`vj`</span> (the target node). Line 4 wraps the edge list in <span class="in">`as.data.frame`</span> because <span class="in">`as_edgelist`</span> returns a matrix which don't play well with <span class="in">`dplyr`</span> verbs.</span>
+<span id="cb77-101"><a href="#cb77-101" aria-label="97"></a><span class="ss">- </span>Lines 3-4 turn the graph's ties into a data frame with one row per link and then rename the two resulting columns to <span class="in">`vi`</span> (the source node) and <span class="in">`vj`</span> (the target node). Line 3 wraps the edge list in <span class="in">`as.data.frame`</span> because <span class="in">`as_edgelist`</span> returns a matrix which don't play well with <span class="in">`dplyr`</span> verbs.</span>
 <span id="cb77-102"><a href="#cb77-102" aria-label="98"></a></span>
-<span id="cb77-103"><a href="#cb77-103" aria-label="99"></a><span class="ss">- </span>Line 7 builds the lookup table, with one row per node, pairing that node's identifier with its community label. Wrapping <span class="in">`c`</span> and <span class="in">`V(x)`</span> in <span class="in">`as.vector`</span> makes sure the two are plain vectors that line up row for row.</span>
+<span id="cb77-103"><a href="#cb77-103" aria-label="99"></a><span class="ss">- </span>Line 5 builds the lookup table, with one row per node, pairing that node's identifier with its community label. Wrapping <span class="in">`c`</span> and <span class="in">`V(x)`</span> in <span class="in">`as.vector`</span> makes sure the two are plain vectors that line up row for row.</span>
 <span id="cb77-104"><a href="#cb77-104" aria-label="100"></a></span>
-<span id="cb77-105"><a href="#cb77-105" aria-label="101"></a><span class="ss">- </span>Lines 9-12 handle the *target* end of each link. Line 9 starts from the <span class="in">`vj`</span> column, keeping it as a one-column data frame rather than a bare vector. Line 10 joins in each target's community, using named matching so that <span class="in">`vj`</span> on the left is matched to <span class="in">`node`</span> on the right; because it is a <span class="in">`left_join`</span>, no links are dropped. Line 11 keeps just the target and its community, and line 12 renames that column to <span class="in">`c2`</span> to mark it as the target's community.</span>
+<span id="cb77-105"><a href="#cb77-105" aria-label="101"></a><span class="ss">- </span>Lines 6-9 handle the *target* end of each link. Line 6 starts from the <span class="in">`vj`</span> column, keeping it as a one-column data frame rather than a bare vector. Line 7 joins in each target's community, using named matching so that <span class="in">`vj`</span> on the left is matched to <span class="in">`node`</span> on the right; because it is a <span class="in">`left_join`</span>, no links are dropped. Line 8 keeps just the target and its community, and line 9 renames that column to <span class="in">`c2`</span> to mark it as the target's community.</span>
 <span id="cb77-106"><a href="#cb77-106" aria-label="102"></a></span>
-<span id="cb77-107"><a href="#cb77-107" aria-label="103"></a><span class="ss">- </span>Lines 14-17 do the same for the *source* end, matching <span class="in">`vi`</span> to <span class="in">`node`</span> and naming the result <span class="in">`c1`</span>. Line 18 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.</span>
+<span id="cb77-107"><a href="#cb77-107" aria-label="103"></a><span class="ss">- </span>Lines 10-13 do the same for the *source* end, matching <span class="in">`vi`</span> to <span class="in">`node`</span> and naming the result <span class="in">`c1`</span>. Line 14 then binds the two sides together row by row, which is safe because both were built from the same edge list and so keep the links in the same order.</span>
 <span id="cb77-108"><a href="#cb77-108" aria-label="104"></a></span>
-<span id="cb77-109"><a href="#cb77-109" aria-label="105"></a><span class="ss">- </span>Line 20 returns the finished edge list, with columns <span class="in">`vi`</span>, <span class="in">`c1`</span>, <span class="in">`vj`</span>, and <span class="in">`c2`</span>: each link tagged with the community of both of its endpoints and ready for the modularity function below.</span>
+<span id="cb77-109"><a href="#cb77-109" aria-label="105"></a><span class="ss">- </span>Line 15 returns the finished edge list, with columns <span class="in">`vi`</span>, <span class="in">`c1`</span>, <span class="in">`vj`</span>, and <span class="in">`c2`</span>: each link tagged with the community of both of its endpoints and ready for the modularity function below.</span>
 <span id="cb77-110"><a href="#cb77-110" aria-label="106"></a></span>
 <span id="cb77-111"><a href="#cb77-111" aria-label="107"></a>So if we wanted an edge list data frame containing each node's status membership in the <span class="in">`law_friends`</span> network, we would just type:</span>
 <span id="cb77-112"><a href="#cb77-112" aria-label="108"></a></span>
@@ -2600,7 +2600,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-158"><a href="#cb77-158" aria-label="148"></a><span class="fu">mod.Q1</span>(<span class="fu">link.bag</span>(g, <span class="fu">V</span>(g)<span class="sc">$</span>gender))</span>
 <span id="cb77-159"><a href="#cb77-159" aria-label="149"></a><span class="in">```</span></span>
 <span id="cb77-160"><a href="#cb77-160" aria-label="150"></a></span>
-<span id="cb77-161"><a href="#cb77-161" aria-label="151"></a>This indeed confirms that status is a more powerful group formation principle than gender in this network. </span>
+<span id="cb77-161"><a href="#cb77-161" aria-label="151"></a>The two scores indeed confirm that status is a more powerful group formation principle than gender in this network. </span>
 <span id="cb77-162"><a href="#cb77-162" aria-label="152"></a></span>
 <span id="cb77-163"><a href="#cb77-163" aria-label="153"></a><span class="fu">## Modularity from the Adjacency Matrix</span></span>
 <span id="cb77-164"><a href="#cb77-164" aria-label="154"></a></span>
@@ -2851,9 +2851,9 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-443"><a href="#cb77-443" aria-label="399"></a><span class="fu">round</span>(s.eig, <span class="dv">2</span>)</span>
 <span id="cb77-444"><a href="#cb77-444" aria-label="400"></a><span class="in">```</span></span>
 <span id="cb77-445"><a href="#cb77-445" aria-label="401"></a></span>
-<span id="cb77-446"><a href="#cb77-446" aria-label="402"></a>This seems more interesting. The resulting "status" vector has both negative and positive entries. What if I told you that this vector is actually a **partition** of the original graph into two communities? </span>
+<span id="cb77-446"><a href="#cb77-446" aria-label="402"></a>The resulting vector seems more interesting. The "status" vector has both negative and positive entries. What if we told you that this vector is actually a **partition** of the original graph into two communities? </span>
 <span id="cb77-447"><a href="#cb77-447" aria-label="403"></a></span>
-<span id="cb77-448"><a href="#cb77-448" aria-label="404"></a>Not only that, I have even better news. This is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.^<span class="co">[</span><span class="ot">Actually, this is not true; finding the partition that maximizes the modularity in a graph is an NP hard problem [@brandes07], so this is just a pretty good approximation of that.</span><span class="co">]</span> </span>
+<span id="cb77-448"><a href="#cb77-448" aria-label="404"></a>Not only that, the news gets even better. The vector is the partition that *maximizes* the modularity in the graph, the best two-group partition that has the most edges within groups and the least edges going across groups.^<span class="co">[</span><span class="ot">Actually, this is not true; finding the partition that maximizes the modularity in a graph is an NP hard problem [@brandes07], so this is just a pretty good approximation of that.</span><span class="co">]</span> </span>
 <span id="cb77-449"><a href="#cb77-449" aria-label="405"></a></span>
 <span id="cb77-450"><a href="#cb77-450" aria-label="406"></a>Let's see some evidence for these claims in real data. </span>
 <span id="cb77-451"><a href="#cb77-451" aria-label="407"></a></span>
@@ -2873,9 +2873,9 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-469"><a href="#cb77-469" aria-label="421"></a><span class="fu">modularity</span>(ug, C)</span>
 <span id="cb77-470"><a href="#cb77-470" aria-label="422"></a><span class="in">```</span></span>
 <span id="cb77-471"><a href="#cb77-471" aria-label="423"></a></span>
-<span id="cb77-472"><a href="#cb77-472" aria-label="424"></a>This is a pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is indeed an optimal binary partition of the <span class="in">`law_friends`</span> network.</span>
+<span id="cb77-472"><a href="#cb77-472" aria-label="424"></a>A pretty big score, at least larger than we obtained earlier using the exogenous indicator of status in the law firm as the basis for a binary partition. @fig-mod-1 shows visual evidence that this is a good binary partition of the <span class="in">`law_friends`</span> network.</span>
 <span id="cb77-473"><a href="#cb77-473" aria-label="425"></a></span>
-<span id="cb77-474"><a href="#cb77-474" aria-label="426"></a>Of course, you may also remember from the <span class="co">[</span><span class="ot">Status and Prestige</span><span class="co">](prest-eigen.qmd)</span> lesson that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So turns out that the modularity maximizing bi-partition of a graph is just given by this vector:</span>
+<span id="cb77-474"><a href="#cb77-474" aria-label="426"></a>Of course, you may also remember from the <span class="co">[</span><span class="ot">Status and Prestige</span><span class="co">](prest-eigen.qmd)</span> lesson that the little status game we played above is also a method (called the "power" method) of computing the **leading eigenvector** (the one associated with the largest eigenvalue) of a matrix. So it turns out that the modularity maximizing bi-partition of a graph is just given by this vector:</span>
 <span id="cb77-475"><a href="#cb77-475" aria-label="427"></a></span>
 <span id="cb77-476"><a href="#cb77-476" aria-label="428"></a>$$</span>
 <span id="cb77-477"><a href="#cb77-477" aria-label="429"></a>\mathbf{B}\mathbf{v} = \lambda\mathbf{v}</span>
@@ -2987,7 +2987,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-593"><a href="#cb77-593" aria-label="535"></a>splits1</span>
 <span id="cb77-594"><a href="#cb77-594" aria-label="536"></a><span class="in">```</span></span>
 <span id="cb77-595"><a href="#cb77-595" aria-label="537"></a></span>
-<span id="cb77-596"><a href="#cb77-596" aria-label="538"></a>The <span class="in">`delta.Q`</span> vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. This is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in @fig-mod-1 below).</span>
+<span id="cb77-596"><a href="#cb77-596" aria-label="538"></a>The <span class="in">`delta.Q`</span> vector stores the results of our modularity checks. In this case, the test in the first community failed; the modularity didn't change (the difference between the old and the new is zero) when we tried to split into two smaller communities. A zero change is usually indicative that the original community was a well-defined **group** with lots of within-cluster ties, so that splitting it makes no difference (that's the orange nodes in @fig-mod-1 below).</span>
 <span id="cb77-597"><a href="#cb77-597" aria-label="539"></a></span>
 <span id="cb77-598"><a href="#cb77-598" aria-label="540"></a>Nevertheless, the test in the second community was positive, indicating we should split it into two. Because we left one of the original communities alone, the resulting network will have three communities after splitting the second one in two. </span>
 <span id="cb77-599"><a href="#cb77-599" aria-label="541"></a></span>
@@ -3021,7 +3021,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-631"><a href="#cb77-631" aria-label="569"></a>splits2</span>
 <span id="cb77-632"><a href="#cb77-632" aria-label="570"></a><span class="in">```</span></span>
 <span id="cb77-633"><a href="#cb77-633" aria-label="571"></a></span>
-<span id="cb77-634"><a href="#cb77-634" aria-label="572"></a>Here, the three modularity-split checks failed, as indicated by the <span class="in">`delta.Q`</span> vector. So no further splits were made (hence the <span class="in">`split`</span> object is an empty list). This tells us that, according to this method, three communities are the optimal partition. </span>
+<span id="cb77-634"><a href="#cb77-634" aria-label="572"></a>Here, the three modularity-split checks failed, as indicated by the <span class="in">`delta.Q`</span> vector. So no further splits were made (hence the <span class="in">`split`</span> object is an empty list). The empty <span class="in">`split`</span> list tells us that, according to this method, <span class="in">`r length(unique(splits1$v))`</span> communities are the optimal partition. </span>
 <span id="cb77-635"><a href="#cb77-635" aria-label="573"></a></span>
 <span id="cb77-636"><a href="#cb77-636" aria-label="574"></a>Of course, if you are working on your project, you don't have to mess with all of the functions above, because <span class="in">`igraph`</span> has implemented Newman's leading eigenvector (of the modularity matrix) community detection method <span class="co">[</span><span class="ot">@newman06b</span><span class="co">]</span> in a single function called <span class="in">`cluster_leading_eigen`</span>. </span>
 <span id="cb77-637"><a href="#cb77-637" aria-label="575"></a></span>
@@ -3055,9 +3055,9 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-671"><a href="#cb77-671" aria-label="603"></a>  )</span>
 <span id="cb77-672"><a href="#cb77-672" aria-label="604"></a><span class="in">```</span></span>
 <span id="cb77-673"><a href="#cb77-673" aria-label="605"></a></span>
-<span id="cb77-674"><a href="#cb77-674" aria-label="606"></a>This is just a **contingency table** listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns. </span>
+<span id="cb77-674"><a href="#cb77-674" aria-label="606"></a>The output is just a **contingency table** listing status in the rows (1 = partner) and the three leading eigenvector communities in the columns. </span>
 <span id="cb77-675"><a href="#cb77-675" aria-label="607"></a></span>
-<span id="cb77-676"><a href="#cb77-676" aria-label="608"></a>We find that community one (the most coherent, in orange) is <span class="in">`r round((1 - 3/30)*100)`</span>% partners (it contains <span class="in">`r sum(t[, 1])`</span> members, of whom only <span class="in">`r t[2, 1]`</span> are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of nine partners and seven associates. </span>
+<span id="cb77-676"><a href="#cb77-676" aria-label="608"></a>We find that community one (the most coherent, in orange) is <span class="in">`r round((1 - t[2, 1]/sum(t[, 1]))*100)`</span>% partners (it contains <span class="in">`r sum(t[, 1])`</span> members, of whom only <span class="in">`r t[2, 1]`</span> are associates). So it is a high-status clique. Community three (in blue), on the other hand, is composed entirely of associates, a less dense but completely homogeneous, low-status clique. Finally, community two (green) is a status-mixed clique, composed of <span class="in">`r t[1, 2]`</span> partners and <span class="in">`r t[2, 2]`</span> associates. </span>
 <span id="cb77-677"><a href="#cb77-677" aria-label="609"></a></span>
 <span id="cb77-678"><a href="#cb77-678" aria-label="610"></a>So in this network, both status and endogenous group dynamics seem to be at play.</span>
 <span id="cb77-679"><a href="#cb77-679" aria-label="611"></a></span>
@@ -3119,7 +3119,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-739"><a href="#cb77-739" aria-label="667"></a></span>
 <span id="cb77-740"><a href="#cb77-740" aria-label="668"></a><span class="ss">- </span>Lines 12-14 keep the pair with the largest positive gain, and line 20 makes that merge by relabelling every node in the second community with the label of the first. When no pair clears zero, line 22 returns the labels.</span>
 <span id="cb77-741"><a href="#cb77-741" aria-label="669"></a></span>
-<span id="cb77-742"><a href="#cb77-742" aria-label="670"></a>The result matches <span class="in">`igraph`</span> exactly---the same three communities and the same modularity:</span>
+<span id="cb77-742"><a href="#cb77-742" aria-label="670"></a>The result matches <span class="in">`igraph`</span> exactly---the same <span class="in">`r length(unique(fg.res$membership))`</span> communities and the same modularity:</span>
 <span id="cb77-743"><a href="#cb77-743" aria-label="671"></a></span>
 <span id="cb77-746"><a href="#cb77-746" aria-label="672"></a><span class="in">```{r}</span></span>
 <span id="cb77-747"><a href="#cb77-747" aria-label="673"></a>gr.res <span class="ot">&lt;-</span> <span class="fu">greedy</span>(ug)</span>
@@ -3139,14 +3139,14 @@ document.addEventListener("DOMContentLoaded", function() {
 <span id="cb77-763"><a href="#cb77-763" aria-label="687"></a><span class="fu">plot</span>(hc)</span>
 <span id="cb77-764"><a href="#cb77-764" aria-label="688"></a><span class="in">```</span></span>
 <span id="cb77-765"><a href="#cb77-765" aria-label="689"></a></span>
-<span id="cb77-766"><a href="#cb77-766" aria-label="690"></a>This gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at $k = 3$:</span>
+<span id="cb77-766"><a href="#cb77-766" aria-label="690"></a>The dendrogram gives us the sense that the network is divided into three communities, as we saw earlier. If we wanted to see which nodes are in which, we could just cut the dendrogram at $k = 3$:</span>
 <span id="cb77-767"><a href="#cb77-767" aria-label="691"></a></span>
 <span id="cb77-770"><a href="#cb77-770" aria-label="692"></a><span class="in">```{r}</span></span>
 <span id="cb77-771"><a href="#cb77-771" aria-label="693"></a><span class="fu">library</span>(dendextend)</span>
 <span id="cb77-772"><a href="#cb77-772" aria-label="694"></a><span class="fu">cutree</span>(hc, <span class="at">k =</span> <span class="dv">3</span>)</span>
 <span id="cb77-773"><a href="#cb77-773" aria-label="695"></a><span class="in">```</span></span>
 <span id="cb77-774"><a href="#cb77-774" aria-label="696"></a></span>
-<span id="cb77-775"><a href="#cb77-775" aria-label="697"></a>This provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).</span>
+<span id="cb77-775"><a href="#cb77-775" aria-label="697"></a>The <span class="in">`cutree`</span> call provides the relevant assignment to communities (if we wanted more communities, we would cut the tree at a lower height).</span>
 <span id="cb77-776"><a href="#cb77-776" aria-label="698"></a></span>
 <span id="cb77-777"><a href="#cb77-777" aria-label="699"></a>Of course, this information was already stored in our results in the <span class="in">`membership`</span> object:</span>
 <span id="cb77-778"><a href="#cb77-778" aria-label="700"></a></span>
